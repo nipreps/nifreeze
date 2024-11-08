@@ -74,6 +74,14 @@ test = [
     "pytest-xdist >= 1.28"
 ]
 
+notebooks = [
+    "jupyter",
+    "nbclient",
+    "nbmake",
+    "mriqc_learn",
+    "nipreps-synthstrip",
+]
+
 antsopt = [
     "ConfigSpace",
     "nipreps",
