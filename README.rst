@@ -1,6 +1,7 @@
-*Eddymotion*
+*NiFreeze*
 ============
-Estimating head-motion and deformations derived from eddy-currents in diffusion MRI data.
+An open-source framework for volume-to-volume motion estimation in d/fMRI and PET,
+and Eddy-current-derived distortion estimation in dMRI.
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4680599.svg
    :target: https://doi.org/10.5281/zenodo.4680599
@@ -26,41 +27,47 @@ Estimating head-motion and deformations derived from eddy-currents in diffusion 
    :target: https://github.com/nipreps/nifreeze/actions/workflows/pythonpackage.yml
    :alt: Python package
 
-Retrospective estimation of head-motion between diffusion-weighted images (DWI) acquired within
-diffusion MRI (dMRI) experiments renders exceptionally challenging1 for datasets including
-high-diffusivity (or “high b”) images.
-These “high b” (b > 1000s/mm2) DWIs enable higher angular resolution, as compared to more traditional
-diffusion tensor imaging (DTI) schemes.
-UNDISTORT [#r1]_ (Using NonDistorted Images to Simulate a Template Of the Registration Target)
-was the earliest method addressing this issue, by simulating a target DW image without motion
-or distortion from a DTI (b=1000s/mm2) scan of the same subject.
-Later, Andersson and Sotiropoulos [#r2]_ proposed a similar approach (widely available within the
-FSL ``eddy`` tool), by predicting the target DW image to be registered from the remainder of the
-dMRI dataset and modeled with a Gaussian process.
-Besides the need for less data, ``eddy`` has the advantage of implicitly modeling distortions due
-to Eddy currents.
-More recently, Cieslak et al. [#r3]_ integrated both approaches in *SHORELine*, by
-(i) setting up a leave-one-out prediction framework as in eddy; and
-(ii) replacing eddy’s general-purpose Gaussian process prediction with the SHORE [#r4]_ diffusion model.
-
-*Eddymotion* is an open implementation of eddy-current and head-motion correction that builds upon
-the work of ``eddy`` and *SHORELine*, while generalizing these methods to multiple acquisition schemes
-(single-shell, multi-shell, and diffusion spectrum imaging) using diffusion models available with DIPY [#r5]_.
+Diffusion and functional MRI (d/fMRI) generally employ echo-planar imaging (EPI) for fast
+whole-brain acquisition.
+Despite the rapid collection of volumes, typical repetition times are long enough for head motion
+to occur, which has been proven detrimental to both diffusion [1]_ and functional [2]_ MRI.
+In the case of dMRI, additional volume-wise, low-order spatial distortions are caused by
+eddy currents (EC), which appear as a result of quickly switching diffusion gradients.
+Unaccounted for EC distortion can result in incorrect local model fitting and poor downstream
+tractography results [3]_, [4]_.
+*FSL*'s ``eddy`` [5]_ is the most popular tool for EC distortion correction, and
+implements a leave-one-volume-out approach to estimate EC distortions.
+However, *FSL* has commercial restrictions that hinder application within open-source initiatives
+such as *NiPreps* [6]_.
+In addition, *FSL*'s development model discourages the implementation of alternative data-modeling
+approaches to broaden the scope of application (e.g., modalities beyond dMRI).
+*NiFreeze* is an open-source implementation of ``eddy``'s approach to estimate artifacts
+that permits alternative models that apply to, for instance, head motion estimation in fMRI 
+and positron-emission tomography (PET) data.
 
 .. BEGIN FLOWCHART
 
-.. image:: https://raw.githubusercontent.com/nipreps/nifreeze/507fc9bab86696d5330fd6a86c3870968243aea8/docs/_static/nifreeze-flowchart.svg
+.. image:: https://raw.githubusercontent.com/nipreps/nifreeze/9588b4d0e410cc648f73f5581eb8feb38baf6e2b/docs/_static/nifreeze-flowchart.svg
    :alt: The nifreeze flowchart
 
 .. END FLOWCHART
 
-.. [#r1] S. Ben-Amitay et al., Motion correction and registration of high b-value diffusion weighted images, Magnetic
-   Resonance in Medicine 67:1694–1702 (2012)
-.. [#r2] J. L. R. Andersson. et al., An integrated approach to correction for off-resonance effects and subject movement
-   in diffusion MR imaging, NeuroImage 125 (2016) 1063–1078
-.. [#r3] M. Cieslak et al., QSIPrep: An integrative platform for preprocessing and reconstructing diffusion MRI data.
-   Nature Methods, 18(7), 775–778 (2021)
-.. [#r4] E. Ozarslan et al., Simple Harmonic Oscillator Based Reconstruction and Estimation for Three-Dimensional Q-Space
-   MRI. in Proc. Intl. Soc. Mag. Reson. Med. vol. 17 1396 (2009)
-.. [#r5] E. Garyfallidis et al., Dipy, a library for the analysis of diffusion MRI data. Front. Neuroinformatics 8, 8
-   (2014)
+.. [1] Yendiki et al. (2014) *Spurious group differences due to head motion in a diffusion MRI study*.
+    NeuroImage **88**:79-90.
+
+.. [2] Power et al. (2012) *Spurious but systematic correlations in functional connectivity MRI
+    networks arise from subject motion*. NeuroImage **59**:2142-2154.
+
+.. [3] Zhuang et al. (2006) *Correction of eddy-current distortions in diffusion tensor images using
+    the known directions and strengths of diffusion gradients*. J Magn Reson Imaging **24**:1188-1193.
+
+.. [4] Andersson et al. (2012) *A comprehensive Gaussian Process framework for correcting distortions
+    and movements in difussion images*. In: 20th SMRT & 21st ISMRM, Melbourne, Australia.
+
+.. [5] Andersson & Sotiropoulos (2015) *Non-parametric representation and prediction of single- and
+    multi-shell diffusion-weighted MRI data using Gaussian processes*. NeuroImage **122**:166-176.
+
+.. [6] Esteban (2025) *Standardized preprocessing in neuroimaging: enhancing reliability and reproducibility*.
+    In: Whelan, R., & Lemaître, H. (eds.) *Methods for Analyzing Large Neuroimaging Datasets. Neuromethods*,
+    vol. **218**, pp. 153-179. Humana, New York, NY.
+    doi:`10.1007/978-1-0716-4260-3_8 <https://doi.org/10.1007/978-1-0716-4260-3_8>`__.
