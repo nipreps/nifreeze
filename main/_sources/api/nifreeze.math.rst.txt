@@ -1,0 +1,15 @@
+nifreeze.math package
+=====================
+
+.. automodule:: nifreeze.math
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   nifreeze.math.utils

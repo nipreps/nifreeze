@@ -1,0 +1,7 @@
+nifreeze.math.utils module
+==========================
+
+.. automodule:: nifreeze.math.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:

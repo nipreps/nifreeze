@@ -1,0 +1,7 @@
+nifreeze.data.dmri module
+=========================
+
+.. automodule:: nifreeze.data.dmri
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,19 @@
+nifreeze.data package
+=====================
+
+.. automodule:: nifreeze.data
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   nifreeze.data.dmri
+   nifreeze.data.filtering
+   nifreeze.data.pet
+   nifreeze.data.splitting
+   nifreeze.data.utils

@@ -1,0 +1,7 @@
+nifreeze.cli.run module
+=======================
+
+.. automodule:: nifreeze.cli.run
+   :members:
+   :undoc-members:
+   :show-inheritance:
