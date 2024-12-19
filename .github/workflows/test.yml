@@ -1,0 +1,86 @@
+name: Unit and integration tests
+
+on:
+  push:
+    branches:
+      - main
+      - maint/*
+  pull_request:
+    branches:
+      - main
+      - maint/*
+  # Allow job to be triggered manually from GitHub interface
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+# Force tox and pytest to use color
+env:
+  FORCE_COLOR: true
+  TEST_DATA_HOME: /home/runner/eddymotion-tests/
+  ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS: 4
+  ANTSPATH: /usr/share/miniconda/bin/
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  stable:
+    # Unit tests only on Linux/Python 3.12
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install ANTs
+        run: |
+          conda install -c conda-forge ants=2.5
+      - name: Install datalad
+        run: |
+          python -m pip install datalad-installer
+          datalad-installer --sudo ok git-annex
+          python -m pip install datalad datalad-osf
+          datalad wtf
+      - uses: actions/cache/restore@v4
+        with:
+          path: /home/runner/eddymotion-tests/
+          key: data-v0
+      - name: Get test data with DataLad
+        run: |
+          if [[ ! -d "${TEST_DATA_HOME}" ]]; then
+            datalad install -rg --source=https://gin.g-node.org/nipreps-data/tests-eddymotion.git ${TEST_DATA_HOME}
+          else
+            cd ${TEST_DATA_HOME}
+            datalad update --merge -r .
+            datalad get -r -J4 *
+          fi
+      - uses: actions/cache/save@v4
+        with:
+          path: /home/runner/eddymotion-tests/
+          key: data-v0
+      - name: Install tox
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install tox tox-gh-actions
+      - name: Show tox config
+        run: tox c
+      - name: Run tox
+        run: |
+          export PATH=$ANTSPATH:$PATH
+          tox -v --exit-and-dump-after 1200
+      - uses: codecov/codecov-action@v4
+        if: ${{ always() }}
+        with:
+          files: cov.xml
+          token: ${{ secrets.CODECOV_TOKEN }}

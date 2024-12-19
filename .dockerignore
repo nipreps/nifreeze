@@ -1,0 +1,56 @@
+# python cache
+__pycache__/**/*
+__pycache__
+*.pyc
+
+# python distribution
+build/**/*
+build
+dist/**/*
+dist
+src/eddymotion.egg-info/**/*
+src/eddymotion.egg-info
+.eggs/**/*
+.eggs
+
+# housekeeping tools
+.maint/**/*
+.maint
+
+# pip installs
+src/**/*
+src/
+
+# git
+.git_archival.txt
+.gitattributes
+.gitignore
+.git/**/*
+.git
+.mailmap
+
+# other
+work/**/*
+work
+out/**/*
+out/
+.idea/**/*
+.idea
+
+# CI, etc.
+tox.ini
+.circleci
+.circleci/**/*
+.github
+.github/**/*
+.pytest_cache
+.pytest_cache/**/*
+.codecov.yml
+.coveragerc
+.pep8speaks.yml
+.pre-commit-config.yaml
+.readthedocs.yml
+.travis.yml
+.zenodo.json
+
+.afq

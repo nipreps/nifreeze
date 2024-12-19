@@ -1,0 +1,87 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Python package
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ '*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    if: "!startsWith(github.ref, 'refs/tags/') && !contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 0
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: actions/cache@v4
+      with:
+        path: $HOME/.cache/pip
+        key: pip-cache-v1
+        restore-keys: |
+          pip-cache-
+
+    - name: Build in confined environment and interpolate version
+      run: |
+        python -m venv /tmp/buildenv
+        source /tmp/buildenv/bin/activate
+        pip install -U build hatch pip twine
+
+        python -m build -s -w
+        python -m twine check dist/eddymotion-*
+
+        mv dist /tmp/package
+
+        # Interpolate version
+        if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+          TAG=${GITHUB_REF##*/}
+        fi
+        THISVERSION=$( python -m hatch version | tail -n1 | xargs )
+        THISVERSION=${TAG:-$THISVERSION}
+        echo "Expected VERSION: \"${THISVERSION}\""
+        echo "THISVERSION=${THISVERSION}" >> $GITHUB_ENV
+
+    - name: Install in confined environment [pip]
+      run: |
+        python -m venv /tmp/pip
+        source /tmp/pip/bin/activate
+        pip install -U pip
+        python -m pip install .
+        INSTALLED_VERSION=$(python -c 'import eddymotion as em; print(em.__version__, end="")')
+        echo "VERSION: \"${THISVERSION}\""
+        echo "INSTALLED: \"${INSTALLED_VERSION}\""
+        test "${INSTALLED_VERSION}" = "${THISVERSION}"
+
+    - name: Install in confined environment [sdist]
+      run: |
+        python -m venv /tmp/install_sdist
+        source /tmp/install_sdist/bin/activate
+        pip install -U pip
+        python -m pip install /tmp/package/eddymotion*.tar.gz
+        INSTALLED_VERSION=$(python -c 'import eddymotion as em; print(em.__version__, end="")')
+        echo "VERSION: \"${THISVERSION}\""
+        echo "INSTALLED: \"${INSTALLED_VERSION}\""
+        test "${INSTALLED_VERSION}" = "${THISVERSION}"
+
+    - name: Install in confined environment [wheel]
+      run: |
+        python -m venv /tmp/install_wheel
+        source /tmp/install_wheel/bin/activate
+        pip install -U pip
+        python -m pip install /tmp/package/eddymotion*.whl
+        INSTALLED_VERSION=$(python -c 'import eddymotion as em; print(em.__version__, end="")')
+        echo "INSTALLED: \"${INSTALLED_VERSION}\""
+        test "${INSTALLED_VERSION}" = "${THISVERSION}"
