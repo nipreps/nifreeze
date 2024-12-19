@@ -25,13 +25,13 @@ import sys
 
 import pytest
 
-from eddymotion.__main__ import main
+from nifreeze.__main__ import main
 
 
 @pytest.fixture(autouse=True)
 def set_command(monkeypatch):
     with monkeypatch.context() as m:
-        m.setattr(sys, "argv", ["eddymotion"])
+        m.setattr(sys, "argv", ["nifreeze"])
         yield
 
 
@@ -39,7 +39,7 @@ def test_help(capsys):
     with pytest.raises(SystemExit):
         main(["--help"])
     captured = capsys.readouterr()
-    assert captured.out.startswith("usage: eddymotion [-h]")
+    assert captured.out.startswith("usage: nifreeze [-h]")
 
 
 def test_main(tmp_path, datadir):
@@ -66,4 +66,4 @@ def test_main(tmp_path, datadir):
         )
     # assert Path(output_dir).joinpath("dwi.h5").exists()  # Empty
 
-    # Also, call python -m eddymotion or eddymotion from GHA ??
+    # Also, call python -m nifreeze or nifreeze from GHA ??

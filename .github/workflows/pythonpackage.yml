@@ -41,7 +41,7 @@ jobs:
         pip install -U build hatch pip twine
 
         python -m build -s -w
-        python -m twine check dist/eddymotion-*
+        python -m twine check dist/nifreeze-*
 
         mv dist /tmp/package
 
@@ -60,7 +60,7 @@ jobs:
         source /tmp/pip/bin/activate
         pip install -U pip
         python -m pip install .
-        INSTALLED_VERSION=$(python -c 'import eddymotion as em; print(em.__version__, end="")')
+        INSTALLED_VERSION=$(python -c 'import nifreeze as em; print(em.__version__, end="")')
         echo "VERSION: \"${THISVERSION}\""
         echo "INSTALLED: \"${INSTALLED_VERSION}\""
         test "${INSTALLED_VERSION}" = "${THISVERSION}"
@@ -70,8 +70,8 @@ jobs:
         python -m venv /tmp/install_sdist
         source /tmp/install_sdist/bin/activate
         pip install -U pip
-        python -m pip install /tmp/package/eddymotion*.tar.gz
-        INSTALLED_VERSION=$(python -c 'import eddymotion as em; print(em.__version__, end="")')
+        python -m pip install /tmp/package/nifreeze*.tar.gz
+        INSTALLED_VERSION=$(python -c 'import nifreeze as em; print(em.__version__, end="")')
         echo "VERSION: \"${THISVERSION}\""
         echo "INSTALLED: \"${INSTALLED_VERSION}\""
         test "${INSTALLED_VERSION}" = "${THISVERSION}"
@@ -81,7 +81,7 @@ jobs:
         python -m venv /tmp/install_wheel
         source /tmp/install_wheel/bin/activate
         pip install -U pip
-        python -m pip install /tmp/package/eddymotion*.whl
-        INSTALLED_VERSION=$(python -c 'import eddymotion as em; print(em.__version__, end="")')
+        python -m pip install /tmp/package/nifreeze*.whl
+        INSTALLED_VERSION=$(python -c 'import nifreeze as em; print(em.__version__, end="")')
         echo "INSTALLED: \"${INSTALLED_VERSION}\""
         test "${INSTALLED_VERSION}" = "${THISVERSION}"

@@ -2,7 +2,7 @@ import nibabel as nib
 import numpy as np
 import numpy.testing as npt
 
-from eddymotion.data.utils import apply_affines
+from nifreeze.data.utils import apply_affines
 
 
 def test_apply_affines():

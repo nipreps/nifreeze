@@ -35,8 +35,8 @@ from ConfigSpace import Configuration, ConfigurationSpace
 from smac import HyperparameterOptimizationFacade, Scenario
 from smac.utils.configspace import get_config_hash
 
-from eddymotion.registration import ants as erants
-from eddymotion.registration import utils
+from nifreeze.registration import ants as erants
+from nifreeze.registration import utils
 
 logger = logging.getLogger("ants-optimization")
 
@@ -75,9 +75,9 @@ async def ants(cmd, cwd, stdout, stderr, semaphore):
         return returncode
 
 
-DATASET_PATH = Path(getenv("TEST_DATA_HOME", f"{getenv('HOME')}/.cache/eddymotion-tests"))
+DATASET_PATH = Path(getenv("TEST_DATA_HOME", f"{getenv('HOME')}/.cache/nifreeze-tests"))
 
-WORKDIR = Path.home() / "tmp" / "eddymotiondev"
+WORKDIR = Path.home() / "tmp" / "nifreezedev"
 WORKDIR.mkdir(parents=True, exist_ok=True)
 
 EXPERIMENTDIR = WORKDIR / "smac"

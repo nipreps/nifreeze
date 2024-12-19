@@ -1,11 +1,11 @@
-.. _running_eddymotion:
+.. _running_nifreeze:
 
 Running *Eddymotion*
 ********************
 Command line interface
 ----------------------
 .. argparse::
-   :ref: eddymotion.cli.parser._build_parser
-   :prog: eddymotion
+   :ref: nifreeze.cli.parser._build_parser
+   :prog: nifreeze
    :nodefault:
    :nodefaultconst:

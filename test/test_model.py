@@ -26,13 +26,13 @@ import numpy as np
 import pytest
 from dipy.sims.voxel import single_tensor
 
-from eddymotion import model
-from eddymotion.data.dmri import DWI
-from eddymotion.data.splitting import lovo_split
-from eddymotion.exceptions import ModelNotFittedError
-from eddymotion.model._dipy import GaussianProcessModel
-from eddymotion.model.dmri import DEFAULT_MAX_S0, DEFAULT_MIN_S0
-from eddymotion.testing import simulations as _sim
+from nifreeze import model
+from nifreeze.data.dmri import DWI
+from nifreeze.data.splitting import lovo_split
+from nifreeze.exceptions import ModelNotFittedError
+from nifreeze.model._dipy import GaussianProcessModel
+from nifreeze.model.dmri import DEFAULT_MAX_S0, DEFAULT_MIN_S0
+from nifreeze.testing import simulations as _sim
 
 
 def test_trivial_model():

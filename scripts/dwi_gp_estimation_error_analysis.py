@@ -36,11 +36,11 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold, RepeatedKFold, cross_val_predict, cross_val_score
 
-from eddymotion.model.gpr import (
+from nifreeze.model.gpr import (
     EddyMotionGPR,
     SphericalKriging,
 )
-from eddymotion.testing import simulations as testsims
+from nifreeze.testing import simulations as testsims
 
 
 def cross_validate(
@@ -63,8 +63,8 @@ def cross_validate(
         Number of folds.
     n_repeats : :obj:`int`
         Number of times the cross-validator needs to be repeated.
-    gpr : obj:`~eddymotion.model.gpr.EddyMotionGPR`
-        The eddymotion Gaussian process regressor object.
+    gpr : obj:`~nifreeze.model.gpr.EddyMotionGPR`
+        The nifreeze Gaussian process regressor object.
 
     Returns
     -------

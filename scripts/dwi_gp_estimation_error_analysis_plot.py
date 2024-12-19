@@ -35,7 +35,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from eddymotion.viz.signals import plot_error
+from nifreeze.viz.signals import plot_error
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:

@@ -26,8 +26,8 @@ import nibabel as nb
 import numpy as np
 import pytest
 
-from eddymotion.data.dmri import load
-from eddymotion.model.dmri import (
+from nifreeze.data.dmri import load
+from nifreeze.model.dmri import (
     find_shelling_scheme,
 )
 

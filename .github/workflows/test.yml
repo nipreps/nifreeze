@@ -19,7 +19,7 @@ defaults:
 # Force tox and pytest to use color
 env:
   FORCE_COLOR: true
-  TEST_DATA_HOME: /home/runner/eddymotion-tests/
+  TEST_DATA_HOME: /home/runner/nifreeze-tests/
   ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS: 4
   ANTSPATH: /usr/share/miniconda/bin/
 
@@ -54,12 +54,12 @@ jobs:
           datalad wtf
       - uses: actions/cache/restore@v4
         with:
-          path: /home/runner/eddymotion-tests/
+          path: /home/runner/nifreeze-tests/
           key: data-v0
       - name: Get test data with DataLad
         run: |
           if [[ ! -d "${TEST_DATA_HOME}" ]]; then
-            datalad install -rg --source=https://gin.g-node.org/nipreps-data/tests-eddymotion.git ${TEST_DATA_HOME}
+            datalad install -rg --source=https://gin.g-node.org/nipreps-data/tests-nifreeze.git ${TEST_DATA_HOME}
           else
             cd ${TEST_DATA_HOME}
             datalad update --merge -r .
@@ -67,7 +67,7 @@ jobs:
           fi
       - uses: actions/cache/save@v4
         with:
-          path: /home/runner/eddymotion-tests/
+          path: /home/runner/nifreeze-tests/
           key: data-v0
       - name: Install tox
         run: |

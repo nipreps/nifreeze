@@ -24,8 +24,8 @@
 
 import numpy as np
 
-from eddymotion.data.dmri import DWI
-from eddymotion.data.splitting import lovo_split
+from nifreeze.data.dmri import DWI
+from nifreeze.data.splitting import lovo_split
 
 
 def test_lovo_split(datadir):

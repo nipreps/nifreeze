@@ -25,7 +25,7 @@
 
 import pytest
 
-from eddymotion.cli.parser import _build_parser
+from nifreeze.cli.parser import _build_parser
 
 MIN_ARGS = ["data/dwi.h5"]
 

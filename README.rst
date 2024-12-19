@@ -7,23 +7,23 @@ Estimating head-motion and deformations derived from eddy-currents in diffusion 
    :alt: DOI
 
 .. image:: https://img.shields.io/badge/License-Apache_2.0-blue.svg
-   :target: https://github.com/nipreps/eddymotion/blob/main/LICENSE
+   :target: https://github.com/nipreps/nifreeze/blob/main/LICENSE
    :alt: License
 
-.. image:: https://img.shields.io/pypi/v/eddymotion.svg
-   :target: https://pypi.python.org/pypi/eddymotion/
+.. image:: https://img.shields.io/pypi/v/nifreeze.svg
+   :target: https://pypi.python.org/pypi/nifreeze/
    :alt: Latest Version
 
-.. image:: https://github.com/nipreps/eddymotion/actions/workflows/test.yml/badge.svg
-   :target: https://github.com/nipreps/eddymotion/actions/workflows/test.yml
+.. image:: https://github.com/nipreps/nifreeze/actions/workflows/test.yml/badge.svg
+   :target: https://github.com/nipreps/nifreeze/actions/workflows/test.yml
    :alt: Testing
 
-.. image:: https://github.com/nipreps/eddymotion/actions/workflows/pages/pages-build-deployment/badge.svg
-   :target: https://www.nipreps.org/eddymotion/main/index.html
+.. image:: https://github.com/nipreps/nifreeze/actions/workflows/pages/pages-build-deployment/badge.svg
+   :target: https://www.nipreps.org/nifreeze/main/index.html
    :alt: Documentation
 
-.. image:: https://github.com/nipreps/eddymotion/actions/workflows/pythonpackage.yml/badge.svg
-   :target: https://github.com/nipreps/eddymotion/actions/workflows/pythonpackage.yml
+.. image:: https://github.com/nipreps/nifreeze/actions/workflows/pythonpackage.yml/badge.svg
+   :target: https://github.com/nipreps/nifreeze/actions/workflows/pythonpackage.yml
    :alt: Python package
 
 Retrospective estimation of head-motion between diffusion-weighted images (DWI) acquired within
@@ -49,8 +49,8 @@ the work of ``eddy`` and *SHORELine*, while generalizing these methods to multip
 
 .. BEGIN FLOWCHART
 
-.. image:: https://raw.githubusercontent.com/nipreps/eddymotion/507fc9bab86696d5330fd6a86c3870968243aea8/docs/_static/eddymotion-flowchart.svg
-   :alt: The eddymotion flowchart
+.. image:: https://raw.githubusercontent.com/nipreps/nifreeze/507fc9bab86696d5330fd6a86c3870968243aea8/docs/_static/nifreeze-flowchart.svg
+   :alt: The nifreeze flowchart
 
 .. END FLOWCHART
 

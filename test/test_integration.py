@@ -28,9 +28,9 @@ import nibabel as nb
 import nitransforms as nt
 import numpy as np
 
-from eddymotion.data.dmri import DWI
-from eddymotion.estimator import EddyMotionEstimator
-from eddymotion.registration.utils import displacements_within_mask
+from nifreeze.data.dmri import DWI
+from nifreeze.estimator import EddyMotionEstimator
+from nifreeze.registration.utils import displacements_within_mask
 
 
 def test_proximity_estimator_trivial_model(datadir, tmp_path):

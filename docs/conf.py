@@ -9,7 +9,7 @@ http://www.sphinx-doc.org/en/master/config
 
 from packaging.version import Version
 
-from eddymotion import __copyright__, __packagename__, __version__
+from nifreeze import __copyright__, __packagename__, __version__
 
 # -- Path setup --------------------------------------------------------------
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -104,7 +104,7 @@ exclude_patterns = [
     "_build",
     "Thumbs.db",
     ".DS_Store",
-    "api/eddymotion.rst",
+    "api/nifreeze.rst",
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -149,7 +149,7 @@ html_css_files = [
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "eddymotiondoc"
+htmlhelp_basename = "nifreezedoc"
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -228,7 +228,7 @@ epub_exclude_files = ["search.html"]
 
 # -- Extension configuration -------------------------------------------------
 
-apidoc_module_dir = "../src/eddymotion"
+apidoc_module_dir = "../src/nifreeze"
 apidoc_output_dir = "api"
 apidoc_excluded_paths = ["conftest.py", "*/tests/*", "tests/*", "config/*"]
 apidoc_separate_modules = True

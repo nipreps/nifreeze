@@ -25,7 +25,7 @@
 import sys
 from importlib import reload
 
-import eddymotion
+import nifreeze
 
 
 def test_version_scm0(monkeypatch):
@@ -34,6 +34,6 @@ def test_version_scm0(monkeypatch):
     class _version:
         __version__ = "10.0.0"
 
-    monkeypatch.setitem(sys.modules, "eddymotion._version", _version)
-    reload(eddymotion)
-    assert eddymotion.__version__ == "10.0.0"
+    monkeypatch.setitem(sys.modules, "nifreeze._version", _version)
+    reload(nifreeze)
+    assert nifreeze.__version__ == "10.0.0"

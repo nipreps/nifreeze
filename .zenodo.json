@@ -20,7 +20,7 @@
       "scheme": "doi"
     }
   ],
-  "title": "eddymotion: model-based estimation of head-motion and eddy-current distortions",
+  "title": "nifreeze: model-based estimation of head-motion and eddy-current distortions",
   "upload_type": "software",
   "creators": [
     {

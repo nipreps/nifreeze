@@ -26,7 +26,7 @@ import numpy as np
 import pytest
 from dipy.io import read_bvals_bvecs
 
-from eddymotion.model import gpr
+from nifreeze.model import gpr
 
 GradientTablePatch = namedtuple("gtab", ["bvals", "bvecs"])
 

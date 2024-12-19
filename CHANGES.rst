@@ -23,7 +23,7 @@ A new minor release with fixes such as setting random seeds and enhancing parall
   * ENH: Drop support for Python 3.8 and 3.9 (#158)
   * ENH: Remove unused `tmp_path` parameter from test (#162)
   * ENH: Outsource leave-one-out splitter so it can be used across data types (#98)
-  * ENH: Simplify `eddymotion.estimator.EddyMotionEstimator.fit` (#149)
+  * ENH: Simplify `nifreeze.estimator.EddyMotionEstimator.fit` (#149)
   * ENH: Refactor code linter and formatter dependencies (#144)
   * ENH: Use NumPy's `Generator` class as a replacement for `RandomState` (#141)
   * ENH: Define instance attributes in ``__init__`` method (#133)

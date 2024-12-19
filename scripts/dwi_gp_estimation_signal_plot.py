@@ -35,7 +35,7 @@ import numpy as np
 from dipy.core.gradients import gradient_table
 from dipy.io import read_bvals_bvecs
 
-from eddymotion.viz.signals import plot_prediction_surface
+from nifreeze.viz.signals import plot_prediction_surface
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:

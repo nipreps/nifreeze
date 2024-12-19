@@ -11,8 +11,8 @@ To utilize Eddymotion functionalities within your Python module or script, follo
    .. code-block:: python
 
       # Import required components from the Eddymotion package
-      from eddymotion.data import dmri
-      from eddymotion.estimator import EddyMotionEstimator
+      from nifreeze.data import dmri
+      from nifreeze.estimator import EddyMotionEstimator
 
 2. **Load DWI Data**: Load diffusion MRI (dMRI) data into a `DWI` object using the `load` function. Ensure the gradient table is provided. It should have one row per diffusion-weighted image. The first three columns represent the gradient directions, and the last column indicates the timing and strength of the gradients in units of s/mm² [ R A S+ b ]. If your data are in NIfTI file format, include a file containing the gradient information with the argument "gradients_file":
 
@@ -59,7 +59,7 @@ To utilize Eddymotion functionalities within your Python module or script, follo
 
    - `dwi_data`: The target DWI dataset, represented by this tool's internal type.
    - `align_kwargs`: Parameters to configure the image registration process.
-   - `models`: list of diffusion models used to generate the registration target for each gradient map. For a list of available models, see :doc:`api/eddymotion.model`.
+   - `models`: list of diffusion models used to generate the registration target for each gradient map. For a list of available models, see :doc:`api/nifreeze.model`.
    - `omp_nthreads`: Maximum number of threads an individual process may use.
    - `n_jobs`: Number of parallel jobs.
    - `seed`: Seed for the random number generator (necessary for deterministic estimation).

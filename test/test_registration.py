@@ -33,8 +33,8 @@ from nibabel.eulerangles import euler2mat
 from nipype.interfaces.ants.registration import Registration
 from pkg_resources import resource_filename as pkg_fn
 
-from eddymotion.registration.ants import _massage_mask_path
-from eddymotion.registration.utils import displacements_within_mask
+from nifreeze.registration.ants import _massage_mask_path
+from nifreeze.registration.utils import displacements_within_mask
 
 
 @pytest.mark.parametrize("r_x", [0.0, 0.1, 0.3])
@@ -62,7 +62,7 @@ def test_ANTs_config_b0(datadir, tmp_path, dataset, r_x, r_y, r_z, t_x, t_y, t_z
     registration = Registration(
         terminal_output="file",
         from_file=pkg_fn(
-            "eddymotion.registration",
+            "nifreeze.registration",
             "config/b0-to-b0_level0.json",
         ),
         fixed_image=str(fixed.absolute()),

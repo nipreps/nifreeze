@@ -4,8 +4,8 @@
 .. include:: ../README.rst
    :start-after: END FLOWCHART
 
-.. image:: _static/eddymotion-flowchart.svg
-   :alt: The eddymotion flowchart
+.. image:: _static/nifreeze-flowchart.svg
+   :alt: The nifreeze flowchart
 
 Contents
 --------
