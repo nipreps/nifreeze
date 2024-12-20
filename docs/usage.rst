@@ -2,17 +2,17 @@
 
 How to Use
 ==========
-Incorporating Eddymotion into a Python module or script
--------------------------------------------------------
-To utilize Eddymotion functionalities within your Python module or script, follow these steps:
+Incorporating NiFreeze into a Python module or script
+-----------------------------------------------------
+To utilize NiFreeze functionalities within your Python module or script, follow these steps:
 
-1. **Import Eddymotion Components**: Start by importing necessary components from the Eddymotion package:
+1. **Import NiFreeze Components**: Start by importing necessary components from the NiFreeze package:
 
    .. code-block:: python
 
-      # Import required components from the Eddymotion package
+      # Import required components from the nifreeze package
       from nifreeze.data import dmri
-      from nifreeze.estimator import EddyMotionEstimator
+      from nifreeze.estimator import Estimator
 
 2. **Load DWI Data**: Load diffusion MRI (dMRI) data into a `DWI` object using the `load` function. Ensure the gradient table is provided. It should have one row per diffusion-weighted image. The first three columns represent the gradient directions, and the last column indicates the timing and strength of the gradients in units of s/mm² [ R A S+ b ]. If your data are in NIfTI file format, include a file containing the gradient information with the argument "gradients_file":
 
@@ -32,16 +32,16 @@ To utilize Eddymotion functionalities within your Python module or script, follo
          dwi_data = dmri.DWI.from_filename('/path/to/downloaded/dwi_full.h5')
 
 
-3. **Instantiate an Eddymotion Estimator Object**: Create an instance of the `EddyMotionEstimator` class, which encapsulates tools for estimating rigid-body head motion and distortions due to eddy currents.
+3. **Instantiate an NiFreeze Estimator Object**: Create an instance of the `Estimator` class, which encapsulates tools for estimating rigid-body head motion and distortions due to eddy currents.
 
    .. code-block:: python
 
-      # Create an instance of the EddyMotionEstimator class
-      estimator = EddyMotionEstimator()
+      # Create an instance of the Estimator class
+      estimator = Estimator()
 
 4. **Fit the Models to Estimate the Affine Transformation**:
 
-   Use the `estimate` method of the `EddyMotionEstimator` object to estimate the affine transformation parameters:
+   Use the `estimate` method of the `Estimator` object to estimate the affine transformation parameters:
 
    .. code-block:: python
 

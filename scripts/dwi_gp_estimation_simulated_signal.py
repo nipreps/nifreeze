@@ -33,7 +33,7 @@ from pathlib import Path
 import numpy as np
 from dipy.core.sphere import Sphere
 
-from nifreeze.model.gpr import EddyMotionGPR, SphericalKriging
+from nifreeze.model.gpr import DiffusionGPR, SphericalKriging
 from nifreeze.testing import simulations as testsims
 
 SAMPLING_DIRECTIONS = 200
@@ -135,7 +135,7 @@ def main() -> None:
     a = 1.15
     lambda_s = 120
     alpha = 100
-    gpr = EddyMotionGPR(
+    gpr = DiffusionGPR(
         kernel=SphericalKriging(a=a, lambda_s=lambda_s),
         alpha=alpha,
         optimizer=None,

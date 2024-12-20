@@ -32,7 +32,7 @@ from dipy.reconst.base import ReconstModel
 from sklearn.gaussian_process import GaussianProcessRegressor
 
 from nifreeze.model.gpr import (
-    EddyMotionGPR,
+    DiffusionGPR,
     ExponentialKriging,
     SphericalKriging,
 )
@@ -180,7 +180,7 @@ class GaussianProcessModel(ReconstModel):
                 f"and gradient table ({grad_dirs})."
             )
 
-        gpr = EddyMotionGPR(
+        gpr = DiffusionGPR(
             kernel=self.kernel,
             random_state=random_state,
             n_targets=y.shape[1],

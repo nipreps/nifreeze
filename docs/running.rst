@@ -1,7 +1,7 @@
 .. _running_nifreeze:
 
-Running *Eddymotion*
-********************
+Running *NiFreeze*
+******************
 Command line interface
 ----------------------
 .. argparse::

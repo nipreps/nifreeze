@@ -34,7 +34,7 @@ from nifreeze.model.base import ModelFactory
 from nifreeze.registration.ants import _prepare_registration_data, _run_registration
 
 
-class EddyMotionEstimator:
+class Estimator:
     """Estimates rigid-body head-motion and distortions derived from eddy-currents."""
 
     @staticmethod

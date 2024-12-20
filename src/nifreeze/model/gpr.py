@@ -62,7 +62,7 @@ SUPPORTED_OPTIMIZERS = set(CONFIGURABLE_OPTIONS.keys()) | {"fmin_l_bfgs_b"}
 """A set of supported optimizers (automatically created)."""
 
 
-class EddyMotionGPR(GaussianProcessRegressor):
+class DiffusionGPR(GaussianProcessRegressor):
     r"""
     A Gaussian process (GP) regressor specialized for nifreeze.
 

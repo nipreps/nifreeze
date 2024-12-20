@@ -29,7 +29,7 @@ import nitransforms as nt
 import numpy as np
 
 from nifreeze.data.dmri import DWI
-from nifreeze.estimator import EddyMotionEstimator
+from nifreeze.estimator import Estimator
 from nifreeze.registration.utils import displacements_within_mask
 
 
@@ -70,7 +70,7 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path):
         brainmask=dwdata.brainmask,
     )
 
-    estimator = EddyMotionEstimator()
+    estimator = Estimator()
     em_affines = estimator.estimate(
         data=dwi_motion,
         models=("b0",),

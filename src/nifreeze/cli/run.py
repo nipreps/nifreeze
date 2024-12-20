@@ -20,13 +20,13 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""Eddymotion runner."""
+"""NiFreeze runner."""
 
 from pathlib import Path
 
 from nifreeze.cli.parser import parse_args
 from nifreeze.data.dmri import DWI
-from nifreeze.estimator import EddyMotionEstimator
+from nifreeze.estimator import Estimator
 
 
 def main(argv=None) -> None:
@@ -42,7 +42,7 @@ def main(argv=None) -> None:
     # Open the data with the given file path
     dwi_dataset: DWI = DWI.from_filename(args.input_file)
 
-    estimator: EddyMotionEstimator = EddyMotionEstimator()
+    estimator: Estimator = Estimator()
 
     _ = estimator.estimate(
         dwi_dataset,

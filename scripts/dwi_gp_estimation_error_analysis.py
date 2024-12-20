@@ -37,7 +37,7 @@ import pandas as pd
 from sklearn.model_selection import KFold, RepeatedKFold, cross_val_predict, cross_val_score
 
 from nifreeze.model.gpr import (
-    EddyMotionGPR,
+    DiffusionGPR,
     SphericalKriging,
 )
 from nifreeze.testing import simulations as testsims
@@ -48,7 +48,7 @@ def cross_validate(
     y: np.ndarray,
     cv: int,
     n_repeats: int,
-    gpr: EddyMotionGPR,
+    gpr: DiffusionGPR,
 ) -> dict[int, list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]]:
     """
     Perform the experiment by estimating the dMRI signal using a Gaussian process model.
@@ -63,7 +63,7 @@ def cross_validate(
         Number of folds.
     n_repeats : :obj:`int`
         Number of times the cross-validator needs to be repeated.
-    gpr : obj:`~nifreeze.model.gpr.EddyMotionGPR`
+    gpr : obj:`~nifreeze.model.gpr.DiffusionGPR`
         The nifreeze Gaussian process regressor object.
 
     Returns
@@ -192,7 +192,7 @@ def main() -> None:
     a = 1.15
     lambda_s = 120
     alpha = 1
-    gpr = EddyMotionGPR(
+    gpr = DiffusionGPR(
         kernel=SphericalKriging(beta_a=a, beta_l=lambda_s),
         alpha=alpha,
         optimizer=None,

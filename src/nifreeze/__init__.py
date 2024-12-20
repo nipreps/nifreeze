@@ -1,7 +1,7 @@
 # emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 #
-# Copyright 2022 The NiPreps Developers <nipreps@gmail.com>
+# Copyright The NiPreps Developers <nipreps@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@
 from nifreeze._version import __version__
 
 __packagename__ = "nifreeze"
-__copyright__ = "Copyright 2021, The nifreeze developers"
-__url__ = "https://github.com/nipreps/EddyMotionCorrection"
+__copyright__ = "Copyright 2024, The NiFreeze developers"
+__url__ = "https://github.com/nipreps/nifreeze"
 
 DOWNLOAD_URL = f"https://github.com/nipreps/{__packagename__}/archive/{__version__}.tar.gz"

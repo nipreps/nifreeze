@@ -175,8 +175,8 @@ latex_elements = {
 latex_documents = [
     (
         master_doc,
-        "smriprep.tex",
-        "Eddymotion Documentation",
+        "nifreeze.tex",
+        "NiFreeze Documentation",
         "The NiPreps Developers",
         "manual",
     ),
@@ -187,7 +187,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, "smriprep", "Eddymotion Documentation", [author], 1)]
+man_pages = [(master_doc, "nifreeze", "NiFreeze Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output ----------------------------------------------
@@ -198,10 +198,10 @@ man_pages = [(master_doc, "smriprep", "Eddymotion Documentation", [author], 1)]
 texinfo_documents = [
     (
         master_doc,
-        "smriprep",
-        "Eddymotion Documentation",
+        "nifreeze",
+        "NiFreeze Documentation",
         author,
-        "Eddymotion",
+        "NiFreeze",
         "One line description of project.",
         "Miscellaneous",
     ),
