@@ -2,7 +2,7 @@ For developers
 ==============
 Contributing
 ------------
-*Eddymotion* is a project of the *NiPreps Community*, `which specifies the contributing guidelines <https://www.nipreps.org/community/>`__.
+*NiFreeze* is a project of the *NiPreps Community*, `which specifies the contributing guidelines <https://www.nipreps.org/community/>`__.
 Before delving into the code, please make sure you have read all the guidelines offered online.
 
 Documentation

@@ -3,10 +3,10 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Running Eddymotion" href="running.html" /><link rel="prev" title="Installation" href="installation.html" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Running NiFreeze" href="running.html" /><link rel="prev" title="Installation" href="installation.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>How to Use - nifreeze 24.0.0.dev5 documentation</title>
+        <title>How to Use - nifreeze 24.0.0.dev6 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
@@ -167,7 +167,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 24.0.0.dev5 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 24.0.0.dev6 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -190,14 +190,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">24.0.0.dev5</span>
+    <span id="version-slug" class="sidebar-brand-text">24.0.0.dev6</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">24.0.0.dev5</span>
+  <span class="sidebar-brand-text">24.0.0.dev6</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -211,7 +211,7 @@
   <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">How to Use</a></li>
-<li class="toctree-l1"><a class="reference internal" href="running.html">Running <em>Eddymotion</em></a></li>
+<li class="toctree-l1"><a class="reference internal" href="running.html">Running <em>NiFreeze</em></a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="developers.html">For developers</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of For developers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.cli.html">nifreeze.cli package</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of nifreeze.cli package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.cli.parser.html">nifreeze.cli.parser module</a></li>
@@ -299,14 +299,14 @@
         <article role="main" id="furo-main-content">
           <section id="how-to-use">
 <h1>How to Use<a class="headerlink" href="#how-to-use" title="Link to this heading">¶</a></h1>
-<section id="incorporating-eddymotion-into-a-python-module-or-script">
-<h2>Incorporating Eddymotion into a Python module or script<a class="headerlink" href="#incorporating-eddymotion-into-a-python-module-or-script" title="Link to this heading">¶</a></h2>
-<p>To utilize Eddymotion functionalities within your Python module or script, follow these steps:</p>
+<section id="incorporating-nifreeze-into-a-python-module-or-script">
+<h2>Incorporating NiFreeze into a Python module or script<a class="headerlink" href="#incorporating-nifreeze-into-a-python-module-or-script" title="Link to this heading">¶</a></h2>
+<p>To utilize NiFreeze functionalities within your Python module or script, follow these steps:</p>
 <ol class="arabic">
-<li><p><strong>Import Eddymotion Components</strong>: Start by importing necessary components from the Eddymotion package:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import required components from the Eddymotion package</span>
+<li><p><strong>Import NiFreeze Components</strong>: Start by importing necessary components from the NiFreeze package:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import required components from the nifreeze package</span>
 <span class="kn">from</span> <span class="nn">nifreeze.data</span> <span class="kn">import</span> <span class="n">dmri</span>
-<span class="kn">from</span> <span class="nn">nifreeze.estimator</span> <span class="kn">import</span> <span class="n">EddyMotionEstimator</span>
+<span class="kn">from</span> <span class="nn">nifreeze.estimator</span> <span class="kn">import</span> <span class="n">Estimator</span>
 </pre></div>
 </div>
 </li>
@@ -325,14 +325,14 @@ To load from an HDF5 file, use:</p>
 </div>
 </div>
 </li>
-<li><p><strong>Instantiate an Eddymotion Estimator Object</strong>: Create an instance of the <cite>EddyMotionEstimator</cite> class, which encapsulates tools for estimating rigid-body head motion and distortions due to eddy currents.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create an instance of the EddyMotionEstimator class</span>
-<span class="n">estimator</span> <span class="o">=</span> <span class="n">EddyMotionEstimator</span><span class="p">()</span>
+<li><p><strong>Instantiate an NiFreeze Estimator Object</strong>: Create an instance of the <cite>Estimator</cite> class, which encapsulates tools for estimating rigid-body head motion and distortions due to eddy currents.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create an instance of the Estimator class</span>
+<span class="n">estimator</span> <span class="o">=</span> <span class="n">Estimator</span><span class="p">()</span>
 </pre></div>
 </div>
 </li>
 <li><p><strong>Fit the Models to Estimate the Affine Transformation</strong>:</p>
-<p>Use the <cite>estimate</cite> method of the <cite>EddyMotionEstimator</cite> object to estimate the affine transformation parameters:</p>
+<p>Use the <cite>estimate</cite> method of the <cite>Estimator</cite> object to estimate the affine transformation parameters:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Estimate affine transformation parameters</span>
 <span class="n">estimated_affine</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">estimate</span><span class="p">(</span>
     <span class="n">dwi_data</span><span class="p">,</span>
@@ -407,7 +407,7 @@ the deformations due to head motion and eddy currents.</p>
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Running <em>Eddymotion</em></div>
+                <div class="title">Running <em>NiFreeze</em></div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -426,7 +426,7 @@ the deformations due to head motion and eddy currents.</p>
         <div class="bottom-of-page">
           <div class="left-details">
             <div class="copyright">
-                Copyright &#169; Copyright 2021, The nifreeze developers
+                Copyright &#169; Copyright 2024, The NiFreeze developers
             </div>
             Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
             
@@ -453,7 +453,7 @@ the deformations due to head motion and eddy currents.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">How to Use</a><ul>
-<li><a class="reference internal" href="#incorporating-eddymotion-into-a-python-module-or-script">Incorporating Eddymotion into a Python module or script</a></li>
+<li><a class="reference internal" href="#incorporating-nifreeze-into-a-python-module-or-script">Incorporating NiFreeze into a Python module or script</a></li>
 </ul>
 </li>
 </ul>
@@ -465,7 +465,7 @@ the deformations due to head motion and eddy currents.</p>
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=71896850"></script>
+</div><script src="_static/documentation_options.js?v=4671e23a"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=5fa4622c"></script>
