@@ -75,6 +75,15 @@ test = [
     "pytest-env",
     "pytest-xdist >= 1.28"
 ]
+types = [
+  "pandas-stubs",
+  "types-setuptools",
+  "scipy-stubs",
+  "types-PyYAML",
+  "types-tqdm",
+  "pytest",
+  "microsoft-python-type-stubs @ git+https://github.com/microsoft/python-type-stubs.git",
+]
 
 notebooks = [
     "jupyter",
@@ -137,6 +146,16 @@ version-file = "src/nifreeze/_version.py"
 #
 # Developer tool configurations
 #
+
+[[tool.mypy.overrides]]
+module = [
+  "nipype.*",
+  "nilearn.*",
+  "nireports.*",
+  "nitransforms.*",
+  "seaborn",
+]
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 99
