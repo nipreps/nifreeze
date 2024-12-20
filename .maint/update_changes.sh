@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Collects the pull-requests since the latest release and
-# aranges them in the CHANGES.rst.txt file.
+# aranges them in the CHANGES.rst file.
 #
 # This is a script to be run before releasing a new version.
 #
@@ -19,15 +19,8 @@ if [[ "$UPCOMING" == "0" ]]; then
     head -n3  CHANGES.rst >> newchanges
 fi
 
-# Elaborate today's release header
-HEADER="$1 ($(date '+%B %d, %Y'))"
-echo $HEADER >> newchanges
-echo $( printf "%${#HEADER}s" | tr " " "=" ) >> newchanges
-
 # Search for PRs since previous release
-git log --grep="Merge pull request" `git describe --tags --abbrev=0`..HEAD --pretty='format:  * %b %s' | sed  's/Merge pull request \#\([^\d]*\)\ from\ .*/(\#\1)/' >> newchanges
-echo "" >> newchanges
-echo "" >> newchanges
+git show --pretty='format:  * %b %s'  HEAD | sed 's/Merge pull request \#\([^\d]*\)\ from\ .*/(\#\1)/' >> newchanges
 
 # Add back the Upcoming header if it was present
 if [[ "$UPCOMING" == "0" ]]; then
@@ -38,3 +31,4 @@ fi
 
 # Replace old CHANGES.rst with new file
 mv newchanges CHANGES.rst
+

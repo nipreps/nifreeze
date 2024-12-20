@@ -156,7 +156,8 @@ inline-quotes = "double"
 
 [tool.ruff.lint.extend-per-file-ignores]
 "*/__init__.py" = ["F401"]
-"docs/conf.py" = ["E265"]
+".maint/update_authors.py" = ["C901"]
+"docs/conf.py" = ["E265", "E402"]
 "/^\\s*\\.\\. _.*?: http/" = ["E501"]
 
 [tool.ruff.format]

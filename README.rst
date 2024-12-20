@@ -3,6 +3,18 @@
 An open-source framework for volume-to-volume motion estimation in d/fMRI and PET,
 and Eddy-current-derived distortion estimation in dMRI.
 
+.. important:: *NiFreeze* is a fork of *eddymotion*
+
+   In November 2023, the *NiPreps Steering Committee* brought to the *Bi-monthly Roundup*
+   the discussion about re-branding *eddymotion* to better reflect its aspirations to
+   perform on diverse modalities.
+
+   The `repository of the project <https://github.com/nipreps/eddymotion>`__
+   has been archived, and development will continue under the *NiFreeze* project.
+
+   The contributor list of *eddymotion* is found under the credit file
+   ``.maint/EDDYMOTION.md`` in this repository.
+
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4680599.svg
    :target: https://doi.org/10.5281/zenodo.4680599
    :alt: DOI
