@@ -389,7 +389,7 @@ def generate_command(
             str(p) for p in _massage_mask_path(movingmask_path, nlevels)
         ]
 
-    # Set initalizing affine if provided
+    # Set initializing affine if provided
     if init_affine is not None:
         settings["initial_moving_transform"] = str(init_affine)
 
