@@ -33,7 +33,6 @@ Information on specific functions, classes, and methods.
    api/nifreeze.data.dmri
    api/nifreeze.estimator
    api/nifreeze.exceptions
-   api/nifreeze.math
    api/nifreeze.model
    api/nifreeze.registration
    api/nifreeze.testing
