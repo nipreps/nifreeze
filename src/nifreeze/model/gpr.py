@@ -212,7 +212,7 @@ class DiffusionGPR(GaussianProcessRegressor):
     ) -> tuple[float, float]:
         options = {}
         if self.optimizer == "fmin_l_bfgs_b":
-            from sklearn.utils.optimize import _check_optimize_result
+            from sklearn.utils.optimize import _check_optimize_result  # type: ignore
 
             for name in LBFGS_CONFIGURABLE_OPTIONS:
                 if (value := getattr(self, name, None)) is not None:
