@@ -29,13 +29,13 @@ from typing import Optional
 import yaml
 
 
-def _parse_yaml_config(file_path: Path) -> dict:
+def _parse_yaml_config(file_path: str) -> dict:
     """
     Parse YAML configuration file.
 
     Parameters
     ----------
-    file_path : Path
+    file_path : str
         Path to the YAML configuration file.
 
     Returns
