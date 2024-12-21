@@ -413,7 +413,7 @@ def _run_registration(
     i_iter: int,
     vol_idx: int,
     dirname: Path,
-    reg_target_type: str,
+    reg_target_type: str | tuple[str, str],
     align_kwargs: dict,
 ) -> nt.base.BaseTransform:
     """
@@ -443,7 +443,7 @@ def _run_registration(
         DWI frame index.
     dirname : :obj:`Path`
         Directory name where the transformation is saved.
-    reg_target_type : :obj:`str`
+    reg_target_type : :obj:`str` or tuple of :obj:`str`
         Target registration type.
     align_kwargs : :obj:`dict`
         Parameters to configure the image registration process.
