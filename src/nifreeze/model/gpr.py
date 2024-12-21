@@ -29,7 +29,7 @@ from typing import Callable, Mapping, Sequence
 
 import numpy as np
 from scipy import optimize
-from scipy.optimize._minimize import Bounds
+from scipy.optimize import Bounds
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import (
     Hyperparameter,
