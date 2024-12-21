@@ -154,6 +154,8 @@ def main() -> None:
     X_test = np.vstack([gtab[~gtab.b0s_mask].bvecs, sph.vertices])
 
     predictions = gpr_fit.predict(X_test)
+    if isinstance(predictions, tuple):
+        predictions = predictions[0]
 
     # Save the predicted data
     testsims.serialize_dwi(predictions.T, args.dwi_pred_data_fname)
