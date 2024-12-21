@@ -87,6 +87,7 @@ class GaussianProcessModel(ReconstModel):
     __slots__ = (
         "kernel",
         "_modelfit",
+        "sigma_sq",
     )
 
     def __init__(
