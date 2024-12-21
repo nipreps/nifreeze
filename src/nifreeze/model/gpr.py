@@ -25,7 +25,7 @@
 from __future__ import annotations
 
 from numbers import Integral, Real
-from typing import Callable, Mapping, Sequence
+from typing import Callable, ClassVar, Mapping, Sequence
 
 import numpy as np
 from scipy import optimize
@@ -153,7 +153,7 @@ class DiffusionGPR(GaussianProcessRegressor):
 
     """
 
-    _parameter_constraints: dict = {
+    _parameter_constraints: ClassVar[dict] = {
         "kernel": [None, Kernel],
         "alpha": [Interval(Real, 0, None, closed="left"), np.ndarray],
         "optimizer": [StrOptions(SUPPORTED_OPTIMIZERS), callable, None],
