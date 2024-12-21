@@ -89,9 +89,8 @@ class DWI:
 
     def set_transform(self, index, affine, order=3):
         """Set an affine, and update data object and gradients."""
-        reference = namedtuple("ImageGrid", ("shape", "affine"))(
-            shape=self.dataobj.shape[:3], affine=self.affine
-        )
+        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
+        reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
 
         # create a nitransforms object
         if self.fieldmap:

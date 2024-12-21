@@ -472,7 +472,8 @@ def _run_registration(
         registration.inputs.fixed_image_masks = ["NULL", bmask_img]
 
     if em_affines is not None and np.any(em_affines[vol_idx, ...]):
-        reference = namedtuple("ImageGrid", ("shape", "affine"))(shape=shape, affine=affine)
+        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
+        reference = ImageGrid(shape=shape, affine=affine)
 
         # create a nitransforms object
         if fieldmap:
