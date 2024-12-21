@@ -332,7 +332,7 @@ class ExponentialKriging(Kernel):
 
         return self.beta_l * C_theta, K_gradient
 
-    def diag(self, X: np.ndarray) -> np.ndarray:
+    def diag(self, X) -> np.ndarray:
         """Returns the diagonal of the kernel k(X, X).
 
         The result of this method is identical to np.diag(self(X)); however,
@@ -442,7 +442,7 @@ class SphericalKriging(Kernel):
 
         return self.beta_l * C_theta, K_gradient
 
-    def diag(self, X: np.ndarray) -> np.ndarray:
+    def diag(self, X) -> np.ndarray:
         """Returns the diagonal of the kernel k(X, X).
 
         The result of this method is identical to np.diag(self(X)); however,
