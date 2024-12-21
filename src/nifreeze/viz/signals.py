@@ -37,7 +37,7 @@ def plot_error(
     ylabel: str,
     title: str,
     color: str = "orange",
-    figsize: tuple[int, int] = (19.2, 10.8),
+    figsize: tuple[float, float] = (19.2, 10.8),
 ) -> plt.Figure:
     """
     Plot the error and standard deviation.
