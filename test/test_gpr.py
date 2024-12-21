@@ -20,16 +20,12 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-from collections import namedtuple
 
 import numpy as np
 import pytest
 from dipy.io import read_bvals_bvecs
 
 from nifreeze.model import gpr
-
-GradientTablePatch = namedtuple("gtab", ["bvals", "bvecs"])
-
 
 THETAS = np.linspace(0, np.pi / 2, num=50)
 EXPECTED_EXPONENTIAL = [
