@@ -100,7 +100,7 @@ def main() -> None:
         bval = bval[0]
     else:
         raise ValueError(f"More than one unique bval value: {bval}")
-    rmse_data = [df.groupby("n_folds").get_group(k)["rmse"].values for k in kfolds]
+    rmse_data = np.asarray([df.groupby("n_folds").get_group(k)["rmse"].values for k in kfolds])
     axis = 1
     mean = np.mean(rmse_data, axis=axis)
     std_dev = np.std(rmse_data, axis=axis)
