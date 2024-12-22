@@ -33,9 +33,10 @@ def linear_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
 
     Parameters
     ----------
-    size : :obj:`int`
-        Number of volumes in the dataset
-        (for instance, the number of orientations in a DWI)
+    size : :obj:`int` or None, optional
+        Number of volumes in the dataset (for instance, the number of
+        orientations in a DWI). If `None`, the size is inferred from the `bvals`
+        argument in `kwargs`, if present.
 
     Returns
     -------
@@ -60,16 +61,17 @@ def random_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
     """
     Traverse the dataset volumes randomly.
 
+    If the `seed` key is present in the keyword arguments, initializes the seed
+    of Python's `random` pseudo-random number generator library with the given
+    value. Specifically, if `False`, `None` is used as the seed; it `True`, a
+    default seed value is used.
+
     Parameters
     ----------
-    size : :obj:`int`
-        Number of volumes in the dataset
-        (for instance, the number of orientations in a DWI)
-    seed : :obj:`int` or :obj:`bool` or :obj:`bool` or ``None``
-        If :obj:`int` or :obj:`str` or ``None``, initializes the seed of Python's random generator
-        with the given value.
-        If ``False``, the random generator is passed ``None``.
-        If ``True``, a default seed value is set.
+    size : :obj:`int` or None, optional
+        Number of volumes in the dataset (for instance, the number of
+        orientations in a DWI). If `None`, the size is inferred from the `bvals`
+        argument in `kwargs`, if present.
 
     Returns
     -------
@@ -138,9 +140,10 @@ def centralsym_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
 
     Parameters
     ----------
-    size : :obj:`int`
-        Number of volumes in the dataset
-        (for instance, the number of orientations in a DWI)
+    size : :obj:`int` or None, optional
+        Number of volumes in the dataset (for instance, the number of
+        orientations in a DWI). If `None`, the size is inferred from the `bvals`
+        argument in `kwargs`, if present.
 
     Returns
     -------
