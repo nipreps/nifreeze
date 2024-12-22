@@ -22,6 +22,8 @@
 #
 """Base infrastructure for nifreeze's models."""
 
+from warnings import warn
+
 import numpy as np
 
 from nifreeze.exceptions import ModelNotFittedError
@@ -93,6 +95,9 @@ class BaseModel:
         self._models = None  # For parallel (chunked) execution
 
         # Setup brain mask
+        if mask is None:
+            warn("No mask provided; consider using a mask to avoid issues in model optimization.")
+
         self._mask = mask
 
         self._datashape = None

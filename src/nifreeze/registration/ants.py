@@ -382,12 +382,16 @@ def generate_command(
         settings["fixed_image_masks"] = [
             str(p) for p in _massage_mask_path(fixedmask_path, nlevels)
         ]
+    else:
+        warn("No fixed image mask provided; consider using a mask to avoid optimization issues.")
 
     # Set moving masks if provided
     if movingmask_path is not None:
         settings["moving_image_masks"] = [
             str(p) for p in _massage_mask_path(movingmask_path, nlevels)
         ]
+    else:
+        warn("No moving image mask provided; consider using a mask to avoid optimization issues.")
 
     # Set initalizing affine if provided
     if init_affine is not None:
