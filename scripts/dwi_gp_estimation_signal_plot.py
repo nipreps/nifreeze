@@ -114,7 +114,7 @@ def main() -> None:
     y_pred = nib.load(args.dwi_pred_data_fname).get_fdata()
 
     bvals, bvecs = read_bvals_bvecs(str(args.bval_data_fname), str(args.bvec_data_fname))
-    gtab = gradient_table(bvals, bvecs)
+    gtab = gradient_table(bvals, bvecs=bvecs)
 
     # Pick one voxel randomly
     rng = np.random.default_rng(1234)

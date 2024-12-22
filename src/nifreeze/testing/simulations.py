@@ -178,7 +178,7 @@ def create_single_shell_gradient_table(
 
     # Add a b0 value to the gradient table
     bvals, bvecs = add_b0(bvals, bvecs)
-    return gradient_table(bvals, bvecs)
+    return gradient_table(bvals, bvecs=bvecs)
 
 
 def get_query_vectors(

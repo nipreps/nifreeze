@@ -286,5 +286,5 @@ def _rasb2dipy(gradient):
         from dipy.core.gradients import gradient_table
 
         warnings.filterwarnings("ignore", category=UserWarning)
-        retval = gradient_table(gradient[3, :], gradient[:3, :].T)
+        retval = gradient_table(gradient[3, :], bvecs=gradient[:3, :].T)
     return retval
