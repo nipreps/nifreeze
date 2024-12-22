@@ -172,7 +172,13 @@ norecursedirs = [".*", "_*"]
 addopts = "-v --doctest-modules"
 doctest_optionflags = "ALLOW_UNICODE NORMALIZE_WHITESPACE ELLIPSIS"
 env = "PYTHONHASHSEED=0"
-filterwarnings = ["ignore::DeprecationWarning"]
+filterwarnings = [
+  "ignore::DeprecationWarning",
+  # DIPY
+  "ignore:Updating b0_threshold to.*:UserWarning",
+  # scikit-learn
+  "ignore:The optimal value found for dimension.*:sklearn.exceptions.ConvergenceWarning",
+]
 
 
 [tool.coverage.run]
