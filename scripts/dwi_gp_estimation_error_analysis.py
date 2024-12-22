@@ -49,7 +49,7 @@ def cross_validate(
     cv: int,
     n_repeats: int,
     gpr: DiffusionGPR,
-) -> dict[int, list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]]:
+) -> np.ndarray:
     """
     Perform the experiment by estimating the dMRI signal using a Gaussian process model.
 
@@ -68,7 +68,7 @@ def cross_validate(
 
     Returns
     -------
-    :obj:`dict`
+    :obj:`~numpy.ndarray`
         Data for the predicted signal and its error.
 
     """
