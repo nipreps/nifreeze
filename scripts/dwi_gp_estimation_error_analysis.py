@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 from collections import defaultdict
 from pathlib import Path
+from typing import DefaultDict, List
 
 import numpy as np
 import pandas as pd
@@ -206,7 +207,7 @@ def main() -> None:
 
     if args.kfold:
         # Use Scikit-learn cross validation
-        scores = defaultdict(list, {})
+        scores: DefaultDict[str, List[float | str]] = defaultdict(list)
         for n in args.kfold:
             for i in range(args.repeats):
                 cv_scores = -1.0 * cross_validate(X, y.T, n, n_repeats, gpr)
