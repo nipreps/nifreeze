@@ -217,7 +217,7 @@ def main() -> None:
             print(f"Finished {n}-fold cross-validation")
 
         scores_df = pd.DataFrame(scores)
-        scores_df.to_csv(args.output_scores, sep="\t", index=None, na_rep="n/a")
+        scores_df.to_csv(args.output_scores, sep="\t", index=False, na_rep="n/a")
 
         grouped = scores_df.groupby(["n_folds"])
         print(grouped[["rmse"]].mean())
