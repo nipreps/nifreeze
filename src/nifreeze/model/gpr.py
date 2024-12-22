@@ -25,7 +25,7 @@
 from __future__ import annotations
 
 from numbers import Integral, Real
-from typing import Callable, ClassVar, Mapping, Sequence
+from typing import Callable, ClassVar, Mapping, Optional, Sequence, Union
 
 import numpy as np
 from scipy import optimize
@@ -152,6 +152,8 @@ class DiffusionGPR(GaussianProcessRegressor):
         imaging, NeuroImage 125 (2016) 1063-11078
 
     """
+
+    optimizer: Optional[Union[StrOptions, Callable, None]] = None
 
     _parameter_constraints: ClassVar[dict] = {
         "kernel": [None, Kernel],
