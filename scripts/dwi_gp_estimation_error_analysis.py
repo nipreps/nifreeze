@@ -189,11 +189,11 @@ def main() -> None:
 
     snr_str = args.snr if args.snr is not None else "None"
 
-    a = 1.15
-    lambda_s = 120
+    beta_a = 1.15
+    beta_l = 120
     alpha = 1
     gpr = DiffusionGPR(
-        kernel=SphericalKriging(beta_a=a, beta_l=lambda_s),
+        kernel=SphericalKriging(beta_a=beta_a, beta_l=beta_l),
         alpha=alpha,
         optimizer=None,
         # optimizer="Nelder-Mead",

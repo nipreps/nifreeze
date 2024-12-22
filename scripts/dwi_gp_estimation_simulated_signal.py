@@ -132,11 +132,11 @@ def main() -> None:
 
     # Fit the Gaussian Process regressor and predict on an arbitrary number of
     # directions
-    a = 1.15
-    lambda_s = 120
+    beta_a = 1.15
+    beta_l = 120
     alpha = 100
     gpr = DiffusionGPR(
-        kernel=SphericalKriging(a=a, lambda_s=lambda_s),
+        kernel=SphericalKriging(beta_a=beta_a, beta_l=beta_l),
         alpha=alpha,
         optimizer=None,
     )
