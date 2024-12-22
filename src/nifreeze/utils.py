@@ -54,7 +54,7 @@ def linear_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
     if size is None:
         raise TypeError("Cannot build iterator without size")
 
-    return range(size)
+    return iter(range(size))
 
 
 def random_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
