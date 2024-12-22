@@ -107,14 +107,9 @@ def random_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
     return (x for x in index_order)
 
 
-def bvalue_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
+def bvalue_iterator(*_, **kwargs) -> Iterator[int]:
     """
     Traverse the volumes in a DWI dataset by growing b-value.
-
-    Parameters
-    ----------
-    bvalues : :obj:`list`
-        List of b-values corresponding to all orientations of the dataset.
 
     Returns
     -------
