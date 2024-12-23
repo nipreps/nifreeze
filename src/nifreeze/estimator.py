@@ -28,10 +28,10 @@ from tempfile import TemporaryDirectory, mkstemp
 import nibabel as nb
 from tqdm import tqdm
 
-from nifreeze import utils as eutils
 from nifreeze.data.splitting import lovo_split
 from nifreeze.model.base import ModelFactory
 from nifreeze.registration.ants import _prepare_registration_data, _run_registration
+from nifreeze.utils import iterators
 
 
 class Estimator:
@@ -90,7 +90,7 @@ class Estimator:
         } | iter_kwargs
         iter_kwargs["size"] = len(data)
 
-        iterfunc = getattr(eutils, f'{iter_kwargs.pop("strategy", "random")}_iterator')
+        iterfunc = getattr(iterators, f'{iter_kwargs.pop("strategy", "random")}_iterator')
         index_order = list(iterfunc(**iter_kwargs))
 
         align_kwargs = align_kwargs or {}

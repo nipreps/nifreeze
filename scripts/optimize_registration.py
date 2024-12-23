@@ -37,6 +37,7 @@ from smac.utils.configspace import get_config_hash
 
 from nifreeze.registration import ants as erants
 from nifreeze.registration import utils
+from nifreeze.utils.ndimage import load_api
 
 logger = logging.getLogger("ants-optimization")
 
@@ -168,7 +169,7 @@ async def train_coro(
             ),
         )
 
-        masknii = nb.load(brainmask_path)
+        masknii = load_api(brainmask_path, nb.Nifti1Image)
         initial_error = utils.displacements_within_mask(
             masknii,
             ref_xfms[i],
