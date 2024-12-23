@@ -24,13 +24,13 @@
 import os
 import typing
 
-import nibabel as nib
+import nibabel as nb
 
-ImgT = typing.TypeVar("ImgT", bound=nib.filebasedimages.FileBasedImage)
+ImgT = typing.TypeVar("ImgT", bound=nb.filebasedimages.FileBasedImage)
 
 
 def load_api(path: str | os.PathLike[str], api: type[ImgT]) -> ImgT:
-    img = nib.load(path)
+    img = nb.load(path)
     if not isinstance(img, api):
         raise TypeError(f"File {path} does not implement {api} interface")
     return img

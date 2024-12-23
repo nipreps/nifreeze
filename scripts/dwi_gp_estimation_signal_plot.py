@@ -30,7 +30,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-import nibabel as nib
+import nibabel as nb
 import numpy as np
 from dipy.core.gradients import gradient_table
 from dipy.io import read_bvals_bvecs
@@ -111,8 +111,8 @@ def main() -> None:
     # Plot the predicted DWI signal at a single voxel
 
     # Load the dMRI data
-    signal = load_api(args.dwi_gt_data_fname, nib.Nifti1Image).get_fdata()
-    y_pred = load_api(args.dwi_pred_data_fname, nib.Nifti1Image).get_fdata()
+    signal = load_api(args.dwi_gt_data_fname, nb.Nifti1Image).get_fdata()
+    y_pred = load_api(args.dwi_pred_data_fname, nb.Nifti1Image).get_fdata()
 
     bvals, bvecs = read_bvals_bvecs(str(args.bval_data_fname), str(args.bvec_data_fname))
     gtab = gradient_table(bvals, bvecs)

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import nibabel as nib
+import nibabel as nb
 import nitransforms as nt
 import numpy as np
 
@@ -26,7 +26,7 @@ def apply_affines(nii, em_affines, output_filename=None):
     """
     transformed_nii = np.zeros_like(np.asanyarray(nii.dataobj))
 
-    for ii, bvecnii in enumerate(nib.four_to_three(nii)):
+    for ii, bvecnii in enumerate(nb.four_to_three(nii)):
         xfms = nt.linear.Affine(em_affines[ii])
         transformed_nii[..., ii] = np.asanyarray((~xfms).apply(bvecnii, reference=nii).dataobj)
 
