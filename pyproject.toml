@@ -69,6 +69,7 @@ resmon = ["psutil >=5.4"]
 test = [
     "coverage",
     "pytest >= 4.4",
+    "pytest-console-scripts",
     "pytest-cov",
     "pytest-env",
     "pytest-xdist >= 1.28"
