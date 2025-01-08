@@ -3,10 +3,10 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="nifreeze.testing package" href="nifreeze.testing.html" /><link rel="prev" title="nifreeze.registration.ants module" href="nifreeze.registration.ants.html" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="nifreeze.utils.ndimage module" href="nifreeze.utils.ndimage.html" /><link rel="prev" title="nifreeze.utils package" href="nifreeze.utils.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.registration.utils module - nifreeze 25.0.0.dev12 documentation</title>
+        <title>nifreeze.utils.iterators module - nifreeze 25.0.0.dev12 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
@@ -236,17 +236,17 @@
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.model.pet.html">nifreeze.model.pet module</a></li>
 </ul>
 </li>
-<li class="toctree-l2 current has-children"><a class="reference internal" href="nifreeze.registration.html">nifreeze.registration package</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of nifreeze.registration package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.registration.html">nifreeze.registration package</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of nifreeze.registration package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.registration.ants.html">nifreeze.registration.ants module</a></li>
-<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">nifreeze.registration.utils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.registration.utils.html">nifreeze.registration.utils module</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.testing.html">nifreeze.testing package</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of nifreeze.testing package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.testing.simulations.html">nifreeze.testing.simulations module</a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.utils.html">nifreeze.utils package</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of nifreeze.utils package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l3"><a class="reference internal" href="nifreeze.utils.iterators.html">nifreeze.utils.iterators module</a></li>
+<li class="toctree-l2 current has-children"><a class="reference internal" href="nifreeze.utils.html">nifreeze.utils package</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of nifreeze.utils package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">nifreeze.utils.iterators module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.utils.ndimage.html">nifreeze.utils.ndimage module</a></li>
 </ul>
 </li>
@@ -277,7 +277,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../_sources/api/nifreeze.registration.utils.rst.txt" title="View this page">
+  <a class="muted-link" href="../_sources/api/nifreeze.utils.iterators.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -297,56 +297,113 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="module-nifreeze.registration.utils">
-<span id="nifreeze-registration-utils-module"></span><h1>nifreeze.registration.utils module<a class="headerlink" href="#module-nifreeze.registration.utils" title="Link to this heading">¶</a></h1>
-<p>Utilities to aid in performing and evaluating image registration.</p>
-<p>This module provides functions to compute displacements of image coordinates
-under a transformation, useful for assessing the accuracy of image registration
-processes.</p>
+          <section id="module-nifreeze.utils.iterators">
+<span id="nifreeze-utils-iterators-module"></span><h1>nifreeze.utils.iterators module<a class="headerlink" href="#module-nifreeze.utils.iterators" title="Link to this heading">¶</a></h1>
+<p>Iterators to traverse the volumes in a 4D image.</p>
 <dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.registration.utils.displacement_framewise">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.registration.utils.</span></span><span class="sig-name descname"><span class="pre">displacement_framewise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://nipy.org/nibabel/reference/nibabel.spatialimages.html#nibabel.spatialimages.SpatialImage" title="(in NiBabel v5.4.0.dev1+g3b1c7b37)"><span class="pre">nibabel.spatialimages.SpatialImage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_xfm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">nitransforms.base.BaseTransform</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/registration/utils.html#displacement_framewise"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.registration.utils.displacement_framewise" title="Link to this definition">¶</a></dt>
-<dd><p>Compute the framewise displacement (FD) for a given transformation.</p>
+<dt class="sig sig-object py" id="nifreeze.utils.iterators.bvalue_iterator">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">bvalue_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.13)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#bvalue_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.bvalue_iterator" title="Link to this definition">¶</a></dt>
+<dd><p>Traverse the volumes in a DWI dataset by growing b-value.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>img</strong> (<a class="reference external" href="https://nipy.org/nibabel/reference/nibabel.spatialimages.html#nibabel.spatialimages.SpatialImage" title="(in NiBabel v5.4.0.dev1+g3b1c7b37)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SpatialImage</span></code></a>) – The reference image. Used to extract the center coordinates.</p></li>
-<li><p><strong>test_xfm</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">BaseTransform</span></code>) – The transformation to test. Applied to coordinates around the image center.</p></li>
-<li><p><strong>radius</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional) – The radius (in mm) of the spherical neighborhood around the center of the image.
-Default is 50.0 mm.</p></li>
-</ul>
+<dd class="field-odd"><p><strong>bvalues</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>) – List of b-values corresponding to all orientations of the dataset.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The average framewise displacement (FD) for the test transformation.</p>
+<dd class="field-even"><p>The sorted index order.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterator</span></code></a></p>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">bvalue_iterator</span><span class="p">(</span><span class="n">bvals</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">,</span> <span class="mf">2000.0</span><span class="p">,</span> <span class="mf">2000.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]))</span>
+<span class="go">[0, 1, 8, 4, 5, 2, 3, 6, 7]</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.registration.utils.displacements_within_mask">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.registration.utils.</span></span><span class="sig-name descname"><span class="pre">displacements_within_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mask_img</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">nb.spatialimages.SpatialImage</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_xfm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">nt.base.BaseTransform</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_xfm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">nt.base.BaseTransform</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">np.ndarray</span></span></span><a class="reference internal" href="../_modules/nifreeze/registration/utils.html#displacements_within_mask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.registration.utils.displacements_within_mask" title="Link to this definition">¶</a></dt>
-<dd><p>Compute the distance between voxel coordinates mapped through two transforms.</p>
+<dt class="sig sig-object py" id="nifreeze.utils.iterators.centralsym_iterator">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">centralsym_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.13)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#centralsym_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.centralsym_iterator" title="Link to this definition">¶</a></dt>
+<dd><p>Traverse the dataset starting from the center and alternatingly progressing to the sides.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>) – Number of volumes in the dataset
+(for instance, the number of orientations in a DWI)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The sorted index order.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterator</span></code></a></p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">centralsym_iterator</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+<span class="go">[5, 4, 6, 3, 7, 2, 8, 1, 9, 0]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">centralsym_iterator</span><span class="p">(</span><span class="mi">11</span><span class="p">))</span>
+<span class="go">[5, 4, 6, 3, 7, 2, 8, 1, 9, 0, 10]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nifreeze.utils.iterators.linear_iterator">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">linear_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.13)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#linear_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.linear_iterator" title="Link to this definition">¶</a></dt>
+<dd><p>Traverse the dataset volumes in ascending order.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>) – Number of volumes in the dataset
+(for instance, the number of orientations in a DWI)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The sorted index order.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterator</span></code></a></p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">linear_iterator</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+<span class="go">[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nifreeze.utils.iterators.random_iterator">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">random_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.13)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#random_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.random_iterator" title="Link to this definition">¶</a></dt>
+<dd><p>Traverse the dataset volumes randomly.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>mask_img</strong> (<a class="reference external" href="https://nipy.org/nibabel/reference/nibabel.spatialimages.html#nibabel.spatialimages.SpatialImage" title="(in NiBabel v5.4.0.dev1+g3b1c7b37)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SpatialImage</span></code></a>) – A mask image that defines the region of interest. Voxel coordinates
-within the mask are transformed.</p></li>
-<li><p><strong>test_xfm</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">BaseTransform</span></code>) – The transformation to test. This transformation is applied to the
-voxel coordinates.</p></li>
-<li><p><strong>reference_xfm</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">BaseTransform</span></code>, optional) – A reference transformation to compare with. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, the identity
-transformation is assumed (no transformation).</p></li>
+<li><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>) – Number of volumes in the dataset
+(for instance, the number of orientations in a DWI)</p></li>
+<li><p><strong>seed</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a> or <code class="docutils literal notranslate"><span class="pre">None</span></code>) – If <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> or <code class="docutils literal notranslate"><span class="pre">None</span></code>, initializes the seed of Python’s random generator
+with the given value.
+If <code class="docutils literal notranslate"><span class="pre">False</span></code>, the random generator is passed <code class="docutils literal notranslate"><span class="pre">None</span></code>.
+If <code class="docutils literal notranslate"><span class="pre">True</span></code>, a default seed value is set.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>An array of displacements (in mm) for each voxel within the mask.</p>
+<dd class="field-even"><p>The sorted index order.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterator</span></code></a></p>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>  <span class="c1"># seed is 0</span>
+<span class="go">[1, 10, 9, 5, 11, 2, 3, 7, 8, 4, 0, 14, 12, 6, 13]</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="c1"># seed is True -&gt; the default value 20210324 is set</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="go">[1, 12, 14, 5, 0, 11, 10, 9, 7, 8, 3, 13, 2, 6, 4]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">20210324</span><span class="p">))</span>
+<span class="go">[1, 12, 14, 5, 0, 11, 10, 9, 7, 8, 3, 13, 2, 6, 4]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">))</span>  <span class="c1"># seed is 42</span>
+<span class="go">[8, 13, 7, 6, 14, 12, 5, 2, 9, 3, 4, 11, 0, 1, 10]</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>
@@ -356,23 +413,23 @@ transformation is assumed (no transformation).</p></li>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="nifreeze.testing.html">
+          <a class="next-page" href="nifreeze.utils.ndimage.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">nifreeze.testing package</div>
+                <div class="title">nifreeze.utils.ndimage module</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="nifreeze.registration.ants.html">
+          <a class="prev-page" href="nifreeze.utils.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">nifreeze.registration.ants module</div>
+                <div class="title">nifreeze.utils package</div>
                 
               </div>
             </a>
@@ -406,9 +463,11 @@ transformation is assumed (no transformation).</p></li>
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">nifreeze.registration.utils module</a><ul>
-<li><a class="reference internal" href="#nifreeze.registration.utils.displacement_framewise"><code class="docutils literal notranslate"><span class="pre">displacement_framewise()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.registration.utils.displacements_within_mask"><code class="docutils literal notranslate"><span class="pre">displacements_within_mask()</span></code></a></li>
+<li><a class="reference internal" href="#">nifreeze.utils.iterators module</a><ul>
+<li><a class="reference internal" href="#nifreeze.utils.iterators.bvalue_iterator"><code class="docutils literal notranslate"><span class="pre">bvalue_iterator()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.utils.iterators.centralsym_iterator"><code class="docutils literal notranslate"><span class="pre">centralsym_iterator()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.utils.iterators.linear_iterator"><code class="docutils literal notranslate"><span class="pre">linear_iterator()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.utils.iterators.random_iterator"><code class="docutils literal notranslate"><span class="pre">random_iterator()</span></code></a></li>
 </ul>
 </li>
 </ul>

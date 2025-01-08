@@ -3,10 +3,10 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="nifreeze.viz package" href="nifreeze.viz.html" /><link rel="prev" title="nifreeze.testing.simulations module" href="nifreeze.testing.simulations.html" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="nifreeze.utils.iterators module" href="nifreeze.utils.iterators.html" /><link rel="prev" title="nifreeze.testing.simulations module" href="nifreeze.testing.simulations.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.utils module - nifreeze 25.0.0.dev10 documentation</title>
+        <title>nifreeze.utils package - nifreeze 25.0.0.dev12 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
@@ -167,7 +167,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev10 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev12 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -190,14 +190,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev10</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev12</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev10</span>
+  <span class="sidebar-brand-text">25.0.0.dev12</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -245,8 +245,12 @@
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.testing.simulations.html">nifreeze.testing.simulations module</a></li>
 </ul>
 </li>
-<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">nifreeze.utils module</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.viz.html">nifreeze.viz package</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of nifreeze.viz package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 current has-children current-page"><a class="current reference internal" href="#">nifreeze.utils package</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of nifreeze.utils package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.utils.iterators.html">nifreeze.utils.iterators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.utils.ndimage.html">nifreeze.utils.ndimage module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.viz.html">nifreeze.viz package</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of nifreeze.viz package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.viz.signals.html">nifreeze.viz.signals module</a></li>
 </ul>
 </li>
@@ -294,114 +298,16 @@
         </div>
         <article role="main" id="furo-main-content">
           <section id="module-nifreeze.utils">
-<span id="nifreeze-utils-module"></span><h1>nifreeze.utils module<a class="headerlink" href="#module-nifreeze.utils" title="Link to this heading">¶</a></h1>
-<p>Iterators to traverse the volumes in a 4D image.</p>
-<dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.utils.bvalue_iterator">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.</span></span><span class="sig-name descname"><span class="pre">bvalue_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.13)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils.html#bvalue_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.bvalue_iterator" title="Link to this definition">¶</a></dt>
-<dd><p>Traverse the volumes in a DWI dataset by growing b-value.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>bvalues</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>) – List of b-values corresponding to all orientations of the dataset.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The sorted index order.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterator</span></code></a></p>
-</dd>
-</dl>
-<p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">bvalue_iterator</span><span class="p">(</span><span class="n">bvals</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">,</span> <span class="mf">2000.0</span><span class="p">,</span> <span class="mf">2000.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]))</span>
-<span class="go">[0, 1, 8, 4, 5, 2, 3, 6, 7]</span>
-</pre></div>
-</div>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.utils.centralsym_iterator">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.</span></span><span class="sig-name descname"><span class="pre">centralsym_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.13)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils.html#centralsym_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.centralsym_iterator" title="Link to this definition">¶</a></dt>
-<dd><p>Traverse the dataset starting from the center and alternatingly progressing to the sides.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>) – Number of volumes in the dataset
-(for instance, the number of orientations in a DWI)</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The sorted index order.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterator</span></code></a></p>
-</dd>
-</dl>
-<p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">centralsym_iterator</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
-<span class="go">[5, 4, 6, 3, 7, 2, 8, 1, 9, 0]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">centralsym_iterator</span><span class="p">(</span><span class="mi">11</span><span class="p">))</span>
-<span class="go">[5, 4, 6, 3, 7, 2, 8, 1, 9, 0, 10]</span>
-</pre></div>
-</div>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.utils.linear_iterator">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.</span></span><span class="sig-name descname"><span class="pre">linear_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.13)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils.html#linear_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.linear_iterator" title="Link to this definition">¶</a></dt>
-<dd><p>Traverse the dataset volumes in ascending order.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>) – Number of volumes in the dataset
-(for instance, the number of orientations in a DWI)</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The sorted index order.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterator</span></code></a></p>
-</dd>
-</dl>
-<p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">linear_iterator</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
-<span class="go">[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]</span>
-</pre></div>
-</div>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.utils.random_iterator">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.</span></span><span class="sig-name descname"><span class="pre">random_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.13)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils.html#random_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.random_iterator" title="Link to this definition">¶</a></dt>
-<dd><p>Traverse the dataset volumes randomly.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>) – Number of volumes in the dataset
-(for instance, the number of orientations in a DWI)</p></li>
-<li><p><strong>seed</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a> or <code class="docutils literal notranslate"><span class="pre">None</span></code>) – If <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> or <code class="docutils literal notranslate"><span class="pre">None</span></code>, initializes the seed of Python’s random generator
-with the given value.
-If <code class="docutils literal notranslate"><span class="pre">False</span></code>, the random generator is passed <code class="docutils literal notranslate"><span class="pre">None</span></code>.
-If <code class="docutils literal notranslate"><span class="pre">True</span></code>, a default seed value is set.</p></li>
+<span id="nifreeze-utils-package"></span><h1>nifreeze.utils package<a class="headerlink" href="#module-nifreeze.utils" title="Link to this heading">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="nifreeze.utils.iterators.html">nifreeze.utils.iterators module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nifreeze.utils.ndimage.html">nifreeze.utils.ndimage module</a></li>
 </ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The sorted index order.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Iterator</span></code></a></p>
-</dd>
-</dl>
-<p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>  <span class="c1"># seed is 0</span>
-<span class="go">[1, 10, 9, 5, 11, 2, 3, 7, 8, 4, 0, 14, 12, 6, 13]</span>
-<span class="gp">&gt;&gt;&gt; </span> <span class="c1"># seed is True -&gt; the default value 20210324 is set</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
-<span class="go">[1, 12, 14, 5, 0, 11, 10, 9, 7, 8, 3, 13, 2, 6, 4]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">20210324</span><span class="p">))</span>
-<span class="go">[1, 12, 14, 5, 0, 11, 10, 9, 7, 8, 3, 13, 2, 6, 4]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">))</span>  <span class="c1"># seed is 42</span>
-<span class="go">[8, 13, 7, 6, 14, 12, 5, 2, 9, 3, 4, 11, 0, 1, 10]</span>
-</pre></div>
 </div>
-</dd></dl>
-
+</section>
 </section>
 
         </article>
@@ -409,12 +315,12 @@ If <code class="docutils literal notranslate"><span class="pre">True</span></cod
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="nifreeze.viz.html">
+          <a class="next-page" href="nifreeze.utils.iterators.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">nifreeze.viz package</div>
+                <div class="title">nifreeze.utils.iterators module</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -459,11 +365,8 @@ If <code class="docutils literal notranslate"><span class="pre">True</span></cod
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">nifreeze.utils module</a><ul>
-<li><a class="reference internal" href="#nifreeze.utils.bvalue_iterator"><code class="docutils literal notranslate"><span class="pre">bvalue_iterator()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.utils.centralsym_iterator"><code class="docutils literal notranslate"><span class="pre">centralsym_iterator()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.utils.linear_iterator"><code class="docutils literal notranslate"><span class="pre">linear_iterator()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.utils.random_iterator"><code class="docutils literal notranslate"><span class="pre">random_iterator()</span></code></a></li>
+<li><a class="reference internal" href="#">nifreeze.utils package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
 </ul>
 </li>
 </ul>
@@ -475,7 +378,7 @@ If <code class="docutils literal notranslate"><span class="pre">True</span></cod
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=743951a9"></script>
+</div><script src="../_static/documentation_options.js?v=e7b95fda"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
