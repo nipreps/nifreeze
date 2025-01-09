@@ -22,6 +22,7 @@ env:
   TEST_DATA_HOME: /home/runner/nifreeze-tests/
   ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS: 4
   ANTSPATH: /usr/share/miniconda/bin/
+  NIFREEZE_WERRORS: 1
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
