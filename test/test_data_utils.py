@@ -1,4 +1,4 @@
-import nibabel as nib
+import nibabel as nb
 import numpy as np
 import numpy.testing as npt
 
@@ -12,7 +12,7 @@ def test_apply_affines():
     nii_data = rng.random((10, 10, 10, 10))
 
     # Generate Nifti1Image
-    nii = nib.Nifti1Image(nii_data, np.eye(4))
+    nii = nb.Nifti1Image(nii_data, np.eye(4))
 
     # Generate synthetic affines
     em_affines = np.expand_dims(np.eye(4), 0).repeat(nii_data.shape[-1], 0)
