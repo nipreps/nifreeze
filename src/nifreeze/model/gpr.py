@@ -25,11 +25,11 @@
 from __future__ import annotations
 
 from numbers import Integral, Real
-from typing import Callable, Mapping, Sequence
+from typing import Callable, ClassVar, Mapping, Optional, Sequence, Union
 
 import numpy as np
 from scipy import optimize
-from scipy.optimize._minimize import Bounds
+from scipy.optimize import Bounds
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import (
     Hyperparameter,
@@ -153,7 +153,9 @@ class DiffusionGPR(GaussianProcessRegressor):
 
     """
 
-    _parameter_constraints: dict = {
+    optimizer: Optional[Union[StrOptions, Callable, None]] = None
+
+    _parameter_constraints: ClassVar[dict] = {
         "kernel": [None, Kernel],
         "alpha": [Interval(Real, 0, None, closed="left"), np.ndarray],
         "optimizer": [StrOptions(SUPPORTED_OPTIMIZERS), callable, None],
@@ -212,7 +214,7 @@ class DiffusionGPR(GaussianProcessRegressor):
     ) -> tuple[float, float]:
         options = {}
         if self.optimizer == "fmin_l_bfgs_b":
-            from sklearn.utils.optimize import _check_optimize_result
+            from sklearn.utils.optimize import _check_optimize_result  # type: ignore
 
             for name in LBFGS_CONFIGURABLE_OPTIONS:
                 if (value := getattr(self, name, None)) is not None:
@@ -332,7 +334,7 @@ class ExponentialKriging(Kernel):
 
         return self.beta_l * C_theta, K_gradient
 
-    def diag(self, X: np.ndarray) -> np.ndarray:
+    def diag(self, X) -> np.ndarray:
         """Returns the diagonal of the kernel k(X, X).
 
         The result of this method is identical to np.diag(self(X)); however,
@@ -442,7 +444,7 @@ class SphericalKriging(Kernel):
 
         return self.beta_l * C_theta, K_gradient
 
-    def diag(self, X: np.ndarray) -> np.ndarray:
+    def diag(self, X) -> np.ndarray:
         """Returns the diagonal of the kernel k(X, X).
 
         The result of this method is identical to np.diag(self(X)); however,

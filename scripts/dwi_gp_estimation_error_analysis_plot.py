@@ -89,10 +89,18 @@ def main() -> None:
     df = pd.read_csv(args.error_data_fname, sep="\t", keep_default_na=False, na_values="n/a")
 
     # Plot the prediction error
-    kfolds = sorted(np.unique(df["n_folds"].values))
-    snr = np.unique(df["snr"].values).item()
-    bval = np.unique(df["bval"].values).item()
-    rmse_data = [df.groupby("n_folds").get_group(k)["rmse"].values for k in kfolds]
+    kfolds = sorted(pd.unique(df["n_folds"]))
+    snr = pd.unique(df["snr"])
+    if len(snr) == 1:
+        snr = snr[0]
+    else:
+        raise ValueError(f"More than one unique SNR value: {snr}")
+    bval = pd.unique(df["bval"])
+    if len(bval) == 1:
+        bval = bval[0]
+    else:
+        raise ValueError(f"More than one unique bval value: {bval}")
+    rmse_data = np.asarray([df.groupby("n_folds").get_group(k)["rmse"].values for k in kfolds])
     axis = 1
     mean = np.mean(rmse_data, axis=axis)
     std_dev = np.std(rmse_data, axis=axis)

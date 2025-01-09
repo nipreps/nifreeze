@@ -77,8 +77,12 @@ def advanced_clip(
     # Calculate stats on denoised version to avoid outlier bias
     denoised = median_filter(data, footprint=ball(3))
 
-    a_min = np.percentile(denoised[denoised >= 0] if nonnegative else denoised, p_min)
-    a_max = np.percentile(denoised[denoised >= 0] if nonnegative else denoised, p_max)
+    a_min = np.percentile(
+        np.asarray([denoised[denoised >= 0] if nonnegative else denoised]), p_min
+    )
+    a_max = np.percentile(
+        np.asarray([denoised[denoised >= 0] if nonnegative else denoised]), p_max
+    )
 
     # Clip and scale data
     data = np.clip(data, a_min=a_min, a_max=a_max)

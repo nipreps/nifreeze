@@ -389,7 +389,7 @@ def generate_command(
             str(p) for p in _massage_mask_path(movingmask_path, nlevels)
         ]
 
-    # Set initalizing affine if provided
+    # Set initializing affine if provided
     if init_affine is not None:
         settings["initial_moving_transform"] = str(init_affine)
 
@@ -413,7 +413,7 @@ def _run_registration(
     i_iter: int,
     vol_idx: int,
     dirname: Path,
-    reg_target_type: str,
+    reg_target_type: str | tuple[str, str],
     align_kwargs: dict,
 ) -> nt.base.BaseTransform:
     """
@@ -443,7 +443,7 @@ def _run_registration(
         DWI frame index.
     dirname : :obj:`Path`
         Directory name where the transformation is saved.
-    reg_target_type : :obj:`str`
+    reg_target_type : :obj:`str` or tuple of :obj:`str`
         Target registration type.
     align_kwargs : :obj:`dict`
         Parameters to configure the image registration process.
@@ -472,7 +472,8 @@ def _run_registration(
         registration.inputs.fixed_image_masks = ["NULL", bmask_img]
 
     if em_affines is not None and np.any(em_affines[vol_idx, ...]):
-        reference = namedtuple("ImageGrid", ("shape", "affine"))(shape=shape, affine=affine)
+        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
+        reference = ImageGrid(shape=shape, affine=affine)
 
         # create a nitransforms object
         if fieldmap:

@@ -71,9 +71,8 @@ class PET:
 
     def set_transform(self, index, affine, order=3):
         """Set an affine, and update data object and gradients."""
-        reference = namedtuple("ImageGrid", ("shape", "affine"))(
-            shape=self.dataobj.shape[:3], affine=self.affine
-        )
+        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
+        reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
         xform = Affine(matrix=affine, reference=reference)
 
         if not Path(self._filepath).exists():

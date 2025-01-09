@@ -25,6 +25,7 @@
 from __future__ import annotations
 
 import warnings
+from typing import Any
 
 import numpy as np
 from dipy.core.gradients import GradientTable
@@ -87,6 +88,7 @@ class GaussianProcessModel(ReconstModel):
     __slots__ = (
         "kernel",
         "_modelfit",
+        "sigma_sq",
     )
 
     def __init__(
@@ -137,7 +139,7 @@ class GaussianProcessModel(ReconstModel):
         self,
         data: np.ndarray,
         gtab: GradientTable | np.ndarray,
-        mask: np.ndarray[bool] | None = None,
+        mask: np.ndarray[bool, Any] | None = None,
         random_state: int = 0,
     ) -> GPFit:
         """Fit method of the DTI model class
