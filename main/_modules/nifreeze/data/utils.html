@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.data.utils - nifreeze 25.0.0.dev12 documentation</title>
+        <title>nifreeze.data.utils - nifreeze 25.0.0.dev14 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev12 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev14 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev12</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev14</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev12</span>
+  <span class="sidebar-brand-text">25.0.0.dev14</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -293,7 +293,7 @@
           <h1>Source code for nifreeze.data.utils</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 
-<span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nib</span>
+<span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nb</span>
 <span class="kn">import</span> <span class="nn">nitransforms</span> <span class="k">as</span> <span class="nn">nt</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
@@ -321,7 +321,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">transformed_nii</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">nii</span><span class="o">.</span><span class="n">dataobj</span><span class="p">))</span>
 
-    <span class="k">for</span> <span class="n">ii</span><span class="p">,</span> <span class="n">bvecnii</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">nib</span><span class="o">.</span><span class="n">four_to_three</span><span class="p">(</span><span class="n">nii</span><span class="p">)):</span>
+    <span class="k">for</span> <span class="n">ii</span><span class="p">,</span> <span class="n">bvecnii</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">nb</span><span class="o">.</span><span class="n">four_to_three</span><span class="p">(</span><span class="n">nii</span><span class="p">)):</span>
         <span class="n">xfms</span> <span class="o">=</span> <span class="n">nt</span><span class="o">.</span><span class="n">linear</span><span class="o">.</span><span class="n">Affine</span><span class="p">(</span><span class="n">em_affines</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span>
         <span class="n">transformed_nii</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">((</span><span class="o">~</span><span class="n">xfms</span><span class="p">)</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">bvecnii</span><span class="p">,</span> <span class="n">reference</span><span class="o">=</span><span class="n">nii</span><span class="p">)</span><span class="o">.</span><span class="n">dataobj</span><span class="p">)</span>
 
@@ -368,7 +368,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=e7b95fda"></script>
+</div><script src="../../../_static/documentation_options.js?v=88484b0e"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>

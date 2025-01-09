@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.utils.ndimage - nifreeze 25.0.0.dev12 documentation</title>
+        <title>nifreeze.utils.ndimage - nifreeze 25.0.0.dev14 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev12 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev14 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev12</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev14</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev12</span>
+  <span class="sidebar-brand-text">25.0.0.dev14</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -317,15 +317,15 @@
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">typing</span>
 
-<span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nib</span>
+<span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nb</span>
 
-<span class="n">ImgT</span> <span class="o">=</span> <span class="n">typing</span><span class="o">.</span><span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;ImgT&quot;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="n">nib</span><span class="o">.</span><span class="n">filebasedimages</span><span class="o">.</span><span class="n">FileBasedImage</span><span class="p">)</span>
+<span class="n">ImgT</span> <span class="o">=</span> <span class="n">typing</span><span class="o">.</span><span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;ImgT&quot;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="n">nb</span><span class="o">.</span><span class="n">filebasedimages</span><span class="o">.</span><span class="n">FileBasedImage</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="load_api">
 <a class="viewcode-back" href="../../../api/nifreeze.utils.ndimage.html#nifreeze.utils.ndimage.load_api">[docs]</a>
 <span class="k">def</span> <span class="nf">load_api</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">api</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">ImgT</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">ImgT</span><span class="p">:</span>
-    <span class="n">img</span> <span class="o">=</span> <span class="n">nib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">api</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> does not implement </span><span class="si">{</span><span class="n">api</span><span class="si">}</span><span class="s2"> interface&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">img</span></div>
@@ -362,7 +362,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=e7b95fda"></script>
+</div><script src="../../../_static/documentation_options.js?v=88484b0e"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>
