@@ -25,8 +25,8 @@
 import os
 from pathlib import Path
 
-import nibabel
-import numpy
+import nibabel as nb
+import numpy as np
 import pytest
 
 test_data_env = os.getenv("TEST_DATA_HOME", str(Path.home() / "nifreeze-tests"))
@@ -39,16 +39,16 @@ _datadir = (Path(__file__).parent.parent.parent / "test" / "data").absolute()
 def pytest_report_header(config):
     return f"""\
 TEST_DATA_HOME={test_data_env}.
-TEST_OUTPUT_DIR={test_output_dir or '<unset> (output files will be discarded)'}.
-TEST_WORK_DIR={test_workdir or '<unset> (intermediate files will be discarded)'}.
+TEST_OUTPUT_DIR={test_output_dir or "<unset> (output files will be discarded)"}.
+TEST_WORK_DIR={test_workdir or "<unset> (intermediate files will be discarded)"}.
 """
 
 
 @pytest.fixture(autouse=True)
 def doctest_imports(doctest_namespace):
     """Populates doctests with some conveniency imports."""
-    doctest_namespace["np"] = numpy
-    doctest_namespace["nb"] = nibabel
+    doctest_namespace["np"] = np
+    doctest_namespace["nb"] = nb
     doctest_namespace["os"] = os
     doctest_namespace["Path"] = Path
     doctest_namespace["repodata"] = _datadir
