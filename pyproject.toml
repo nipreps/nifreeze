@@ -146,6 +146,7 @@ select = [
   "W",
   "B",
   "I",
+  "ICN",
 ]
 ignore = [
   "E203"
@@ -162,6 +163,9 @@ inline-quotes = "double"
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.ruff.lint.flake8-import-conventions.extend-aliases]
+"nibabel" = "nb"
 
 [tool.ruff.lint.isort]
 known-first-party=["nifreeze"]

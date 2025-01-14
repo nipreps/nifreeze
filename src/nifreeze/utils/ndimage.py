@@ -20,35 +20,17 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""py.test configuration."""
 
 import os
-from pathlib import Path
+import typing
 
 import nibabel as nb
-import numpy as np
-import pytest
 
-test_data_env = os.getenv("TEST_DATA_HOME", str(Path.home() / "nifreeze-tests"))
-test_output_dir = os.getenv("TEST_OUTPUT_DIR")
-test_workdir = os.getenv("TEST_WORK_DIR")
-
-_datadir = (Path(__file__).parent.parent.parent / "test" / "data").absolute()
+ImgT = typing.TypeVar("ImgT", bound=nb.filebasedimages.FileBasedImage)
 
 
-def pytest_report_header(config):
-    return f"""\
-TEST_DATA_HOME={test_data_env}.
-TEST_OUTPUT_DIR={test_output_dir or "<unset> (output files will be discarded)"}.
-TEST_WORK_DIR={test_workdir or "<unset> (intermediate files will be discarded)"}.
-"""
-
-
-@pytest.fixture(autouse=True)
-def doctest_imports(doctest_namespace):
-    """Populates doctests with some conveniency imports."""
-    doctest_namespace["np"] = np
-    doctest_namespace["nb"] = nb
-    doctest_namespace["os"] = os
-    doctest_namespace["Path"] = Path
-    doctest_namespace["repodata"] = _datadir
+def load_api(path: str | os.PathLike[str], api: type[ImgT]) -> ImgT:
+    img = nb.load(path)
+    if not isinstance(img, api):
+        raise TypeError(f"File {path} does not implement {api} interface")
+    return img
