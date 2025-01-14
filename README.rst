@@ -5,7 +5,7 @@ and Eddy-current-derived distortion estimation in dMRI.
 
 .. important:: *NiFreeze* is a fork of *eddymotion*
 
-   In November 2023, the *NiPreps Steering Committee* brought to the *Bi-monthly Roundup*
+   In November 2024, the *NiPreps Steering Committee* brought to the *Bi-monthly Roundup*
    the discussion about re-branding *eddymotion* to better reflect its aspirations to
    perform on diverse modalities.
 

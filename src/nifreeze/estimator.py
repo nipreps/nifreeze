@@ -90,7 +90,7 @@ class Estimator:
         } | iter_kwargs
         iter_kwargs["size"] = len(data)
 
-        iterfunc = getattr(iterators, f'{iter_kwargs.pop("strategy", "random")}_iterator')
+        iterfunc = getattr(iterators, f"{iter_kwargs.pop('strategy', 'random')}_iterator")
         index_order = list(iterfunc(**iter_kwargs))
 
         align_kwargs = align_kwargs or {}

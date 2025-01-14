@@ -200,7 +200,7 @@ async def train_coro(
         f"Avg. p95 initial error: {np.mean(start):0.2f} mm."
     )
     if verbose:
-        logger.info(f"\n\nParameters:\n{align_kwargs}" f"\n\nConversions folder: {tmp_folder}.")
+        logger.info(f"\n\nParameters:\n{align_kwargs}\n\nConversions folder: {tmp_folder}.")
 
     return error
 
