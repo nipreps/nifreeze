@@ -67,7 +67,7 @@ def add_b0(bvals: np.ndarray, bvecs: np.ndarray) -> tuple[np.ndarray, np.ndarray
 
 def create_single_fiber_evecs(theta: float = 0, phi: float = 0) -> np.ndarray:
     """
-    Create eigenvectors for a simulated fiber given the polar coordinates of its pricipal axis.
+    Create eigenvectors for a simulated fiber given the polar coordinates of its principal axis.
 
     Parameters
     ----------
