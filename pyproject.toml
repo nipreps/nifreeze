@@ -182,6 +182,8 @@ filterwarnings = [
   "ignore:Updating b0_threshold to.*:UserWarning",
   # scikit-learn
   "ignore:The optimal value found for dimension.*:sklearn.exceptions.ConvergenceWarning",
+  # masks
+  "ignore:No mask provided;.*:UserWarning",
 ]
 
 
