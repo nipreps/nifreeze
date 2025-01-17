@@ -68,6 +68,8 @@ resmon = ["psutil >=5.4"]
 
 test = [
     "coverage",
+    "ipykernel",
+    "mriqc-learn",
     "pytest >= 4.4",
     "pytest-cov",
     "pytest-env",
@@ -77,7 +79,7 @@ test = [
 antsopt = [
     "ConfigSpace",
     "nipreps",
-    "skimage",
+    "scikit-image",
     "smac",
 ]
 
