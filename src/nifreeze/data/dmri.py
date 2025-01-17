@@ -99,37 +99,14 @@ class DWI(BaseDataset):
         ValueError
             If ``gradients`` is None or doesn't match the data shape.
         """
-        # Basic validation
-        if self.gradients is None:
-            raise ValueError("Cannot set a transform on DWI data without a gradient table.")
-
-        # If the gradient table is Nx4, and dataobj has shape (..., N)
-        n_volumes = self.dataobj.shape[-1]
-        if self.gradients.shape[0] != n_volumes and self.gradients.shape[1] == n_volumes:
-            # Possibly transposed gradient table - handle or raise an error
-            raise ValueError("Gradient table shape does not match the data's last dimension.")
+        if not Path(self._filepath).exists():
+            self.to_filename(self._filepath)
 
         reference = namedtuple("ImageGrid", ("shape", "affine"))(
             shape=self.dataobj.shape[:3], affine=self.affine
         )
         xform = Affine(matrix=affine, reference=reference)
-
-        if not Path(self._filepath).exists():
-            self.to_filename(self._filepath)
-
-        # read original DWI data & b-vector
-        with h5py.File(self._filepath, "r") as in_file:
-            root = in_file["/0"]
-            dwi_frame = np.asanyarray(root["dataobj"][..., index])
-            bvec = np.asanyarray(root["gradients"][index, :3])
-
-        dwmoving = nb.Nifti1Image(dwi_frame, self.affine, None)
-
-        # resample and update orientation at index
-        self.dataobj[..., index] = np.asanyarray(
-            xform.apply(dwmoving, order=order).dataobj,
-            dtype=self.dataobj.dtype,
-        )
+        bvec = self.gradients[index, :3]
 
         # invert transform transform b-vector and origin
         r_bvec = (~xform).map([bvec, (0.0, 0.0, 0.0)])
@@ -138,11 +115,7 @@ class DWI(BaseDataset):
         # Normalize and update
         self.gradients[index, :3] = new_bvec / np.linalg.norm(new_bvec)
 
-        # update transform
-        if self.em_affines is None:
-            self.em_affines = np.zeros((self.dataobj.shape[-1], 4, 4))
-
-        self.em_affines[index] = xform.matrix
+        super().set_transform(index, affine, order)
 
     @classmethod
     def from_filename(cls, filename: Path | str) -> DWI:
