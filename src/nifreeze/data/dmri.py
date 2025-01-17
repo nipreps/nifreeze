@@ -49,7 +49,7 @@ class DWI(BaseDataset):
     be unwarped.
     """
     gradients = attr.ib(default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp))
-    """A 2D numpy array of the gradient table in RAS+B format (Nx4)."""
+    """A 2D numpy array of the gradient table (4xN)."""
     eddy_xfms = attr.ib(default=None)
     """List of transforms to correct for estimatted eddy current distortions."""
 
@@ -73,12 +73,12 @@ class DWI(BaseDataset):
             The corresponding per-volume motion affine(s) or `None` if identity transform(s).
         gradient : np.ndarray
             The corresponding gradient(s), which may have shape ``(4,)`` if a single volume
-            or ``(k, 4)`` if multiple volumes, or None if gradients are not available.
+            or ``(4, k)`` if multiple volumes, or None if gradients are not available.
 
         """
 
         data, affine = super().__getitem__(idx)
-        return data, affine, self.gradients[idx, ...]
+        return data, affine, self.gradients[..., idx]
 
     def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
         """
@@ -106,14 +106,14 @@ class DWI(BaseDataset):
             shape=self.dataobj.shape[:3], affine=self.affine
         )
         xform = Affine(matrix=affine, reference=reference)
-        bvec = self.gradients[index, :3]
+        bvec = self.gradients[:3, index]
 
         # invert transform transform b-vector and origin
         r_bvec = (~xform).map([bvec, (0.0, 0.0, 0.0)])
         # Reset b-vector's origin
         new_bvec = r_bvec[1] - r_bvec[0]
         # Normalize and update
-        self.gradients[index, :3] = new_bvec / np.linalg.norm(new_bvec)
+        self.gradients[:3, index] = new_bvec / np.linalg.norm(new_bvec)
 
         super().set_transform(index, affine, order)
 
@@ -172,7 +172,7 @@ class DWI(BaseDataset):
         with h5py.File(filename, "r+") as out_file:
             out_file.attrs["Type"] = "dmri"
 
-    def to_nifti(self, filename: Path | str) -> None:
+    def to_nifti(self, filename: Path | str, insert_b0: bool = False) -> None:
         """
         Write a NIfTI 1.0 file to disk, and also write out the gradient table
         to sidecar text files (.bvec, .bval).
@@ -183,8 +183,15 @@ class DWI(BaseDataset):
             The output NIfTI file path.
 
         """
-        # First call the parent's to_nifti to handle the primary NIfTI export.
-        super().to_nifti(filename)
+        if not insert_b0:
+            # Parent's to_nifti to handle the primary NIfTI export.
+            super().to_nifti(filename)
+        else:
+            data = np.concatenate((self.bzero[..., np.newaxis], self.dataobj), axis=-1)
+            nii = nb.Nifti1Image(data, self.affine, self.datahdr)
+            if self.datahdr is None:
+                nii.header.set_xyzt_units("mm")
+            nii.to_filename(filename)
 
         # Convert filename to a Path object.
         out_root = Path(filename).absolute()
@@ -202,8 +209,8 @@ class DWI(BaseDataset):
 
         # Save bvecs and bvals to text files
         # Each row of bvecs is one direction (3 rows, N columns).
-        np.savetxt(bvecs_file, self.gradients[..., :3].T, fmt="%.6f")
-        np.savetxt(bvals_file, self.gradients[..., -1], fmt="%.6f")
+        np.savetxt(bvecs_file, self.gradients[:3, ...].T, fmt="%.6f")
+        np.savetxt(bvals_file, self.gradients[:3, ...], fmt="%.6f")
 
 
 def load(
@@ -297,7 +304,7 @@ def load(
         # We'll assign the filtered gradients below.
     )
 
-    dwi_obj.gradients = grad[:, gradmsk] if grad.shape[0] == 4 else grad[gradmsk, :]
+    dwi_obj.gradients = grad[:, gradmsk] if grad.shape[0] == 4 else grad[gradmsk, :].T
 
     # 6) b=0 volume (bzero)
     #    If the user provided a b0_file, load it

@@ -29,7 +29,7 @@ import nibabel as nb
 import numpy as np
 import pytest
 
-from nifreeze import NFDH5_EXT, BaseDataset, load
+from nifreeze.data.base import NFDH5_EXT, BaseDataset, load
 
 
 @pytest.fixture

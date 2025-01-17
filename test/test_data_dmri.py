@@ -185,7 +185,6 @@ def test_equality_operator(tmp_path):
         gradients_file=gradients_fname,
         b0_file=b0_fname,
         brainmask_file=brainmask_fname,
-        fmap_file=fieldmap_fname,
         b0_thres=b0_thres,
     )
     hdf5_filename = tmp_path / "test_dwi.h5"
