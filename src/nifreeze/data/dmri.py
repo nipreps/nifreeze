@@ -53,6 +53,33 @@ class DWI(BaseDataset):
     eddy_xfms = attr.ib(default=None)
     """List of transforms to correct for estimatted eddy current distortions."""
 
+    def __getitem__(
+        self, idx: int | slice | tuple | np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None]:
+        """
+        Returns volume(s) and corresponding affine(s) and gradient(s) through fancy indexing.
+
+        Parameters
+        ----------
+        idx : :obj:`int` or :obj:`slice` or :obj:`tuple` or :obj:`~numpy.ndarray`
+            Indexer for the last dimension (or possibly other dimensions if extended).
+
+        Returns
+        -------
+        volumes : np.ndarray
+            The selected data subset. If `idx` is a single integer, this will have shape
+            ``(X, Y, Z)``, otherwise it may have shape ``(X, Y, Z, k)``.
+        motion_affine : np.ndarray or None
+            The corresponding per-volume motion affine(s) or `None` if identity transform(s).
+        gradient : np.ndarray
+            The corresponding gradient(s), which may have shape ``(4,)`` if a single volume
+            or ``(k, 4)`` if multiple volumes, or None if gradients are not available.
+
+        """
+
+        data, affine = super().__getitem__(idx)
+        return data, affine, self.gradients[idx, ...]
+
     def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
         """
         Set an affine transform for a particular DWI volume, resample that volume,
@@ -148,6 +175,29 @@ class DWI(BaseDataset):
                     data[f.name] = None
 
         return cls(**data)
+
+    def to_filename(
+        self,
+        filename: Path | str,
+        compression: str | None = None,
+        compression_opts: Any = None,
+    ) -> None:
+        """
+        Write the dMRI dataset to an HDF5 file on disk.
+
+        Parameters
+        ----------
+        filename : Path or str
+            Path to the output HDF5 file.
+        compression : str, optional
+            Compression filter, e.g. 'gzip'. Default is None (no compression).
+        compression_opts : Any, optional
+            Compression level or other parameters for the HDF5 dataset.
+        """
+        super().to_filename(filename, compression=compression, compression_opts=compression_opts)
+        # Overriding if you'd like to set a custom attribute, for example:
+        with h5py.File(filename, "r+") as out_file:
+            out_file.attrs["Type"] = "dmri"
 
     def to_nifti(self, filename: Path | str) -> None:
         """

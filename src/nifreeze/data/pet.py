@@ -22,157 +22,201 @@
 #
 """PET data representation."""
 
-from collections import namedtuple
+from __future__ import annotations
+
 from pathlib import Path
-from tempfile import mkdtemp
+from typing import Any, Union
 
 import attr
 import h5py
 import nibabel as nb
 import numpy as np
-from nitransforms.linear import Affine
 
-
-def _data_repr(value):
-    if value is None:
-        return "None"
-    return f"<{'x'.join(str(v) for v in value.shape)} ({value.dtype})>"
+from nifreeze.data.base import BaseDataset, _cmp, _data_repr
 
 
 @attr.s(slots=True)
-class PET:
-    """Data representation structure for PET data."""
-
-    dataobj = attr.ib(default=None, repr=_data_repr)
-    """A numpy ndarray object for the data array, without *b=0* volumes."""
-    affine = attr.ib(default=None, repr=_data_repr)
-    """Best affine for RAS-to-voxel conversion of coordinates (NIfTI header)."""
-    brainmask = attr.ib(default=None, repr=_data_repr)
-    """A boolean ndarray object containing a corresponding brainmask."""
-    frame_time = attr.ib(default=None, repr=_data_repr)
-    """A 1D numpy array with the midpoint timing of each sample."""
-    total_duration = attr.ib(default=None, repr=_data_repr)
-    """A float number representing the total duration of acquisition."""
-
-    em_affines = attr.ib(default=None)
+class PET(BaseDataset):
     """
-    List of :obj:`nitransforms.linear.Affine` objects that bring
-    PET timepoints into alignment.
+    Data representation structure for PET data, inheriting from BaseDataset.
+
+    In addition to the base attributes (e.g., dataobj, affine), this PET class stores:
+    - frame_time: a 1D array specifying the midpoint timing of each frame.
+    - total_duration: a float specifying the total acquisition duration.
+
     """
-    _filepath = attr.ib(
-        factory=lambda: Path(mkdtemp()) / "em_cache.h5",
-        repr=False,
+
+    frame_time: np.ndarray | None = attr.ib(
+        default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp)
     )
-    """A path to an HDF5 file to store the whole dataset."""
+    """
+    A 1D numpy array specifying the midpoint timing of each sample or frame.
+    Typically shape (N,).
+    """
+    total_duration: float | None = attr.ib(default=None, repr=True)
+    """
+    A float representing the total duration of the entire PET acquisition.
+    """
 
-    def __len__(self):
-        """Obtain the number of high-*b* orientations."""
-        return self.dataobj.shape[-1]
+    def __getitem__(
+        self, idx: int | slice | tuple | np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None]:
+        """
+        Returns volume(s) and corresponding affine(s) and timing(s) through fancy indexing.
 
-    def set_transform(self, index, affine, order=3):
-        """Set an affine, and update data object and gradients."""
-        reference = namedtuple("ImageGrid", ("shape", "affine"))(
-            shape=self.dataobj.shape[:3], affine=self.affine
-        )
-        xform = Affine(matrix=affine, reference=reference)
+        Parameters
+        ----------
+        idx : :obj:`int` or :obj:`slice` or :obj:`tuple` or :obj:`~numpy.ndarray`
+            Indexer for the last dimension (or possibly other dimensions if extended).
 
-        if not Path(self._filepath).exists():
-            self.to_filename(self._filepath)
+        Returns
+        -------
+        volumes : np.ndarray
+            The selected data subset. If `idx` is a single integer, this will have shape
+            ``(X, Y, Z)``, otherwise it may have shape ``(X, Y, Z, k)``.
+        motion_affine : np.ndarray or None
+            The corresponding per-volume motion affine(s) or `None` if identity transform(s).
+        time : float
+            The corresponding frame time.
 
-        # read original PET
-        with h5py.File(self._filepath, "r") as in_file:
-            root = in_file["/0"]
-            dframe = np.asanyarray(root["dataobj"][..., index])
+        """
 
-        dmoving = nb.Nifti1Image(dframe, self.affine, None)
-
-        # resample and update orientation at index
-        self.dataobj[..., index] = np.asanyarray(
-            xform.apply(dmoving, order=order).dataobj,
-            dtype=self.dataobj.dtype,
-        )
-
-        # update transform
-        if self.em_affines is None:
-            self.em_affines = [None] * len(self)
-
-        self.em_affines[index] = xform
-
-    def to_filename(self, filename, compression=None, compression_opts=None):
-        """Write an HDF5 file to disk."""
-        filename = Path(filename)
-        if not filename.name.endswith(".h5"):
-            filename = filename.parent / f"{filename.name}.h5"
-
-        with h5py.File(filename, "w") as out_file:
-            out_file.attrs["Format"] = "EMC/PET"
-            out_file.attrs["Version"] = np.uint16(1)
-            root = out_file.create_group("/0")
-            root.attrs["Type"] = "pet"
-            for f in attr.fields(self.__class__):
-                if f.name.startswith("_"):
-                    continue
-
-                value = getattr(self, f.name)
-                if value is not None:
-                    root.create_dataset(
-                        f.name,
-                        data=value,
-                        compression=compression,
-                        compression_opts=compression_opts,
-                    )
-
-    def to_nifti(self, filename, *_):
-        """Write a NIfTI 1.0 file to disk."""
-        nii = nb.Nifti1Image(self.dataobj, self.affine, None)
-        nii.header.set_xyzt_units("mm")
-        nii.to_filename(filename)
+        data, affine = super().__getitem__(idx)
+        return data, affine, self.frame_time[idx]
 
     @classmethod
-    def from_filename(cls, filename):
-        """Read an HDF5 file from disk."""
+    def from_filename(cls, filename: Union[str, Path]) -> PET:
+        """
+        Read an HDF5 file from disk and create a PET object.
+
+        Parameters
+        ----------
+        filename : str or Path
+            The HDF5 file path to read.
+
+        Returns
+        -------
+        PET
+            A PET dataset with data loaded from the specified file.
+        """
+        import attr
+
+        filename = Path(filename)
+        data: dict[str, Any] = {}
+
         with h5py.File(filename, "r") as in_file:
             root = in_file["/0"]
-            data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}
+            for f in attr.fields(cls):
+                # skip private attributes (start with '_')
+                if f.name.startswith("_"):
+                    continue
+                if f.name in root:
+                    data[f.name] = np.asanyarray(root[f.name])
+                else:
+                    data[f.name] = None
+
         return cls(**data)
+
+    def to_filename(
+        self,
+        filename: Path | str,
+        compression: str | None = None,
+        compression_opts: Any = None,
+    ) -> None:
+        """
+        Write the PET dataset to an HDF5 file on disk.
+
+        Parameters
+        ----------
+        filename : Path or str
+            Path to the output HDF5 file.
+        compression : str, optional
+            Compression filter, e.g. 'gzip'. Default is None (no compression).
+        compression_opts : Any, optional
+            Compression level or other parameters for the HDF5 dataset.
+        """
+        super().to_filename(filename, compression=compression, compression_opts=compression_opts)
+        # Overriding if you'd like to set a custom attribute, for example:
+        with h5py.File(filename, "r+") as out_file:
+            out_file.attrs["Type"] = "pet"
 
 
 def load(
-    filename,
-    brainmask_file=None,
-    frame_time=None,
-    frame_duration=None,
-):
-    """Load PET data."""
+    filename: Path | str,
+    brainmask_file: Path | str | None = None,
+    frame_time: np.ndarray | list[float] | None = None,
+    frame_duration: np.ndarray | list[float] | None = None,
+) -> PET:
+    """
+    Load PET data from HDF5 or NIfTI, creating a PET object with appropriate metadata.
+
+    Parameters
+    ----------
+    filename : Path or str
+        Path to the PET data (HDF5 or NIfTI).
+    brainmask_file : Path or str, optional
+        An optional brain mask NIfTI file.
+    frame_time : np.ndarray or list of float, optional
+        The start times of each frame relative to the beginning of the acquisition.
+        If None, an error is raised (since BIDS requires FrameTimesStart).
+    frame_duration : np.ndarray or list of float, optional
+        The duration of each frame. If None, it is derived by the difference
+        of consecutive frame_times, defaulting the last frame to match the second-last.
+
+    Returns
+    -------
+    PET
+        A PET object storing the data, metadata, and any optional mask.
+
+    Raises
+    ------
+    RuntimeError
+        If `frame_time` is not provided (BIDS requires it).
+    """
     filename = Path(filename)
-    if filename.name.endswith(".h5"):
-        return PET.from_filename(filename)
-
-    img = nb.load(filename)
-    retval = PET(
-        dataobj=img.get_fdata(dtype="float32"),
-        affine=img.affine,
-    )
-
-    if frame_time is None:
-        raise RuntimeError(
-            "Start time of frames is mandatory (see https://bids-specification.readthedocs.io/"
-            "en/stable/glossary.html#objects.metadata.FrameTimesStart)"
+    if filename.suffix == ".h5":
+        # Load from HDF5
+        pet_obj = PET.from_filename(filename)
+    else:
+        # Load from NIfTI
+        img = nb.load(str(filename))
+        data = img.get_fdata(dtype=np.float32)
+        pet_obj = PET(
+            dataobj=data,
+            affine=img.affine,
         )
 
-    frame_time = np.array(frame_time, dtype="float32") - frame_time[0]
+    # Verify the user provided frame_time if not already in the PET object
+    if pet_obj.frame_time is None and frame_time is None:
+        raise RuntimeError(
+            "The `frame_time` is mandatory for PET data to comply with BIDS. "
+            "See https://bids-specification.readthedocs.io for details."
+        )
+
+    # If the user supplied new values, set them
+    if frame_time is not None:
+        # Convert to a float32 numpy array and zero out the earliest time
+        frame_time_arr = np.array(frame_time, dtype=np.float32)
+        frame_time_arr -= frame_time_arr[0]
+        pet_obj.frame_time = frame_time_arr
+
+    # If the user doesn't provide frame_duration, we derive it:
     if frame_duration is None:
-        frame_duration = np.diff(frame_time)
-        if len(frame_duration) == (retval.dataobj.shape[-1] - 1):
-            frame_duration = np.append(frame_duration, frame_duration[-1])
+        frame_time_arr = pet_obj.frame_time
+        # If shape is e.g. (N,), then we can do
+        durations = np.diff(frame_time_arr)
+        if len(durations) == (len(frame_time_arr) - 1):
+            durations = np.append(durations, durations[-1])  # last frame same as second-last
+    else:
+        durations = np.array(frame_duration, dtype=np.float32)
 
-    retval.total_duration = frame_time[-1] + frame_duration[-1]
-    retval.frame_time = frame_time + 0.5 * np.array(frame_duration, dtype="float32")
+    # Set total_duration and shift frame_time to the midpoint
+    pet_obj.total_duration = float(frame_time_arr[-1] + durations[-1])
+    pet_obj.frame_time = frame_time_arr + 0.5 * durations
 
-    assert len(retval.frame_time) == retval.dataobj.shape[-1]
+    # If a brain mask is provided, load and attach
+    if brainmask_file is not None:
+        mask_img = nb.load(str(brainmask_file))
+        pet_obj.brainmask = np.asanyarray(mask_img.dataobj, dtype=bool)
 
-    if brainmask_file:
-        mask = nb.load(brainmask_file)
-        retval.brainmask = np.asanyarray(mask.dataobj)
-
-    return retval
+    return pet_obj

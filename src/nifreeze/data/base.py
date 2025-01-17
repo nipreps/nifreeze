@@ -88,6 +88,9 @@ class BaseDataset:
 
     def __len__(self) -> int:
         """Obtain the number of volumes/frames in the dataset."""
+        if self.dataobj is None:
+            return 0
+
         return self.dataobj.shape[-1]
 
     def __getitem__(
