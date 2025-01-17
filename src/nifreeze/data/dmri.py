@@ -280,9 +280,12 @@ def load(
             )
     elif bvec_file and bval_file:
         bvecs = np.loadtxt(bvec_file, dtype="float32")  # shape (3, N)
+        if bvecs.shape[0] != 3 and bvecs.shape[1] == 3:
+            bvecs = bvecs.T
+
         bvals = np.loadtxt(bval_file, dtype="float32")  # shape (N,)
         # Stack to shape (4, N)
-        grad = np.vstack((bvecs, bvals)).T
+        grad = np.vstack((bvecs, bvals))
     else:
         raise RuntimeError(
             "No gradient data provided. "
