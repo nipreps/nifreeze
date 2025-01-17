@@ -21,6 +21,8 @@
 #     https://www.nipreps.org/community/licensing/
 #
 
+from importlib import import_module
+
 import numpy as np
 from joblib import Parallel, delayed
 
@@ -121,8 +123,6 @@ class BaseDWIModel(BaseModel):
         # DIPY models (or one with a fully-compliant interface)
         model_str = getattr(self, "_model_class", None)
         if model_str:
-            from importlib import import_module
-
             module_name, class_name = model_str.rsplit(".", 1)
             self._model = getattr(
                 import_module(module_name),
