@@ -56,7 +56,7 @@ class Estimator:
         data : :obj:`~nifreeze.dmri.DWI`
             The target DWI dataset, represented by this tool's internal
             type. The object is used in-place, and will contain the estimated
-            parameters in its ``em_affines`` property, as well as the rotated
+            parameters in its ``motion_affines`` property, as well as the rotated
             *b*-vectors within its ``gradients`` property.
         n_iter : :obj:`int`
             Number of iterations this particular model is going to be repeated.
@@ -177,7 +177,7 @@ class Estimator:
                             fixed,
                             moving,
                             bmask_img,
-                            data.em_affines,
+                            data.motion_affines,
                             data.affine,
                             data.dataobj.shape[:3],
                             data_test[1][3],
@@ -193,7 +193,7 @@ class Estimator:
                         data.set_transform(i, xform.matrix)
                         pbar.update()
 
-        return data.em_affines
+        return data.motion_affines
 
 
 def _prepare_brainmask_data(brainmask, affine):
