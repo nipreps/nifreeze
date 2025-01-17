@@ -181,7 +181,6 @@ class Estimator:
                             data.affine,
                             data.dataobj.shape[:3],
                             data_test[1][3],
-                            data.fieldmap,
                             i_iter,
                             i,
                             ptmp_dir,

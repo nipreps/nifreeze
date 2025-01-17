@@ -49,7 +49,6 @@ def _create_dwi_random_dataobj():
     brainmask_dataobj = rng.random(vol_size, dtype="float32")
     b0_dataobj = rng.random(vol_size, dtype="float32")
     gradients = np.vstack([bvecs, bvals[np.newaxis, :]], dtype="float32")
-    fieldmap_dataobj = rng.random(vol_size, dtype="float32")
 
     return (
         dwi_dataobj,
@@ -57,7 +56,6 @@ def _create_dwi_random_dataobj():
         brainmask_dataobj,
         b0_dataobj,
         gradients,
-        fieldmap_dataobj,
         b0_thres,
     )
 
@@ -67,14 +65,12 @@ def _create_dwi_random_data(
     affine,
     brainmask_dataobj,
     b0_dataobj,
-    fieldmap_dataobj,
 ):
     dwi = nb.Nifti1Image(dwi_dataobj, affine)
     brainmask = nb.Nifti1Image(brainmask_dataobj, affine)
     b0 = nb.Nifti1Image(b0_dataobj, affine)
-    fieldmap = nb.Nifti1Image(fieldmap_dataobj, affine)
 
-    return dwi, brainmask, b0, fieldmap
+    return dwi, brainmask, b0
 
 
 def _serialize_dwi_data(
@@ -82,27 +78,23 @@ def _serialize_dwi_data(
     brainmask,
     b0,
     gradients,
-    fieldmap,
     _tmp_path,
 ):
     dwi_fname = _tmp_path / "dwi.nii.gz"
     brainmask_fname = _tmp_path / "brainmask.nii.gz"
     b0_fname = _tmp_path / "b0.nii.gz"
     gradients_fname = _tmp_path / "gradients.txt"
-    fieldmap_fname = _tmp_path / "fieldmap.nii.gz"
 
     nb.save(dwi, dwi_fname)
     nb.save(brainmask, brainmask_fname)
     nb.save(b0, b0_fname)
     np.savetxt(gradients_fname, gradients.T)
-    nb.save(fieldmap, fieldmap_fname)
 
     return (
         dwi_fname,
         brainmask_fname,
         b0_fname,
         gradients_fname,
-        fieldmap_fname,
     )
 
 
@@ -153,16 +145,14 @@ def test_equality_operator(tmp_path):
         brainmask_dataobj,
         b0_dataobj,
         gradients,
-        fieldmap_dataobj,
         b0_thres,
     ) = _create_dwi_random_dataobj()
 
-    dwi, brainmask, b0, fieldmap = _create_dwi_random_data(
+    dwi, brainmask, b0 = _create_dwi_random_data(
         dwi_dataobj,
         affine,
         brainmask_dataobj,
         b0_dataobj,
-        fieldmap_dataobj,
     )
 
     (
@@ -170,13 +160,11 @@ def test_equality_operator(tmp_path):
         brainmask_fname,
         b0_fname,
         gradients_fname,
-        fieldmap_fname,
     ) = _serialize_dwi_data(
         dwi,
         brainmask,
         b0,
         gradients,
-        fieldmap,
         tmp_path,
     )
 

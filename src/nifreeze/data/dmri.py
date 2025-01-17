@@ -43,11 +43,7 @@ class DWI(BaseDataset):
     """Data representation structure for dMRI data."""
 
     bzero = attr.ib(default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp))
-    """
-    A *b=0* reference map, preferably obtained by some smart averaging.
-    If the :math:`B_0` fieldmap is set, this *b=0* reference map should also
-    be unwarped.
-    """
+    """A *b=0* reference map, preferably obtained by some smart averaging."""
     gradients = attr.ib(default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp))
     """A 2D numpy array of the gradient table (4xN)."""
     eddy_xfms = attr.ib(default=None)
@@ -254,7 +250,7 @@ def load(
     -------
     dwi : DWI
         A DWI object containing the loaded data, gradient table, and optional
-        b-zero volume, brainmask, or fieldmap.
+        b-zero volume, and brainmask.
 
     Raises
     ------
