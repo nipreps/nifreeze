@@ -28,6 +28,10 @@ import numpy as np
 
 from nifreeze.exceptions import ModelNotFittedError
 
+mask_absence_warn_msg = (
+    "No mask provided; consider using a mask to avoid issues in model optimization."
+)
+
 
 class ModelFactory:
     """A factory for instantiating data models."""
@@ -96,7 +100,7 @@ class BaseModel:
 
         # Setup brain mask
         if mask is None:
-            warn("No mask provided; consider using a mask to avoid issues in model optimization.")
+            warn(mask_absence_warn_msg)
 
         self._mask = mask
 

@@ -22,6 +22,8 @@
 #
 """Unit tests exercising models."""
 
+import contextlib
+
 import numpy as np
 import pytest
 from dipy.sims.voxel import single_tensor
@@ -31,11 +33,13 @@ from nifreeze.data.dmri import DWI
 from nifreeze.data.splitting import lovo_split
 from nifreeze.exceptions import ModelNotFittedError
 from nifreeze.model._dipy import GaussianProcessModel
+from nifreeze.model.base import mask_absence_warn_msg
 from nifreeze.model.dmri import DEFAULT_MAX_S0, DEFAULT_MIN_S0
 from nifreeze.testing import simulations as _sim
 
 
-def test_trivial_model():
+@pytest.mark.parametrize("use_mask", (False, True))
+def test_trivial_model(use_mask):
     """Check the implementation of the trivial B0 model."""
 
     rng = np.random.default_rng(1234)
@@ -44,7 +48,15 @@ def test_trivial_model():
     with pytest.raises(TypeError):
         model.TrivialModel()
 
-    _S0 = rng.normal(size=(2, 2, 2))
+    size = (2, 2, 2)
+    mask = None
+    if use_mask:
+        mask = np.ones(size, dtype=bool)
+        context = contextlib.nullcontext()
+    else:
+        context = pytest.warns(UserWarning, match=mask_absence_warn_msg)
+
+    _S0 = rng.normal(size=size)
 
     _clipped_S0 = np.clip(
         _S0.astype("float32") / _S0.max(),
@@ -52,7 +64,8 @@ def test_trivial_model():
         a_max=DEFAULT_MAX_S0,
     )
 
-    tmodel = model.TrivialModel(predicted=_clipped_S0)
+    with context:
+        tmodel = model.TrivialModel(mask=mask, predicted=_clipped_S0)
 
     data = None
     assert tmodel.fit(data) is None
