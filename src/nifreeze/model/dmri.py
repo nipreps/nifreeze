@@ -219,7 +219,7 @@ class BaseDWIModel(BaseModel):
 
 
 class AverageDWIModel(BaseDWIModel):
-    """A trivial model that returns an average map."""
+    """A trivial model that returns an average DWI volume."""
 
     __slots__ = ("_data", "_th_low", "_th_high", "_bias", "_stat", "_is_fitted")
 
