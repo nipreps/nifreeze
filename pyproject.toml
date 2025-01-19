@@ -83,6 +83,12 @@ antsopt = [
     "smac",
 ]
 
+benchmark = [
+    "asv",
+    "pyperf",
+    "virtualenv",
+]
+
 # Aliases
 docs = ["nifreeze[doc]"]
 tests = ["nifreeze[test]"]
