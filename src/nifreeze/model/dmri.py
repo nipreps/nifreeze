@@ -218,7 +218,7 @@ class BaseDWIModel(BaseModel):
         return retval
 
 
-class AverageDWModel(BaseDWIModel):
+class AverageDWIModel(BaseDWIModel):
     """A trivial model that returns an average map."""
 
     __slots__ = ("_data", "_th_low", "_th_high", "_bias", "_stat", "_is_fitted")
