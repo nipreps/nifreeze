@@ -28,7 +28,7 @@ from nifreeze.model.base import (
     TrivialModel,
 )
 from nifreeze.model.dmri import (
-    AverageDWModel,
+    AverageDWIModel,
     DKIModel,
     DTIModel,
     GPModel,
@@ -38,7 +38,7 @@ from nifreeze.model.pet import PETModel
 __all__ = (
     "ModelFactory",
     "AverageModel",
-    "AverageDWModel",
+    "AverageDWIModel",
     "DKIModel",
     "DTIModel",
     "GPModel",
