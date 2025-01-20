@@ -92,49 +92,57 @@ def _to_nifti(
 
 
 def _prepare_registration_data(
-    dwframe: np.ndarray,
+    fixed: np.ndarray,
     predicted: np.ndarray,
     affine: np.ndarray,
     vol_idx: int,
     dirname: Path | str,
-    reg_target_type: str,
+    clip: str | None = None,
 ) -> tuple[Path, Path]:
     """
     Prepare the registration data: save the fixed and moving images to disk.
 
     Parameters
     ----------
-    dwframe : :obj:`~numpy.ndarray`
-        DWI data object.
+    fixed : :obj:`~numpy.ndarray`
+        Reference volume's data array.
     predicted : :obj:`~numpy.ndarray`
-        Predicted data.
+        Predicted volume's data array.
     affine : :obj:`numpy.ndarray`
-        Affine transformation matrix.
+        Orientation affine from the original NIfTI.
     vol_idx : :obj:`int`
-        DWI volume index.
+        Volume index.
     dirname : :obj:`os.pathlike`
         Directory name where the data is saved.
-    reg_target_type : :obj:`str`
-        Target registration type.
+    clip : :obj:`str` or ``None``
+        Clip intensity of ``"fixed"``, ``"moving"``, ``"both"``,
+        or ``"none"`` of the images.
 
     Returns
     -------
-    fixed : :obj:`~pathlib.Path`
+    fixed_path : :obj:`~pathlib.Path`
         Fixed image filename.
-    moving : :obj:`~pathlib.Path`
+    moving_path : :obj:`~pathlib.Path`
         Moving image filename.
-    """
 
-    moving = Path(dirname) / f"moving{vol_idx:05d}.nii.gz"
-    fixed = Path(dirname) / f"fixed{vol_idx:05d}.nii.gz"
-    _to_nifti(dwframe, affine, moving)
+    """
+    clip = clip or "none"
+
+    moving_path = Path(dirname) / f"moving{vol_idx:05d}.nii.gz"
+    fixed_path = Path(dirname) / f"fixed{vol_idx:05d}.nii.gz"
+    _to_nifti(
+        fixed,
+        affine,
+        moving_path,
+        clip=clip.lower() in ("fixed", "both"),
+    )
     _to_nifti(
         predicted,
         affine,
-        fixed,
-        clip=reg_target_type == "dwi",
+        fixed_path,
+        clip=clip.lower() in ("moving", "both"),
     )
-    return fixed, moving
+    return fixed_path, moving_path
 
 
 def _get_ants_settings(settings: str = "b0-to-b0_level0") -> Path:
@@ -408,12 +416,9 @@ def _run_registration(
     em_affines: np.ndarray,
     affine: np.ndarray,
     shape: tuple[int, int, int],
-    bval: int,
-    i_iter: int,
     vol_idx: int,
     dirname: Path,
-    reg_target_type: str,
-    align_kwargs: dict,
+    **kwargs: dict,
 ) -> nt.base.BaseTransform:
     """
     Register the moving image to the fixed image.
@@ -427,22 +432,16 @@ def _run_registration(
     bmask_img : :class:`~nibabel.spatialimages.SpatialImage`
         Brainmask image.
     em_affines : :obj:`numpy.ndarray`
-        Estimated eddy motion affine transformation matrices.
+        Estimated head-motion affine transformation matrices.
     affine : :obj:`numpy.ndarray`
-        Affine transformation matrix.
+        Orientation affine from the original NIfTI.
     shape : :obj:`tuple`
-        Shape of the DWI frame.
-    bval : :obj:`int`
-        b-value of the corresponding DWI volume.
-    i_iter : :obj:`int`
-        Iteration number.
+        3D shape of dataset.
     vol_idx : :obj:`int`
-        DWI frame index.
+        Dataset volume index.
     dirname : :obj:`Path`
         Directory name where the transformation is saved.
-    reg_target_type : :obj:`str`
-        Target registration type.
-    align_kwargs : :obj:`dict`
+    kwargs : :obj:`dict`
         Parameters to configure the image registration process.
 
     Returns
@@ -452,18 +451,16 @@ def _run_registration(
 
     """
 
-    if isinstance(reg_target_type, str):
-        reg_target_type = (reg_target_type, reg_target_type)
-
+    if "config_file" in kwargs:
+        kwargs["from_file"] = pkg_fn(
+            "nifreeze.registration",
+            f"config/{kwargs.pop('config_file')}",
+        )
     registration = Registration(
         terminal_output="file",
-        from_file=pkg_fn(
-            "nifreeze.registration",
-            f"config/{reg_target_type[0]}-to-{reg_target_type[1]}_level{i_iter}.json",
-        ),
         fixed_image=str(fixed.absolute()),
         moving_image=str(moving.absolute()),
-        **align_kwargs,
+        **kwargs,
     )
     if bmask_img:
         registration.inputs.fixed_image_masks = ["NULL", bmask_img]
@@ -472,7 +469,7 @@ def _run_registration(
         ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
         reference = ImageGrid(shape=shape, affine=affine)
         initial_xform = Affine(matrix=em_affines[vol_idx], reference=reference)
-        mat_file = dirname / f"init_{i_iter}_{vol_idx:05d}.mat"
+        mat_file = dirname / f"init_{vol_idx:05d}.mat"
         initial_xform.to_filename(mat_file, fmt="itk")
         registration.inputs.initial_moving_transform = str(mat_file)
 
@@ -486,8 +483,6 @@ def _run_registration(
         ),
     )
     # debugging: generate aligned file for testing
-    xform.apply(moving, reference=fixed).to_filename(
-        dirname / f"aligned{vol_idx:05d}_{int(bval):04d}.nii.gz"
-    )
+    xform.apply(moving, reference=fixed).to_filename(dirname / f"aligned{vol_idx:05d}.nii.gz")
 
     return xform
