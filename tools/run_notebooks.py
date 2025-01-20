@@ -25,4 +25,9 @@ import glob
 import subprocess
 import sys
 
-sys.exit(subprocess.call(["pytest", "--nbmake"] + glob.glob("docs/notebooks/*.ipynb")))
+notebooks = glob.glob("docs/notebooks/*.ipynb")
+# Make bold_realignment.ipynb Jupyter notebook an exception as it involves running a realignment
+# process for several DataLad datasets, which requires long running times.
+notebooks.remove("docs/notebooks/bold_realignment.ipynb")
+
+sys.exit(subprocess.call(["pytest", "--nbmake"] + notebooks))
