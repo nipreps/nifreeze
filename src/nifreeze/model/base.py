@@ -30,7 +30,7 @@ from nifreeze.exceptions import ModelNotFittedError
 
 
 class ModelFactory:
-    """A factory for instantiating diffusion models."""
+    """A factory for instantiating data models."""
 
     @staticmethod
     def init(model="DTI", **kwargs):
@@ -53,9 +53,9 @@ class ModelFactory:
             return TrivialModel(predicted=kwargs.pop("S0"), gtab=kwargs.pop("gtab"))
 
         if model.lower() in ("avgdwi", "averagedwi", "meandwi"):
-            from nifreeze.model.dmri import AverageDWModel
+            from nifreeze.model.dmri import AverageDWIModel
 
-            return AverageDWModel(**kwargs)
+            return AverageDWIModel(**kwargs)
 
         if model.lower() in ("avg", "average", "mean"):
             return AverageModel(**kwargs)

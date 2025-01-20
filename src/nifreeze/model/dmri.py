@@ -21,6 +21,8 @@
 #     https://www.nipreps.org/community/licensing/
 #
 
+from importlib import import_module
+
 import numpy as np
 from joblib import Parallel, delayed
 
@@ -121,8 +123,6 @@ class BaseDWIModel(BaseModel):
         # DIPY models (or one with a fully-compliant interface)
         model_str = getattr(self, "_model_class", None)
         if model_str:
-            from importlib import import_module
-
             module_name, class_name = model_str.rsplit(".", 1)
             self._model = getattr(
                 import_module(module_name),
@@ -218,8 +218,8 @@ class BaseDWIModel(BaseModel):
         return retval
 
 
-class AverageDWModel(BaseDWIModel):
-    """A trivial model that returns an average map."""
+class AverageDWIModel(BaseDWIModel):
+    """A trivial model that returns an average DWI volume."""
 
     __slots__ = ("_data", "_th_low", "_th_high", "_bias", "_stat", "_is_fitted")
 

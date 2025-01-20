@@ -37,6 +37,7 @@ def test_lovo_split(datadir):
 
     Returns:
     None
+
     """
     data = DWI.from_filename(datadir / "dwi.h5")
 
@@ -52,11 +53,11 @@ def test_lovo_split(datadir):
     data.gradients[..., index] = 1
 
     # Apply the lovo_split function at the specified index
-    (train_data, train_gradients), (test_data, test_gradients) = lovo_split(data, index)
+    train_data, test_data = lovo_split(data, index)
 
     # Check if the test data contains only 1s
     # and the train data contains only 0s after the split
-    assert np.all(test_data == 1)
-    assert np.all(train_data == 0)
-    assert np.all(test_gradients == 1)
-    assert np.all(train_gradients == 0)
+    assert np.all(test_data[0] == 1)
+    assert np.all(train_data[0] == 0)
+    assert np.all(test_data[-1] == 1)
+    assert np.all(train_data[-1] == 0)
