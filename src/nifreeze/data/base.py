@@ -20,7 +20,7 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""Representing data in hard-disk and memory."""
+"""Four-dimensional data representation in hard-disk and memory."""
 
 from __future__ import annotations
 
@@ -106,8 +106,12 @@ class BaseDataset:
 
         Returns
         -------
-        :obj:`tuple`
-            The selected volume(s) and corresponding affine(s).
+        volumes : :obj:`~numpy.ndarray`
+            The selected data subset.
+            If ``idx`` is a single integer, this will have shape ``(X, Y, Z)``,
+            otherwise it may have shape ``(X, Y, Z, k)``.
+        motion_affine : :obj:`~numpy.ndarray` or ``None``
+            The corresponding per-volume motion affine(s) or ``None`` if identity transform(s).
 
         """
         if self.dataobj is None:
@@ -115,6 +119,27 @@ class BaseDataset:
 
         affine = self.motion_affines[idx] if self.motion_affines is not None else None
         return self.dataobj[..., idx], affine
+
+    @classmethod
+    def from_filename(cls, filename: Path | str) -> BaseDataset:
+        """
+        Read an HDF5 file from disk and create a BaseDataset.
+
+        Parameters
+        ----------
+        filename : :obj:`os.pathlike`
+            The HDF5 file path to read.
+
+        Returns
+        -------
+        :obj:`~nifreeze.data.base.BaseDataset`
+            The constructed dataset with data loaded from the file.
+
+        """
+        with h5py.File(filename, "r") as in_file:
+            root = in_file["/0"]
+            data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}
+        return cls(**data)
 
     def get_filename(self) -> Path:
         """Get the filepath of the HDF5 file."""
@@ -131,7 +156,7 @@ class BaseDataset:
         affine : :obj:`numpy.ndarray`
             The 4x4 affine matrix to be applied.
         order : :obj:`int`, optional
-            The order of the spline interpolation. Default is 3.
+            The order of the spline interpolation.
 
         """
         reference = namedtuple("ImageGrid", ("shape", "affine"))(
@@ -158,7 +183,7 @@ class BaseDataset:
 
         # if head motion affines are to be used, initialized to identities
         if self.motion_affines is None:
-            self.motion_affines = np.repeat(np.eye(4)[None, ...], len(self), axis=0)
+            self.motion_affines = np.repeat(np.zeros((4, 4))[None, ...], len(self), axis=0)
 
         self.motion_affines[index] = xform.matrix
 
@@ -173,9 +198,11 @@ class BaseDataset:
         filename : :obj:`os.pathlike`
             The HDF5 file path to write to.
         compression : :obj:`str`, optional
-            Compression filter ('gzip', etc.). Default is None (no compression).
+            Compression strategy.
+            See :obj:`~h5py.Group.create_dataset` documentation.
         compression_opts : :obj:`typing.Any`, optional
-            Compression level or other compression parameters.
+            Parameters for compression
+            `filters <https://docs.h5py.org/en/stable/high/dataset.html#dataset-compression>`__.
 
         """
         filename = Path(filename)
@@ -202,11 +229,11 @@ class BaseDataset:
 
     def to_nifti(self, filename: Path) -> None:
         """
-        Write a NIfTI 1.0 file to disk.
+        Write a NIfTI file to disk.
 
         Parameters
         ----------
-        filename : Path or str
+        filename : :obj:`os.pathlike`
             The output NIfTI file path.
 
         """
@@ -214,27 +241,6 @@ class BaseDataset:
         if self.datahdr is None:
             nii.header.set_xyzt_units("mm")
         nii.to_filename(filename)
-
-    @classmethod
-    def from_filename(cls, filename: Path | str) -> BaseDataset:
-        """
-        Read an HDF5 file from disk and create a BaseDataset.
-
-        Parameters
-        ----------
-        filename : :obj:`os.pathlike`
-            The HDF5 file path to read.
-
-        Returns
-        -------
-        BaseDataset
-            The constructed dataset with data loaded from the file.
-
-        """
-        with h5py.File(filename, "r") as in_file:
-            root = in_file["/0"]
-            data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}
-        return cls(**data)
 
 
 def load(
@@ -253,11 +259,11 @@ def load(
         A brainmask NIfTI file. If provided, will be loaded and
         stored in the returned dataset.
     motion_file : :obj:`os.pathlike`
-        A file containing head-motion affine matrices (linear)
+        A file containing head-motion affine matrices (linear).
 
     Returns
     -------
-    BaseDataset
+    :obj:`~nifreeze.data.base.BaseDataset`
         The loaded dataset.
 
     Raises
@@ -266,6 +272,9 @@ def load(
         If the file extension is not supported or the file cannot be loaded.
 
     """
+    if motion_file:
+        raise NotImplementedError
+
     filename = Path(filename)
     if filename.name.endswith(NFDH5_EXT):
         return BaseDataset.from_filename(filename)
@@ -276,8 +285,5 @@ def load(
     if brainmask_file:
         mask = nb.load(brainmask_file)
         retval.brainmask = np.asanyarray(mask.dataobj)
-
-    if motion_file:
-        raise NotImplementedError
 
     return retval

@@ -20,7 +20,7 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""Representing dMRI data."""
+"""dMRI data representation."""
 
 from __future__ import annotations
 
@@ -62,38 +62,70 @@ class DWI(BaseDataset):
 
         Returns
         -------
-        volumes : np.ndarray
-            The selected data subset. If `idx` is a single integer, this will have shape
-            ``(X, Y, Z)``, otherwise it may have shape ``(X, Y, Z, k)``.
-        motion_affine : np.ndarray or None
-            The corresponding per-volume motion affine(s) or `None` if identity transform(s).
-        gradient : np.ndarray
+        volumes : :obj:`~numpy.ndarray`
+            The selected data subset.
+            If ``idx`` is a single integer, this will have shape ``(X, Y, Z)``,
+            otherwise it may have shape ``(X, Y, Z, k)``.
+        motion_affine : :obj:`~numpy.ndarray` or ``None``
+            The corresponding per-volume motion affine(s) or ``None`` if identity transform(s).
+        gradient : :obj:`~numpy.ndarray`
             The corresponding gradient(s), which may have shape ``(4,)`` if a single volume
-            or ``(4, k)`` if multiple volumes, or None if gradients are not available.
+            or ``(4, k)`` if multiple volumes, or ``None`` if gradients are not available.
 
         """
 
         data, affine = super().__getitem__(idx)
         return data, affine, self.gradients[..., idx]
 
-    def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
+    @classmethod
+    def from_filename(cls, filename: Path | str) -> DWI:
         """
-        Set an affine transform for a particular DWI volume, resample that volume,
-        and reorient the corresponding gradient vector.
+        Read an HDF5 file from disk and create a DWI object.
 
         Parameters
         ----------
-        index : int
-            The volume index to transform (0-based).
-        affine : np.ndarray
-            A 4x4 affine matrix to be applied to the DWI volume.
-        order : int, optional
-            Order of the spline interpolation (0-5). Default is 3.
+        filename : :obj:`os.pathlike`
+            The HDF5 file path to read.
 
-        Raises
-        ------
-        ValueError
-            If ``gradients`` is None or doesn't match the data shape.
+        Returns
+        -------
+        :obj:`~nifreeze.data.dmri.DWI`
+            The constructed dataset with data loaded from the file.
+
+        """
+        # Reuse the parent `from_filename` logic to load all attributes
+        # that do not start with '_'. Then simply return DWI(**loaded_data).
+        from attr import fields
+
+        data: dict[str, Any] = {}
+        with h5py.File(filename, "r") as in_file:
+            root = in_file["/0"]
+            for f in fields(cls):
+                if f.name.startswith("_"):
+                    continue
+                if f.name in root:
+                    data[f.name] = np.asanyarray(root[f.name])
+                else:
+                    data[f.name] = None
+
+        return cls(**data)
+
+    def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
+        """
+        Set an affine transform for a particular index and update the data object.
+
+        The new affine is set as in :obj:`~nifreeze.data.base.BaseDataset.set_transform`,
+        and, in addition, the corresponding gradient vector is rotated.
+
+        Parameters
+        ----------
+        index : :obj:`int`
+            The volume index to transform.
+        affine : :obj:`numpy.ndarray`
+            The 4x4 affine matrix to be applied.
+        order : :obj:`int`, optional
+            The order of the spline interpolation.
+
         """
         if not Path(self._filepath).exists():
             self.to_filename(self._filepath)
@@ -113,38 +145,6 @@ class DWI(BaseDataset):
 
         super().set_transform(index, affine, order)
 
-    @classmethod
-    def from_filename(cls, filename: Path | str) -> DWI:
-        """
-        Read an HDF5 file from disk and create a DWI object.
-
-        Parameters
-        ----------
-        filename : Path or str
-            The HDF5 file path to read.
-
-        Returns
-        -------
-        DWI
-            The constructed dataset with data loaded from the file.
-        """
-        # Reuse the parent `from_filename` logic to load all attributes
-        # that do not start with '_'. Then simply return DWI(**loaded_data).
-        from attr import fields
-
-        data: dict[str, Any] = {}
-        with h5py.File(filename, "r") as in_file:
-            root = in_file["/0"]
-            for f in fields(cls):
-                if f.name.startswith("_"):
-                    continue
-                if f.name in root:
-                    data[f.name] = np.asanyarray(root[f.name])
-                else:
-                    data[f.name] = None
-
-        return cls(**data)
-
     def to_filename(
         self,
         filename: Path | str,
@@ -156,12 +156,15 @@ class DWI(BaseDataset):
 
         Parameters
         ----------
-        filename : Path or str
-            Path to the output HDF5 file.
-        compression : str, optional
-            Compression filter, e.g. 'gzip'. Default is None (no compression).
-        compression_opts : Any, optional
-            Compression level or other parameters for the HDF5 dataset.
+        filename : :obj:`os.pathlike`
+            The HDF5 file path to write to.
+        compression : :obj:`str`, optional
+            Compression strategy.
+            See :obj:`~h5py.Group.create_dataset` documentation.
+        compression_opts : :obj:`typing.Any`, optional
+            Parameters for compression
+            `filters <https://docs.h5py.org/en/stable/high/dataset.html#dataset-compression>`__.
+
         """
         super().to_filename(filename, compression=compression, compression_opts=compression_opts)
         # Overriding if you'd like to set a custom attribute, for example:
@@ -170,13 +173,14 @@ class DWI(BaseDataset):
 
     def to_nifti(self, filename: Path | str, insert_b0: bool = False) -> None:
         """
-        Write a NIfTI 1.0 file to disk, and also write out the gradient table
-        to sidecar text files (.bvec, .bval).
+        Write a NIfTI file to disk.
 
         Parameters
         ----------
-        filename : Path or str
+        filename : :obj:`os.pathlike`
             The output NIfTI file path.
+        insert_b0 : :obj:`bool`
+            Insert a :math:`b=0` at the front of the output NIfTI.
 
         """
         if not insert_b0:
@@ -210,12 +214,13 @@ class DWI(BaseDataset):
 
 
 def load(
-    filename: str | Path,
-    gradients_file: str | Path | None = None,
-    b0_file: str | Path | None = None,
-    brainmask_file: str | Path | None = None,
-    bvec_file: str | Path | None = None,
-    bval_file: str | Path | None = None,
+    filename: Path | str,
+    brainmask_file: Path | str | None = None,
+    motion_file: Path | str | None = None,
+    gradients_file: Path | str | None = None,
+    bvec_file: Path | str | None = None,
+    bval_file: Path | str | None = None,
+    b0_file: Path | str | None = None,
     b0_thres: float = 50.0,
 ) -> DWI:
     """
@@ -227,28 +232,30 @@ def load(
 
     Parameters
     ----------
-    filename : str or Path
+    filename : :obj:`os.pathlike`
         The main DWI data file (NIfTI or HDF5).
-    gradients_file : str or Path, optional
+    brainmask_file : :obj:`os.pathlike`, optional
+        A brainmask NIfTI file. If provided, will be loaded and
+        stored in the returned dataset.
+    motion_file : :obj:`os.pathlike`
+        A file containing head-motion affine matrices (linear)
+    gradients_file : :obj:`os.pathlike`, optional
         A text file containing the gradients table, shape (4, N) or (N, 4).
         If provided, it supersedes any .bvec / .bval combination.
-    b0_file : str or Path, optional
+    bvec_file : :obj:`os.pathlike`, optional
+        A text file containing b-vectors, shape (3, N).
+    bval_file : :obj:`os.pathlike`, optional
+        A text file containing b-values, shape (N,).
+    b0_file : :obj:`os.pathlike`, optional
         A NIfTI file containing a b=0 volume (possibly averaged or reference).
         If not provided, and the data contains at least one b=0 volume, one will be computed.
-    brainmask_file : str or Path, optional
-        A NIfTI file containing a brain mask. If provided, it will be loaded into
-        the resulting DWI object.
-    bvec_file : str or Path, optional
-        A text file containing b-vectors, shape (3, N).
-    bval_file : str or Path, optional
-        A text file containing b-values, shape (N,).
     b0_thres : float, optional
         Threshold for determining which volumes are considered DWI vs. b=0
-        if you combine them in the same file. Default is 50.0.
+        if you combine them in the same file.
 
     Returns
     -------
-    dwi : DWI
+    dwi : :obj:`~nifreeze.data.dmri.DWI`
         A DWI object containing the loaded data, gradient table, and optional
         b-zero volume, and brainmask.
 
@@ -259,6 +266,10 @@ def load(
         ``bvec_file`` + ``bval_file``).
 
     """
+
+    if motion_file:
+        raise NotImplementedError
+
     filename = Path(filename)
     # 1) If this is an HDF5 file, just load via the DWI.from_filename method
     if filename.suffix == ".h5":

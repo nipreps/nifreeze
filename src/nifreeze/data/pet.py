@@ -37,26 +37,14 @@ from nifreeze.data.base import BaseDataset, _cmp, _data_repr
 
 @attr.s(slots=True)
 class PET(BaseDataset):
-    """
-    Data representation structure for PET data, inheriting from BaseDataset.
-
-    In addition to the base attributes (e.g., dataobj, affine), this PET class stores:
-    - frame_time: a 1D array specifying the midpoint timing of each frame.
-    - total_duration: a float specifying the total acquisition duration.
-
-    """
+    """Data representation structure for PET data."""
 
     frame_time: np.ndarray | None = attr.ib(
         default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp)
     )
-    """
-    A 1D numpy array specifying the midpoint timing of each sample or frame.
-    Typically shape (N,).
-    """
+    """A (N,) numpy array specifying the midpoint timing of each sample or frame."""
     total_duration: float | None = attr.ib(default=None, repr=True)
-    """
-    A float representing the total duration of the entire PET acquisition.
-    """
+    """A float representing the total duration of the dataset."""
 
     def __getitem__(
         self, idx: int | slice | tuple | np.ndarray
@@ -71,13 +59,14 @@ class PET(BaseDataset):
 
         Returns
         -------
-        volumes : np.ndarray
-            The selected data subset. If `idx` is a single integer, this will have shape
-            ``(X, Y, Z)``, otherwise it may have shape ``(X, Y, Z, k)``.
-        motion_affine : np.ndarray or None
-            The corresponding per-volume motion affine(s) or `None` if identity transform(s).
-        time : float
-            The corresponding frame time.
+        volumes : :obj:`~numpy.ndarray`
+            The selected data subset.
+            If ``idx`` is a single integer, this will have shape ``(X, Y, Z)``,
+            otherwise it may have shape ``(X, Y, Z, k)``.
+        motion_affine : :obj:`~numpy.ndarray` or ``None``
+            The corresponding per-volume motion affine(s) or ``None`` if identity transform(s).
+        time : :obj:`float` or ``None``
+            The frame time corresponding to the index(es).
 
         """
 
@@ -91,13 +80,14 @@ class PET(BaseDataset):
 
         Parameters
         ----------
-        filename : str or Path
+        filename : :obj:`os.pathlike`
             The HDF5 file path to read.
 
         Returns
         -------
-        PET
+        :obj:`~nifreeze.data.pet.PET`
             A PET dataset with data loaded from the specified file.
+
         """
         import attr
 
@@ -128,12 +118,15 @@ class PET(BaseDataset):
 
         Parameters
         ----------
-        filename : Path or str
-            Path to the output HDF5 file.
-        compression : str, optional
-            Compression filter, e.g. 'gzip'. Default is None (no compression).
-        compression_opts : Any, optional
-            Compression level or other parameters for the HDF5 dataset.
+        filename : :obj:`os.pathlike`
+            The HDF5 file path to write to.
+        compression : :obj:`str`, optional
+            Compression strategy.
+            See :obj:`~h5py.Group.create_dataset` documentation.
+        compression_opts : :obj:`typing.Any`, optional
+            Parameters for compression
+            `filters <https://docs.h5py.org/en/stable/high/dataset.html#dataset-compression>`__.
+
         """
         super().to_filename(filename, compression=compression, compression_opts=compression_opts)
         # Overriding if you'd like to set a custom attribute, for example:
@@ -144,6 +137,7 @@ class PET(BaseDataset):
 def load(
     filename: Path | str,
     brainmask_file: Path | str | None = None,
+    motion_file: Path | str | None = None,
     frame_time: np.ndarray | list[float] | None = None,
     frame_duration: np.ndarray | list[float] | None = None,
 ) -> PET:
@@ -152,27 +146,35 @@ def load(
 
     Parameters
     ----------
-    filename : Path or str
-        Path to the PET data (HDF5 or NIfTI).
-    brainmask_file : Path or str, optional
-        An optional brain mask NIfTI file.
-    frame_time : np.ndarray or list of float, optional
+    filename : :obj:`os.pathlike`
+        The NIfTI or HDF5 file.
+    brainmask_file : :obj:`os.pathlike`, optional
+        A brainmask NIfTI file. If provided, will be loaded and
+        stored in the returned dataset.
+    motion_file : :obj:`os.pathlike`
+        A file containing head-motion affine matrices (linear).
+    frame_time : :obj:`numpy.ndarray` or :obj:`list` of :obj:`float`, optional
         The start times of each frame relative to the beginning of the acquisition.
-        If None, an error is raised (since BIDS requires FrameTimesStart).
-    frame_duration : np.ndarray or list of float, optional
-        The duration of each frame. If None, it is derived by the difference
-        of consecutive frame_times, defaulting the last frame to match the second-last.
+        If ``None``, an error is raised (since BIDS requires ``FrameTimesStart``).
+    frame_duration : :obj:`numpy.ndarray` or :obj:`list` of :obj:`float`, optional
+        The duration of each frame.
+        If ``None``, it is derived by the difference of consecutive frame times,
+        defaulting the last frame to match the second-last.
 
     Returns
     -------
-    PET
+    :obj:`~nifreeze.data.pet.PET`
         A PET object storing the data, metadata, and any optional mask.
 
     Raises
     ------
     RuntimeError
-        If `frame_time` is not provided (BIDS requires it).
+        If ``frame_time`` is not provided (BIDS requires it).
+
     """
+    if motion_file:
+        raise NotImplementedError
+
     filename = Path(filename)
     if filename.suffix == ".h5":
         # Load from HDF5
