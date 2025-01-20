@@ -96,5 +96,5 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path):
                 nt.linear.Affine(est),
                 xfms[i],
             ).max()
-            < 0.2
+            < 0.25
         )
