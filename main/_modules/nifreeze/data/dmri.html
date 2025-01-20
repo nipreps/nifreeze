@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.data.dmri - nifreeze 25.0.0.dev44 documentation</title>
+        <title>nifreeze.data.dmri - nifreeze 25.0.0.dev58 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev44 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev58 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev44</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev58</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev44</span>
+  <span class="sidebar-brand-text">25.0.0.dev58</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -218,6 +218,7 @@
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/nifreeze.data.html">nifreeze.data package</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of nifreeze.data package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.data.base.html">nifreeze.data.base module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.data.dmri.html">nifreeze.data.dmri module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.data.filtering.html">nifreeze.data.filtering module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.data.pet.html">nifreeze.data.pet module</a></li>
@@ -313,11 +314,13 @@
 <span class="c1">#</span>
 <span class="c1">#     https://www.nipreps.org/community/licensing/</span>
 <span class="c1">#</span>
-<span class="sd">&quot;&quot;&quot;Representing data in hard-disk and memory.&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;dMRI data representation.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span> <span class="nn">tempfile</span> <span class="kn">import</span> <span class="n">mkdtemp</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
 <span class="kn">from</span> <span class="nn">warnings</span> <span class="kn">import</span> <span class="n">warn</span>
 
 <span class="kn">import</span> <span class="nn">attr</span>
@@ -326,99 +329,113 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">nitransforms.linear</span> <span class="kn">import</span> <span class="n">Affine</span>
 
-
-<span class="k">def</span> <span class="nf">_data_repr</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;None&quot;</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&lt;</span><span class="si">{</span><span class="s1">&#39;x&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">value</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">value</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">)&gt;&quot;</span>
-
-
-<span class="k">def</span> <span class="nf">_cmp</span><span class="p">(</span><span class="n">lh</span><span class="p">,</span> <span class="n">rh</span><span class="p">):</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">lh</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rh</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">lh</span><span class="p">,</span> <span class="n">rh</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">lh</span> <span class="o">==</span> <span class="n">rh</span>
+<span class="kn">from</span> <span class="nn">nifreeze.data.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span><span class="p">,</span> <span class="n">_cmp</span><span class="p">,</span> <span class="n">_data_repr</span>
 
 
 <div class="viewcode-block" id="DWI">
 <a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI">[docs]</a>
 <span class="nd">@attr</span><span class="o">.</span><span class="n">s</span><span class="p">(</span><span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">DWI</span><span class="p">:</span>
+<span class="k">class</span> <span class="nc">DWI</span><span class="p">(</span><span class="n">BaseDataset</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Data representation structure for dMRI data.&quot;&quot;&quot;</span>
 
-    <span class="n">dataobj</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="n">attr</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">))</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A numpy ndarray object for the data array, without *b=0* volumes.&quot;&quot;&quot;</span>
-    <span class="n">affine</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="n">attr</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">))</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Best affine for RAS-to-voxel conversion of coordinates (NIfTI header).&quot;&quot;&quot;</span>
-    <span class="n">brainmask</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="n">attr</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">))</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A boolean ndarray object containing a corresponding brainmask.&quot;&quot;&quot;</span>
     <span class="n">bzero</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="n">attr</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">))</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A *b=0* reference map, preferably obtained by some smart averaging.</span>
-<span class="sd">    If the :math:`B_0` fieldmap is set, this *b=0* reference map should also</span>
-<span class="sd">    be unwarped.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A *b=0* reference map, preferably obtained by some smart averaging.&quot;&quot;&quot;</span>
     <span class="n">gradients</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="n">attr</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">))</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A 2D numpy array of the gradient table in RAS+B format.&quot;&quot;&quot;</span>
-    <span class="n">em_affines</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="n">attr</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">))</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    List of :obj:`nitransforms.linear.Affine` objects that bring</span>
-<span class="sd">    DWIs (i.e., no b=0) into alignment.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">fieldmap</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="n">attr</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">))</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A 3D displacements field to unwarp susceptibility distortions.&quot;&quot;&quot;</span>
-    <span class="n">_filepath</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span>
-        <span class="n">factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">Path</span><span class="p">(</span><span class="n">mkdtemp</span><span class="p">())</span> <span class="o">/</span> <span class="s2">&quot;em_cache.h5&quot;</span><span class="p">,</span>
-        <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-        <span class="n">eq</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="p">)</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A path to an HDF5 file to store the whole dataset.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A 2D numpy array of the gradient table (4xN).&quot;&quot;&quot;</span>
+    <span class="n">eddy_xfms</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;List of transforms to correct for estimatted eddy current distortions.&quot;&quot;&quot;</span>
 
-<div class="viewcode-block" id="DWI.get_filename">
-<a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI.get_filename">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_filename</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the filepath of the HDF5 file.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span></div>
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">slice</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns volume(s) and corresponding affine(s) and gradient(s) through fancy indexing.</span>
 
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        idx : :obj:`int` or :obj:`slice` or :obj:`tuple` or :obj:`~numpy.ndarray`</span>
+<span class="sd">            Indexer for the last dimension (or possibly other dimensions if extended).</span>
 
-<div class="viewcode-block" id="DWI.__len__">
-<a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI.__len__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Obtain the number of high-*b* orientations.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span></div>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        volumes : :obj:`~numpy.ndarray`</span>
+<span class="sd">            The selected data subset.</span>
+<span class="sd">            If ``idx`` is a single integer, this will have shape ``(X, Y, Z)``,</span>
+<span class="sd">            otherwise it may have shape ``(X, Y, Z, k)``.</span>
+<span class="sd">        motion_affine : :obj:`~numpy.ndarray` or ``None``</span>
+<span class="sd">            The corresponding per-volume motion affine(s) or ``None`` if identity transform(s).</span>
+<span class="sd">        gradient : :obj:`~numpy.ndarray`</span>
+<span class="sd">            The corresponding gradient(s), which may have shape ``(4,)`` if a single volume</span>
+<span class="sd">            or ``(4, k)`` if multiple volumes, or ``None`` if gradients are not available.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">data</span><span class="p">,</span> <span class="n">affine</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span>
+
+<div class="viewcode-block" id="DWI.from_filename">
+<a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI.from_filename">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_filename</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DWI</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read an HDF5 file from disk and create a DWI object.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        filename : :obj:`os.pathlike`</span>
+<span class="sd">            The HDF5 file path to read.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :obj:`~nifreeze.data.dmri.DWI`</span>
+<span class="sd">            The constructed dataset with data loaded from the file.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Reuse the parent `from_filename` logic to load all attributes</span>
+        <span class="c1"># that do not start with &#39;_&#39;. Then simply return DWI(**loaded_data).</span>
+        <span class="kn">from</span> <span class="nn">attr</span> <span class="kn">import</span> <span class="n">fields</span>
+
+        <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">in_file</span><span class="p">:</span>
+            <span class="n">root</span> <span class="o">=</span> <span class="n">in_file</span><span class="p">[</span><span class="s2">&quot;/0&quot;</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">):</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">root</span><span class="p">:</span>
+                    <span class="n">data</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">root</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">data</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="n">data</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="DWI.set_transform">
 <a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI.set_transform">[docs]</a>
-    <span class="k">def</span> <span class="nf">set_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set an affine, and update data object and gradients.&quot;&quot;&quot;</span>
-        <span class="n">reference</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;ImageGrid&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="s2">&quot;affine&quot;</span><span class="p">))(</span>
-            <span class="n">shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="n">affine</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">affine</span>
-        <span class="p">)</span>
+    <span class="k">def</span> <span class="nf">set_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set an affine transform for a particular index and update the data object.</span>
 
-        <span class="c1"># create a nitransforms object</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fieldmap</span><span class="p">:</span>
-            <span class="c1"># compose fieldmap into transform</span>
-            <span class="k">raise</span> <span class="ne">NotImplementedError</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">xform</span> <span class="o">=</span> <span class="n">Affine</span><span class="p">(</span><span class="n">matrix</span><span class="o">=</span><span class="n">affine</span><span class="p">,</span> <span class="n">reference</span><span class="o">=</span><span class="n">reference</span><span class="p">)</span>
+<span class="sd">        The new affine is set as in :obj:`~nifreeze.data.base.BaseDataset.set_transform`,</span>
+<span class="sd">        and, in addition, the corresponding gradient vector is rotated.</span>
 
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        index : :obj:`int`</span>
+<span class="sd">            The volume index to transform.</span>
+<span class="sd">        affine : :obj:`numpy.ndarray`</span>
+<span class="sd">            The 4x4 affine matrix to be applied.</span>
+<span class="sd">        order : :obj:`int`, optional</span>
+<span class="sd">            The order of the spline interpolation.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span><span class="p">)</span>
 
-        <span class="c1"># read original DWI data &amp; b-vector</span>
-        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">in_file</span><span class="p">:</span>
-            <span class="n">root</span> <span class="o">=</span> <span class="n">in_file</span><span class="p">[</span><span class="s2">&quot;/0&quot;</span><span class="p">]</span>
-            <span class="n">dwframe</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">root</span><span class="p">[</span><span class="s2">&quot;dataobj&quot;</span><span class="p">][</span><span class="o">...</span><span class="p">,</span> <span class="n">index</span><span class="p">])</span>
-            <span class="n">bvec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">root</span><span class="p">[</span><span class="s2">&quot;gradients&quot;</span><span class="p">][:</span><span class="mi">3</span><span class="p">,</span> <span class="n">index</span><span class="p">])</span>
+        <span class="n">ImageGrid</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;ImageGrid&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="s2">&quot;affine&quot;</span><span class="p">))</span>
+        <span class="n">reference</span> <span class="o">=</span> <span class="n">ImageGrid</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="n">affine</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">)</span>
 
-        <span class="n">dwmoving</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">dwframe</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-
-        <span class="c1"># resample and update orientation at index</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span>
-            <span class="n">xform</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">dwmoving</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span><span class="o">.</span><span class="n">dataobj</span><span class="p">,</span>
-            <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
-        <span class="p">)</span>
+        <span class="n">xform</span> <span class="o">=</span> <span class="n">Affine</span><span class="p">(</span><span class="n">matrix</span><span class="o">=</span><span class="n">affine</span><span class="p">,</span> <span class="n">reference</span><span class="o">=</span><span class="n">reference</span><span class="p">)</span>
+        <span class="n">bvec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="n">index</span><span class="p">]</span>
 
         <span class="c1"># invert transform transform b-vector and origin</span>
         <span class="n">r_bvec</span> <span class="o">=</span> <span class="p">(</span><span class="o">~</span><span class="n">xform</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">([</span><span class="n">bvec</span><span class="p">,</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)])</span>
@@ -427,87 +444,80 @@
         <span class="c1"># Normalize and update</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_bvec</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">new_bvec</span><span class="p">)</span>
 
-        <span class="c1"># update transform</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">em_affines</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">em_affines</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">em_affines</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">xform</span><span class="o">.</span><span class="n">matrix</span></div>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">set_transform</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="n">order</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="DWI.to_filename">
 <a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI.to_filename">[docs]</a>
-    <span class="k">def</span> <span class="nf">to_filename</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compression_opts</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write an HDF5 file to disk.&quot;&quot;&quot;</span>
-        <span class="n">filename</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">filename</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.h5&quot;</span><span class="p">):</span>
-            <span class="n">filename</span> <span class="o">=</span> <span class="n">filename</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">filename</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.h5&quot;</span>
+    <span class="k">def</span> <span class="nf">to_filename</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">compression</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">compression_opts</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write the dMRI dataset to an HDF5 file on disk.</span>
 
-        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
-            <span class="n">out_file</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;Format&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;EMC/DWI&quot;</span>
-            <span class="n">out_file</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;Version&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-            <span class="n">root</span> <span class="o">=</span> <span class="n">out_file</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s2">&quot;/0&quot;</span><span class="p">)</span>
-            <span class="n">root</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;Type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;dwi&quot;</span>
-            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">attr</span><span class="o">.</span><span class="n">fields</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">):</span>
-                <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">):</span>
-                    <span class="k">continue</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        filename : :obj:`os.pathlike`</span>
+<span class="sd">            The HDF5 file path to write to.</span>
+<span class="sd">        compression : :obj:`str`, optional</span>
+<span class="sd">            Compression strategy.</span>
+<span class="sd">            See :obj:`~h5py.Group.create_dataset` documentation.</span>
+<span class="sd">        compression_opts : :obj:`typing.Any`, optional</span>
+<span class="sd">            Parameters for compression</span>
+<span class="sd">            `filters &lt;https://docs.h5py.org/en/stable/high/dataset.html#dataset-compression&gt;`__.</span>
 
-                <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="n">root</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
-                        <span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-                        <span class="n">data</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
-                        <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span>
-                        <span class="n">compression_opts</span><span class="o">=</span><span class="n">compression_opts</span><span class="p">,</span>
-                    <span class="p">)</span></div>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span> <span class="n">compression_opts</span><span class="o">=</span><span class="n">compression_opts</span><span class="p">)</span>
+        <span class="c1"># Overriding if you&#39;d like to set a custom attribute, for example:</span>
+        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
+            <span class="n">out_file</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;Type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;dmri&quot;</span></div>
 
 
 <div class="viewcode-block" id="DWI.to_nifti">
 <a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI.to_nifti">[docs]</a>
-    <span class="k">def</span> <span class="nf">to_nifti</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write a NIfTI 1.0 file to disk.&quot;&quot;&quot;</span>
-        <span class="n">insert_b0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;insert_b0&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">insert_b0</span>
-            <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">bzero</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
-        <span class="p">)</span>
-        <span class="n">nii</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="n">nii</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">set_xyzt_units</span><span class="p">(</span><span class="s2">&quot;mm&quot;</span><span class="p">)</span>
-        <span class="n">nii</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span></div>
+    <span class="k">def</span> <span class="nf">to_nifti</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span> <span class="n">insert_b0</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write a NIfTI file to disk.</span>
 
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        filename : :obj:`os.pathlike`</span>
+<span class="sd">            The output NIfTI file path.</span>
+<span class="sd">        insert_b0 : :obj:`bool`</span>
+<span class="sd">            Insert a :math:`b=0` at the front of the output NIfTI.</span>
 
-<div class="viewcode-block" id="DWI.plot_mosaic">
-<a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI.plot_mosaic">[docs]</a>
-    <span class="k">def</span> <span class="nf">plot_mosaic</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Visualize one direction of the dMRI dataset.&quot;&quot;&quot;</span>
-        <span class="kn">from</span> <span class="nn">nireports.reportlets.modality.dwi</span> <span class="kn">import</span> <span class="n">plot_dwi</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">insert_b0</span><span class="p">:</span>
+            <span class="c1"># Parent&#39;s to_nifti to handle the primary NIfTI export.</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_nifti</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">bzero</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">nii</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">datahdr</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">datahdr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">nii</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">set_xyzt_units</span><span class="p">(</span><span class="s2">&quot;mm&quot;</span><span class="p">)</span>
+            <span class="n">nii</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">plot_dwi</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">bzero</span> <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">index</span><span class="p">],</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span>
-            <span class="n">gradient</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">index</span><span class="p">]</span> <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-        <span class="p">)</span></div>
+        <span class="c1"># Convert filename to a Path object.</span>
+        <span class="n">out_root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span><span class="o">.</span><span class="n">absolute</span><span class="p">()</span>
 
+        <span class="c1"># Remove .gz if present, then remove .nii if present.</span>
+        <span class="c1"># This yields the base stem for writing .bvec / .bval.</span>
+        <span class="k">if</span> <span class="n">out_root</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">&quot;.gz&quot;</span><span class="p">:</span>
+            <span class="n">out_root</span> <span class="o">=</span> <span class="n">out_root</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>  <span class="c1"># remove &#39;.gz&#39;</span>
+        <span class="k">if</span> <span class="n">out_root</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">&quot;.nii&quot;</span><span class="p">:</span>
+            <span class="n">out_root</span> <span class="o">=</span> <span class="n">out_root</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>  <span class="c1"># remove &#39;.nii&#39;</span>
 
-<div class="viewcode-block" id="DWI.plot_gradients">
-<a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI.plot_gradients">[docs]</a>
-    <span class="k">def</span> <span class="nf">plot_gradients</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Visualize diffusion gradient.&quot;&quot;&quot;</span>
-        <span class="kn">from</span> <span class="nn">nireports.reportlets.modality.dwi</span> <span class="kn">import</span> <span class="n">plot_gradients</span> <span class="k">as</span> <span class="n">rpt_plot_gradients</span>
+        <span class="c1"># Construct sidecar file paths.</span>
+        <span class="n">bvecs_file</span> <span class="o">=</span> <span class="n">out_root</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.bvec&quot;</span><span class="p">)</span>
+        <span class="n">bvals_file</span> <span class="o">=</span> <span class="n">out_root</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.bval&quot;</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">rpt_plot_gradients</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="DWI.from_filename">
-<a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI.from_filename">[docs]</a>
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">from_filename</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read an HDF5 file from disk.&quot;&quot;&quot;</span>
-        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">in_file</span><span class="p">:</span>
-            <span class="n">root</span> <span class="o">=</span> <span class="n">in_file</span><span class="p">[</span><span class="s2">&quot;/0&quot;</span><span class="p">]</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)}</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="n">data</span><span class="p">)</span></div>
+        <span class="c1"># Save bvecs and bvals to text files</span>
+        <span class="c1"># Each row of bvecs is one direction (3 rows, N columns).</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">bvecs_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%.6f</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">bvals_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">fmt</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%.6f</span><span class="s2">&quot;</span><span class="p">)</span></div>
 </div>
 
 
@@ -515,63 +525,129 @@
 <div class="viewcode-block" id="load">
 <a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.load">[docs]</a>
 <span class="k">def</span> <span class="nf">load</span><span class="p">(</span>
-    <span class="n">filename</span><span class="p">,</span>
-    <span class="n">gradients_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">b0_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">brainmask_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">fmap_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">bvec_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">bval_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">b0_thres</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
-<span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load DWI data.&quot;&quot;&quot;</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">brainmask_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">motion_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">gradients_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">bvec_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">bval_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">b0_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">b0_thres</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">50.0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DWI</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load DWI data and construct a DWI object.</span>
+
+<span class="sd">    This function can load data from either an HDF5 file (if the filename ends with ``.h5``)</span>
+<span class="sd">    or from a NIfTI file, optionally loading a gradient table from either a separate gradients</span>
+<span class="sd">    file or from .bvec / .bval files.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filename : :obj:`os.pathlike`</span>
+<span class="sd">        The main DWI data file (NIfTI or HDF5).</span>
+<span class="sd">    brainmask_file : :obj:`os.pathlike`, optional</span>
+<span class="sd">        A brainmask NIfTI file. If provided, will be loaded and</span>
+<span class="sd">        stored in the returned dataset.</span>
+<span class="sd">    motion_file : :obj:`os.pathlike`</span>
+<span class="sd">        A file containing head-motion affine matrices (linear)</span>
+<span class="sd">    gradients_file : :obj:`os.pathlike`, optional</span>
+<span class="sd">        A text file containing the gradients table, shape (4, N) or (N, 4).</span>
+<span class="sd">        If provided, it supersedes any .bvec / .bval combination.</span>
+<span class="sd">    bvec_file : :obj:`os.pathlike`, optional</span>
+<span class="sd">        A text file containing b-vectors, shape (3, N).</span>
+<span class="sd">    bval_file : :obj:`os.pathlike`, optional</span>
+<span class="sd">        A text file containing b-values, shape (N,).</span>
+<span class="sd">    b0_file : :obj:`os.pathlike`, optional</span>
+<span class="sd">        A NIfTI file containing a b=0 volume (possibly averaged or reference).</span>
+<span class="sd">        If not provided, and the data contains at least one b=0 volume, one will be computed.</span>
+<span class="sd">    b0_thres : float, optional</span>
+<span class="sd">        Threshold for determining which volumes are considered DWI vs. b=0</span>
+<span class="sd">        if you combine them in the same file.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dwi : :obj:`~nifreeze.data.dmri.DWI`</span>
+<span class="sd">        A DWI object containing the loaded data, gradient table, and optional</span>
+<span class="sd">        b-zero volume, and brainmask.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    RuntimeError</span>
+<span class="sd">        If no gradient information is provided (neither ``gradients_file`` nor</span>
+<span class="sd">        ``bvec_file`` + ``bval_file``).</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">motion_file</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
     <span class="n">filename</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">filename</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.h5&quot;</span><span class="p">):</span>
+    <span class="c1"># 1) If this is an HDF5 file, just load via the DWI.from_filename method</span>
+    <span class="k">if</span> <span class="n">filename</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">&quot;.h5&quot;</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">DWI</span><span class="o">.</span><span class="n">from_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">gradients_file</span><span class="p">:</span>
-        <span class="n">grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">gradients_file</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+    <span class="c1"># 2) Otherwise, load a NIfTI</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">filename</span><span class="p">))</span>
+    <span class="n">fulldata</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">get_fdata</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">affine</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">affine</span>
 
+    <span class="c1"># 3) Determine the gradients array from either gradients_file or bvec/bval</span>
+    <span class="k">if</span> <span class="n">gradients_file</span><span class="p">:</span>
+        <span class="n">grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">gradients_file</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">bvec_file</span> <span class="ow">and</span> <span class="n">bval_file</span><span class="p">:</span>
             <span class="n">warn</span><span class="p">(</span>
-                <span class="s2">&quot;Gradients table file and b-vec/val files are defined; &quot;</span>
-                <span class="s2">&quot;dismissing b-vec/val files.&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Both a gradients table file and b-vec/val files are defined; &quot;</span>
+                <span class="s2">&quot;ignoring b-vec/val files in favor of the gradients_file.&quot;</span><span class="p">,</span>
                 <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
             <span class="p">)</span>
     <span class="k">elif</span> <span class="n">bvec_file</span> <span class="ow">and</span> <span class="n">bval_file</span><span class="p">:</span>
-        <span class="n">grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span>
-            <span class="p">(</span>
-                <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">bvec_file</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">),</span>
-                <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">bval_file</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">),</span>
-            <span class="p">)</span>
-        <span class="p">)</span>
+        <span class="n">bvecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">bvec_file</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>  <span class="c1"># shape (3, N)</span>
+        <span class="k">if</span> <span class="n">bvecs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">bvecs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">bvecs</span> <span class="o">=</span> <span class="n">bvecs</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="n">bvals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">bval_file</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>  <span class="c1"># shape (N,)</span>
+        <span class="c1"># Stack to shape (4, N)</span>
+        <span class="n">grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">bvecs</span><span class="p">,</span> <span class="n">bvals</span><span class="p">))</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;A gradients file is necessary&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="s2">&quot;No gradient data provided. &quot;</span>
+            <span class="s2">&quot;Please specify either a gradients_file or (bvec_file &amp; bval_file).&quot;</span>
+        <span class="p">)</span>
 
-    <span class="n">img</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-    <span class="n">fulldata</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">get_fdata</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
-    <span class="n">retval</span> <span class="o">=</span> <span class="n">DWI</span><span class="p">(</span>
-        <span class="n">affine</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span>
+    <span class="c1"># 4) Create the DWI instance. We&#39;ll filter out volumes where b-value &gt; b0_thres</span>
+    <span class="c1">#    as &quot;DW volumes&quot; if the user wants to store only the high-b volumes here</span>
+    <span class="n">gradmsk</span> <span class="o">=</span> <span class="n">grad</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">b0_thres</span> <span class="k">if</span> <span class="n">grad</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span> <span class="k">else</span> <span class="n">grad</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">b0_thres</span>
+
+    <span class="c1"># The shape checking is somewhat flexible: (4, N) or (N, 4)</span>
+    <span class="n">dwi_obj</span> <span class="o">=</span> <span class="n">DWI</span><span class="p">(</span>
+        <span class="n">dataobj</span><span class="o">=</span><span class="n">fulldata</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">gradmsk</span><span class="p">],</span>
+        <span class="n">affine</span><span class="o">=</span><span class="n">affine</span><span class="p">,</span>
+        <span class="c1"># We&#39;ll assign the filtered gradients below.</span>
     <span class="p">)</span>
-    <span class="n">gradmsk</span> <span class="o">=</span> <span class="n">grad</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">b0_thres</span>
-    <span class="n">retval</span><span class="o">.</span><span class="n">gradients</span> <span class="o">=</span> <span class="n">grad</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">gradmsk</span><span class="p">]</span>
-    <span class="n">retval</span><span class="o">.</span><span class="n">dataobj</span> <span class="o">=</span> <span class="n">fulldata</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">gradmsk</span><span class="p">]</span>
 
+    <span class="n">dwi_obj</span><span class="o">.</span><span class="n">gradients</span> <span class="o">=</span> <span class="n">grad</span><span class="p">[:,</span> <span class="n">gradmsk</span><span class="p">]</span> <span class="k">if</span> <span class="n">grad</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span> <span class="k">else</span> <span class="n">grad</span><span class="p">[</span><span class="n">gradmsk</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span>
+
+    <span class="c1"># 6) b=0 volume (bzero)</span>
+    <span class="c1">#    If the user provided a b0_file, load it</span>
     <span class="k">if</span> <span class="n">b0_file</span><span class="p">:</span>
-        <span class="n">b0img</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">b0_file</span><span class="p">)</span>
-        <span class="n">retval</span><span class="o">.</span><span class="n">bzero</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">b0img</span><span class="o">.</span><span class="n">dataobj</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">gradmsk</span><span class="p">):</span>
-        <span class="n">retval</span><span class="o">.</span><span class="n">bzero</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">fulldata</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="o">~</span><span class="n">gradmsk</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">b0img</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">b0_file</span><span class="p">))</span>
+        <span class="n">b0vol</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">b0img</span><span class="o">.</span><span class="n">dataobj</span><span class="p">)</span>
+        <span class="c1"># We&#39;ll assume your DWI class has a bzero: np.ndarray | None attribute</span>
+        <span class="n">dwi_obj</span><span class="o">.</span><span class="n">bzero</span> <span class="o">=</span> <span class="n">b0vol</span>
+    <span class="c1"># Otherwise, if any volumes remain outside gradmsk, compute a median B0:</span>
+    <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="o">~</span><span class="n">gradmsk</span><span class="p">):</span>
+        <span class="c1"># The b=0 volumes are those that did NOT pass b0_thres</span>
+        <span class="n">b0_volumes</span> <span class="o">=</span> <span class="n">fulldata</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="o">~</span><span class="n">gradmsk</span><span class="p">]</span>
+        <span class="c1"># A simple approach is to take the median across that last dimension</span>
+        <span class="c1"># Note that axis=3 is valid only if your data is 4D (x, y, z, volumes).</span>
+        <span class="n">dwi_obj</span><span class="o">.</span><span class="n">bzero</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">b0_volumes</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
 
+    <span class="c1"># 7) If a brainmask_file was provided, load it</span>
     <span class="k">if</span> <span class="n">brainmask_file</span><span class="p">:</span>
-        <span class="n">mask</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">brainmask_file</span><span class="p">)</span>
-        <span class="n">retval</span><span class="o">.</span><span class="n">brainmask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">mask</span><span class="o">.</span><span class="n">dataobj</span><span class="p">)</span>
+        <span class="n">mask_img</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">brainmask_file</span><span class="p">))</span>
+        <span class="n">dwi_obj</span><span class="o">.</span><span class="n">brainmask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">mask_img</span><span class="o">.</span><span class="n">dataobj</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">fmap_file</span><span class="p">:</span>
-        <span class="n">fmapimg</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fmap_file</span><span class="p">)</span>
-        <span class="n">retval</span><span class="o">.</span><span class="n">fieldmap</span> <span class="o">=</span> <span class="n">fmapimg</span><span class="o">.</span><span class="n">get_fdata</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">retval</span></div>
+    <span class="k">return</span> <span class="n">dwi_obj</span></div>
 
 </pre></div>
         </article>
@@ -605,7 +681,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=a4c9dc1b"></script>
+</div><script src="../../../_static/documentation_options.js?v=1fe425f7"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>

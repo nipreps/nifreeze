@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.data.pet - nifreeze 25.0.0.dev44 documentation</title>
+        <title>nifreeze.data.pet - nifreeze 25.0.0.dev58 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev44 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev58 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev44</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev58</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev44</span>
+  <span class="sidebar-brand-text">25.0.0.dev58</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -218,6 +218,7 @@
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/nifreeze.data.html">nifreeze.data package</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of nifreeze.data package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.data.base.html">nifreeze.data.base module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.data.dmri.html">nifreeze.data.dmri module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.data.filtering.html">nifreeze.data.filtering module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.data.pet.html">nifreeze.data.pet module</a></li>
@@ -315,135 +316,123 @@
 <span class="c1">#</span>
 <span class="sd">&quot;&quot;&quot;PET data representation.&quot;&quot;&quot;</span>
 
-<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span> <span class="nn">tempfile</span> <span class="kn">import</span> <span class="n">mkdtemp</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">import</span> <span class="nn">attr</span>
 <span class="kn">import</span> <span class="nn">h5py</span>
 <span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nb</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">nitransforms.linear</span> <span class="kn">import</span> <span class="n">Affine</span>
 
-
-<span class="k">def</span> <span class="nf">_data_repr</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;None&quot;</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&lt;</span><span class="si">{</span><span class="s1">&#39;x&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">value</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">value</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">)&gt;&quot;</span>
+<span class="kn">from</span> <span class="nn">nifreeze.data.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span><span class="p">,</span> <span class="n">_cmp</span><span class="p">,</span> <span class="n">_data_repr</span>
 
 
 <div class="viewcode-block" id="PET">
 <a class="viewcode-back" href="../../../api/nifreeze.data.pet.html#nifreeze.data.pet.PET">[docs]</a>
 <span class="nd">@attr</span><span class="o">.</span><span class="n">s</span><span class="p">(</span><span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">PET</span><span class="p">:</span>
+<span class="k">class</span> <span class="nc">PET</span><span class="p">(</span><span class="n">BaseDataset</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Data representation structure for PET data.&quot;&quot;&quot;</span>
 
-    <span class="n">dataobj</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">)</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A numpy ndarray object for the data array, without *b=0* volumes.&quot;&quot;&quot;</span>
-    <span class="n">affine</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">)</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Best affine for RAS-to-voxel conversion of coordinates (NIfTI header).&quot;&quot;&quot;</span>
-    <span class="n">brainmask</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">)</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A boolean ndarray object containing a corresponding brainmask.&quot;&quot;&quot;</span>
-    <span class="n">frame_time</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">)</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A 1D numpy array with the midpoint timing of each sample.&quot;&quot;&quot;</span>
-    <span class="n">total_duration</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">)</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A float number representing the total duration of acquisition.&quot;&quot;&quot;</span>
-
-    <span class="n">em_affines</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    List of :obj:`nitransforms.linear.Affine` objects that bring</span>
-<span class="sd">    PET timepoints into alignment.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">_filepath</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span>
-        <span class="n">factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">Path</span><span class="p">(</span><span class="n">mkdtemp</span><span class="p">())</span> <span class="o">/</span> <span class="s2">&quot;em_cache.h5&quot;</span><span class="p">,</span>
-        <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">frame_time</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="n">attr</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">)</span>
     <span class="p">)</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A path to an HDF5 file to store the whole dataset.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A (N,) numpy array specifying the midpoint timing of each sample or frame.&quot;&quot;&quot;</span>
+    <span class="n">total_duration</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A float representing the total duration of the dataset.&quot;&quot;&quot;</span>
 
-<div class="viewcode-block" id="PET.__len__">
-<a class="viewcode-back" href="../../../api/nifreeze.data.pet.html#nifreeze.data.pet.PET.__len__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Obtain the number of high-*b* orientations.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span></div>
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">slice</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns volume(s) and corresponding affine(s) and timing(s) through fancy indexing.</span>
 
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        idx : :obj:`int` or :obj:`slice` or :obj:`tuple` or :obj:`~numpy.ndarray`</span>
+<span class="sd">            Indexer for the last dimension (or possibly other dimensions if extended).</span>
 
-<div class="viewcode-block" id="PET.set_transform">
-<a class="viewcode-back" href="../../../api/nifreeze.data.pet.html#nifreeze.data.pet.PET.set_transform">[docs]</a>
-    <span class="k">def</span> <span class="nf">set_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set an affine, and update data object and gradients.&quot;&quot;&quot;</span>
-        <span class="n">reference</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;ImageGrid&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="s2">&quot;affine&quot;</span><span class="p">))(</span>
-            <span class="n">shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="n">affine</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">affine</span>
-        <span class="p">)</span>
-        <span class="n">xform</span> <span class="o">=</span> <span class="n">Affine</span><span class="p">(</span><span class="n">matrix</span><span class="o">=</span><span class="n">affine</span><span class="p">,</span> <span class="n">reference</span><span class="o">=</span><span class="n">reference</span><span class="p">)</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        volumes : :obj:`~numpy.ndarray`</span>
+<span class="sd">            The selected data subset.</span>
+<span class="sd">            If ``idx`` is a single integer, this will have shape ``(X, Y, Z)``,</span>
+<span class="sd">            otherwise it may have shape ``(X, Y, Z, k)``.</span>
+<span class="sd">        motion_affine : :obj:`~numpy.ndarray` or ``None``</span>
+<span class="sd">            The corresponding per-volume motion affine(s) or ``None`` if identity transform(s).</span>
+<span class="sd">        time : :obj:`float` or ``None``</span>
+<span class="sd">            The frame time corresponding to the index(es).</span>
 
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span><span class="p">)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="c1"># read original PET</span>
-        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">in_file</span><span class="p">:</span>
-            <span class="n">root</span> <span class="o">=</span> <span class="n">in_file</span><span class="p">[</span><span class="s2">&quot;/0&quot;</span><span class="p">]</span>
-            <span class="n">dframe</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">root</span><span class="p">[</span><span class="s2">&quot;dataobj&quot;</span><span class="p">][</span><span class="o">...</span><span class="p">,</span> <span class="n">index</span><span class="p">])</span>
-
-        <span class="n">dmoving</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">dframe</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-
-        <span class="c1"># resample and update orientation at index</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span>
-            <span class="n">xform</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">dmoving</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span><span class="o">.</span><span class="n">dataobj</span><span class="p">,</span>
-            <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
-        <span class="p">)</span>
-
-        <span class="c1"># update transform</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">em_affines</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">em_affines</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">em_affines</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">xform</span></div>
-
-
-<div class="viewcode-block" id="PET.to_filename">
-<a class="viewcode-back" href="../../../api/nifreeze.data.pet.html#nifreeze.data.pet.PET.to_filename">[docs]</a>
-    <span class="k">def</span> <span class="nf">to_filename</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compression_opts</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write an HDF5 file to disk.&quot;&quot;&quot;</span>
-        <span class="n">filename</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">filename</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.h5&quot;</span><span class="p">):</span>
-            <span class="n">filename</span> <span class="o">=</span> <span class="n">filename</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">filename</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.h5&quot;</span>
-
-        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
-            <span class="n">out_file</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;Format&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;EMC/PET&quot;</span>
-            <span class="n">out_file</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;Version&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-            <span class="n">root</span> <span class="o">=</span> <span class="n">out_file</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s2">&quot;/0&quot;</span><span class="p">)</span>
-            <span class="n">root</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;Type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;pet&quot;</span>
-            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">attr</span><span class="o">.</span><span class="n">fields</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">):</span>
-                <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">):</span>
-                    <span class="k">continue</span>
-
-                <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="n">root</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
-                        <span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-                        <span class="n">data</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
-                        <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span>
-                        <span class="n">compression_opts</span><span class="o">=</span><span class="n">compression_opts</span><span class="p">,</span>
-                    <span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="PET.to_nifti">
-<a class="viewcode-back" href="../../../api/nifreeze.data.pet.html#nifreeze.data.pet.PET.to_nifti">[docs]</a>
-    <span class="k">def</span> <span class="nf">to_nifti</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write a NIfTI 1.0 file to disk.&quot;&quot;&quot;</span>
-        <span class="n">nii</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="n">nii</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">set_xyzt_units</span><span class="p">(</span><span class="s2">&quot;mm&quot;</span><span class="p">)</span>
-        <span class="n">nii</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span></div>
-
+        <span class="n">data</span><span class="p">,</span> <span class="n">affine</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame_time</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
 
 <div class="viewcode-block" id="PET.from_filename">
 <a class="viewcode-back" href="../../../api/nifreeze.data.pet.html#nifreeze.data.pet.PET.from_filename">[docs]</a>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">from_filename</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read an HDF5 file from disk.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">from_filename</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PET</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read an HDF5 file from disk and create a PET object.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        filename : :obj:`os.pathlike`</span>
+<span class="sd">            The HDF5 file path to read.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :obj:`~nifreeze.data.pet.PET`</span>
+<span class="sd">            A PET dataset with data loaded from the specified file.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">attr</span>
+
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
         <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">in_file</span><span class="p">:</span>
             <span class="n">root</span> <span class="o">=</span> <span class="n">in_file</span><span class="p">[</span><span class="s2">&quot;/0&quot;</span><span class="p">]</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)}</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">attr</span><span class="o">.</span><span class="n">fields</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+                <span class="c1"># skip private attributes (start with &#39;_&#39;)</span>
+                <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">):</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">root</span><span class="p">:</span>
+                    <span class="n">data</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">root</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">data</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="n">data</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PET.to_filename">
+<a class="viewcode-back" href="../../../api/nifreeze.data.pet.html#nifreeze.data.pet.PET.to_filename">[docs]</a>
+    <span class="k">def</span> <span class="nf">to_filename</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">compression</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">compression_opts</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write the PET dataset to an HDF5 file on disk.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        filename : :obj:`os.pathlike`</span>
+<span class="sd">            The HDF5 file path to write to.</span>
+<span class="sd">        compression : :obj:`str`, optional</span>
+<span class="sd">            Compression strategy.</span>
+<span class="sd">            See :obj:`~h5py.Group.create_dataset` documentation.</span>
+<span class="sd">        compression_opts : :obj:`typing.Any`, optional</span>
+<span class="sd">            Parameters for compression</span>
+<span class="sd">            `filters &lt;https://docs.h5py.org/en/stable/high/dataset.html#dataset-compression&gt;`__.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span> <span class="n">compression_opts</span><span class="o">=</span><span class="n">compression_opts</span><span class="p">)</span>
+        <span class="c1"># Overriding if you&#39;d like to set a custom attribute, for example:</span>
+        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
+            <span class="n">out_file</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;Type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;pet&quot;</span></div>
 </div>
 
 
@@ -451,44 +440,93 @@
 <div class="viewcode-block" id="load">
 <a class="viewcode-back" href="../../../api/nifreeze.data.pet.html#nifreeze.data.pet.load">[docs]</a>
 <span class="k">def</span> <span class="nf">load</span><span class="p">(</span>
-    <span class="n">filename</span><span class="p">,</span>
-    <span class="n">brainmask_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">frame_time</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">frame_duration</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-<span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load PET data.&quot;&quot;&quot;</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">brainmask_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">motion_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">frame_time</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">frame_duration</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PET</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load PET data from HDF5 or NIfTI, creating a PET object with appropriate metadata.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filename : :obj:`os.pathlike`</span>
+<span class="sd">        The NIfTI or HDF5 file.</span>
+<span class="sd">    brainmask_file : :obj:`os.pathlike`, optional</span>
+<span class="sd">        A brainmask NIfTI file. If provided, will be loaded and</span>
+<span class="sd">        stored in the returned dataset.</span>
+<span class="sd">    motion_file : :obj:`os.pathlike`</span>
+<span class="sd">        A file containing head-motion affine matrices (linear).</span>
+<span class="sd">    frame_time : :obj:`numpy.ndarray` or :obj:`list` of :obj:`float`, optional</span>
+<span class="sd">        The start times of each frame relative to the beginning of the acquisition.</span>
+<span class="sd">        If ``None``, an error is raised (since BIDS requires ``FrameTimesStart``).</span>
+<span class="sd">    frame_duration : :obj:`numpy.ndarray` or :obj:`list` of :obj:`float`, optional</span>
+<span class="sd">        The duration of each frame.</span>
+<span class="sd">        If ``None``, it is derived by the difference of consecutive frame times,</span>
+<span class="sd">        defaulting the last frame to match the second-last.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    :obj:`~nifreeze.data.pet.PET`</span>
+<span class="sd">        A PET object storing the data, metadata, and any optional mask.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    RuntimeError</span>
+<span class="sd">        If ``frame_time`` is not provided (BIDS requires it).</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">motion_file</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
     <span class="n">filename</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">filename</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.h5&quot;</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">PET</span><span class="o">.</span><span class="n">from_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-
-    <span class="n">img</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-    <span class="n">retval</span> <span class="o">=</span> <span class="n">PET</span><span class="p">(</span>
-        <span class="n">dataobj</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">get_fdata</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">),</span>
-        <span class="n">affine</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span>
-    <span class="p">)</span>
-
-    <span class="k">if</span> <span class="n">frame_time</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-            <span class="s2">&quot;Start time of frames is mandatory (see https://bids-specification.readthedocs.io/&quot;</span>
-            <span class="s2">&quot;en/stable/glossary.html#objects.metadata.FrameTimesStart)&quot;</span>
+    <span class="k">if</span> <span class="n">filename</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">&quot;.h5&quot;</span><span class="p">:</span>
+        <span class="c1"># Load from HDF5</span>
+        <span class="n">pet_obj</span> <span class="o">=</span> <span class="n">PET</span><span class="o">.</span><span class="n">from_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Load from NIfTI</span>
+        <span class="n">img</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">filename</span><span class="p">))</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">get_fdata</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">pet_obj</span> <span class="o">=</span> <span class="n">PET</span><span class="p">(</span>
+            <span class="n">dataobj</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+            <span class="n">affine</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span>
         <span class="p">)</span>
 
-    <span class="n">frame_time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">frame_time</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span> <span class="o">-</span> <span class="n">frame_time</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="c1"># Verify the user provided frame_time if not already in the PET object</span>
+    <span class="k">if</span> <span class="n">pet_obj</span><span class="o">.</span><span class="n">frame_time</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">frame_time</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="s2">&quot;The `frame_time` is mandatory for PET data to comply with BIDS. &quot;</span>
+            <span class="s2">&quot;See https://bids-specification.readthedocs.io for details.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="c1"># If the user supplied new values, set them</span>
+    <span class="k">if</span> <span class="n">frame_time</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Convert to a float32 numpy array and zero out the earliest time</span>
+        <span class="n">frame_time_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">frame_time</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">frame_time_arr</span> <span class="o">-=</span> <span class="n">frame_time_arr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">pet_obj</span><span class="o">.</span><span class="n">frame_time</span> <span class="o">=</span> <span class="n">frame_time_arr</span>
+
+    <span class="c1"># If the user doesn&#39;t provide frame_duration, we derive it:</span>
     <span class="k">if</span> <span class="n">frame_duration</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">frame_duration</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">frame_time</span><span class="p">)</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">frame_duration</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="n">retval</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
-            <span class="n">frame_duration</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">frame_duration</span><span class="p">,</span> <span class="n">frame_duration</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">frame_time_arr</span> <span class="o">=</span> <span class="n">pet_obj</span><span class="o">.</span><span class="n">frame_time</span>
+        <span class="c1"># If shape is e.g. (N,), then we can do</span>
+        <span class="n">durations</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">frame_time_arr</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">durations</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">frame_time_arr</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">durations</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">durations</span><span class="p">,</span> <span class="n">durations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>  <span class="c1"># last frame same as second-last</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">durations</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">frame_duration</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 
-    <span class="n">retval</span><span class="o">.</span><span class="n">total_duration</span> <span class="o">=</span> <span class="n">frame_time</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">frame_duration</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-    <span class="n">retval</span><span class="o">.</span><span class="n">frame_time</span> <span class="o">=</span> <span class="n">frame_time</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">frame_duration</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
+    <span class="c1"># Set total_duration and shift frame_time to the midpoint</span>
+    <span class="n">pet_obj</span><span class="o">.</span><span class="n">total_duration</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">frame_time_arr</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">durations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">pet_obj</span><span class="o">.</span><span class="n">frame_time</span> <span class="o">=</span> <span class="n">frame_time_arr</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">durations</span>
 
-    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">retval</span><span class="o">.</span><span class="n">frame_time</span><span class="p">)</span> <span class="o">==</span> <span class="n">retval</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="c1"># If a brain mask is provided, load and attach</span>
+    <span class="k">if</span> <span class="n">brainmask_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">mask_img</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">brainmask_file</span><span class="p">))</span>
+        <span class="n">pet_obj</span><span class="o">.</span><span class="n">brainmask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">mask_img</span><span class="o">.</span><span class="n">dataobj</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">brainmask_file</span><span class="p">:</span>
-        <span class="n">mask</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">brainmask_file</span><span class="p">)</span>
-        <span class="n">retval</span><span class="o">.</span><span class="n">brainmask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">mask</span><span class="o">.</span><span class="n">dataobj</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">retval</span></div>
+    <span class="k">return</span> <span class="n">pet_obj</span></div>
 
 </pre></div>
         </article>
@@ -522,7 +560,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=a4c9dc1b"></script>
+</div><script src="../../../_static/documentation_options.js?v=1fe425f7"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>

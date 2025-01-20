@@ -12,6 +12,7 @@ Submodules
 .. toctree::
    :maxdepth: 1
 
+   nifreeze.data.base
    nifreeze.data.dmri
    nifreeze.data.filtering
    nifreeze.data.pet

@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.estimator - nifreeze 25.0.0.dev44 documentation</title>
+        <title>nifreeze.estimator - nifreeze 25.0.0.dev58 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">nifreeze 25.0.0.dev44 documentation</div></a>
+      <a href="../../index.html"><div class="brand">nifreeze 25.0.0.dev58 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev44</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev58</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev44</span>
+  <span class="sidebar-brand-text">25.0.0.dev58</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -218,6 +218,7 @@
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../api/nifreeze.data.html">nifreeze.data package</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of nifreeze.data package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api/nifreeze.data.base.html">nifreeze.data.base module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/nifreeze.data.dmri.html">nifreeze.data.dmri module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/nifreeze.data.filtering.html">nifreeze.data.filtering module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/nifreeze.data.pet.html">nifreeze.data.pet module</a></li>
@@ -353,7 +354,7 @@
 <span class="sd">        data : :obj:`~nifreeze.dmri.DWI`</span>
 <span class="sd">            The target DWI dataset, represented by this tool&#39;s internal</span>
 <span class="sd">            type. The object is used in-place, and will contain the estimated</span>
-<span class="sd">            parameters in its ``em_affines`` property, as well as the rotated</span>
+<span class="sd">            parameters in its ``motion_affines`` property, as well as the rotated</span>
 <span class="sd">            *b*-vectors within its ``gradients`` property.</span>
 <span class="sd">        n_iter : :obj:`int`</span>
 <span class="sd">            Number of iterations this particular model is going to be repeated.</span>
@@ -474,11 +475,10 @@
                             <span class="n">fixed</span><span class="p">,</span>
                             <span class="n">moving</span><span class="p">,</span>
                             <span class="n">bmask_img</span><span class="p">,</span>
-                            <span class="n">data</span><span class="o">.</span><span class="n">em_affines</span><span class="p">,</span>
+                            <span class="n">data</span><span class="o">.</span><span class="n">motion_affines</span><span class="p">,</span>
                             <span class="n">data</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span>
                             <span class="n">data</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span>
                             <span class="n">data_test</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">3</span><span class="p">],</span>
-                            <span class="n">data</span><span class="o">.</span><span class="n">fieldmap</span><span class="p">,</span>
                             <span class="n">i_iter</span><span class="p">,</span>
                             <span class="n">i</span><span class="p">,</span>
                             <span class="n">ptmp_dir</span><span class="p">,</span>
@@ -490,7 +490,7 @@
                         <span class="n">data</span><span class="o">.</span><span class="n">set_transform</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">xform</span><span class="o">.</span><span class="n">matrix</span><span class="p">)</span>
                         <span class="n">pbar</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
 
-        <span class="k">return</span> <span class="n">data</span><span class="o">.</span><span class="n">em_affines</span></div>
+        <span class="k">return</span> <span class="n">data</span><span class="o">.</span><span class="n">motion_affines</span></div>
 </div>
 
 
@@ -580,7 +580,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=a4c9dc1b"></script>
+</div><script src="../../_static/documentation_options.js?v=1fe425f7"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>
