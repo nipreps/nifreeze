@@ -154,19 +154,19 @@ def test_two_initialisations(datadir):
 
     # Direct initialisation
     model1 = model.AverageDWIModel(
-        gtab=data_train[1],
+        gtab=data_train[-1],
         S0=dmri_dataset.bzero,
         th_low=100,
         th_high=1000,
         bias=False,
         stat="mean",
     )
-    model1.fit(data_train[0], gtab=data_train[1])
-    predicted1 = model1.predict(data_test[1])
+    model1.fit(data_train[0], gtab=data_train[-1])
+    predicted1 = model1.predict(data_test[-1])
 
     # Initialisation via ModelFactory
     model2 = model.ModelFactory.init(
-        gtab=data_train[1],
+        gtab=data_train[-1],
         model="avgdwi",
         S0=dmri_dataset.bzero,
         th_low=100,
@@ -176,9 +176,9 @@ def test_two_initialisations(datadir):
     )
 
     with pytest.raises(ModelNotFittedError):
-        model2.predict(data_test[1])
+        model2.predict(data_test[-1])
 
-    model2.fit(data_train[0], gtab=data_train[1])
-    predicted2 = model2.predict(data_test[1])
+    model2.fit(data_train[0], gtab=data_train[-1])
+    predicted2 = model2.predict(data_test[-1])
 
     assert np.all(predicted1 == predicted2)
