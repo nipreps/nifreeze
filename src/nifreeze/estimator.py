@@ -28,10 +28,10 @@ from tempfile import TemporaryDirectory, mkstemp
 import nibabel as nb
 from tqdm import tqdm
 
-from nifreeze import utils as eutils
 from nifreeze.data.splitting import lovo_split
 from nifreeze.model.base import ModelFactory
 from nifreeze.registration.ants import _prepare_registration_data, _run_registration
+from nifreeze.utils import iterators
 
 
 class Estimator:
@@ -56,7 +56,7 @@ class Estimator:
         data : :obj:`~nifreeze.dmri.DWI`
             The target DWI dataset, represented by this tool's internal
             type. The object is used in-place, and will contain the estimated
-            parameters in its ``em_affines`` property, as well as the rotated
+            parameters in its ``motion_affines`` property, as well as the rotated
             *b*-vectors within its ``gradients`` property.
         n_iter : :obj:`int`
             Number of iterations this particular model is going to be repeated.
@@ -90,7 +90,7 @@ class Estimator:
         } | iter_kwargs
         iter_kwargs["size"] = len(data)
 
-        iterfunc = getattr(eutils, f'{iter_kwargs.pop("strategy", "random")}_iterator')
+        iterfunc = getattr(iterators, f"{iter_kwargs.pop('strategy', 'random')}_iterator")
         index_order = list(iterfunc(**iter_kwargs))
 
         align_kwargs = align_kwargs or {}
@@ -177,11 +177,10 @@ class Estimator:
                             fixed,
                             moving,
                             bmask_img,
-                            data.em_affines,
+                            data.motion_affines,
                             data.affine,
                             data.dataobj.shape[:3],
                             data_test[1][3],
-                            data.fieldmap,
                             i_iter,
                             i,
                             ptmp_dir,
@@ -193,7 +192,7 @@ class Estimator:
                         data.set_transform(i, xform.matrix)
                         pbar.update()
 
-        return data.em_affines
+        return data.motion_affines
 
 
 def _prepare_brainmask_data(brainmask, affine):

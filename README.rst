@@ -5,7 +5,7 @@ and Eddy-current-derived distortion estimation in dMRI.
 
 .. important:: *NiFreeze* is a fork of *eddymotion*
 
-   In November 2023, the *NiPreps Steering Committee* brought to the *Bi-monthly Roundup*
+   In November 2024, the *NiPreps Steering Committee* brought to the *Bi-monthly Roundup*
    the discussion about re-branding *eddymotion* to better reflect its aspirations to
    perform on diverse modalities.
 
@@ -74,7 +74,7 @@ and positron-emission tomography (PET) data.
     the known directions and strengths of diffusion gradients*. J Magn Reson Imaging **24**:1188-1193.
 
 .. [4] Andersson et al. (2012) *A comprehensive Gaussian Process framework for correcting distortions
-    and movements in difussion images*. In: 20th SMRT & 21st ISMRM, Melbourne, Australia.
+    and movements in diffusion images*. In: 20th SMRT & 21st ISMRM, Melbourne, Australia.
 
 .. [5] Andersson & Sotiropoulos (2015) *Non-parametric representation and prediction of single- and
     multi-shell diffusion-weighted MRI data using Gaussian processes*. NeuroImage **122**:166-176.

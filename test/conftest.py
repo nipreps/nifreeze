@@ -25,8 +25,8 @@
 import os
 from pathlib import Path
 
-import nibabel
-import numpy
+import nibabel as nb
+import numpy as np
 import pytest
 
 test_data_env = os.getenv("TEST_DATA_HOME", str(Path.home() / "nifreeze-tests"))
@@ -39,16 +39,16 @@ _datadir = (Path(__file__).parent / "data").absolute()
 def pytest_report_header(config):
     return f"""\
 TEST_DATA_HOME={test_data_env}.
-TEST_OUTPUT_DIR={test_output_dir or '<unset> (output files will be discarded)'}.
-TEST_WORK_DIR={test_workdir or '<unset> (intermediate files will be discarded)'}.
+TEST_OUTPUT_DIR={test_output_dir or "<unset> (output files will be discarded)"}.
+TEST_WORK_DIR={test_workdir or "<unset> (intermediate files will be discarded)"}.
 """
 
 
 @pytest.fixture(autouse=True)
 def doctest_imports(doctest_namespace):
     """Populates doctests with some conveniency imports."""
-    doctest_namespace["np"] = numpy
-    doctest_namespace["nb"] = nibabel
+    doctest_namespace["np"] = np
+    doctest_namespace["nb"] = nb
     doctest_namespace["os"] = os
     doctest_namespace["Path"] = Path
     doctest_namespace["repodata"] = _datadir
@@ -70,3 +70,35 @@ def datadir():
 def repodata():
     """Return the path to this repository's test data folder."""
     return _datadir
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--warnings-as-errors",
+        action="store_true",
+        help="Consider all uncaught warnings as errors.",
+    )
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_sessionfinish(session, exitstatus):
+    have_werrors = os.getenv("NIFREEZE_WERRORS", False)
+    have_werrors = session.config.getoption("--warnings-as-errors", False) or have_werrors
+    if have_werrors:
+        # Check if there were any warnings during the test session
+        reporter = session.config.pluginmanager.get_plugin("terminalreporter")
+        if reporter.stats.get("warnings", None):
+            session.exitstatus = 2
+
+
+@pytest.hookimpl
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    have_werrors = os.getenv("NIFREEZE_WERRORS", False)
+    have_werrors = config.getoption("--warnings-as-errors", False) or have_werrors
+    have_warnings = terminalreporter.stats.get("warnings", None)
+    if have_warnings and have_werrors:
+        terminalreporter.ensure_newline()
+        terminalreporter.section("Werrors", sep="=", red=True, bold=True)
+        terminalreporter.line(
+            f"Warnings as errors: Activated.\n{len(have_warnings)} warnings were raised and treated as errors.\n"
+        )

@@ -24,7 +24,7 @@
 
 from __future__ import annotations
 
-import nibabel as nib
+import nibabel as nb
 import numpy as np
 from dipy.core.geometry import sphere2cart
 from dipy.core.gradients import gradient_table
@@ -67,7 +67,7 @@ def add_b0(bvals: np.ndarray, bvecs: np.ndarray) -> tuple[np.ndarray, np.ndarray
 
 def create_single_fiber_evecs(theta: float = 0, phi: float = 0) -> np.ndarray:
     """
-    Create eigenvectors for a simulated fiber given the polar coordinates of its pricipal axis.
+    Create eigenvectors for a simulated fiber given the polar coordinates of its principal axis.
 
     Parameters
     ----------
@@ -178,7 +178,7 @@ def create_single_shell_gradient_table(
 
     # Add a b0 value to the gradient table
     bvals, bvecs = add_b0(bvals, bvecs)
-    return gradient_table(bvals, bvecs)
+    return gradient_table(bvals, bvecs=bvecs)
 
 
 def get_query_vectors(
@@ -428,8 +428,8 @@ def serialize_dwi(dwi_data, dwi_data_fname, affine: np.ndarray | None = None):
     if affine is None:
         affine = np.eye(4)
 
-    dwi_img = nib.Nifti1Image(dwi_data, affine=affine)
-    nib.save(dwi_img, dwi_data_fname)
+    dwi_img = nb.Nifti1Image(dwi_data, affine=affine)
+    nb.save(dwi_img, dwi_data_fname)
 
 
 def serialize_gtab(gtab, bval_data_fname, bvec_data_fname):

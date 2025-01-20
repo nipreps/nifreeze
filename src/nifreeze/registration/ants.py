@@ -389,7 +389,7 @@ def generate_command(
             str(p) for p in _massage_mask_path(movingmask_path, nlevels)
         ]
 
-    # Set initalizing affine if provided
+    # Set initializing affine if provided
     if init_affine is not None:
         settings["initial_moving_transform"] = str(init_affine)
 
@@ -409,7 +409,6 @@ def _run_registration(
     affine: np.ndarray,
     shape: tuple[int, int, int],
     bval: int,
-    fieldmap: nb.spatialimages.SpatialImage,
     i_iter: int,
     vol_idx: int,
     dirname: Path,
@@ -435,8 +434,6 @@ def _run_registration(
         Shape of the DWI frame.
     bval : :obj:`int`
         b-value of the corresponding DWI volume.
-    fieldmap : :class:`~nibabel.spatialimages.SpatialImage`
-        Fieldmap.
     i_iter : :obj:`int`
         Iteration number.
     vol_idx : :obj:`int`
@@ -472,14 +469,9 @@ def _run_registration(
         registration.inputs.fixed_image_masks = ["NULL", bmask_img]
 
     if em_affines is not None and np.any(em_affines[vol_idx, ...]):
-        reference = namedtuple("ImageGrid", ("shape", "affine"))(shape=shape, affine=affine)
-
-        # create a nitransforms object
-        if fieldmap:
-            # compose fieldmap into transform
-            raise NotImplementedError
-        else:
-            initial_xform = Affine(matrix=em_affines[vol_idx], reference=reference)
+        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
+        reference = ImageGrid(shape=shape, affine=affine)
+        initial_xform = Affine(matrix=em_affines[vol_idx], reference=reference)
         mat_file = dirname / f"init_{i_iter}_{vol_idx:05d}.mat"
         initial_xform.to_filename(mat_file, fmt="itk")
         registration.inputs.initial_moving_transform = str(mat_file)

@@ -78,10 +78,10 @@ def test_average_model():
 
     data *= gtab[:, -1]
 
-    tmodel_mean = model.AverageDWModel(gtab=gtab, bias=False, stat="mean")
-    tmodel_median = model.AverageDWModel(gtab=gtab, bias=False, stat="median")
-    tmodel_1000 = model.AverageDWModel(gtab=gtab, bias=False, th_high=1000, th_low=900)
-    tmodel_2000 = model.AverageDWModel(
+    tmodel_mean = model.AverageDWIModel(gtab=gtab, bias=False, stat="mean")
+    tmodel_median = model.AverageDWIModel(gtab=gtab, bias=False, stat="median")
+    tmodel_1000 = model.AverageDWIModel(gtab=gtab, bias=False, th_high=1000, th_low=900)
+    tmodel_2000 = model.AverageDWIModel(
         gtab=gtab,
         bias=False,
         th_high=2000,
@@ -153,7 +153,7 @@ def test_two_initialisations(datadir):
     data_train, data_test = lovo_split(dmri_dataset, 10)
 
     # Direct initialisation
-    model1 = model.AverageDWModel(
+    model1 = model.AverageDWIModel(
         gtab=data_train[1],
         S0=dmri_dataset.bzero,
         th_low=100,

@@ -22,13 +22,15 @@
 #
 """Base infrastructure for nifreeze's models."""
 
+from warnings import warn
+
 import numpy as np
 
 from nifreeze.exceptions import ModelNotFittedError
 
 
 class ModelFactory:
-    """A factory for instantiating diffusion models."""
+    """A factory for instantiating data models."""
 
     @staticmethod
     def init(model="DTI", **kwargs):
@@ -51,9 +53,9 @@ class ModelFactory:
             return TrivialModel(predicted=kwargs.pop("S0"), gtab=kwargs.pop("gtab"))
 
         if model.lower() in ("avgdwi", "averagedwi", "meandwi"):
-            from nifreeze.model.dmri import AverageDWModel
+            from nifreeze.model.dmri import AverageDWIModel
 
-            return AverageDWModel(**kwargs)
+            return AverageDWIModel(**kwargs)
 
         if model.lower() in ("avg", "average", "mean"):
             return AverageModel(**kwargs)
@@ -93,6 +95,9 @@ class BaseModel:
         self._models = None  # For parallel (chunked) execution
 
         # Setup brain mask
+        if mask is None:
+            warn("No mask provided; consider using a mask to avoid issues in model optimization.")
+
         self._mask = mask
 
         self._datashape = None
