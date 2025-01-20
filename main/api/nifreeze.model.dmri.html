@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="nifreeze.model.gpr module" href="nifreeze.model.gpr.html" /><link rel="prev" title="nifreeze.model.base module" href="nifreeze.model.base.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.model.dmri module - nifreeze 25.0.0.dev41 documentation</title>
+        <title>nifreeze.model.dmri module - nifreeze 25.0.0.dev44 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
@@ -167,7 +167,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev41 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev44 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -190,14 +190,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev41</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev44</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev41</span>
+  <span class="sidebar-brand-text">25.0.0.dev44</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -300,10 +300,10 @@
           <section id="module-nifreeze.model.dmri">
 <span id="nifreeze-model-dmri-module"></span><h1>nifreeze.model.dmri module<a class="headerlink" href="#module-nifreeze.model.dmri" title="Link to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="nifreeze.model.dmri.AverageDWModel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.dmri.</span></span><span class="sig-name descname"><span class="pre">AverageDWModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/dmri.html#AverageDWModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.dmri.AverageDWModel" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="nifreeze.model.dmri.AverageDWIModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.dmri.</span></span><span class="sig-name descname"><span class="pre">AverageDWIModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/dmri.html#AverageDWIModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.dmri.AverageDWIModel" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#nifreeze.model.dmri.BaseDWIModel" title="nifreeze.model.dmri.BaseDWIModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseDWIModel</span></code></a></p>
-<p>A trivial model that returns an average map.</p>
+<p>A trivial model that returns an average DWI volume.</p>
 <p>Implement object initialization.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -320,14 +320,14 @@ standardized and centered around the
 </dd>
 </dl>
 <dl class="py method">
-<dt class="sig sig-object py" id="nifreeze.model.dmri.AverageDWModel.fit">
-<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/dmri.html#AverageDWModel.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.dmri.AverageDWModel.fit" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="nifreeze.model.dmri.AverageDWIModel.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/dmri.html#AverageDWIModel.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.dmri.AverageDWIModel.fit" title="Link to this definition">¶</a></dt>
 <dd><p>Calculate the average.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="nifreeze.model.dmri.AverageDWModel.predict">
-<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">_</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/dmri.html#AverageDWModel.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.dmri.AverageDWModel.predict" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="nifreeze.model.dmri.AverageDWIModel.predict">
+<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">_</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/dmri.html#AverageDWIModel.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.dmri.AverageDWIModel.predict" title="Link to this definition">¶</a></dt>
 <dd><p>Return the average map.</p>
 </dd></dl>
 
@@ -556,9 +556,9 @@ below the <code class="docutils literal notranslate"><span class="pre">multishel
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">nifreeze.model.dmri module</a><ul>
-<li><a class="reference internal" href="#nifreeze.model.dmri.AverageDWModel"><code class="docutils literal notranslate"><span class="pre">AverageDWModel</span></code></a><ul>
-<li><a class="reference internal" href="#nifreeze.model.dmri.AverageDWModel.fit"><code class="docutils literal notranslate"><span class="pre">AverageDWModel.fit()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.dmri.AverageDWModel.predict"><code class="docutils literal notranslate"><span class="pre">AverageDWModel.predict()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.model.dmri.AverageDWIModel"><code class="docutils literal notranslate"><span class="pre">AverageDWIModel</span></code></a><ul>
+<li><a class="reference internal" href="#nifreeze.model.dmri.AverageDWIModel.fit"><code class="docutils literal notranslate"><span class="pre">AverageDWIModel.fit()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.model.dmri.AverageDWIModel.predict"><code class="docutils literal notranslate"><span class="pre">AverageDWIModel.predict()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#nifreeze.model.dmri.BaseDWIModel"><code class="docutils literal notranslate"><span class="pre">BaseDWIModel</span></code></a><ul>
@@ -590,7 +590,7 @@ below the <code class="docutils literal notranslate"><span class="pre">multishel
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=fcc042a5"></script>
+</div><script src="../_static/documentation_options.js?v=a4c9dc1b"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
