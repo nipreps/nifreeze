@@ -30,7 +30,7 @@ from nifreeze.exceptions import ModelNotFittedError
 
 
 class ModelFactory:
-    """A factory for instantiating diffusion models."""
+    """A factory for instantiating data models."""
 
     @staticmethod
     def init(model="DTI", **kwargs):
