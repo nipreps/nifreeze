@@ -469,7 +469,8 @@ def _run_registration(
         registration.inputs.fixed_image_masks = ["NULL", bmask_img]
 
     if em_affines is not None and np.any(em_affines[vol_idx, ...]):
-        reference = namedtuple("ImageGrid", ("shape", "affine"))(shape=shape, affine=affine)
+        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
+        reference = ImageGrid(shape=shape, affine=affine)
         initial_xform = Affine(matrix=em_affines[vol_idx], reference=reference)
         mat_file = dirname / f"init_{i_iter}_{vol_idx:05d}.mat"
         initial_xform.to_filename(mat_file, fmt="itk")

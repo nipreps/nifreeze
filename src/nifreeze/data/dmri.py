@@ -130,9 +130,9 @@ class DWI(BaseDataset):
         if not Path(self._filepath).exists():
             self.to_filename(self._filepath)
 
-        reference = namedtuple("ImageGrid", ("shape", "affine"))(
-            shape=self.dataobj.shape[:3], affine=self.affine
-        )
+        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
+        reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
+
         xform = Affine(matrix=affine, reference=reference)
         bvec = self.gradients[:3, index]
 
