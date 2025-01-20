@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.estimator - nifreeze 25.0.0.dev63 documentation</title>
+        <title>nifreeze.estimator - nifreeze 25.0.0.dev67 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">nifreeze 25.0.0.dev63 documentation</div></a>
+      <a href="../../index.html"><div class="brand">nifreeze 25.0.0.dev67 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev63</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev67</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev63</span>
+  <span class="sidebar-brand-text">25.0.0.dev67</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -439,13 +439,13 @@
                         <span class="n">pbar</span><span class="o">.</span><span class="n">set_description_str</span><span class="p">(</span>
                             <span class="sa">f</span><span class="s2">&quot;Pass </span><span class="si">{</span><span class="n">i_iter</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">n_iter</span><span class="si">}</span><span class="s2"> | Fit and predict b-index &lt;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&gt;&quot;</span>
                         <span class="p">)</span>
-                        <span class="n">data_train</span><span class="p">,</span> <span class="n">data_test</span> <span class="o">=</span> <span class="n">lovo_split</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">with_b0</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-                        <span class="n">grad_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">data_test</span><span class="p">[</span><span class="mi">1</span><span class="p">][:</span><span class="mi">3</span><span class="p">]</span><span class="si">}</span><span class="s2">, b=</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">data_test</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">3</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="n">data_train</span><span class="p">,</span> <span class="n">data_test</span> <span class="o">=</span> <span class="n">lovo_split</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+                        <span class="n">grad_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">data_test</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][:</span><span class="mi">3</span><span class="p">]</span><span class="si">}</span><span class="s2">, b=</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">data_test</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">3</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span>
                         <span class="n">pbar</span><span class="o">.</span><span class="n">set_description_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">grad_str</span><span class="si">}</span><span class="s2">], </span><span class="si">{</span><span class="n">n_jobs</span><span class="si">}</span><span class="s2"> jobs&quot;</span><span class="p">)</span>
 
                         <span class="k">if</span> <span class="ow">not</span> <span class="n">single_model</span><span class="p">:</span>  <span class="c1"># A true LOGO estimator</span>
                             <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s2">&quot;gradients&quot;</span><span class="p">):</span>
-                                <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;gtab&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_train</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                                <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;gtab&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_train</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
                             <span class="c1"># Factory creates the appropriate model and pipes arguments</span>
                             <span class="n">dwmodel</span> <span class="o">=</span> <span class="n">ModelFactory</span><span class="o">.</span><span class="n">init</span><span class="p">(</span>
                                 <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
@@ -460,7 +460,7 @@
                             <span class="p">)</span>
 
                         <span class="c1"># generate a synthetic dw volume for the test gradient</span>
-                        <span class="n">predicted</span> <span class="o">=</span> <span class="n">dwmodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">data_test</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                        <span class="n">predicted</span> <span class="o">=</span> <span class="n">dwmodel</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">data_test</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
 
                         <span class="c1"># prepare data for running ANTs</span>
                         <span class="n">fixed</span><span class="p">,</span> <span class="n">moving</span> <span class="o">=</span> <span class="n">_prepare_registration_data</span><span class="p">(</span>
@@ -478,7 +478,7 @@
                             <span class="n">data</span><span class="o">.</span><span class="n">motion_affines</span><span class="p">,</span>
                             <span class="n">data</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span>
                             <span class="n">data</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span>
-                            <span class="n">data_test</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">3</span><span class="p">],</span>
+                            <span class="n">data_test</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">3</span><span class="p">],</span>
                             <span class="n">i_iter</span><span class="p">,</span>
                             <span class="n">i</span><span class="p">,</span>
                             <span class="n">ptmp_dir</span><span class="p">,</span>
@@ -580,7 +580,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=a6dfec5e"></script>
+</div><script src="../../_static/documentation_options.js?v=5aaef6f9"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>
