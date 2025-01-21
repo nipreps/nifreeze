@@ -70,26 +70,25 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path):
         brainmask=dwdata.brainmask,
     )
 
-    estimator = Estimator()
-    em_affines = estimator.estimate(
+    estimator = Estimator(dwi_motion, model="b0")
+    estimator.run(
         data=dwi_motion,
         models=("b0",),
         seed=None,
         align_kwargs={
-            "fixed_modality": "b0",
-            "moving_modality": "b0",
+            "config_file": "b0-to-b0_level0.json",
             "num_threads": min(cpu_count(), 8),
         },
     )
 
     # Uncomment to see the realigned dataset
     nt.linear.LinearTransformsMapping(
-        em_affines,
+        dwi_motion.motion_affines,
         reference=b0nii,
     ).apply(moved_nii).to_filename(tmp_path / "realigned.nii.gz")
 
     # For each moved b0 volume
-    for i, est in enumerate(em_affines):
+    for i, est in enumerate(dwi_motion.motion_affines):
         assert (
             displacements_within_mask(
                 masknii,
