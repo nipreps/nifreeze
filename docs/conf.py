@@ -54,7 +54,6 @@ autodoc_mock_imports = [
     "nipype",
     "nitime",
     "nitransforms",
-    "numpy",
     "pandas",
     "scipy",
     "seaborn",
