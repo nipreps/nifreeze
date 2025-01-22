@@ -28,6 +28,7 @@ from numbers import Integral, Real
 from typing import Callable, ClassVar, Literal, Mapping, Optional, Sequence, Union
 
 import numpy as np
+import numpy.typing as npt
 from scipy import optimize
 from scipy.optimize import Bounds
 from sklearn.gaussian_process import GaussianProcessRegressor
@@ -334,7 +335,7 @@ class ExponentialKriging(Kernel):
 
         return self.beta_l * C_theta, K_gradient
 
-    def diag(self, X: np.ndarray) -> np.ndarray:
+    def diag(self, X: npt.ArrayLike) -> np.ndarray:
         """Returns the diagonal of the kernel k(X, X).
 
         The result of this method is identical to np.diag(self(X)); however,
@@ -351,7 +352,7 @@ class ExponentialKriging(Kernel):
         K_diag : :obj:`~numpy.ndarray` of shape (n_samples_X,)
             Diagonal of kernel k(X, X)
         """
-        return self.beta_l * np.ones(X.shape[0])
+        return self.beta_l * np.ones(np.asanyarray(X).shape[0])
 
     def is_stationary(self) -> bool:
         """Returns whether the kernel is stationary."""
@@ -444,7 +445,7 @@ class SphericalKriging(Kernel):
 
         return self.beta_l * C_theta, K_gradient
 
-    def diag(self, X: np.ndarray) -> np.ndarray:
+    def diag(self, X: npt.ArrayLike) -> np.ndarray:
         """Returns the diagonal of the kernel k(X, X).
 
         The result of this method is identical to np.diag(self(X)); however,
@@ -461,7 +462,7 @@ class SphericalKriging(Kernel):
         K_diag : :obj:`~numpy.ndarray` of shape (n_samples_X,)
             Diagonal of kernel k(X, X)
         """
-        return self.beta_l * np.ones(X.shape[0])
+        return self.beta_l * np.ones(np.asanyarray(X).shape[0])
 
     def is_stationary(self) -> bool:
         """Returns whether the kernel is stationary."""
