@@ -154,6 +154,11 @@ module = [
   "nireports.*",
   "nitransforms.*",
   "seaborn",
+  "dipy.*",
+  "smac.*",
+  "joblib",
+  "h5py",
+  "ConfigSpace",
 ]
 ignore_missing_imports = true
 
