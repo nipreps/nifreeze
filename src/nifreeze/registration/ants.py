@@ -92,22 +92,23 @@ def _to_nifti(
 
 
 def _prepare_registration_data(
-    fixed: np.ndarray,
+    sample: np.ndarray,
     predicted: np.ndarray,
     affine: np.ndarray,
     vol_idx: int,
     dirname: Path | str,
     clip: str | None = None,
-) -> tuple[Path, Path]:
+    init_affine: np.ndarray | None = None,
+) -> tuple[Path, Path, Path | None]:
     """
-    Prepare the registration data: save the fixed and moving images to disk.
+    Prepare the registration data: save the moving and predicted (fixed) images to disk.
 
     Parameters
     ----------
-    fixed : :obj:`~numpy.ndarray`
-        Reference volume's data array.
+    sample : :obj:`~numpy.ndarray`
+        Current volume for which a transformation is to be estimated.
     predicted : :obj:`~numpy.ndarray`
-        Predicted volume's data array.
+        Predicted volume's data array (that is, spatial reference).
     affine : :obj:`numpy.ndarray`
         Orientation affine from the original NIfTI.
     vol_idx : :obj:`int`
@@ -115,34 +116,45 @@ def _prepare_registration_data(
     dirname : :obj:`os.pathlike`
         Directory name where the data is saved.
     clip : :obj:`str` or ``None``
-        Clip intensity of ``"fixed"``, ``"moving"``, ``"both"``,
+        Clip intensity of ``"sample"``, ``"predicted"``, ``"both"``,
         or ``"none"`` of the images.
 
     Returns
     -------
-    fixed_path : :obj:`~pathlib.Path`
-        Fixed image filename.
-    moving_path : :obj:`~pathlib.Path`
-        Moving image filename.
+    predicted_path : :obj:`~pathlib.Path`
+        Predicted image filename.
+    sample_path : :obj:`~pathlib.Path`
+        Current volume's filename.
+    init_path : :obj:`~pathlib.Path` or ``None``
+        An initialization affine (for second and further estimators).
 
     """
     clip = clip or "none"
 
-    moving_path = Path(dirname) / f"moving{vol_idx:05d}.nii.gz"
-    fixed_path = Path(dirname) / f"fixed{vol_idx:05d}.nii.gz"
+    predicted_path = Path(dirname) / f"predicted_{vol_idx:05d}.nii.gz"
+    sample_path = Path(dirname) / f"sample_{vol_idx:05d}.nii.gz"
     _to_nifti(
-        fixed,
+        sample,
         affine,
-        moving_path,
-        clip=clip.lower() in ("fixed", "both"),
+        sample_path,
+        clip=clip.lower() in ("sample", "both"),
     )
     _to_nifti(
         predicted,
         affine,
-        fixed_path,
-        clip=clip.lower() in ("moving", "both"),
+        predicted_path,
+        clip=clip.lower() in ("predicted", "both"),
     )
-    return fixed_path, moving_path
+
+    init_path = None
+    if init_affine is not None:
+        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
+        reference = ImageGrid(shape=sample.shape[:3], affine=affine)
+        initial_xform = Affine(matrix=init_affine, reference=reference)
+        init_path = dirname / f"init_{vol_idx:05d}.mat"
+        initial_xform.to_filename(init_path, fmt="itk")
+
+    return predicted_path, sample_path, init_path
 
 
 def _get_ants_settings(settings: str = "b0-to-b0_level0") -> Path:
@@ -222,7 +234,7 @@ def generate_command(
     init_affine: str | Path | None = None,
     default: str = "b0-to-b0_level0",
     **kwargs: dict,
-) -> str:
+) -> Registration:
     """
     Generate an ANTs' command line.
 
@@ -245,15 +257,15 @@ def generate_command(
 
     Returns
     -------
-    :obj:`str`
-        The ANTs registration command line string.
+    :obj:`~nipype.interfaces.ants.Registration`
+        The configured Nipype interface of ANTs registration.
 
     Examples
     --------
     >>> generate_command(
     ...     fixed_path=repodata / 'fileA.nii.gz',
     ...     moving_path=repodata / 'fileB.nii.gz',
-    ... )  # doctest: +NORMALIZE_WHITESPACE
+    ... ).cmdline  # doctest: +NORMALIZE_WHITESPACE
     'antsRegistration --collapse-output-transforms 1 --dimensionality 3 \
     --initialize-transforms-per-stage 0 --interpolation Linear --output transform \
     --transform Rigid[ 12.0 ] \
@@ -275,7 +287,7 @@ def generate_command(
     ...     fixed_path=repodata / 'fileA.nii.gz',
     ...     moving_path=repodata / 'fileB.nii.gz',
     ...     default="dwi-to-b0_level0",
-    ... )  # doctest: +NORMALIZE_WHITESPACE
+    ... ).cmdline  # doctest: +NORMALIZE_WHITESPACE
     'antsRegistration --collapse-output-transforms 1 --dimensionality 3 \
     --initialize-transforms-per-stage 0 --interpolation Linear --output transform \
     --transform Rigid[ 0.01 ] --metric Mattes[ \
@@ -297,7 +309,7 @@ def generate_command(
     ...     moving_path=repodata / 'fileB.nii.gz',
     ...     fixedmask_path=repodata / 'maskA.nii.gz',
     ...     default="dwi-to-b0_level0",
-    ... )  # doctest: +NORMALIZE_WHITESPACE
+    ... ).cmdline  # doctest: +NORMALIZE_WHITESPACE
     'antsRegistration --collapse-output-transforms 1 --dimensionality 3 \
     --initialize-transforms-per-stage 0 --interpolation Linear --output transform \
     --transform Rigid[ 0.01 ] --metric Mattes[ \
@@ -320,7 +332,7 @@ def generate_command(
     ...     fixed_path=repodata / 'fileA.nii.gz',
     ...     moving_path=repodata / 'fileB.nii.gz',
     ...     default="dwi-to-b0_level0",
-    ... )  # doctest: +NORMALIZE_WHITESPACE
+    ... ).cmdline  # doctest: +NORMALIZE_WHITESPACE
     'antsRegistration --collapse-output-transforms 1 --dimensionality 3 \
     --initialize-transforms-per-stage 0 --interpolation Linear --output transform \
     --transform Rigid[ 0.01 ] --metric Mattes[ \
@@ -342,7 +354,7 @@ def generate_command(
     ...     moving_path=repodata / 'fileB.nii.gz',
     ...     fixedmask_path=[repodata / 'maskA.nii.gz'],
     ...     default="dwi-to-b0_level0",
-    ... )  # doctest: +NORMALIZE_WHITESPACE
+    ... ).cmdline  # doctest: +NORMALIZE_WHITESPACE
     'antsRegistration --collapse-output-transforms 1 --dimensionality 3 \
     --initialize-transforms-per-stage 0 --interpolation Linear --output transform \
     --transform Rigid[ 0.01 ] --metric Mattes[ \
@@ -406,16 +418,12 @@ def generate_command(
         fixed_image=str(Path(fixed_path).absolute()),
         moving_image=str(Path(moving_path).absolute()),
         **settings,
-    ).cmdline
+    )
 
 
 def _run_registration(
-    fixed: Path,
-    moving: Path,
-    bmask_img: nb.spatialimages.SpatialImage,
-    em_affines: np.ndarray,
-    affine: np.ndarray,
-    shape: tuple[int, int, int],
+    fixed_path: str | Path,
+    moving_path: str | Path,
     vol_idx: int,
     dirname: Path,
     **kwargs: dict,
@@ -425,18 +433,10 @@ def _run_registration(
 
     Parameters
     ----------
-    fixed : :obj:`Path`
+    fixed_path : :obj:`Path`
         Fixed image filename.
-    moving : :obj:`Path`
+    moving_path : :obj:`Path`
         Moving image filename.
-    bmask_img : :class:`~nibabel.spatialimages.SpatialImage`
-        Brainmask image.
-    em_affines : :obj:`numpy.ndarray`
-        Estimated head-motion affine transformation matrices.
-    affine : :obj:`numpy.ndarray`
-        Orientation affine from the original NIfTI.
-    shape : :obj:`tuple`
-        3D shape of dataset.
     vol_idx : :obj:`int`
         Dataset volume index.
     dirname : :obj:`Path`
@@ -451,27 +451,27 @@ def _run_registration(
 
     """
 
-    if "config_file" in kwargs:
-        kwargs["from_file"] = pkg_fn(
-            "nifreeze.registration",
-            f"config/{kwargs.pop('config_file')}",
-        )
-    registration = Registration(
-        terminal_output="file",
-        fixed_image=str(fixed.absolute()),
-        moving_image=str(moving.absolute()),
-        **kwargs,
-    )
-    if bmask_img:
-        registration.inputs.fixed_image_masks = ["NULL", bmask_img]
+    align_kwargs = kwargs.copy()
+    environ = align_kwargs.pop("environ", {})
+    num_threads = align_kwargs.pop("num_threads", None)
 
-    if em_affines is not None and np.any(em_affines[vol_idx, ...]):
-        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
-        reference = ImageGrid(shape=shape, affine=affine)
-        initial_xform = Affine(matrix=em_affines[vol_idx], reference=reference)
-        mat_file = dirname / f"init_{vol_idx:05d}.mat"
-        initial_xform.to_filename(mat_file, fmt="itk")
-        registration.inputs.initial_moving_transform = str(mat_file)
+    if (seed := align_kwargs.pop("seed", None)) is not None:
+        environ["ANTS_RANDOM_SEED"] = str(seed)
+
+    if "ants_config" in kwargs:
+        align_kwargs["default"] = align_kwargs.pop("ants_config").replace(".json", "")
+
+    registration = generate_command(
+        fixed_path,
+        moving_path,
+        terminal_output="file",
+        environ=environ,
+        **align_kwargs,
+    )
+    if num_threads:
+        registration.inputs.num_threads = num_threads
+
+    (dirname / f"cmd-{vol_idx:05d}.sh").write_text(registration.cmdline)
 
     # execute ants command line
     result = registration.run(cwd=str(dirname)).outputs
@@ -479,10 +479,12 @@ def _run_registration(
     # read output transform
     xform = nt.linear.Affine(
         nt.io.itk.ITKLinearTransform.from_filename(result.forward_transforms[0]).to_ras(
-            reference=fixed, moving=moving
+            reference=fixed_path, moving=moving_path
         ),
     )
     # debugging: generate aligned file for testing
-    xform.apply(moving, reference=fixed).to_filename(dirname / f"aligned{vol_idx:05d}.nii.gz")
+    xform.apply(moving_path, reference=fixed_path).to_filename(
+        dirname / f"dbg_{vol_idx:05d}.nii.gz"
+    )
 
     return xform

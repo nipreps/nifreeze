@@ -37,6 +37,30 @@ from nitransforms.linear import Affine
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr
 
+DEFAULT_CLIP_PERCENTILE = 75
+"""Upper percentile threshold for intensity clipping."""
+
+DEFAULT_MIN_S0 = 1e-5
+"""Minimum value when considering the :math:`S_{0}` DWI signal."""
+
+DEFAULT_MAX_S0 = 1.0
+"""Maximum value when considering the :math:`S_{0}` DWI signal."""
+
+DEFAULT_LOWB_THRESHOLD = 50
+"""The lower bound for the b-value so that the orientation is considered a DW volume."""
+
+DEFAULT_HIGHB_THRESHOLD = 8000
+"""A b-value cap for DWI data."""
+
+DEFAULT_NUM_BINS = 15
+"""Number of bins to classify b-values."""
+
+DEFAULT_MULTISHELL_BIN_COUNT_THR = 7
+"""Default bin count to consider a multishell scheme."""
+
+DTI_MIN_ORIENTATIONS = 6
+"""Minimum number of nonzero b-values in a DWI dataset."""
+
 
 @attr.s(slots=True)
 class DWI(BaseDataset):
@@ -221,7 +245,7 @@ def load(
     bvec_file: Path | str | None = None,
     bval_file: Path | str | None = None,
     b0_file: Path | str | None = None,
-    b0_thres: float = 50.0,
+    b0_thres: float = DEFAULT_LOWB_THRESHOLD,
 ) -> DWI:
     """
     Load DWI data and construct a DWI object.
@@ -337,3 +361,87 @@ def load(
         dwi_obj.brainmask = np.asanyarray(mask_img.dataobj, dtype=bool)
 
     return dwi_obj
+
+
+def find_shelling_scheme(
+    bvals,
+    num_bins=DEFAULT_NUM_BINS,
+    multishell_nonempty_bin_count_thr=DEFAULT_MULTISHELL_BIN_COUNT_THR,
+    bval_cap=DEFAULT_HIGHB_THRESHOLD,
+):
+    """
+    Find the shelling scheme on the given b-values.
+
+    Computes the histogram of the b-values according to ``num_bins``
+    and depending on the nonempty bin count, classify the shelling scheme
+    as single-shell if they are 2 (low-b and a shell); multi-shell if they are
+    below the ``multishell_nonempty_bin_count_thr`` value; and DSI otherwise.
+
+    Parameters
+    ----------
+    bvals : :obj:`list` or :obj:`~numpy.ndarray`
+         List or array of b-values.
+    num_bins : :obj:`int`, optional
+        Number of bins.
+    multishell_nonempty_bin_count_thr : :obj:`int`, optional
+        Bin count to consider a multi-shell scheme.
+
+    Returns
+    -------
+    scheme : :obj:`str`
+        Shelling scheme.
+    bval_groups : :obj:`list`
+        List of grouped b-values.
+    bval_estimated : :obj:`list`
+        List of 'estimated' b-values as the median value of each b-value group.
+
+    """
+
+    # Bin the b-values: use -1 as the lower bound to be able to appropriately
+    # include b0 values
+    hist, bin_edges = np.histogram(bvals, bins=num_bins, range=(-1, min(max(bvals), bval_cap)))
+
+    # Collect values in each bin
+    bval_groups = []
+    bval_estimated = []
+    for lower, upper in zip(bin_edges[:-1], bin_edges[1:], strict=False):
+        # Add only if a nonempty b-values mask
+        if (mask := (bvals > lower) & (bvals <= upper)).sum():
+            bval_groups.append(bvals[mask])
+            bval_estimated.append(np.median(bvals[mask]))
+
+    nonempty_bins = len(bval_groups)
+
+    if nonempty_bins < 2:
+        raise ValueError("DWI must have at least one high-b shell")
+
+    if nonempty_bins == 2:
+        scheme = "single-shell"
+    elif nonempty_bins < multishell_nonempty_bin_count_thr:
+        scheme = "multi-shell"
+    else:
+        scheme = "DSI"
+
+    return scheme, bval_groups, bval_estimated
+
+
+def _rasb2dipy(gradient):
+    import warnings
+
+    gradient = np.asanyarray(gradient)
+    if gradient.ndim == 1:
+        if gradient.size != 4:
+            raise ValueError("Missing gradient information.")
+        gradient = gradient[..., np.newaxis]
+
+    if gradient.shape[0] != 4:
+        gradient = gradient.T
+    elif gradient.shape == (4, 4):
+        print("Warning: make sure gradient information is not transposed!")
+
+    with warnings.catch_warnings():
+        from dipy.core.gradients import gradient_table
+
+        warnings.filterwarnings("ignore", category=UserWarning)
+        retval = gradient_table(gradient[3, :], bvecs=gradient[:3, :].T)
+    return retval

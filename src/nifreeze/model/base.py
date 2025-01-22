@@ -26,8 +26,6 @@ from warnings import warn
 
 import numpy as np
 
-from nifreeze.exceptions import ModelNotFittedError
-
 
 class ModelFactory:
     """A factory for instantiating data models."""
@@ -53,19 +51,19 @@ class ModelFactory:
             raise RuntimeError("No model identifier provided.")
 
         if model.lower() in ("s0", "b0"):
-            return TrivialModel(predicted=kwargs.pop("S0"), gtab=kwargs.pop("gtab"))
+            return TrivialModel(kwargs.pop("dataset"))
+
+        if model.lower() in ("avg", "average", "mean"):
+            return ExpectationModel(kwargs.pop("dataset"), **kwargs)
 
         if model.lower() in ("avgdwi", "averagedwi", "meandwi"):
             from nifreeze.model.dmri import AverageDWIModel
 
-            return AverageDWIModel(**kwargs)
-
-        if model.lower() in ("avg", "average", "mean"):
-            return AverageModel(**kwargs)
+            return AverageDWIModel(kwargs.pop("dataset"), **kwargs)
 
         if model.lower() in ("dti", "dki", "pet"):
             Model = globals()[f"{model.upper()}Model"]
-            return Model(**kwargs)
+            return Model(kwargs.pop("dataset"), **kwargs)
 
         raise NotImplementedError(f"Unsupported model <{model}>.")
 
@@ -81,114 +79,81 @@ class BaseModel:
 
     """
 
-    __slots__ = (
-        "_model",
-        "_mask",
-        "_models",
-        "_datashape",
-        "_is_fitted",
-        "_modelargs",
-    )
+    __slots__ = {
+        "_dataset": "Reference to a :obj:`~nifreeze.data.base.BaseDataset` object.",
+    }
 
-    def __init__(self, mask=None, **kwargs):
+    def __init__(self, dataset, **kwargs):
         """Base initialization."""
 
-        # Keep model state
-        self._model = None  # "Main" model
-        self._models = None  # For parallel (chunked) execution
-
-        # Setup brain mask
-        if mask is None:
+        self._dataset = dataset
+        # Warn if mask not present
+        if dataset.brainmask is None:
             warn(
                 "No mask provided; consider using a mask to avoid issues in model optimization.",
                 stacklevel=2,
             )
 
-        self._mask = mask
-
-        self._datashape = None
-        self._is_fitted = False
-
-        self._modelargs = ()
-
-    @property
-    def is_fitted(self):
-        return self._is_fitted
-
-    def fit(self, data, **kwargs):
-        """Abstract member signature of fit()."""
-        raise NotImplementedError("Cannot call fit() on a BaseModel instance.")
-
-    def predict(self, *args, **kwargs):
-        """Abstract member signature of predict()."""
-        raise NotImplementedError("Cannot call predict() on a BaseModel instance.")
+    def fit_predict(self, *_, **kwargs):
+        """Fit and predict the indicate index of the dataset (abstract signature)."""
+        raise NotImplementedError("Cannot call fit_predict() on a BaseModel instance.")
 
 
 class TrivialModel(BaseModel):
     """A trivial model that returns a given map always."""
 
-    __slots__ = ("_predicted",)
+    __slots__ = {
+        "_predicted": "A :obj:`~numpy.ndarray` with shape matching the dataset containing the map"
+        "that will always be returned as prediction (that is, a reference volume).",
+    }
 
-    def __init__(self, predicted=None, **kwargs):
+    def __init__(self, dataset, predicted=None, **kwargs):
         """Implement object initialization."""
-        if predicted is None:
+
+        super().__init__(dataset, **kwargs)
+        self._predicted = (
+            predicted
+            if predicted is not None
+            # Infer from dataset if not provided at initialization
+            else getattr(dataset, "reference", getattr(dataset, "bzero", None))
+        )
+
+        if self._predicted is None:
             raise TypeError("This model requires the predicted map at initialization")
 
-        super().__init__(**kwargs)
-        self._predicted = predicted
-        self._datashape = predicted.shape
-
-    @property
-    def is_fitted(self):
-        return True
-
-    def fit(self, data, **kwargs):
-        """Do nothing."""
-
-    def predict(self, *_, **kwargs):
+    def fit_predict(self, *_, **kwargs):
         """Return the reference map."""
 
         # No need to check fit (if not fitted, has raised already)
         return self._predicted
 
 
-class AverageModel(BaseModel):
-    """A trivial model that returns an average map."""
+class ExpectationModel(BaseModel):
+    """A trivial model that returns an expectation map (for example, average)."""
 
-    __slots__ = ("_data",)
+    __slots__ = {"_stat": "The statistical operation to obtain the expectation map."}
 
-    def __init__(self, **kwargs):
+    def __init__(self, dataset, stat="median", **kwargs):
         """Initialize a new model."""
-        super().__init__(**kwargs)
-        self._data = None
+        super().__init__(dataset, **kwargs)
+        self._stat = stat
 
-    def fit(self, data, **kwargs):
-        """Calculate the average."""
+    def fit_predict(self, index, *_, **kwargs):
+        """
+        Return the expectation map.
 
-        # Regress out global signal differences
-        if kwargs.pop("equalize", False):
-            data = data.copy().astype("float32")
-            reshaped_data = (
-                data.reshape((-1, data.shape[-1])) if self._mask is None else data[self._mask]
-            )
-            p5 = np.percentile(reshaped_data, 5.0, axis=0)
-            p95 = np.percentile(reshaped_data, 95.0, axis=0) - p5
-            data = (data - p5) * p95.mean() / p95 + p5.mean()
+        Parameters
+        ----------
+        index : :obj:`int`
+            The volume index that is left-out in fitting, and then predicted.
 
+        """
         # Select the summary statistic
-        avg_func = getattr(np, kwargs.pop("stat", "mean"))
+        avg_func = getattr(np, kwargs.pop("stat", self._stat))
+
+        # Create index mask
+        mask = np.ones(len(self._dataset), dtype=bool)
+        mask[index] = False
 
         # Calculate the average
-        self._data = avg_func(data, axis=-1)
-
-    @property
-    def is_fitted(self):
-        return self._data is not None
-
-    def predict(self, *_, **kwargs):
-        """Return the average map."""
-
-        if self._data is None:
-            raise ModelNotFittedError(f"{type(self).__name__} must be fitted before predicting")
-
-        return self._data
+        return avg_func(self._dataset.dataobj[mask][0], axis=-1)

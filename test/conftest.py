@@ -100,5 +100,5 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         terminalreporter.ensure_newline()
         terminalreporter.section("Werrors", sep="=", red=True, bold=True)
         terminalreporter.line(
-            f"Warnings as errors: Activated.\n{len(have_warnings)} warnings were raised and treated as errors.\n"
+            f"{len(have_warnings)} warnings were raised and treated as errors.\n"
         )

@@ -133,7 +133,7 @@ async def train_coro(
                 fixedmask_path=brainmask_path,
                 output_transform_prefix=f"conversion-{index:04d}",
                 **align_kwargs,
-            )
+            ).cmdline
 
             tasks.append(
                 ants(

@@ -32,7 +32,10 @@ from tqdm import tqdm
 
 from nifreeze.data.base import BaseDataset
 from nifreeze.model.base import BaseModel, ModelFactory
-from nifreeze.registration.ants import _prepare_registration_data, _run_registration
+from nifreeze.registration.ants import (
+    _prepare_registration_data,
+    _run_registration,
+)
 from nifreeze.utils import iterators
 
 
@@ -60,7 +63,7 @@ class Filter:
 class Estimator:
     """Estimates rigid-body head-motion and distortions derived from eddy-currents."""
 
-    __slots__ = ("_model", "_strategy", "_dataset", "_prev", "_model_kwargs", "_align_kwargs")
+    __slots__ = ("_model", "_strategy", "_prev", "_model_kwargs", "_align_kwargs")
 
     def __init__(
         self,
@@ -111,29 +114,37 @@ class Estimator:
                 **self._model_kwargs,
             )
 
-        if self._model.is_static:
-            self._model.fit(dataset, **kwargs)
-
         kwargs["num_threads"] = kwargs.pop("omp_nthreads", None) or kwargs.pop("num_threads", None)
 
         dataset_length = len(dataset)
         with TemporaryDirectory() as tmp_dir:
             print(f"Processing in <{tmp_dir}>")
             ptmp_dir = Path(tmp_dir)
+
+            bmask_path = None
+            if dataset.brainmask is not None:
+                import nibabel as nb
+
+                bmask_path = ptmp_dir / "brainmask.nii.gz"
+                nb.Nifti1Image(
+                    dataset.brainmask.astype("uint8"), dataset.affine, None
+                ).to_filename(bmask_path)
+
             with tqdm(total=dataset_length, unit="vols.") as pbar:
                 # run a original-to-synthetic affine registration
                 for i in index_iter:
                     pbar.set_description_str(f"Fit and predict vol. <{i}>")
 
                     # fit the model
-                    reference, predicted = self._model.fit_predict(
+                    test_set = dataset[i]
+                    predicted = self._model.fit_predict(
                         i,
                         n_jobs=n_jobs,
                     )
 
                     # prepare data for running ANTs
-                    fixed, moving = _prepare_registration_data(
-                        reference,
+                    predicted_path, volume_path, init_path = _prepare_registration_data(
+                        test_set[0],
                         predicted,
                         dataset.affine,
                         i,
@@ -144,14 +155,13 @@ class Estimator:
                     pbar.set_description_str(f"Realign vol. <{i}>")
 
                     xform = _run_registration(
-                        fixed,
-                        moving,
-                        dataset.brainmask,
-                        dataset.motion_affines,
-                        dataset.affine,
-                        dataset.dataobj.shape[:3],
+                        predicted_path,
+                        volume_path,
                         i,
                         ptmp_dir,
+                        init_affine=init_path,
+                        fixedmask_path=bmask_path,
+                        output_transform_prefix=f"ants-{i:05d}",
                         **kwargs,
                     )
 

@@ -23,7 +23,7 @@
 """Data models."""
 
 from nifreeze.model.base import (
-    AverageModel,
+    ExpectationModel,
     ModelFactory,
     TrivialModel,
 )
@@ -37,7 +37,7 @@ from nifreeze.model.pet import PETModel
 
 __all__ = (
     "ModelFactory",
-    "AverageModel",
+    "ExpectationModel",
     "AverageDWIModel",
     "DKIModel",
     "DTIModel",

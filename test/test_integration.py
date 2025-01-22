@@ -30,6 +30,7 @@ import numpy as np
 
 from nifreeze.data.dmri import DWI
 from nifreeze.estimator import Estimator
+from nifreeze.model.base import TrivialModel
 from nifreeze.registration.utils import displacements_within_mask
 
 
@@ -70,14 +71,12 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path):
         brainmask=dwdata.brainmask,
     )
 
-    estimator = Estimator("b0")
+    model = TrivialModel(dwdata)
+    estimator = Estimator(model)
     estimator.run(
         dwi_motion,
-        seed=None,
-        align_kwargs={
-            "config_file": "b0-to-b0_level0.json",
-            "num_threads": min(cpu_count(), 8),
-        },
+        seed=12345,
+        num_threads=min(cpu_count(), 8),
     )
 
     # Uncomment to see the realigned dataset
