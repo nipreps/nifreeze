@@ -74,7 +74,14 @@ def cross_validate(
     """
 
     rkf = RepeatedKFold(n_splits=cv, n_repeats=n_repeats)
-    scores = cross_val_score(gpr, X, y, scoring="neg_root_mean_squared_error", cv=rkf)
+    # scikit-learn stubs do not recognize rkf as a BaseCrossValidator
+    scores = cross_val_score(
+        gpr,
+        X,
+        y,
+        scoring="neg_root_mean_squared_error",
+        cv=rkf,  # type: ignore[arg-type]
+    )
     return scores
 
 
