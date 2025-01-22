@@ -90,6 +90,7 @@ def test_set_transform(random_dataset: BaseDataset):
     assert random_dataset.motion_affines is not None
     np.testing.assert_array_equal(random_dataset.motion_affines[idx], affine)
     # The returned affine from __getitem__ should be the same.
+    assert aff0 is not None
     np.testing.assert_array_equal(aff0, affine)
 
 
@@ -121,7 +122,7 @@ def test_to_nifti(random_dataset: BaseDataset):
         assert nifti_file.is_file()
 
         # Load the saved file with nibabel
-        img = nb.load(nifti_file)
+        img = nb.Nifti1Image.from_filename(nifti_file)
         data = img.get_fdata(dtype=np.float32)
         assert data.shape == (32, 32, 32, 5)
         assert np.allclose(data, random_dataset.dataobj)

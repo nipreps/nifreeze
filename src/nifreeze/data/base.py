@@ -33,7 +33,11 @@ import attr
 import h5py
 import nibabel as nb
 import numpy as np
+from nibabel.arrayproxy import ArrayLike
+from nibabel.spatialimages import SpatialHeader, SpatialImage
 from nitransforms.linear import Affine
+
+from ..utils.ndimage import load_api
 
 NFDH5_EXT = ".h5"
 
@@ -68,15 +72,15 @@ class BaseDataset:
 
     """
 
-    dataobj = attr.ib(default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp))
+    dataobj: np.ndarray = attr.ib(default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp))
     """A :obj:`~numpy.ndarray` object for the data array."""
-    affine = attr.ib(default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp))
+    affine: np.ndarray = attr.ib(default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp))
     """Best affine for RAS-to-voxel conversion of coordinates (NIfTI header)."""
-    brainmask = attr.ib(default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp))
+    brainmask: np.ndarray = attr.ib(default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp))
     """A boolean ndarray object containing a corresponding brainmask."""
-    motion_affines = attr.ib(default=None, eq=attr.cmp_using(eq=_cmp))
+    motion_affines: np.ndarray = attr.ib(default=None, eq=attr.cmp_using(eq=_cmp))
     """List of :obj:`~nitransforms.linear.Affine` realigning the dataset."""
-    datahdr = attr.ib(default=None)
+    datahdr: SpatialHeader = attr.ib(default=None)
     """A :obj:`~nibabel.spatialimages.SpatialHeader` header corresponding to the data."""
 
     _filepath = attr.ib(
@@ -159,9 +163,8 @@ class BaseDataset:
             The order of the spline interpolation.
 
         """
-        reference = namedtuple("ImageGrid", ("shape", "affine"))(
-            shape=self.dataobj.shape[:3], affine=self.affine
-        )
+        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
+        reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
 
         xform = Affine(matrix=affine, reference=reference)
 
@@ -279,11 +282,11 @@ def load(
     if filename.name.endswith(NFDH5_EXT):
         return BaseDataset.from_filename(filename)
 
-    img = nb.load(filename)
-    retval = BaseDataset(dataobj=img.dataobj, affine=img.affine)
+    img = load_api(filename, SpatialImage)
+    retval = BaseDataset(dataobj=np.asanyarray(img.dataobj), affine=img.affine)
 
     if brainmask_file:
-        mask = nb.load(brainmask_file)
+        mask = load_api(brainmask_file, SpatialImage)
         retval.brainmask = np.asanyarray(mask.dataobj)
 
     return retval
