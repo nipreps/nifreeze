@@ -27,19 +27,21 @@ from __future__ import annotations
 from collections import namedtuple
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Any
+from typing import Any, Generic, TypeVarTuple
 
 import attr
 import h5py
 import nibabel as nb
 import numpy as np
-from nibabel.arrayproxy import ArrayLike
 from nibabel.spatialimages import SpatialHeader, SpatialImage
 from nitransforms.linear import Affine
 
 from ..utils.ndimage import load_api
 
 NFDH5_EXT = ".h5"
+
+
+Ts = TypeVarTuple("Ts")
 
 
 def _data_repr(value: np.ndarray | None) -> str:
@@ -56,7 +58,7 @@ def _cmp(lh: Any, rh: Any) -> bool:
 
 
 @attr.s(slots=True)
-class BaseDataset:
+class BaseDataset(Generic[*Ts]):
     """
     Base dataset representation structure.
 
@@ -97,9 +99,13 @@ class BaseDataset:
 
         return self.dataobj.shape[-1]
 
+    def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[*Ts]:
+        # PY312: Default values for TypeVarTuples are not yet supported
+        return ()  # type: ignore[return-value]
+
     def __getitem__(
         self, idx: int | slice | tuple | np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray | None]:
+    ) -> tuple[np.ndarray, np.ndarray | None, *Ts]:
         """
         Returns volume(s) and corresponding affine(s) through fancy indexing.
 
@@ -122,7 +128,7 @@ class BaseDataset:
             raise ValueError("No data available (dataobj is None).")
 
         affine = self.motion_affines[idx] if self.motion_affines is not None else None
-        return self.dataobj[..., idx], affine
+        return self.dataobj[..., idx], affine, *self._getextra(idx)
 
     @classmethod
     def from_filename(cls, filename: Path | str) -> BaseDataset:
@@ -250,7 +256,7 @@ def load(
     filename: Path | str,
     brainmask_file: Path | str | None = None,
     motion_file: Path | str | None = None,
-) -> BaseDataset:
+) -> BaseDataset[()]:
     """
     Load 4D data from a filename or an HDF5 file.
 
@@ -283,7 +289,7 @@ def load(
         return BaseDataset.from_filename(filename)
 
     img = load_api(filename, SpatialImage)
-    retval = BaseDataset(dataobj=np.asanyarray(img.dataobj), affine=img.affine)
+    retval: BaseDataset[()] = BaseDataset(dataobj=np.asanyarray(img.dataobj), affine=img.affine)
 
     if brainmask_file:
         mask = load_api(brainmask_file, SpatialImage)

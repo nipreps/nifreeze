@@ -53,7 +53,7 @@ def test_len(random_dataset: BaseDataset):
     assert len(random_dataset) == 5  # last dimension is 5 volumes
 
 
-def test_getitem_volume_index(random_dataset: BaseDataset):
+def test_getitem_volume_index(random_dataset: BaseDataset[()]):
     """
     Test that __getitem__ returns the correct (volume, affine) tuple.
 
@@ -71,7 +71,7 @@ def test_getitem_volume_index(random_dataset: BaseDataset):
     assert aff_slice is None
 
 
-def test_set_transform(random_dataset: BaseDataset):
+def test_set_transform(random_dataset: BaseDataset[()]):
     """
     Test that calling set_transform changes the data and motion_affines.
     For simplicity, we'll apply an identity transform and check that motion_affines is updated.
