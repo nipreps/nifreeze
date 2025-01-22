@@ -25,7 +25,7 @@
 from __future__ import annotations
 
 from numbers import Integral, Real
-from typing import Callable, ClassVar, Mapping, Optional, Sequence, Union
+from typing import Callable, ClassVar, Literal, Mapping, Optional, Sequence, Union
 
 import numpy as np
 from scipy import optimize
@@ -171,7 +171,7 @@ class DiffusionGPR(GaussianProcessRegressor):
         kernel: Kernel | None = None,
         *,
         alpha: float = 0.5,
-        optimizer: str | Callable | None = "fmin_l_bfgs_b",
+        optimizer: Literal["fmin_l_bfgs_b"] | Callable | None = "fmin_l_bfgs_b",
         n_restarts_optimizer: int = 0,
         copy_X_train: bool = True,
         normalize_y: bool = True,
@@ -229,7 +229,7 @@ class DiffusionGPR(GaussianProcessRegressor):
                 options=options,
                 args=(self.eval_gradient,),
                 tol=self.tol,
-            )
+            )  # type: ignore[call-overload]
             _check_optimize_result("lbfgs", opt_res)
             return opt_res.x, opt_res.fun
 
