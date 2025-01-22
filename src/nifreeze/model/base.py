@@ -33,7 +33,7 @@ class ModelFactory:
     """A factory for instantiating data models."""
 
     @staticmethod
-    def init(model="DTI", **kwargs):
+    def init(model=None, **kwargs):
         """
         Instantiate a diffusion model.
 
@@ -49,6 +49,9 @@ class ModelFactory:
             A model object compliant with DIPY's interface.
 
         """
+        if model is None:
+            raise RuntimeError("No model identifier provided.")
+
         if model.lower() in ("s0", "b0"):
             return TrivialModel(predicted=kwargs.pop("S0"), gtab=kwargs.pop("gtab"))
 
@@ -143,7 +146,7 @@ class TrivialModel(BaseModel):
         """Do nothing."""
 
     def predict(self, *_, **kwargs):
-        """Return the *b=0* map."""
+        """Return the reference map."""
 
         # No need to check fit (if not fitted, has raised already)
         return self._predicted

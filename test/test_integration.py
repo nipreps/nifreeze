@@ -70,10 +70,9 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path):
         brainmask=dwdata.brainmask,
     )
 
-    estimator = Estimator(dwi_motion, model="b0")
+    estimator = Estimator("b0")
     estimator.run(
-        data=dwi_motion,
-        models=("b0",),
+        dwi_motion,
         seed=None,
         align_kwargs={
             "config_file": "b0-to-b0_level0.json",

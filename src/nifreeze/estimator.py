@@ -39,11 +39,28 @@ from nifreeze.utils import iterators
 class Filter:
     """Alters an input data object (e.g., downsampling)."""
 
+    def run(self, dataset: BaseDataset, **kwargs):
+        """
+        Trigger execution of the designated filter.
+
+        Parameters
+        ----------
+        dataset : :obj:`~nifreeze.data.base.BaseDataset`
+            The input dataset this estimator operates on.
+
+        Returns
+        -------
+        :obj:`~nifreeze.estimator.Estimator`
+            The estimator, after fitting.
+
+        """
+        return dataset
+
 
 class Estimator:
     """Estimates rigid-body head-motion and distortions derived from eddy-currents."""
 
-    __slots__ = ("_model", "_strategy", "_prev", "_model_kwargs", "_align_kwargs")
+    __slots__ = ("_model", "_strategy", "_dataset", "_prev", "_model_kwargs", "_align_kwargs")
 
     def __init__(
         self,
@@ -56,10 +73,24 @@ class Estimator:
         self._model = model
         self._prev = prev
         self._strategy = strategy
-        self._model_kwargs = model_kwargs
-        self._align_kwargs = kwargs
+        self._model_kwargs = model_kwargs or {}
+        self._align_kwargs = kwargs or {}
 
     def run(self, dataset: BaseDataset, **kwargs):
+        """
+        Trigger execution of the workflow this estimator belongs.
+
+        Parameters
+        ----------
+        dataset : :obj:`~nifreeze.data.base.BaseDataset`
+            The input dataset this estimator operates on.
+
+        Returns
+        -------
+        :obj:`~nifreeze.estimator.Estimator`
+            The estimator, after fitting.
+
+        """
         if self._prev is not None:
             result = self._prev.run(dataset, **kwargs)
             if isinstance(self._prev, Filter):
@@ -69,7 +100,7 @@ class Estimator:
 
         # Prepare iterator
         iterfunc = getattr(iterators, f"{self._strategy}_iterator")
-        index_iter = iterfunc(dataset, seed=kwargs.get("seed", None))
+        index_iter = iterfunc(len(dataset), seed=kwargs.get("seed", None))
 
         # Initialize model
         if isinstance(self._model, str):
