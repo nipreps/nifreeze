@@ -36,7 +36,7 @@ import numpy as np
 from nibabel.spatialimages import SpatialHeader, SpatialImage
 from nitransforms.linear import Affine
 
-from ..utils.ndimage import load_api
+from nifreeze.utils.ndimage import load_api
 
 NFDH5_EXT = ".h5"
 
@@ -236,7 +236,7 @@ class BaseDataset(Generic[*Ts]):
                         compression_opts=compression_opts,
                     )
 
-    def to_nifti(self, filename: Path) -> None:
+    def to_nifti(self, filename: Path | str) -> None:
         """
         Write a NIfTI file to disk.
 
