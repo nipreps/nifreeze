@@ -96,7 +96,10 @@ class BaseModel:
 
         # Setup brain mask
         if mask is None:
-            warn("No mask provided; consider using a mask to avoid issues in model optimization.")
+            warn(
+                "No mask provided; consider using a mask to avoid issues in model optimization.",
+                stacklevel=2,
+            )
 
         self._mask = mask
 
