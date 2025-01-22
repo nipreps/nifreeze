@@ -74,7 +74,7 @@ def plot_error(
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_xticks(kfolds)
-    ax.set_xticklabels(kfolds)
+    ax.set_xticklabels(map(str, kfolds))
     ax.set_title(title)
     fig.tight_layout()
     return fig
