@@ -213,7 +213,7 @@ def generate_command(
     movingmask_path: str | Path | list[str] | None = None,
     init_affine: str | Path | None = None,
     default: str = "b0-to-b0_level0",
-    **kwargs: dict,
+    **kwargs,
 ) -> str:
     """
     Generate an ANTs' command line.
