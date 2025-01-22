@@ -79,7 +79,9 @@ def gp_prediction(
         raise RuntimeError("Model is not yet fitted.")
 
     # Extract orientations from bvecs, and highly likely, the b-value too.
-    return model.predict(X, return_std=return_std)
+    orientations = model.predict(X, return_std=return_std)
+    assert isinstance(orientations, np.ndarray)
+    return orientations
 
 
 class GaussianProcessModel(ReconstModel):
