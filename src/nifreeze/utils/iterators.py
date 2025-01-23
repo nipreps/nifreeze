@@ -33,9 +33,11 @@ def linear_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
 
     Parameters
     ----------
-    size : :obj:`int` or ``None`` (optional)
+    size : :obj:`int` or ``None``, optional
         Number of volumes in the dataset.
-    bvalues : :obj:`list`
+        If ``None``, ``size`` will be inferred from the ``bvalues``
+        keyword argument.
+    bvalues : :obj:`list`, optional (keyword argument)
         List of b-values corresponding to all orientations of a DWI dataset.
         If ``size`` is provided, this argument will be ignored.
         Otherwise, ``size`` will be inferred from the length of ``bvalues``.
@@ -63,20 +65,22 @@ def random_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
     """
     Traverse the dataset volumes randomly.
 
-    If the `seed` key is present in the keyword arguments, initializes the seed
-    of Python's `random` pseudo-random number generator library with the given
-    value. Specifically, if `False`, `None` is used as the seed; it `True`, a
+    If the ``seed`` key is present in the keyword arguments, initializes the seed
+    of Python's ``random`` pseudo-random number generator library with the given
+    value. Specifically, if ``False``, ``None`` is used as the seed; if ``True``, a
     default seed value is used.
 
     Parameters
     ----------
-    size : :obj:`int` or ``None`` (optional)
+    size : :obj:`int` or ``None``, optional
         Number of volumes in the dataset.
-    bvalues : :obj:`list` (optional, keyword argument)
+        If ``None``, ``size`` will be inferred from the ``bvalues``
+        keyword argument.
+    bvalues : :obj:`list`, optional (keyword argument)
         List of b-values corresponding to all orientations of a DWI dataset.
         If ``size`` is provided, this argument will be ignored.
         Otherwise, ``size`` will be inferred from the length of ``bvalues``.
-    seed : :obj:`int` or :obj:`bool` or :obj:`bool` or ``None`` (optional, keyword argument)
+    seed : :obj:`int`, :obj:`bool`, :obj:`str`, or ``None``, optional (keyword argument)
         If :obj:`int` or :obj:`str` or ``None``, initializes the seed of Python's random generator
         with the given value.
         If ``False``, the random generator is passed ``None``.
@@ -124,6 +128,8 @@ def bvalue_iterator(*_, **kwargs) -> Iterator[int]:
     ----------
     bvalues : :obj:`list`
         List of b-values corresponding to all orientations of the dataset.
+        Please note that ``bvalues`` is a keyword argument and MUST be provided
+        to generate the volume sequence.
 
     Yields
     ------
@@ -149,9 +155,11 @@ def centralsym_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
 
     Parameters
     ----------
-    size : :obj:`int` or ``None`` (optional)
+    size : :obj:`int` or ``None``, optional
         Number of volumes in the dataset.
-    bvalues : :obj:`list` (optional, keyword argument)
+        If ``None``, ``size`` will be inferred from the ``bvalues``
+        keyword argument.
+    bvalues : :obj:`list`, optional (keyword argument)
         List of b-values corresponding to all orientations of the dataset.
         If ``size`` is provided, this argument will be ignored.
         Otherwise, ``size`` will be inferred from the length of ``bvalues``.
