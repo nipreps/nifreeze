@@ -33,14 +33,16 @@ def linear_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
 
     Parameters
     ----------
-    size : :obj:`int` or None, optional
-        Number of volumes in the dataset (for instance, the number of
-        orientations in a DWI). If `None`, the size is inferred from the `bvals`
-        argument in `kwargs`, if present.
+    size : :obj:`int` or ``None`` (optional)
+        Number of volumes in the dataset.
+    bvalues : :obj:`list`
+        List of b-values corresponding to all orientations of a DWI dataset.
+        If ``size`` is provided, this argument will be ignored.
+        Otherwise, ``size`` will be inferred from the length of ``bvalues``.
 
-    Returns
-    -------
-    :obj:`~typing.Iterator`
+    Yields
+    ------
+    :obj:`int`
         The sorted index order.
 
     Examples
@@ -54,7 +56,7 @@ def linear_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
     if size is None:
         raise TypeError("Cannot build iterator without size")
 
-    return iter(range(size))
+    return (s for s in range(size))
 
 
 def random_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
@@ -68,14 +70,21 @@ def random_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
 
     Parameters
     ----------
-    size : :obj:`int` or None, optional
-        Number of volumes in the dataset (for instance, the number of
-        orientations in a DWI). If `None`, the size is inferred from the `bvals`
-        argument in `kwargs`, if present.
+    size : :obj:`int` or ``None`` (optional)
+        Number of volumes in the dataset.
+    bvalues : :obj:`list` (optional, keyword argument)
+        List of b-values corresponding to all orientations of a DWI dataset.
+        If ``size`` is provided, this argument will be ignored.
+        Otherwise, ``size`` will be inferred from the length of ``bvalues``.
+    seed : :obj:`int` or :obj:`bool` or :obj:`bool` or ``None`` (optional, keyword argument)
+        If :obj:`int` or :obj:`str` or ``None``, initializes the seed of Python's random generator
+        with the given value.
+        If ``False``, the random generator is passed ``None``.
+        If ``True``, a default seed value is set.
 
-    Returns
-    -------
-    :obj:`~typing.Iterator`
+    Yields
+    ------
+    :obj:`int`
         The sorted index order.
 
     Examples
@@ -111,9 +120,14 @@ def bvalue_iterator(*_, **kwargs) -> Iterator[int]:
     """
     Traverse the volumes in a DWI dataset by growing b-value.
 
-    Returns
-    -------
-    :obj:`~typing.Iterator`
+    Parameters
+    ----------
+    bvalues : :obj:`list`
+        List of b-values corresponding to all orientations of the dataset.
+
+    Yields
+    ------
+    :obj:`int`
         The sorted index order.
 
     Examples
@@ -135,14 +149,16 @@ def centralsym_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
 
     Parameters
     ----------
-    size : :obj:`int` or None, optional
-        Number of volumes in the dataset (for instance, the number of
-        orientations in a DWI). If `None`, the size is inferred from the `bvals`
-        argument in `kwargs`, if present.
+    size : :obj:`int` or ``None`` (optional)
+        Number of volumes in the dataset.
+    bvalues : :obj:`list` (optional, keyword argument)
+        List of b-values corresponding to all orientations of the dataset.
+        If ``size`` is provided, this argument will be ignored.
+        Otherwise, ``size`` will be inferred from the length of ``bvalues``.
 
-    Returns
-    -------
-    :obj:`~typing.Iterator`
+    Yields
+    ------
+    :obj:`~int`
         The sorted index order.
 
     Examples
