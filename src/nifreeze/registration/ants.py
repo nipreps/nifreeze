@@ -213,7 +213,7 @@ def generate_command(
     movingmask_path: str | Path | list[str] | None = None,
     init_affine: str | Path | None = None,
     default: str = "b0-to-b0_level0",
-    **kwargs: dict,
+    **kwargs,
 ) -> str:
     """
     Generate an ANTs' command line.
@@ -412,7 +412,7 @@ def _run_registration(
     i_iter: int,
     vol_idx: int,
     dirname: Path,
-    reg_target_type: str,
+    reg_target_type: str | tuple[str, str],
     align_kwargs: dict,
 ) -> nt.base.BaseTransform:
     """
@@ -440,7 +440,7 @@ def _run_registration(
         DWI frame index.
     dirname : :obj:`Path`
         Directory name where the transformation is saved.
-    reg_target_type : :obj:`str`
+    reg_target_type : :obj:`str` or tuple of :obj:`str`
         Target registration type.
     align_kwargs : :obj:`dict`
         Parameters to configure the image registration process.

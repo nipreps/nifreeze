@@ -141,13 +141,13 @@ class Estimator:
                         pbar.set_description_str(
                             f"Pass {i_iter + 1}/{n_iter} | Fit and predict b-index <{i}>"
                         )
-                        data_train, data_test = lovo_split(data, i, with_b0=True)
-                        grad_str = f"{i}, {data_test[1][:3]}, b={int(data_test[1][3])}"
+                        data_train, data_test = lovo_split(data, i)
+                        grad_str = f"{i}, {data_test[-1][:3]}, b={int(data_test[-1][3])}"
                         pbar.set_description_str(f"[{grad_str}], {n_jobs} jobs")
 
                         if not single_model:  # A true LOGO estimator
                             if hasattr(data, "gradients"):
-                                kwargs["gtab"] = data_train[1]
+                                kwargs["gtab"] = data_train[-1]
                             # Factory creates the appropriate model and pipes arguments
                             dwmodel = ModelFactory.init(
                                 model=model,
@@ -162,7 +162,7 @@ class Estimator:
                             )
 
                         # generate a synthetic dw volume for the test gradient
-                        predicted = dwmodel.predict(data_test[1])
+                        predicted = dwmodel.predict(data_test[-1])
 
                         # prepare data for running ANTs
                         fixed, moving = _prepare_registration_data(
@@ -180,7 +180,7 @@ class Estimator:
                             data.motion_affines,
                             data.affine,
                             data.dataobj.shape[:3],
-                            data_test[1][3],
+                            data_test[-1][3],
                             i_iter,
                             i,
                             ptmp_dir,

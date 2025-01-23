@@ -37,7 +37,7 @@ def plot_error(
     ylabel: str,
     title: str,
     color: str = "orange",
-    figsize: tuple[int, int] = (19.2, 10.8),
+    figsize: tuple[float, float] = (19.2, 10.8),
 ) -> plt.Figure:
     """
     Plot the error and standard deviation.
@@ -74,7 +74,7 @@ def plot_error(
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_xticks(kfolds)
-    ax.set_xticklabels(kfolds)
+    ax.set_xticklabels(map(str, kfolds))
     ax.set_title(title)
     fig.tight_layout()
     return fig

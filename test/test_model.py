@@ -76,7 +76,9 @@ def test_trivial_model(use_mask):
 def test_average_model():
     """Check the implementation of the average DW model."""
 
-    data = np.ones((100, 100, 100, 6), dtype=float)
+    size = (100, 100, 100, 6)
+    data = np.ones(size, dtype=float)
+    mask = np.ones(size, dtype=bool)
 
     gtab = np.array(
         [
@@ -91,10 +93,11 @@ def test_average_model():
 
     data *= gtab[:, -1]
 
-    tmodel_mean = model.AverageDWIModel(gtab=gtab, bias=False, stat="mean")
-    tmodel_median = model.AverageDWIModel(gtab=gtab, bias=False, stat="median")
-    tmodel_1000 = model.AverageDWIModel(gtab=gtab, bias=False, th_high=1000, th_low=900)
+    tmodel_mean = model.AverageDWIModel(mask=mask, gtab=gtab, bias=False, stat="mean")
+    tmodel_median = model.AverageDWIModel(mask=mask, gtab=gtab, bias=False, stat="median")
+    tmodel_1000 = model.AverageDWIModel(mask=mask, gtab=gtab, bias=False, th_high=1000, th_low=900)
     tmodel_2000 = model.AverageDWIModel(
+        mask=mask,
         gtab=gtab,
         bias=False,
         th_high=2000,
@@ -167,19 +170,20 @@ def test_two_initialisations(datadir):
 
     # Direct initialisation
     model1 = model.AverageDWIModel(
-        gtab=data_train[1],
+        mask=dmri_dataset.brainmask.astype(bool),
+        gtab=data_train[-1],
         S0=dmri_dataset.bzero,
         th_low=100,
         th_high=1000,
         bias=False,
         stat="mean",
     )
-    model1.fit(data_train[0], gtab=data_train[1])
-    predicted1 = model1.predict(data_test[1])
+    model1.fit(data_train[0], gtab=data_train[-1])
+    predicted1 = model1.predict(data_test[-1])
 
     # Initialisation via ModelFactory
     model2 = model.ModelFactory.init(
-        gtab=data_train[1],
+        gtab=data_train[-1],
         model="avgdwi",
         S0=dmri_dataset.bzero,
         th_low=100,
@@ -189,9 +193,9 @@ def test_two_initialisations(datadir):
     )
 
     with pytest.raises(ModelNotFittedError):
-        model2.predict(data_test[1])
+        model2.predict(data_test[-1])
 
-    model2.fit(data_train[0], gtab=data_train[1])
-    predicted2 = model2.predict(data_test[1])
+    model2.fit(data_train[0], gtab=data_train[-1])
+    predicted2 = model2.predict(data_test[-1])
 
     assert np.all(predicted1 == predicted2)
