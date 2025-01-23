@@ -43,7 +43,7 @@ def linear_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
     Yields
     ------
     :obj:`int`
-        The sorted index order.
+        The next index.
 
     Examples
     --------
@@ -85,7 +85,7 @@ def random_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
     Yields
     ------
     :obj:`int`
-        The sorted index order.
+        The next index.
 
     Examples
     --------
@@ -128,7 +128,7 @@ def bvalue_iterator(*_, **kwargs) -> Iterator[int]:
     Yields
     ------
     :obj:`int`
-        The sorted index order.
+        The next index.
 
     Examples
     --------
@@ -159,7 +159,7 @@ def centralsym_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
     Yields
     ------
     :obj:`~int`
-        The sorted index order.
+        The next index.
 
     Examples
     --------
