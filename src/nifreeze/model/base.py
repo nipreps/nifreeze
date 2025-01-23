@@ -26,6 +26,10 @@ from warnings import warn
 
 import numpy as np
 
+mask_absence_warn_msg = (
+    "No mask provided; consider using a mask to avoid issues in model optimization."
+)
+
 
 class ModelFactory:
     """A factory for instantiating data models."""
@@ -89,10 +93,7 @@ class BaseModel:
         self._dataset = dataset
         # Warn if mask not present
         if dataset.brainmask is None:
-            warn(
-                "No mask provided; consider using a mask to avoid issues in model optimization.",
-                stacklevel=2,
-            )
+            warn(mask_absence_warn_msg, stacklevel=2)
 
     def fit_predict(self, *_, **kwargs):
         """Fit and predict the indicate index of the dataset (abstract signature)."""

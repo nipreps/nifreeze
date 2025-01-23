@@ -22,6 +22,8 @@
 #
 """Unit tests exercising models."""
 
+import contextlib
+
 import numpy as np
 import pytest
 from dipy.sims.voxel import single_tensor
@@ -29,10 +31,12 @@ from dipy.sims.voxel import single_tensor
 from nifreeze import model
 from nifreeze.data.dmri import DEFAULT_MAX_S0, DEFAULT_MIN_S0, DWI
 from nifreeze.model._dipy import GaussianProcessModel
+from nifreeze.model.base import mask_absence_warn_msg
 from nifreeze.testing import simulations as _sim
 
 
-def test_trivial_model():
+@pytest.mark.parametrize("use_mask", (False, True))
+def test_trivial_model(use_mask):
     """Check the implementation of the trivial B0 model."""
 
     rng = np.random.default_rng(1234)
@@ -41,7 +45,15 @@ def test_trivial_model():
     with pytest.raises(TypeError):
         model.TrivialModel()
 
-    _S0 = rng.normal(size=(2, 2, 2))
+    size = (2, 2, 2)
+    mask = None
+    if use_mask:
+        mask = np.ones(size, dtype=bool)
+        context = contextlib.nullcontext()
+    else:
+        context = pytest.warns(UserWarning, match=mask_absence_warn_msg)
+
+    _S0 = rng.normal(size=size)
 
     _clipped_S0 = np.clip(
         _S0.astype("float32") / _S0.max(),
@@ -52,9 +64,12 @@ def test_trivial_model():
     data = DWI(
         dataobj=(*_S0.shape, 10),
         bzero=_clipped_S0,
+        brainmask=mask,
     )
 
-    tmodel = model.TrivialModel(data)
+    with context:
+        tmodel = model.TrivialModel(data)
+
     predicted = tmodel.fit_predict(4)
 
     assert np.all(_clipped_S0 == predicted)
@@ -63,7 +78,10 @@ def test_trivial_model():
 def test_average_model():
     """Check the implementation of the average DW model."""
 
-    data = np.ones((100, 100, 100, 10), dtype=float)
+    size = (100, 100, 100, 6)
+    data = np.ones(size, dtype=float)
+    mask = np.ones(size[:3], dtype=bool)
+
     gtab = np.array(
         [
             [0, 0, 0, 0],
@@ -80,7 +98,7 @@ def test_average_model():
     )
 
     data *= gtab[:, -1]
-    dataset = DWI(dataobj=data, gradients=gtab)
+    dataset = DWI(dataobj=data, gradients=gtab, brainmask=mask)
 
     tmodel_mean = model.AverageDWIModel(dataset, stat="mean")
     tmodel_mean_full = model.AverageDWIModel(dataset, stat="mean", th_low=2000, th_high=2000)

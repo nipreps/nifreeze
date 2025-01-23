@@ -43,7 +43,7 @@ def main(argv=None) -> None:
     dataset: BaseDataset = BaseDataset.from_filename(args.input_file)
 
     prev_model: Estimator | None = None
-    for model in args.models:
+    for _model in args.models:
         estimator: Estimator = Estimator(
             args.model,
             prev=prev_model,
