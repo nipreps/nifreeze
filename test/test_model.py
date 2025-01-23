@@ -183,8 +183,9 @@ def test_two_initialisations(datadir):
 
     # Initialisation via ModelFactory
     model2 = model.ModelFactory.init(
-        gtab=data_train[-1],
         model="avgdwi",
+        mask=dmri_dataset.brainmask.astype(bool),
+        gtab=data_train[-1],
         S0=dmri_dataset.bzero,
         th_low=100,
         th_high=1000,
