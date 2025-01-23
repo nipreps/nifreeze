@@ -50,7 +50,9 @@ class ModelFactory:
 
         """
         if model.lower() in ("s0", "b0"):
-            return TrivialModel(predicted=kwargs.pop("S0"), gtab=kwargs.pop("gtab"))
+            return TrivialModel(
+                mask=kwargs.pop("mask"), predicted=kwargs.pop("S0"), gtab=kwargs.pop("gtab")
+            )
 
         if model.lower() in ("avgdwi", "averagedwi", "meandwi"):
             from nifreeze.model.dmri import AverageDWIModel

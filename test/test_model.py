@@ -44,7 +44,10 @@ def test_trivial_model():
     with pytest.raises(TypeError):
         model.TrivialModel()
 
-    _S0 = rng.normal(size=(2, 2, 2))
+    size = (2, 2, 2)
+    mask = np.ones(size, dtype=bool)
+
+    _S0 = rng.normal(size=size)
 
     _clipped_S0 = np.clip(
         _S0.astype("float32") / _S0.max(),
@@ -52,7 +55,7 @@ def test_trivial_model():
         a_max=DEFAULT_MAX_S0,
     )
 
-    tmodel = model.TrivialModel(predicted=_clipped_S0)
+    tmodel = model.TrivialModel(mask=mask, predicted=_clipped_S0)
 
     data = None
     assert tmodel.fit(data) is None
@@ -63,7 +66,9 @@ def test_trivial_model():
 def test_average_model():
     """Check the implementation of the average DW model."""
 
-    data = np.ones((100, 100, 100, 6), dtype=float)
+    size = (100, 100, 100, 6)
+    data = np.ones(size, dtype=float)
+    mask = np.ones(size, dtype=bool)
 
     gtab = np.array(
         [
@@ -78,10 +83,11 @@ def test_average_model():
 
     data *= gtab[:, -1]
 
-    tmodel_mean = model.AverageDWIModel(gtab=gtab, bias=False, stat="mean")
-    tmodel_median = model.AverageDWIModel(gtab=gtab, bias=False, stat="median")
-    tmodel_1000 = model.AverageDWIModel(gtab=gtab, bias=False, th_high=1000, th_low=900)
+    tmodel_mean = model.AverageDWIModel(mask=mask, gtab=gtab, bias=False, stat="mean")
+    tmodel_median = model.AverageDWIModel(mask=mask, gtab=gtab, bias=False, stat="median")
+    tmodel_1000 = model.AverageDWIModel(mask=mask, gtab=gtab, bias=False, th_high=1000, th_low=900)
     tmodel_2000 = model.AverageDWIModel(
+        mask=mask,
         gtab=gtab,
         bias=False,
         th_high=2000,
@@ -154,6 +160,7 @@ def test_two_initialisations(datadir):
 
     # Direct initialisation
     model1 = model.AverageDWIModel(
+        mask=dmri_dataset.brainmask.astype(bool),
         gtab=data_train[-1],
         S0=dmri_dataset.bzero,
         th_low=100,
