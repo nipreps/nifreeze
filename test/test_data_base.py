@@ -53,7 +53,7 @@ def test_len(random_dataset: BaseDataset):
     assert len(random_dataset) == 5  # last dimension is 5 volumes
 
 
-def test_getitem_volume_index(random_dataset: BaseDataset):
+def test_getitem_volume_index(random_dataset: BaseDataset[()]):
     """
     Test that __getitem__ returns the correct (volume, affine) tuple.
 
@@ -71,7 +71,7 @@ def test_getitem_volume_index(random_dataset: BaseDataset):
     assert aff_slice is None
 
 
-def test_set_transform(random_dataset: BaseDataset):
+def test_set_transform(random_dataset: BaseDataset[()]):
     """
     Test that calling set_transform changes the data and motion_affines.
     For simplicity, we'll apply an identity transform and check that motion_affines is updated.
@@ -90,6 +90,7 @@ def test_set_transform(random_dataset: BaseDataset):
     assert random_dataset.motion_affines is not None
     np.testing.assert_array_equal(random_dataset.motion_affines[idx], affine)
     # The returned affine from __getitem__ should be the same.
+    assert aff0 is not None
     np.testing.assert_array_equal(aff0, affine)
 
 
@@ -121,7 +122,7 @@ def test_to_nifti(random_dataset: BaseDataset):
         assert nifti_file.is_file()
 
         # Load the saved file with nibabel
-        img = nb.load(nifti_file)
+        img = nb.Nifti1Image.from_filename(nifti_file)
         data = img.get_fdata(dtype=np.float32)
         assert data.shape == (32, 32, 32, 5)
         assert np.allclose(data, random_dataset.dataobj)

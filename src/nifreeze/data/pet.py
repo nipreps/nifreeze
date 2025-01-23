@@ -29,14 +29,15 @@ from typing import Any, Union
 
 import attr
 import h5py
-import nibabel as nb
 import numpy as np
+from nibabel.spatialimages import SpatialImage
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr
+from nifreeze.utils.ndimage import load_api
 
 
 @attr.s(slots=True)
-class PET(BaseDataset):
+class PET(BaseDataset[np.ndarray | None]):
     """Data representation structure for PET data."""
 
     frame_time: np.ndarray | None = attr.ib(
@@ -46,6 +47,10 @@ class PET(BaseDataset):
     total_duration: float | None = attr.ib(default=None, repr=True)
     """A float representing the total duration of the dataset."""
 
+    def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray | None]:
+        return (self.frame_time[idx] if self.frame_time is not None else None,)
+
+    # For the sake of the docstring
     def __getitem__(
         self, idx: int | slice | tuple | np.ndarray
     ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None]:
@@ -69,9 +74,7 @@ class PET(BaseDataset):
             The frame time corresponding to the index(es).
 
         """
-
-        data, affine = super().__getitem__(idx)
-        return data, affine, self.frame_time[idx]
+        return super().__getitem__(idx)
 
     @classmethod
     def from_filename(cls, filename: Union[str, Path]) -> PET:
@@ -181,7 +184,7 @@ def load(
         pet_obj = PET.from_filename(filename)
     else:
         # Load from NIfTI
-        img = nb.load(str(filename))
+        img = load_api(filename, SpatialImage)
         data = img.get_fdata(dtype=np.float32)
         pet_obj = PET(
             dataobj=data,
@@ -204,11 +207,12 @@ def load(
 
     # If the user doesn't provide frame_duration, we derive it:
     if frame_duration is None:
-        frame_time_arr = pet_obj.frame_time
-        # If shape is e.g. (N,), then we can do
-        durations = np.diff(frame_time_arr)
-        if len(durations) == (len(frame_time_arr) - 1):
-            durations = np.append(durations, durations[-1])  # last frame same as second-last
+        if pet_obj.frame_time is not None:
+            frame_time_arr = pet_obj.frame_time
+            # If shape is e.g. (N,), then we can do
+            durations = np.diff(frame_time_arr)
+            if len(durations) == (len(frame_time_arr) - 1):
+                durations = np.append(durations, durations[-1])  # last frame same as second-last
     else:
         durations = np.array(frame_duration, dtype=np.float32)
 
@@ -218,7 +222,7 @@ def load(
 
     # If a brain mask is provided, load and attach
     if brainmask_file is not None:
-        mask_img = nb.load(str(brainmask_file))
+        mask_img = load_api(brainmask_file, SpatialImage)
         pet_obj.brainmask = np.asanyarray(mask_img.dataobj, dtype=bool)
 
     return pet_obj
