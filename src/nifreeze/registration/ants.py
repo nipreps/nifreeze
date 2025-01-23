@@ -130,7 +130,6 @@ def _prepare_registration_data(
 
     """
     clip = clip or "none"
-
     predicted_path = Path(dirname) / f"predicted_{vol_idx:05d}.nii.gz"
     sample_path = Path(dirname) / f"sample_{vol_idx:05d}.nii.gz"
     _to_nifti(
@@ -151,7 +150,7 @@ def _prepare_registration_data(
         ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
         reference = ImageGrid(shape=sample.shape[:3], affine=affine)
         initial_xform = Affine(matrix=init_affine, reference=reference)
-        init_path = dirname / f"init_{vol_idx:05d}.mat"
+        init_path = Path(dirname) / f"init_{vol_idx:05d}.mat"
         initial_xform.to_filename(init_path, fmt="itk")
 
     return predicted_path, sample_path, init_path

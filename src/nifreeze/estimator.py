@@ -137,7 +137,7 @@ class Estimator:
 
                     # fit the model
                     test_set = dataset[i]
-                    predicted = self._model.fit_predict(
+                    predicted = self._model.fit_predict(  # type: ignore[union-attr]
                         i,
                         n_jobs=n_jobs,
                     )

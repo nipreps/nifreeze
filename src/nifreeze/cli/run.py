@@ -42,12 +42,17 @@ def main(argv=None) -> None:
     # Open the data with the given file path
     dataset: BaseDataset = BaseDataset.from_filename(args.input_file)
 
-    estimator: Estimator = Estimator()
+    prev_model: Estimator | None = None
+    for model in args.models:
+        estimator: Estimator = Estimator(
+            args.model,
+            prev=prev_model,
+        )
+        prev_model = estimator
 
     _ = estimator.run(
         dataset,
         align_kwargs=args.align_config,
-        models=args.models,
         omp_nthreads=args.nthreads,
         njobs=args.njobs,
         seed=args.seed,
