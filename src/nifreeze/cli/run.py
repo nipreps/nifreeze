@@ -45,7 +45,7 @@ def main(argv=None) -> None:
     prev_model: Estimator | None = None
     for _model in args.models:
         estimator: Estimator = Estimator(
-            args.model,
+            _model,
             prev=prev_model,
         )
         prev_model = estimator
