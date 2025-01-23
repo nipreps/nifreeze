@@ -78,10 +78,6 @@ def test_trivial_model(use_mask):
 def test_average_model():
     """Check the implementation of the average DW model."""
 
-    size = (100, 100, 100, 6)
-    data = np.ones(size, dtype=float)
-    mask = np.ones(size[:3], dtype=bool)
-
     gtab = np.array(
         [
             [0, 0, 0, 0],
@@ -96,6 +92,10 @@ def test_average_model():
             [0.307, -0.766, 0.677, 2000],
         ]
     )
+
+    size = (100, 100, 100, gtab.shape[0])
+    data = np.ones(size, dtype=float)
+    mask = np.ones(size[:3], dtype=bool)
 
     data *= gtab[:, -1]
     dataset = DWI(dataobj=data, gradients=gtab, brainmask=mask)
