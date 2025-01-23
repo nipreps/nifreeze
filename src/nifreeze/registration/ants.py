@@ -233,7 +233,7 @@ def generate_command(
     movingmask_path: str | Path | list[str] | None = None,
     init_affine: str | Path | None = None,
     default: str = "b0-to-b0_level0",
-    **kwargs: dict,
+    **kwargs,
 ) -> Registration:
     """
     Generate an ANTs' command line.
@@ -426,7 +426,7 @@ def _run_registration(
     moving_path: str | Path,
     vol_idx: int,
     dirname: Path,
-    **kwargs: dict,
+    **kwargs,
 ) -> nt.base.BaseTransform:
     """
     Register the moving image to the fixed image.

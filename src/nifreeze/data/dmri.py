@@ -33,9 +33,11 @@ import attr
 import h5py
 import nibabel as nb
 import numpy as np
+from nibabel.spatialimages import SpatialImage
 from nitransforms.linear import Affine
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr
+from nifreeze.utils.ndimage import load_api
 
 DEFAULT_CLIP_PERCENTILE = 75
 """Upper percentile threshold for intensity clipping."""
@@ -63,7 +65,7 @@ DTI_MIN_ORIENTATIONS = 6
 
 
 @attr.s(slots=True)
-class DWI(BaseDataset):
+class DWI(BaseDataset[np.ndarray | None]):
     """Data representation structure for dMRI data."""
 
     bzero = attr.ib(default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp))
@@ -73,6 +75,10 @@ class DWI(BaseDataset):
     eddy_xfms = attr.ib(default=None)
     """List of transforms to correct for estimatted eddy current distortions."""
 
+    def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray | None]:
+        return (self.gradients[..., idx] if self.gradients is not None else None,)
+
+    # For the sake of the docstring
     def __getitem__(
         self, idx: int | slice | tuple | np.ndarray
     ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None]:
@@ -98,8 +104,7 @@ class DWI(BaseDataset):
 
         """
 
-        data, affine = super().__getitem__(idx)
-        return data, affine, self.gradients[..., idx]
+        return super().__getitem__(idx)
 
     @classmethod
     def from_filename(cls, filename: Path | str) -> DWI:
@@ -300,7 +305,7 @@ def load(
         return DWI.from_filename(filename)
 
     # 2) Otherwise, load a NIfTI
-    img = nb.load(str(filename))
+    img = load_api(filename, SpatialImage)
     fulldata = img.get_fdata(dtype=np.float32)
     affine = img.affine
 
@@ -343,7 +348,7 @@ def load(
     # 6) b=0 volume (bzero)
     #    If the user provided a b0_file, load it
     if b0_file:
-        b0img = nb.load(str(b0_file))
+        b0img = load_api(b0_file, SpatialImage)
         b0vol = np.asanyarray(b0img.dataobj)
         # We'll assume your DWI class has a bzero: np.ndarray | None attribute
         dwi_obj.bzero = b0vol
@@ -357,7 +362,7 @@ def load(
 
     # 7) If a brainmask_file was provided, load it
     if brainmask_file:
-        mask_img = nb.load(str(brainmask_file))
+        mask_img = load_api(brainmask_file, SpatialImage)
         dwi_obj.brainmask = np.asanyarray(mask_img.dataobj, dtype=bool)
 
     return dwi_obj

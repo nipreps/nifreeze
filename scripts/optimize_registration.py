@@ -127,12 +127,13 @@ async def train_coro(
             moving_path = tmp_folder / f"test-{index:04d}.nii.gz"
             (~xfm).apply(refnii, reference=refnii).to_filename(moving_path)
 
+            _kwargs = {"output_transform_prefix": f"conversion-{index:04d}", **align_kwargs}
+
             cmdline = erants.generate_command(
                 fixed_path,
                 moving_path,
                 fixedmask_path=brainmask_path,
-                output_transform_prefix=f"conversion-{index:04d}",
-                **align_kwargs,
+                **_kwargs,
             ).cmdline
 
             tasks.append(

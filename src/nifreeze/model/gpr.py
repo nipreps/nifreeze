@@ -25,11 +25,12 @@
 from __future__ import annotations
 
 from numbers import Integral, Real
-from typing import Callable, Mapping, Sequence
+from typing import Callable, ClassVar, Literal, Mapping, Optional, Sequence, Union
 
 import numpy as np
+import numpy.typing as npt
 from scipy import optimize
-from scipy.optimize._minimize import Bounds
+from scipy.optimize import Bounds
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import (
     Hyperparameter,
@@ -153,7 +154,9 @@ class DiffusionGPR(GaussianProcessRegressor):
 
     """
 
-    _parameter_constraints: dict = {
+    optimizer: Optional[Union[StrOptions, Callable, None]] = None
+
+    _parameter_constraints: ClassVar[dict] = {
         "kernel": [None, Kernel],
         "alpha": [Interval(Real, 0, None, closed="left"), np.ndarray],
         "optimizer": [StrOptions(SUPPORTED_OPTIMIZERS), callable, None],
@@ -169,7 +172,7 @@ class DiffusionGPR(GaussianProcessRegressor):
         kernel: Kernel | None = None,
         *,
         alpha: float = 0.5,
-        optimizer: str | Callable | None = "fmin_l_bfgs_b",
+        optimizer: Literal["fmin_l_bfgs_b"] | Callable | None = "fmin_l_bfgs_b",
         n_restarts_optimizer: int = 0,
         copy_X_train: bool = True,
         normalize_y: bool = True,
@@ -212,7 +215,7 @@ class DiffusionGPR(GaussianProcessRegressor):
     ) -> tuple[float, float]:
         options = {}
         if self.optimizer == "fmin_l_bfgs_b":
-            from sklearn.utils.optimize import _check_optimize_result
+            from sklearn.utils.optimize import _check_optimize_result  # type: ignore
 
             for name in LBFGS_CONFIGURABLE_OPTIONS:
                 if (value := getattr(self, name, None)) is not None:
@@ -227,7 +230,7 @@ class DiffusionGPR(GaussianProcessRegressor):
                 options=options,
                 args=(self.eval_gradient,),
                 tol=self.tol,
-            )
+            )  # type: ignore[call-overload]
             _check_optimize_result("lbfgs", opt_res)
             return opt_res.x, opt_res.fun
 
@@ -332,7 +335,7 @@ class ExponentialKriging(Kernel):
 
         return self.beta_l * C_theta, K_gradient
 
-    def diag(self, X: np.ndarray) -> np.ndarray:
+    def diag(self, X: npt.ArrayLike) -> np.ndarray:
         """Returns the diagonal of the kernel k(X, X).
 
         The result of this method is identical to np.diag(self(X)); however,
@@ -349,7 +352,7 @@ class ExponentialKriging(Kernel):
         K_diag : :obj:`~numpy.ndarray` of shape (n_samples_X,)
             Diagonal of kernel k(X, X)
         """
-        return self.beta_l * np.ones(X.shape[0])
+        return self.beta_l * np.ones(np.asanyarray(X).shape[0])
 
     def is_stationary(self) -> bool:
         """Returns whether the kernel is stationary."""
@@ -442,7 +445,7 @@ class SphericalKriging(Kernel):
 
         return self.beta_l * C_theta, K_gradient
 
-    def diag(self, X: np.ndarray) -> np.ndarray:
+    def diag(self, X: npt.ArrayLike) -> np.ndarray:
         """Returns the diagonal of the kernel k(X, X).
 
         The result of this method is identical to np.diag(self(X)); however,
@@ -459,7 +462,7 @@ class SphericalKriging(Kernel):
         K_diag : :obj:`~numpy.ndarray` of shape (n_samples_X,)
             Diagonal of kernel k(X, X)
         """
-        return self.beta_l * np.ones(X.shape[0])
+        return self.beta_l * np.ones(np.asanyarray(X).shape[0])
 
     def is_stationary(self) -> bool:
         """Returns whether the kernel is stationary."""
