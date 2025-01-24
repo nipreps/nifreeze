@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Self
+from typing import Self, TypeVar
 
 from tqdm import tqdm
 
@@ -38,11 +38,13 @@ from nifreeze.registration.ants import (
 )
 from nifreeze.utils import iterators
 
+DatasetT = TypeVar("DatasetT", bound=BaseDataset)
+
 
 class Filter:
     """Alters an input data object (e.g., downsampling)."""
 
-    def run(self, dataset: BaseDataset, **kwargs):
+    def run(self, dataset: DatasetT, **kwargs) -> DatasetT:
         """
         Trigger execution of the designated filter.
 
@@ -53,8 +55,8 @@ class Filter:
 
         Returns
         -------
-        :obj:`~nifreeze.estimator.Estimator`
-            The estimator, after fitting.
+        dataset : :obj:`~nifreeze.data.base.BaseDataset`
+            The dataset, after filtering.
 
         """
         return dataset
@@ -69,7 +71,7 @@ class Estimator:
         self,
         model: BaseModel | str,
         strategy: str = "random",
-        prev: Self | None = None,
+        prev: Estimator | Filter | None = None,
         model_kwargs: dict | None = None,
         **kwargs,
     ):
@@ -79,7 +81,7 @@ class Estimator:
         self._model_kwargs = model_kwargs or {}
         self._align_kwargs = kwargs or {}
 
-    def run(self, dataset: BaseDataset, **kwargs):
+    def run(self, dataset: DatasetT, **kwargs) -> Self:
         """
         Trigger execution of the workflow this estimator belongs.
 

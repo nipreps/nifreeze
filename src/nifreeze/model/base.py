@@ -22,6 +22,7 @@
 #
 """Base infrastructure for nifreeze's models."""
 
+from abc import abstractmethod
 from warnings import warn
 
 import numpy as np
@@ -95,7 +96,8 @@ class BaseModel:
         if dataset.brainmask is None:
             warn(mask_absence_warn_msg, stacklevel=2)
 
-    def fit_predict(self, *_, **kwargs):
+    @abstractmethod
+    def fit_predict(self, index, **kwargs) -> np.ndarray:
         """Fit and predict the indicate index of the dataset (abstract signature)."""
         raise NotImplementedError("Cannot call fit_predict() on a BaseModel instance.")
 
@@ -139,7 +141,7 @@ class ExpectationModel(BaseModel):
         super().__init__(dataset, **kwargs)
         self._stat = stat
 
-    def fit_predict(self, index, *_, **kwargs):
+    def fit_predict(self, index, **kwargs):
         """
         Return the expectation map.
 
