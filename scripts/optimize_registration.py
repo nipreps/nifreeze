@@ -134,7 +134,7 @@ async def train_coro(
                 moving_path,
                 fixedmask_path=brainmask_path,
                 **_kwargs,
-            )
+            ).cmdline
 
             tasks.append(
                 ants(

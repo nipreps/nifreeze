@@ -29,12 +29,9 @@ import pytest
 from dipy.sims.voxel import single_tensor
 
 from nifreeze import model
-from nifreeze.data.dmri import DWI
-from nifreeze.data.splitting import lovo_split
-from nifreeze.exceptions import ModelNotFittedError
+from nifreeze.data.dmri import DEFAULT_MAX_S0, DEFAULT_MIN_S0, DWI
 from nifreeze.model._dipy import GaussianProcessModel
 from nifreeze.model.base import mask_absence_warn_msg
-from nifreeze.model.dmri import DEFAULT_MAX_S0, DEFAULT_MIN_S0
 from nifreeze.testing import simulations as _sim
 
 
@@ -64,21 +61,22 @@ def test_trivial_model(use_mask):
         a_max=DEFAULT_MAX_S0,
     )
 
+    data = DWI(
+        dataobj=(*_S0.shape, 10),
+        bzero=_clipped_S0,
+        brainmask=mask,
+    )
+
     with context:
-        tmodel = model.TrivialModel(mask=mask, predicted=_clipped_S0)
+        tmodel = model.TrivialModel(data)
 
-    data = None
-    assert tmodel.fit(data) is None
+    predicted = tmodel.fit_predict(4)
 
-    assert np.all(_clipped_S0 == tmodel.predict((1, 0, 0)))
+    assert np.all(_clipped_S0 == predicted)
 
 
 def test_average_model():
     """Check the implementation of the average DW model."""
-
-    size = (100, 100, 100, 6)
-    data = np.ones(size, dtype=float)
-    mask = np.ones(size, dtype=bool)
 
     gtab = np.array(
         [
@@ -87,41 +85,41 @@ def test_average_model():
             [0.25, 0.565, 0.21, 500],
             [-0.861, -0.464, 0.564, 1000],
             [0.307, -0.766, 0.677, 1000],
-            [0.736, 0.013, 0.774, 1300],
+            [0.736, 0.013, 0.774, 1000],
+            [-0.31, 0.933, 0.785, 1000],
+            [0.25, 0.565, 0.21, 2000],
+            [-0.861, -0.464, 0.564, 2000],
+            [0.307, -0.766, 0.677, 2000],
         ]
     )
 
+    size = (100, 100, 100, gtab.shape[0])
+    data = np.ones(size, dtype=float)
+    mask = np.ones(size[:3], dtype=bool)
+
     data *= gtab[:, -1]
+    dataset = DWI(dataobj=data, gradients=gtab, brainmask=mask)
 
-    tmodel_mean = model.AverageDWIModel(mask=mask, gtab=gtab, bias=False, stat="mean")
-    tmodel_median = model.AverageDWIModel(mask=mask, gtab=gtab, bias=False, stat="median")
-    tmodel_1000 = model.AverageDWIModel(mask=mask, gtab=gtab, bias=False, th_high=1000, th_low=900)
-    tmodel_2000 = model.AverageDWIModel(
-        mask=mask,
-        gtab=gtab,
-        bias=False,
-        th_high=2000,
-        th_low=900,
-        stat="mean",
-    )
+    tmodel_mean = model.AverageDWIModel(dataset, stat="mean")
+    tmodel_mean_full = model.AverageDWIModel(dataset, stat="mean", th_low=2000, th_high=2000)
+    tmodel_median = model.AverageDWIModel(dataset)
 
-    with pytest.raises(ModelNotFittedError):
-        tmodel_mean.predict([0, 0, 0])
+    # Verify that average cannot be calculated in shells with one single value
+    with pytest.raises(RuntimeError):
+        tmodel_mean.fit_predict(2)
 
-    # Verify that fit function returns nothing
-    assert tmodel_mean.fit(data[..., 1:], gtab=gtab[1:].T) is None
+    assert np.allclose(tmodel_mean.fit_predict(3), 1000)
+    assert np.allclose(tmodel_median.fit_predict(3), 1000)
 
-    tmodel_median.fit(data[..., 1:], gtab=gtab[1:].T)
-    tmodel_1000.fit(data[..., 1:], gtab=gtab[1:].T)
-    tmodel_2000.fit(data[..., 1:], gtab=gtab[1:].T)
+    grads = list(gtab[:, -1])
+    del grads[1]
+    assert np.allclose(tmodel_mean_full.fit_predict(1), np.mean(grads))
 
-    # Verify that the right statistics is applied and that the model discard b-values < 50
-    assert np.all(tmodel_mean.predict([0, 0, 0]) == 950)
-    assert np.all(tmodel_median.predict([0, 0, 0]) == 1000)
+    tmodel_mean_2000 = model.AverageDWIModel(dataset, stat="mean", th_low=1100)
+    tmodel_median_2000 = model.AverageDWIModel(dataset, th_low=1100)
 
-    # Verify that the threshold for b-value selection works as expected
-    assert np.all(tmodel_1000.predict([0, 0, 0]) == 1000)
-    assert np.all(tmodel_2000.predict([0, 0, 0]) == 1100)
+    assert np.allclose(tmodel_mean_2000.fit_predict(9), gtab[3:-1, -1].mean())
+    assert np.allclose(tmodel_median_2000.fit_predict(9), 1000)
 
 
 @pytest.mark.parametrize(
@@ -159,44 +157,26 @@ def test_gp_model(evals, S0, snr, hsph_dirs, bval_shell):
     assert prediction.shape == (2,)
 
 
-def test_two_initialisations(datadir):
+def test_factory(datadir):
     """Check that the two different initialisations result in the same models"""
 
     # Load test data
     dmri_dataset = DWI.from_filename(datadir / "dwi.h5")
 
-    # Split data into test and train set
-    data_train, data_test = lovo_split(dmri_dataset, 10)
-
+    modelargs = {
+        "th_low": 25,
+        "th_high": 25,
+        "detrend": True,
+        "stat": "mean",
+    }
     # Direct initialisation
-    model1 = model.AverageDWIModel(
-        mask=dmri_dataset.brainmask.astype(bool),
-        gtab=data_train[-1],
-        S0=dmri_dataset.bzero,
-        th_low=100,
-        th_high=1000,
-        bias=False,
-        stat="mean",
-    )
-    model1.fit(data_train[0], gtab=data_train[-1])
-    predicted1 = model1.predict(data_test[-1])
+    model1 = model.AverageDWIModel(dmri_dataset, **modelargs)
 
     # Initialisation via ModelFactory
-    model2 = model.ModelFactory.init(
-        model="avgdwi",
-        mask=dmri_dataset.brainmask.astype(bool),
-        gtab=data_train[-1],
-        S0=dmri_dataset.bzero,
-        th_low=100,
-        th_high=1000,
-        bias=False,
-        stat="mean",
-    )
+    model2 = model.ModelFactory.init(model="avgdwi", dataset=dmri_dataset, **modelargs)
 
-    with pytest.raises(ModelNotFittedError):
-        model2.predict(data_test[-1])
-
-    model2.fit(data_train[0], gtab=data_train[-1])
-    predicted2 = model2.predict(data_test[-1])
-
-    assert np.all(predicted1 == predicted2)
+    assert model1._dataset == model2._dataset
+    assert model1._detrend == model2._detrend
+    assert model1._th_low == model2._th_low
+    assert model1._th_high == model2._th_high
+    assert model1._stat == model2._stat
