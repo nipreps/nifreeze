@@ -99,7 +99,7 @@ class Estimator:
         if self._prev is not None:
             result = self._prev.run(dataset, **kwargs)
             if isinstance(self._prev, Filter):
-                dataset = result
+                dataset = result  # type: ignore[assignment]
 
         n_jobs = kwargs.get("n_jobs", None)
 
