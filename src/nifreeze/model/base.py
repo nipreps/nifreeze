@@ -44,7 +44,7 @@ class ModelFactory:
         ----------
         model : :obj:`str`
             Diffusion model.
-            Options: ``"DTI"``, ``"DKI"``, ``"S0"``, ``"AverageDW"``
+            Options: ``"DTI"``, ``"DKI"``, ``"S0"``, ``"AverageDWI"``
 
         Return
         ------
@@ -84,9 +84,7 @@ class BaseModel:
 
     """
 
-    __slots__ = {
-        "_dataset": "Reference to a :obj:`~nifreeze.data.base.BaseDataset` object.",
-    }
+    __slots__ = ("_dataset", )
 
     def __init__(self, dataset, **kwargs):
         """Base initialization."""
@@ -105,10 +103,7 @@ class BaseModel:
 class TrivialModel(BaseModel):
     """A trivial model that returns a given map always."""
 
-    __slots__ = {
-        "_predicted": "A :obj:`~numpy.ndarray` with shape matching the dataset containing the map"
-        "that will always be returned as prediction (that is, a reference volume).",
-    }
+    __slots__ = ("_predicted", )
 
     def __init__(self, dataset, predicted=None, **kwargs):
         """Implement object initialization."""
@@ -134,7 +129,7 @@ class TrivialModel(BaseModel):
 class ExpectationModel(BaseModel):
     """A trivial model that returns an expectation map (for example, average)."""
 
-    __slots__ = {"_stat": "The statistical operation to obtain the expectation map."}
+    __slots__ = ("_stat", )
 
     def __init__(self, dataset, stat="median", **kwargs):
         """Initialize a new model."""
