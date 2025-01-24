@@ -117,6 +117,7 @@ class Estimator:
             )
 
         kwargs["num_threads"] = kwargs.pop("omp_nthreads", None) or kwargs.pop("num_threads", None)
+        kwargs = self._align_kwargs | kwargs
 
         dataset_length = len(dataset)
         with TemporaryDirectory() as tmp_dir:

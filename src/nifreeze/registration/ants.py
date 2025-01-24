@@ -97,7 +97,7 @@ def _prepare_registration_data(
     affine: np.ndarray,
     vol_idx: int,
     dirname: Path | str,
-    clip: str | None = None,
+    clip: str | bool | None = None,
     init_affine: np.ndarray | None = None,
 ) -> tuple[Path, Path, Path | None]:
     """
@@ -129,20 +129,21 @@ def _prepare_registration_data(
         An initialization affine (for second and further estimators).
 
     """
-    clip = clip or "none"
+
     predicted_path = Path(dirname) / f"predicted_{vol_idx:05d}.nii.gz"
     sample_path = Path(dirname) / f"sample_{vol_idx:05d}.nii.gz"
+
     _to_nifti(
         sample,
         affine,
         sample_path,
-        clip=clip.lower() in ("sample", "both"),
+        clip=str(clip).lower() in ("sample", "both", "true"),
     )
     _to_nifti(
         predicted,
         affine,
         predicted_path,
-        clip=clip.lower() in ("predicted", "both"),
+        clip=str(clip).lower() in ("predicted", "both", "true"),
     )
 
     init_path = None
@@ -232,6 +233,9 @@ def generate_command(
     movingmask_path: str | Path | list[str] | None = None,
     init_affine: str | Path | None = None,
     default: str = "b0-to-b0_level0",
+    terminal_output: str | None = None,
+    num_threads: int | None = None,
+    environ: dict | None = None,
     **kwargs,
 ) -> Registration:
     """
@@ -251,6 +255,12 @@ def generate_command(
         Initial affine transformation.
     default : :obj:`str`, optional
         Default settings configuration.
+    terminal_output : :obj:`str`, optional
+        Redirect terminal output (Nipype configuration)
+    environ : :obj:`dict`, optional
+        Add environment variables to the execution.
+    num_threads : :obj:`int`, optional
+        Set the number of threads for ANTs' execution.
     **kwargs : :obj:`dict`
         Additional parameters for ANTs registration.
 
@@ -413,11 +423,17 @@ def generate_command(
         settings["initial_moving_transform"] = str(init_affine)
 
     # Generate command line with nipype and return
-    return Registration(
+    reg_iface = Registration(
         fixed_image=str(Path(fixed_path).absolute()),
         moving_image=str(Path(moving_path).absolute()),
+        terminal_output=terminal_output,
+        environ=environ or {},
         **settings,
     )
+    if num_threads:
+        reg_iface.inputs.num_threads = num_threads
+
+    return reg_iface
 
 
 def _run_registration(
@@ -451,10 +467,11 @@ def _run_registration(
     """
 
     align_kwargs = kwargs.copy()
-    environ = align_kwargs.pop("environ", {})
+    environ = align_kwargs.pop("environ", None)
     num_threads = align_kwargs.pop("num_threads", None)
 
     if (seed := align_kwargs.pop("seed", None)) is not None:
+        environ = environ or {}
         environ["ANTS_RANDOM_SEED"] = str(seed)
 
     if "ants_config" in kwargs:
@@ -463,12 +480,11 @@ def _run_registration(
     registration = generate_command(
         fixed_path,
         moving_path,
-        terminal_output="file",
         environ=environ,
+        terminal_output="file_split",
+        num_threads=num_threads,
         **align_kwargs,
     )
-    if num_threads:
-        registration.inputs.num_threads = num_threads
 
     (dirname / f"cmd-{vol_idx:05d}.sh").write_text(registration.cmdline)
 
