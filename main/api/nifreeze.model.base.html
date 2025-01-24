@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="nifreeze.model.dmri module" href="nifreeze.model.dmri.html" /><link rel="prev" title="nifreeze.model package" href="nifreeze.model.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.model.base module - nifreeze 25.0.0.dev120 documentation</title>
+        <title>nifreeze.model.base module - nifreeze 25.0.0.dev135 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
@@ -167,7 +167,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev120 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev135 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -190,14 +190,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev120</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev135</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev120</span>
+  <span class="sidebar-brand-text">25.0.0.dev135</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -302,33 +302,8 @@
 <span id="nifreeze-model-base-module"></span><h1>nifreeze.model.base module<a class="headerlink" href="#module-nifreeze.model.base" title="Link to this heading">¶</a></h1>
 <p>Base infrastructure for nifreeze’s models.</p>
 <dl class="py class">
-<dt class="sig sig-object py" id="nifreeze.model.base.AverageModel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.base.</span></span><span class="sig-name descname"><span class="pre">AverageModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/base.html#AverageModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.base.AverageModel" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#nifreeze.model.base.BaseModel" title="nifreeze.model.base.BaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></a></p>
-<p>A trivial model that returns an average map.</p>
-<p>Initialize a new model.</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="nifreeze.model.base.AverageModel.fit">
-<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/base.html#AverageModel.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.base.AverageModel.fit" title="Link to this definition">¶</a></dt>
-<dd><p>Calculate the average.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="nifreeze.model.base.AverageModel.is_fitted">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">is_fitted</span></span><a class="headerlink" href="#nifreeze.model.base.AverageModel.is_fitted" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="nifreeze.model.base.AverageModel.predict">
-<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">_</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/base.html#AverageModel.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.base.AverageModel.predict" title="Link to this definition">¶</a></dt>
-<dd><p>Return the average map.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
 <dt class="sig sig-object py" id="nifreeze.model.base.BaseModel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.base.</span></span><span class="sig-name descname"><span class="pre">BaseModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/base.html#BaseModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.base.BaseModel" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.base.</span></span><span class="sig-name descname"><span class="pre">BaseModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/base.html#BaseModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.base.BaseModel" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Defines the interface and default methods.</p>
 <p>Implements the interface of <a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.reconst.html#dipy.reconst.base.ReconstModel" title="(in dipy v1.10.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dipy.reconst.base.ReconstModel</span></code></a>.
@@ -337,20 +312,28 @@ follows type adaptation principles, as it is easier to maintain
 and to read (see <a class="reference external" href="https://www.youtube.com/watch?v=3MNVP9-hglc">https://www.youtube.com/watch?v=3MNVP9-hglc</a>).</p>
 <p>Base initialization.</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="nifreeze.model.base.BaseModel.fit">
-<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/base.html#BaseModel.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.base.BaseModel.fit" title="Link to this definition">¶</a></dt>
-<dd><p>Abstract member signature of fit().</p>
+<dt class="sig sig-object py" id="nifreeze.model.base.BaseModel.fit_predict">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">fit_predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/model/base.html#BaseModel.fit_predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.base.BaseModel.fit_predict" title="Link to this definition">¶</a></dt>
+<dd><p>Fit and predict the indicate index of the dataset (abstract signature).</p>
 </dd></dl>
 
-<dl class="py property">
-<dt class="sig sig-object py" id="nifreeze.model.base.BaseModel.is_fitted">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">is_fitted</span></span><a class="headerlink" href="#nifreeze.model.base.BaseModel.is_fitted" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+</dd></dl>
 
+<dl class="py class">
+<dt class="sig sig-object py" id="nifreeze.model.base.ExpectationModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.base.</span></span><span class="sig-name descname"><span class="pre">ExpectationModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stat</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'median'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/base.html#ExpectationModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.base.ExpectationModel" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#nifreeze.model.base.BaseModel" title="nifreeze.model.base.BaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></a></p>
+<p>A trivial model that returns an expectation map (for example, average).</p>
+<p>Initialize a new model.</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="nifreeze.model.base.BaseModel.predict">
-<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/base.html#BaseModel.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.base.BaseModel.predict" title="Link to this definition">¶</a></dt>
-<dd><p>Abstract member signature of predict().</p>
+<dt class="sig sig-object py" id="nifreeze.model.base.ExpectationModel.fit_predict">
+<span class="sig-name descname"><span class="pre">fit_predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/base.html#ExpectationModel.fit_predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.base.ExpectationModel.fit_predict" title="Link to this definition">¶</a></dt>
+<dd><p>Return the expectation map.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>) – The volume index that is left-out in fitting, and then predicted.</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -362,12 +345,12 @@ and to read (see <a class="reference external" href="https://www.youtube.com/wat
 <p>A factory for instantiating data models.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="nifreeze.model.base.ModelFactory.init">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">init</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'DTI'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/base.html#ModelFactory.init"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.base.ModelFactory.init" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">init</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/base.html#ModelFactory.init"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.base.ModelFactory.init" title="Link to this definition">¶</a></dt>
 <dd><p>Instantiate a diffusion model.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>model</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>) – Diffusion model.
-Options: <code class="docutils literal notranslate"><span class="pre">&quot;DTI&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;DKI&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;S0&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;AverageDW&quot;</span></code></p>
+Options: <code class="docutils literal notranslate"><span class="pre">&quot;DTI&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;DKI&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;S0&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;AverageDWI&quot;</span></code></p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><strong>model</strong> – A model object compliant with DIPY’s interface.</p>
@@ -382,25 +365,14 @@ Options: <code class="docutils literal notranslate"><span class="pre">&quot;DTI&
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nifreeze.model.base.TrivialModel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.base.</span></span><span class="sig-name descname"><span class="pre">TrivialModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">predicted</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/base.html#TrivialModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.base.TrivialModel" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.base.</span></span><span class="sig-name descname"><span class="pre">TrivialModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">predicted</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/base.html#TrivialModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.base.TrivialModel" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#nifreeze.model.base.BaseModel" title="nifreeze.model.base.BaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></a></p>
 <p>A trivial model that returns a given map always.</p>
 <p>Implement object initialization.</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="nifreeze.model.base.TrivialModel.fit">
-<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/base.html#TrivialModel.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.base.TrivialModel.fit" title="Link to this definition">¶</a></dt>
-<dd><p>Do nothing.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="nifreeze.model.base.TrivialModel.is_fitted">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">is_fitted</span></span><a class="headerlink" href="#nifreeze.model.base.TrivialModel.is_fitted" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="nifreeze.model.base.TrivialModel.predict">
-<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">_</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/base.html#TrivialModel.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.base.TrivialModel.predict" title="Link to this definition">¶</a></dt>
-<dd><p>Return the <em>b=0</em> map.</p>
+<dt class="sig sig-object py" id="nifreeze.model.base.TrivialModel.fit_predict">
+<span class="sig-name descname"><span class="pre">fit_predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">_</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/base.html#TrivialModel.fit_predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.base.TrivialModel.fit_predict" title="Link to this definition">¶</a></dt>
+<dd><p>Return the reference map.</p>
 </dd></dl>
 
 </dd></dl>
@@ -463,16 +435,12 @@ Options: <code class="docutils literal notranslate"><span class="pre">&quot;DTI&
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">nifreeze.model.base module</a><ul>
-<li><a class="reference internal" href="#nifreeze.model.base.AverageModel"><code class="docutils literal notranslate"><span class="pre">AverageModel</span></code></a><ul>
-<li><a class="reference internal" href="#nifreeze.model.base.AverageModel.fit"><code class="docutils literal notranslate"><span class="pre">AverageModel.fit()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.base.AverageModel.is_fitted"><code class="docutils literal notranslate"><span class="pre">AverageModel.is_fitted</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.base.AverageModel.predict"><code class="docutils literal notranslate"><span class="pre">AverageModel.predict()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.model.base.BaseModel"><code class="docutils literal notranslate"><span class="pre">BaseModel</span></code></a><ul>
+<li><a class="reference internal" href="#nifreeze.model.base.BaseModel.fit_predict"><code class="docutils literal notranslate"><span class="pre">BaseModel.fit_predict()</span></code></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#nifreeze.model.base.BaseModel"><code class="docutils literal notranslate"><span class="pre">BaseModel</span></code></a><ul>
-<li><a class="reference internal" href="#nifreeze.model.base.BaseModel.fit"><code class="docutils literal notranslate"><span class="pre">BaseModel.fit()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.base.BaseModel.is_fitted"><code class="docutils literal notranslate"><span class="pre">BaseModel.is_fitted</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.base.BaseModel.predict"><code class="docutils literal notranslate"><span class="pre">BaseModel.predict()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.model.base.ExpectationModel"><code class="docutils literal notranslate"><span class="pre">ExpectationModel</span></code></a><ul>
+<li><a class="reference internal" href="#nifreeze.model.base.ExpectationModel.fit_predict"><code class="docutils literal notranslate"><span class="pre">ExpectationModel.fit_predict()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#nifreeze.model.base.ModelFactory"><code class="docutils literal notranslate"><span class="pre">ModelFactory</span></code></a><ul>
@@ -480,9 +448,7 @@ Options: <code class="docutils literal notranslate"><span class="pre">&quot;DTI&
 </ul>
 </li>
 <li><a class="reference internal" href="#nifreeze.model.base.TrivialModel"><code class="docutils literal notranslate"><span class="pre">TrivialModel</span></code></a><ul>
-<li><a class="reference internal" href="#nifreeze.model.base.TrivialModel.fit"><code class="docutils literal notranslate"><span class="pre">TrivialModel.fit()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.base.TrivialModel.is_fitted"><code class="docutils literal notranslate"><span class="pre">TrivialModel.is_fitted</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.base.TrivialModel.predict"><code class="docutils literal notranslate"><span class="pre">TrivialModel.predict()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.model.base.TrivialModel.fit_predict"><code class="docutils literal notranslate"><span class="pre">TrivialModel.fit_predict()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -496,7 +462,7 @@ Options: <code class="docutils literal notranslate"><span class="pre">&quot;DTI&
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=1ddfcac8"></script>
+</div><script src="../_static/documentation_options.js?v=21198432"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

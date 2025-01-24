@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.registration.ants - nifreeze 25.0.0.dev120 documentation</title>
+        <title>nifreeze.registration.ants - nifreeze 25.0.0.dev135 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev120 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev135 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev120</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev135</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev120</span>
+  <span class="sidebar-brand-text">25.0.0.dev135</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -386,49 +386,69 @@
 
 
 <span class="k">def</span> <span class="nf">_prepare_registration_data</span><span class="p">(</span>
-    <span class="n">dwframe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">sample</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">predicted</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">vol_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">dirname</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">reg_target_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="n">Path</span><span class="p">]:</span>
+    <span class="n">clip</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">init_affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Prepare the registration data: save the fixed and moving images to disk.</span>
+<span class="sd">    Prepare the registration data: save the moving and predicted (fixed) images to disk.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    dwframe : :obj:`~numpy.ndarray`</span>
-<span class="sd">        DWI data object.</span>
+<span class="sd">    sample : :obj:`~numpy.ndarray`</span>
+<span class="sd">        Current volume for which a transformation is to be estimated.</span>
 <span class="sd">    predicted : :obj:`~numpy.ndarray`</span>
-<span class="sd">        Predicted data.</span>
+<span class="sd">        Predicted volume&#39;s data array (that is, spatial reference).</span>
 <span class="sd">    affine : :obj:`numpy.ndarray`</span>
-<span class="sd">        Affine transformation matrix.</span>
+<span class="sd">        Orientation affine from the original NIfTI.</span>
 <span class="sd">    vol_idx : :obj:`int`</span>
-<span class="sd">        DWI volume index.</span>
+<span class="sd">        Volume index.</span>
 <span class="sd">    dirname : :obj:`os.pathlike`</span>
 <span class="sd">        Directory name where the data is saved.</span>
-<span class="sd">    reg_target_type : :obj:`str`</span>
-<span class="sd">        Target registration type.</span>
+<span class="sd">    clip : :obj:`str` or ``None``</span>
+<span class="sd">        Clip intensity of ``&quot;sample&quot;``, ``&quot;predicted&quot;``, ``&quot;both&quot;``,</span>
+<span class="sd">        or ``&quot;none&quot;`` of the images.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    fixed : :obj:`~pathlib.Path`</span>
-<span class="sd">        Fixed image filename.</span>
-<span class="sd">    moving : :obj:`~pathlib.Path`</span>
-<span class="sd">        Moving image filename.</span>
+<span class="sd">    predicted_path : :obj:`~pathlib.Path`</span>
+<span class="sd">        Predicted image filename.</span>
+<span class="sd">    sample_path : :obj:`~pathlib.Path`</span>
+<span class="sd">        Current volume&#39;s filename.</span>
+<span class="sd">    init_path : :obj:`~pathlib.Path` or ``None``</span>
+<span class="sd">        An initialization affine (for second and further estimators).</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">moving</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">dirname</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;moving</span><span class="si">{</span><span class="n">vol_idx</span><span class="si">:</span><span class="s2">05d</span><span class="si">}</span><span class="s2">.nii.gz&quot;</span>
-    <span class="n">fixed</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">dirname</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;fixed</span><span class="si">{</span><span class="n">vol_idx</span><span class="si">:</span><span class="s2">05d</span><span class="si">}</span><span class="s2">.nii.gz&quot;</span>
-    <span class="n">_to_nifti</span><span class="p">(</span><span class="n">dwframe</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="n">moving</span><span class="p">)</span>
+    <span class="n">predicted_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">dirname</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;predicted_</span><span class="si">{</span><span class="n">vol_idx</span><span class="si">:</span><span class="s2">05d</span><span class="si">}</span><span class="s2">.nii.gz&quot;</span>
+    <span class="n">sample_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">dirname</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;sample_</span><span class="si">{</span><span class="n">vol_idx</span><span class="si">:</span><span class="s2">05d</span><span class="si">}</span><span class="s2">.nii.gz&quot;</span>
+
+    <span class="n">_to_nifti</span><span class="p">(</span>
+        <span class="n">sample</span><span class="p">,</span>
+        <span class="n">affine</span><span class="p">,</span>
+        <span class="n">sample_path</span><span class="p">,</span>
+        <span class="n">clip</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">clip</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;sample&quot;</span><span class="p">,</span> <span class="s2">&quot;both&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span><span class="p">),</span>
+    <span class="p">)</span>
     <span class="n">_to_nifti</span><span class="p">(</span>
         <span class="n">predicted</span><span class="p">,</span>
         <span class="n">affine</span><span class="p">,</span>
-        <span class="n">fixed</span><span class="p">,</span>
-        <span class="n">clip</span><span class="o">=</span><span class="n">reg_target_type</span> <span class="o">==</span> <span class="s2">&quot;dwi&quot;</span><span class="p">,</span>
+        <span class="n">predicted_path</span><span class="p">,</span>
+        <span class="n">clip</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">clip</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;predicted&quot;</span><span class="p">,</span> <span class="s2">&quot;both&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span><span class="p">),</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="n">fixed</span><span class="p">,</span> <span class="n">moving</span>
+
+    <span class="n">init_path</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">init_affine</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">ImageGrid</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;ImageGrid&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="s2">&quot;affine&quot;</span><span class="p">))</span>
+        <span class="n">reference</span> <span class="o">=</span> <span class="n">ImageGrid</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">sample</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="n">affine</span><span class="o">=</span><span class="n">affine</span><span class="p">)</span>
+        <span class="n">initial_xform</span> <span class="o">=</span> <span class="n">Affine</span><span class="p">(</span><span class="n">matrix</span><span class="o">=</span><span class="n">init_affine</span><span class="p">,</span> <span class="n">reference</span><span class="o">=</span><span class="n">reference</span><span class="p">)</span>
+        <span class="n">init_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">dirname</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;init_</span><span class="si">{</span><span class="n">vol_idx</span><span class="si">:</span><span class="s2">05d</span><span class="si">}</span><span class="s2">.mat&quot;</span>
+        <span class="n">initial_xform</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">init_path</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s2">&quot;itk&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">predicted_path</span><span class="p">,</span> <span class="n">sample_path</span><span class="p">,</span> <span class="n">init_path</span>
 
 
 <span class="k">def</span> <span class="nf">_get_ants_settings</span><span class="p">(</span><span class="n">settings</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;b0-to-b0_level0&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
@@ -509,8 +529,11 @@
     <span class="n">movingmask_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">init_affine</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">default</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;b0-to-b0_level0&quot;</span><span class="p">,</span>
+    <span class="n">terminal_output</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">num_threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">environ</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Registration</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Generate an ANTs&#39; command line.</span>
 
@@ -528,20 +551,26 @@
 <span class="sd">        Initial affine transformation.</span>
 <span class="sd">    default : :obj:`str`, optional</span>
 <span class="sd">        Default settings configuration.</span>
+<span class="sd">    terminal_output : :obj:`str`, optional</span>
+<span class="sd">        Redirect terminal output (Nipype configuration)</span>
+<span class="sd">    environ : :obj:`dict`, optional</span>
+<span class="sd">        Add environment variables to the execution.</span>
+<span class="sd">    num_threads : :obj:`int`, optional</span>
+<span class="sd">        Set the number of threads for ANTs&#39; execution.</span>
 <span class="sd">    **kwargs : :obj:`dict`</span>
 <span class="sd">        Additional parameters for ANTs registration.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    :obj:`str`</span>
-<span class="sd">        The ANTs registration command line string.</span>
+<span class="sd">    :obj:`~nipype.interfaces.ants.Registration`</span>
+<span class="sd">        The configured Nipype interface of ANTs registration.</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; generate_command(</span>
 <span class="sd">    ...     fixed_path=repodata / &#39;fileA.nii.gz&#39;,</span>
 <span class="sd">    ...     moving_path=repodata / &#39;fileB.nii.gz&#39;,</span>
-<span class="sd">    ... )  # doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    ... ).cmdline  # doctest: +NORMALIZE_WHITESPACE</span>
 <span class="sd">    &#39;antsRegistration --collapse-output-transforms 1 --dimensionality 3 \</span>
 <span class="sd">    --initialize-transforms-per-stage 0 --interpolation Linear --output transform \</span>
 <span class="sd">    --transform Rigid[ 12.0 ] \</span>
@@ -563,7 +592,7 @@
 <span class="sd">    ...     fixed_path=repodata / &#39;fileA.nii.gz&#39;,</span>
 <span class="sd">    ...     moving_path=repodata / &#39;fileB.nii.gz&#39;,</span>
 <span class="sd">    ...     default=&quot;dwi-to-b0_level0&quot;,</span>
-<span class="sd">    ... )  # doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    ... ).cmdline  # doctest: +NORMALIZE_WHITESPACE</span>
 <span class="sd">    &#39;antsRegistration --collapse-output-transforms 1 --dimensionality 3 \</span>
 <span class="sd">    --initialize-transforms-per-stage 0 --interpolation Linear --output transform \</span>
 <span class="sd">    --transform Rigid[ 0.01 ] --metric Mattes[ \</span>
@@ -585,7 +614,7 @@
 <span class="sd">    ...     moving_path=repodata / &#39;fileB.nii.gz&#39;,</span>
 <span class="sd">    ...     fixedmask_path=repodata / &#39;maskA.nii.gz&#39;,</span>
 <span class="sd">    ...     default=&quot;dwi-to-b0_level0&quot;,</span>
-<span class="sd">    ... )  # doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    ... ).cmdline  # doctest: +NORMALIZE_WHITESPACE</span>
 <span class="sd">    &#39;antsRegistration --collapse-output-transforms 1 --dimensionality 3 \</span>
 <span class="sd">    --initialize-transforms-per-stage 0 --interpolation Linear --output transform \</span>
 <span class="sd">    --transform Rigid[ 0.01 ] --metric Mattes[ \</span>
@@ -608,7 +637,7 @@
 <span class="sd">    ...     fixed_path=repodata / &#39;fileA.nii.gz&#39;,</span>
 <span class="sd">    ...     moving_path=repodata / &#39;fileB.nii.gz&#39;,</span>
 <span class="sd">    ...     default=&quot;dwi-to-b0_level0&quot;,</span>
-<span class="sd">    ... )  # doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    ... ).cmdline  # doctest: +NORMALIZE_WHITESPACE</span>
 <span class="sd">    &#39;antsRegistration --collapse-output-transforms 1 --dimensionality 3 \</span>
 <span class="sd">    --initialize-transforms-per-stage 0 --interpolation Linear --output transform \</span>
 <span class="sd">    --transform Rigid[ 0.01 ] --metric Mattes[ \</span>
@@ -630,7 +659,7 @@
 <span class="sd">    ...     moving_path=repodata / &#39;fileB.nii.gz&#39;,</span>
 <span class="sd">    ...     fixedmask_path=[repodata / &#39;maskA.nii.gz&#39;],</span>
 <span class="sd">    ...     default=&quot;dwi-to-b0_level0&quot;,</span>
-<span class="sd">    ... )  # doctest: +NORMALIZE_WHITESPACE</span>
+<span class="sd">    ... ).cmdline  # doctest: +NORMALIZE_WHITESPACE</span>
 <span class="sd">    &#39;antsRegistration --collapse-output-transforms 1 --dimensionality 3 \</span>
 <span class="sd">    --initialize-transforms-per-stage 0 --interpolation Linear --output transform \</span>
 <span class="sd">    --transform Rigid[ 0.01 ] --metric Mattes[ \</span>
@@ -690,56 +719,41 @@
         <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;initial_moving_transform&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">init_affine</span><span class="p">)</span>
 
     <span class="c1"># Generate command line with nipype and return</span>
-    <span class="k">return</span> <span class="n">Registration</span><span class="p">(</span>
+    <span class="n">reg_iface</span> <span class="o">=</span> <span class="n">Registration</span><span class="p">(</span>
         <span class="n">fixed_image</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">fixed_path</span><span class="p">)</span><span class="o">.</span><span class="n">absolute</span><span class="p">()),</span>
         <span class="n">moving_image</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">moving_path</span><span class="p">)</span><span class="o">.</span><span class="n">absolute</span><span class="p">()),</span>
+        <span class="n">terminal_output</span><span class="o">=</span><span class="n">terminal_output</span><span class="p">,</span>
+        <span class="n">environ</span><span class="o">=</span><span class="n">environ</span> <span class="ow">or</span> <span class="p">{},</span>
         <span class="o">**</span><span class="n">settings</span><span class="p">,</span>
-    <span class="p">)</span><span class="o">.</span><span class="n">cmdline</span></div>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">num_threads</span><span class="p">:</span>
+        <span class="n">reg_iface</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">num_threads</span> <span class="o">=</span> <span class="n">num_threads</span>
+
+    <span class="k">return</span> <span class="n">reg_iface</span></div>
 
 
 
 <span class="k">def</span> <span class="nf">_run_registration</span><span class="p">(</span>
-    <span class="n">fixed</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-    <span class="n">moving</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-    <span class="n">bmask_img</span><span class="p">:</span> <span class="n">nb</span><span class="o">.</span><span class="n">spatialimages</span><span class="o">.</span><span class="n">SpatialImage</span><span class="p">,</span>
-    <span class="n">em_affines</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
-    <span class="n">bval</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">i_iter</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">fixed_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">moving_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
     <span class="n">vol_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">dirname</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-    <span class="n">reg_target_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
-    <span class="n">align_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nt</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">BaseTransform</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Register the moving image to the fixed image.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    fixed : :obj:`Path`</span>
+<span class="sd">    fixed_path : :obj:`Path`</span>
 <span class="sd">        Fixed image filename.</span>
-<span class="sd">    moving : :obj:`Path`</span>
+<span class="sd">    moving_path : :obj:`Path`</span>
 <span class="sd">        Moving image filename.</span>
-<span class="sd">    bmask_img : :class:`~nibabel.spatialimages.SpatialImage`</span>
-<span class="sd">        Brainmask image.</span>
-<span class="sd">    em_affines : :obj:`numpy.ndarray`</span>
-<span class="sd">        Estimated eddy motion affine transformation matrices.</span>
-<span class="sd">    affine : :obj:`numpy.ndarray`</span>
-<span class="sd">        Affine transformation matrix.</span>
-<span class="sd">    shape : :obj:`tuple`</span>
-<span class="sd">        Shape of the DWI frame.</span>
-<span class="sd">    bval : :obj:`int`</span>
-<span class="sd">        b-value of the corresponding DWI volume.</span>
-<span class="sd">    i_iter : :obj:`int`</span>
-<span class="sd">        Iteration number.</span>
 <span class="sd">    vol_idx : :obj:`int`</span>
-<span class="sd">        DWI frame index.</span>
+<span class="sd">        Dataset volume index.</span>
 <span class="sd">    dirname : :obj:`Path`</span>
 <span class="sd">        Directory name where the transformation is saved.</span>
-<span class="sd">    reg_target_type : :obj:`str` or tuple of :obj:`str`</span>
-<span class="sd">        Target registration type.</span>
-<span class="sd">    align_kwargs : :obj:`dict`</span>
+<span class="sd">    kwargs : :obj:`dict`</span>
 <span class="sd">        Parameters to configure the image registration process.</span>
 
 <span class="sd">    Returns</span>
@@ -749,29 +763,27 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reg_target_type</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="n">reg_target_type</span> <span class="o">=</span> <span class="p">(</span><span class="n">reg_target_type</span><span class="p">,</span> <span class="n">reg_target_type</span><span class="p">)</span>
+    <span class="n">align_kwargs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">environ</span> <span class="o">=</span> <span class="n">align_kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;environ&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">num_threads</span> <span class="o">=</span> <span class="n">align_kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;num_threads&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
-    <span class="n">registration</span> <span class="o">=</span> <span class="n">Registration</span><span class="p">(</span>
-        <span class="n">terminal_output</span><span class="o">=</span><span class="s2">&quot;file&quot;</span><span class="p">,</span>
-        <span class="n">from_file</span><span class="o">=</span><span class="n">pkg_fn</span><span class="p">(</span>
-            <span class="s2">&quot;nifreeze.registration&quot;</span><span class="p">,</span>
-            <span class="sa">f</span><span class="s2">&quot;config/</span><span class="si">{</span><span class="n">reg_target_type</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">-to-</span><span class="si">{</span><span class="n">reg_target_type</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">_level</span><span class="si">{</span><span class="n">i_iter</span><span class="si">}</span><span class="s2">.json&quot;</span><span class="p">,</span>
-        <span class="p">),</span>
-        <span class="n">fixed_image</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">fixed</span><span class="o">.</span><span class="n">absolute</span><span class="p">()),</span>
-        <span class="n">moving_image</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">moving</span><span class="o">.</span><span class="n">absolute</span><span class="p">()),</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">seed</span> <span class="o">:=</span> <span class="n">align_kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;seed&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">environ</span> <span class="o">=</span> <span class="n">environ</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="n">environ</span><span class="p">[</span><span class="s2">&quot;ANTS_RANDOM_SEED&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">&quot;ants_config&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="n">align_kwargs</span><span class="p">[</span><span class="s2">&quot;default&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">align_kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;ants_config&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;.json&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+    <span class="n">registration</span> <span class="o">=</span> <span class="n">generate_command</span><span class="p">(</span>
+        <span class="n">fixed_path</span><span class="p">,</span>
+        <span class="n">moving_path</span><span class="p">,</span>
+        <span class="n">environ</span><span class="o">=</span><span class="n">environ</span><span class="p">,</span>
+        <span class="n">terminal_output</span><span class="o">=</span><span class="s2">&quot;file_split&quot;</span><span class="p">,</span>
+        <span class="n">num_threads</span><span class="o">=</span><span class="n">num_threads</span><span class="p">,</span>
         <span class="o">**</span><span class="n">align_kwargs</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="k">if</span> <span class="n">bmask_img</span><span class="p">:</span>
-        <span class="n">registration</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">fixed_image_masks</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;NULL&quot;</span><span class="p">,</span> <span class="n">bmask_img</span><span class="p">]</span>
 
-    <span class="k">if</span> <span class="n">em_affines</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">em_affines</span><span class="p">[</span><span class="n">vol_idx</span><span class="p">,</span> <span class="o">...</span><span class="p">]):</span>
-        <span class="n">ImageGrid</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;ImageGrid&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="s2">&quot;affine&quot;</span><span class="p">))</span>
-        <span class="n">reference</span> <span class="o">=</span> <span class="n">ImageGrid</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span> <span class="n">affine</span><span class="o">=</span><span class="n">affine</span><span class="p">)</span>
-        <span class="n">initial_xform</span> <span class="o">=</span> <span class="n">Affine</span><span class="p">(</span><span class="n">matrix</span><span class="o">=</span><span class="n">em_affines</span><span class="p">[</span><span class="n">vol_idx</span><span class="p">],</span> <span class="n">reference</span><span class="o">=</span><span class="n">reference</span><span class="p">)</span>
-        <span class="n">mat_file</span> <span class="o">=</span> <span class="n">dirname</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;init_</span><span class="si">{</span><span class="n">i_iter</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">vol_idx</span><span class="si">:</span><span class="s2">05d</span><span class="si">}</span><span class="s2">.mat&quot;</span>
-        <span class="n">initial_xform</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">mat_file</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s2">&quot;itk&quot;</span><span class="p">)</span>
-        <span class="n">registration</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">initial_moving_transform</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">mat_file</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">dirname</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;cmd-</span><span class="si">{</span><span class="n">vol_idx</span><span class="si">:</span><span class="s2">05d</span><span class="si">}</span><span class="s2">.sh&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">registration</span><span class="o">.</span><span class="n">cmdline</span><span class="p">)</span>
 
     <span class="c1"># execute ants command line</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">registration</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cwd</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">dirname</span><span class="p">))</span><span class="o">.</span><span class="n">outputs</span>
@@ -779,12 +791,12 @@
     <span class="c1"># read output transform</span>
     <span class="n">xform</span> <span class="o">=</span> <span class="n">nt</span><span class="o">.</span><span class="n">linear</span><span class="o">.</span><span class="n">Affine</span><span class="p">(</span>
         <span class="n">nt</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">itk</span><span class="o">.</span><span class="n">ITKLinearTransform</span><span class="o">.</span><span class="n">from_filename</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">forward_transforms</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">to_ras</span><span class="p">(</span>
-            <span class="n">reference</span><span class="o">=</span><span class="n">fixed</span><span class="p">,</span> <span class="n">moving</span><span class="o">=</span><span class="n">moving</span>
+            <span class="n">reference</span><span class="o">=</span><span class="n">fixed_path</span><span class="p">,</span> <span class="n">moving</span><span class="o">=</span><span class="n">moving_path</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="c1"># debugging: generate aligned file for testing</span>
-    <span class="n">xform</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">moving</span><span class="p">,</span> <span class="n">reference</span><span class="o">=</span><span class="n">fixed</span><span class="p">)</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span>
-        <span class="n">dirname</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;aligned</span><span class="si">{</span><span class="n">vol_idx</span><span class="si">:</span><span class="s2">05d</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">bval</span><span class="p">)</span><span class="si">:</span><span class="s2">04d</span><span class="si">}</span><span class="s2">.nii.gz&quot;</span>
+    <span class="n">xform</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">moving_path</span><span class="p">,</span> <span class="n">reference</span><span class="o">=</span><span class="n">fixed_path</span><span class="p">)</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span>
+        <span class="n">dirname</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;dbg_</span><span class="si">{</span><span class="n">vol_idx</span><span class="si">:</span><span class="s2">05d</span><span class="si">}</span><span class="s2">.nii.gz&quot;</span>
     <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">xform</span>
@@ -820,7 +832,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=1ddfcac8"></script>
+</div><script src="../../../_static/documentation_options.js?v=21198432"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>
