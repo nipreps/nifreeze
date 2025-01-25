@@ -41,10 +41,10 @@ def advanced_clip(
     invert: bool = False,
 ) -> np.ndarray:
     """
-    Clips outliers from a n-dimensional array and scales/casts to a specified data type.
+    Clips outliers from an n-dimensional array and scales/casts to a specified data type.
 
     This function removes outliers from both ends of the intensity distribution
-    in a n-dimensional array using percentiles. It optionally enforces non-negative
+    in an n-dimensional array using percentiles. It optionally enforces non-negative
     values and scales the data to fit within a specified data type (e.g., uint8
     for image registration). To remove outliers more robustly, the function
     first applies a median filter to the data before calculating clipping thresholds.
