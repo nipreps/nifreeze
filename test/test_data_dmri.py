@@ -182,6 +182,46 @@ def test_equality_operator(tmp_path):
     assert round_trip_dwi_obj == dwi_obj
 
 
+def test_shells(datadir):
+    dwi_h5 = load(datadir / "dwi.h5")
+    num_bins = 3
+
+    _, expected_bval_groups, expected_bval_est = find_shelling_scheme(
+        dwi_h5.gradients[-1, ...], num_bins=num_bins
+    )
+
+    indices = [
+        np.hstack(np.where(np.isin(dwi_h5.gradients[-1, ...], bvals)))
+        for bvals in expected_bval_groups
+    ]
+    expected_dwi_data = [dwi_h5.dataobj[..., idx] for idx in indices]
+    expected_motion_affines = [
+        dwi_h5.motion_affines[idx] if dwi_h5.motion_affines else None for idx in indices
+    ]
+    expected_gradients = [dwi_h5.gradients[..., idx] for idx in indices]
+
+    shell_data = dwi_h5.shells(num_bins=num_bins)
+    obtained_bval_est, obtained_dwi_data, obtained_motion_affines, obtained_gradients = zip(
+        *shell_data, strict=True
+    )
+
+    assert len(shell_data) == num_bins
+    assert list(obtained_bval_est) == expected_bval_est
+    assert all(
+        np.allclose(arr1, arr2)
+        for arr1, arr2 in zip(list(obtained_dwi_data), expected_dwi_data, strict=True)
+    )
+    assert all(
+        (arr1 is None and arr2 is None)
+        or (arr1 is not None and arr2 is not None and np.allclose(arr1, arr2))
+        for arr1, arr2 in zip(list(obtained_motion_affines), expected_motion_affines, strict=True)
+    )
+    assert all(
+        np.allclose(arr1, arr2)
+        for arr1, arr2 in zip(list(obtained_gradients), expected_gradients, strict=True)
+    )
+
+
 @pytest.mark.parametrize(
     ("bvals", "exp_scheme", "exp_bval_groups", "exp_bval_estimated"),
     [
