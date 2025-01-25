@@ -21,7 +21,6 @@
 #     https://www.nipreps.org/community/licensing/
 #
 
-import numbers
 from importlib import import_module
 
 import numpy as np
@@ -179,8 +178,8 @@ class AverageDWIModel(ExpectationModel):
         self,
         dataset: DWI,
         stat: str = "median",
-        th_low: numbers.Number = 100,
-        th_high: numbers.Number = 100,
+        th_low: float = 100.0,
+        th_high: float = 100.0,
         detrend: bool = False,
         **kwargs,
     ):
@@ -193,10 +192,10 @@ class AverageDWIModel(ExpectationModel):
             Reference to a DWI object.
         stat : :obj:`str`, optional
             Whether the summary statistic to apply is ``"mean"`` or ``"median"``.
-        th_low : :obj:`numbers.Number`, optional
+        th_low : :obj:`float`, optional
             A lower bound for the b-value corresponding to the diffusion weighted images
             that will be averaged.
-        th_high : :obj:`numbers.Number`, optional
+        th_high : :obj:`float`, optional
             An upper bound for the b-value corresponding to the diffusion weighted images
             that will be averaged.
         detrend : :obj:`bool`, optional
