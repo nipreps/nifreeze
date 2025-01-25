@@ -390,6 +390,8 @@ def find_shelling_scheme(
         Number of bins.
     multishell_nonempty_bin_count_thr : :obj:`int`, optional
         Bin count to consider a multi-shell scheme.
+    bval_cap : :obj:`int`, optional
+        Maximum b-value to be considered in a multi-shell scheme.
 
     Returns
     -------
