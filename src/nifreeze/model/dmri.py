@@ -21,6 +21,7 @@
 #     https://www.nipreps.org/community/licensing/
 #
 
+import numbers
 from importlib import import_module
 
 import numpy as np
@@ -29,6 +30,7 @@ from joblib import Parallel, delayed
 from nifreeze.data.dmri import (
     DEFAULT_CLIP_PERCENTILE,
     DTI_MIN_ORIENTATIONS,
+    DWI,
 )
 from nifreeze.model.base import BaseModel, ExpectationModel
 
@@ -51,7 +53,7 @@ class BaseDWIModel(BaseModel):
         "_modelargs": "Arguments acceptable by the underlying DIPY-like model.",
     }
 
-    def __init__(self, dataset, **kwargs):
+    def __init__(self, dataset: DWI, **kwargs):
         r"""Initialization.
 
         Parameters
@@ -117,7 +119,7 @@ class BaseDWIModel(BaseModel):
         self._model = None  # Preempt further actions on the model
         return n_jobs
 
-    def fit_predict(self, index, **kwargs):
+    def fit_predict(self, index: int, **kwargs):
         """
         Predict asynchronously chunk-by-chunk the diffusion signal.
 
@@ -173,7 +175,15 @@ class AverageDWIModel(ExpectationModel):
 
     __slots__ = ("_th_low", "_th_high", "_detrend")
 
-    def __init__(self, dataset, stat="median", th_low=100, th_high=100, detrend=False, **kwargs):
+    def __init__(
+        self,
+        dataset: DWI,
+        stat: str = "median",
+        th_low: numbers.Number = 100,
+        th_high: numbers.Number = 100,
+        detrend: bool = False,
+        **kwargs,
+    ):
         r"""
         Implement object initialization.
 
