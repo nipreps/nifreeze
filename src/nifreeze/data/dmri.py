@@ -239,7 +239,7 @@ class DWI(BaseDataset[np.ndarray | None]):
         # Save bvecs and bvals to text files
         # Each row of bvecs is one direction (3 rows, N columns).
         np.savetxt(bvecs_file, self.gradients[:3, ...].T, fmt="%.6f")
-        np.savetxt(bvals_file, self.gradients[:3, ...], fmt="%.6f")
+        np.savetxt(bvals_file, self.gradients[-1, ...], fmt="%.6f")
 
 
 def load(
