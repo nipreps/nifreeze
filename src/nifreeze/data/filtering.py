@@ -24,9 +24,13 @@
 
 from __future__ import annotations
 
+import copy
+
 import numpy as np
 from scipy.ndimage import median_filter
 from skimage.morphology import ball
+
+from nifreeze.data.dmri import DEFAULT_CLIP_PERCENTILE, DWI
 
 DEFAULT_DTYPE = "int16"
 """The default image's data type."""
@@ -96,3 +100,114 @@ def advanced_clip(
         data = np.round(255 * data).astype(dtype)
 
     return data
+
+
+def detrend_data_percentile(data: np.ndarray, mask: np.ndarray | None = None) -> np.ndarray:
+    r"""Detrend data.
+
+    Regresses out global signal differences so that its values are centered around the middle 90%
+    of the data following:
+
+    .. math::
+        \text{data}_{\text{detrended}} = \frac{(\text{data} - p_{5}) \cdot p_{\text{mean}}}{p_{\text{range}}} + p_{5}^{\text{mean}}
+
+    where
+
+    .. math::
+        p_{\text{range}} = p_{95} - p_{5}, \quad p_{\text{mean}} = \frac{1}{N} \sum_{i=1}^N p_{\text{range}_i}, \quad p_{5}^{\text{mean}} = \frac{1}{N} \sum_{i=1}^N p_{5_i}
+
+    :math:`p_{5}` and :math:`p_{95}` being the 5th percentile and the 95th percentile of the data,
+    respectively.
+
+    If a mask is provided, only the data within the mask are considered.
+
+    Parameters
+    ----------
+    data : :obj:`~numpy.ndarray`
+        Data to be detrended.
+    mask : :obj:`~numpy.ndarray`, optional
+        Mask. If provided, only the data within the mask are considered.
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        Detrended data.
+    """
+
+    data = data.copy().astype("float32")
+    reshaped_data = data.reshape((-1, data.shape[-1])) if mask is None else data[mask]
+    p5 = np.percentile(reshaped_data, 5.0, axis=0)
+    p95 = np.percentile(reshaped_data, 95.0, axis=0) - p5
+    return (data - p5) * p95.mean() / p95 + p5.mean()
+
+
+def detrend_dwi_median(data: np.ndarray, mask: np.ndarray | None = None) -> np.ndarray:
+    """Detrend DWI data.
+
+    Regresses out global DWI signal differences so that its standardized and centered around the
+    :data:`src.nifreeze.model.base.DEFAULT_CLIP_PERCENTILE` percentile.
+
+    If a mask is provided, only the data within the mask are considered.
+
+    Parameters
+    ----------
+    data : :obj:`~numpy.ndarray`
+        Data to be detrended.
+    mask : :obj:`~numpy.ndarray`, optional
+        Mask. If provided, only the data within the mask are considered.
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        Detrended data.
+    """
+
+    shelldata = data[..., mask]
+
+    centers = np.median(shelldata, axis=(0, 1, 2))
+    reference = np.percentile(centers[centers >= 1.0], DEFAULT_CLIP_PERCENTILE)
+    centers[centers < 1.0] = reference
+    drift = reference / centers
+    return shelldata * drift
+
+
+def clip_dwi_shell_data(dataset: DWI, index: int, th_low: int = 100, th_high: int = 100) -> DWI:
+    """Clip DWI shell data around the given index and lower and upper b-value bounds.
+
+    Clip DWI data around the given index with the provided lower and upper bound b-values.
+
+    Parameters
+    ----------
+    dataset : :obj:`~nifreeze.data.dmri.DWI`
+        Reference to a DWI object.
+    index  : :obj:`int`
+        Index of the shell data.
+    th_low : :obj:`numbers.Number`, optional
+        A lower bound for the b-value.
+    th_high : :obj:`numbers.Number`, optional
+        An upper bound for the b-value.
+
+    Returns
+    -------
+    clipped_dataset : :obj:`~nifreeze.data.dmri.DWI`
+        Clipped dataset.
+    """
+
+    clipped_dataset = copy.deepcopy(dataset)
+
+    bvalues = clipped_dataset.gradients[:, -1]
+    bcenter = bvalues[index]
+
+    shellmask = np.ones(len(clipped_dataset._dataset), dtype=bool)
+
+    # Keep only bvalues within the range defined by th_high and th_low
+    shellmask[index] = False
+    shellmask[bvalues > (bcenter + th_high)] = False
+    shellmask[bvalues < (bcenter - th_low)] = False
+
+    if not shellmask.sum():
+        raise RuntimeError(f"Shell corresponding to index {index} (b={bcenter}) is empty.")
+
+    clipped_dataset._dataset = clipped_dataset._dataset.dataobj[..., shellmask]
+
+    return clipped_dataset

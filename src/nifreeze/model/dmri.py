@@ -26,10 +26,7 @@ from importlib import import_module
 import numpy as np
 from joblib import Parallel, delayed
 
-from nifreeze.data.dmri import (
-    DEFAULT_CLIP_PERCENTILE,
-    DTI_MIN_ORIENTATIONS,
-)
+from nifreeze.data.dmri import DTI_MIN_ORIENTATIONS
 from nifreeze.model.base import BaseModel, ExpectationModel
 
 
@@ -171,64 +168,25 @@ class BaseDWIModel(BaseModel):
 class AverageDWIModel(ExpectationModel):
     """A trivial model that returns an average DWI volume."""
 
-    __slots__ = ("_th_low", "_th_high", "_detrend")
-
-    def __init__(self, dataset, stat="median", th_low=100, th_high=100, detrend=False, **kwargs):
+    def __init__(self, dataset, stat="median", **kwargs):
         r"""
         Implement object initialization.
 
         Parameters
         ----------
-        th_low : :obj:`numbers.Number`
-            A lower bound for the b-value corresponding to the diffusion weighted images
-            that will be averaged.
-        th_high : :obj:`numbers.Number`
-            An upper bound for the b-value corresponding to the diffusion weighted images
-            that will be averaged.
-        detrend : :obj:`bool`
-            Whether the overall distribution of each diffusion weighted image will be
-            standardized and centered around the
-            :data:`src.nifreeze.model.base.DEFAULT_CLIP_PERCENTILE` percentile.
         stat : :obj:`str`
             Whether the summary statistic to apply is ``"mean"`` or ``"median"``.
 
         """
         super().__init__(dataset, stat=stat, **kwargs)
 
-        self._th_low = th_low
-        self._th_high = th_high
-        self._detrend = detrend
-
-    def fit_predict(self, index, *_, **kwargs):
+    def fit_predict(self, *_, **kwargs):
         """Return the average map."""
-
-        bvalues = self._dataset.gradients[:, -1]
-        bcenter = bvalues[index]
-
-        shellmask = np.ones(len(self._dataset), dtype=bool)
-
-        # Keep only bvalues within the range defined by th_high and th_low
-        shellmask[index] = False
-        shellmask[bvalues > (bcenter + self._th_high)] = False
-        shellmask[bvalues < (bcenter - self._th_low)] = False
-
-        if not shellmask.sum():
-            raise RuntimeError(f"Shell corresponding to index {index} (b={bcenter}) is empty.")
-
-        shelldata = self._dataset.dataobj[..., shellmask]
-
-        # Regress out global signal differences
-        if self._detrend:
-            centers = np.median(shelldata, axis=(0, 1, 2))
-            reference = np.percentile(centers[centers >= 1.0], DEFAULT_CLIP_PERCENTILE)
-            centers[centers < 1.0] = reference
-            drift = reference / centers
-            shelldata = shelldata * drift
 
         # Select the summary statistic
         avg_func = np.median if self._stat == "median" else np.mean
         # Calculate the average
-        return avg_func(shelldata, axis=-1)
+        return avg_func(self._dataset.dataobj, axis=-1)
 
 
 class DTIModel(BaseDWIModel):
