@@ -139,6 +139,14 @@ class DWI(BaseDataset[np.ndarray | None]):
 
         return cls(**data)
 
+    @property
+    def bvals(self):
+        return self.gradients[-1, ...]
+
+    @property
+    def bvecs(self):
+        return self.gradients[:-1, ...]
+
     def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
         """
         Set an affine transform for a particular index and update the data object.
@@ -163,14 +171,14 @@ class DWI(BaseDataset[np.ndarray | None]):
         reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
 
         xform = Affine(matrix=affine, reference=reference)
-        bvec = self.gradients[:3, index]
+        bvec = self.bvecs[:, index]
 
         # invert transform transform b-vector and origin
         r_bvec = (~xform).map([bvec, (0.0, 0.0, 0.0)])
         # Reset b-vector's origin
         new_bvec = r_bvec[1] - r_bvec[0]
         # Normalize and update
-        self.gradients[:3, index] = new_bvec / np.linalg.norm(new_bvec)
+        self.bvecs[:, index] = new_bvec / np.linalg.norm(new_bvec)
 
         super().set_transform(index, affine, order)
 
@@ -238,8 +246,8 @@ class DWI(BaseDataset[np.ndarray | None]):
 
         # Save bvecs and bvals to text files
         # Each row of bvecs is one direction (3 rows, N columns).
-        np.savetxt(bvecs_file, self.gradients[:3, ...].T, fmt="%.6f")
-        np.savetxt(bvals_file, self.gradients[-1, ...], fmt="%.6f")
+        np.savetxt(bvecs_file, self.bvecs.T, fmt="%.6f")
+        np.savetxt(bvals_file, self.bvals, fmt="%.6f")
 
 
 def load(
