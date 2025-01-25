@@ -141,7 +141,7 @@ class BaseDWIModel(BaseModel):
         if n_models == 1:
             predicted, _ = _exec_predict(self._model, **(kwargs | {"gtab": gradient, "S0": S0}))
         else:
-            S0 = np.array_split(S0, n_models) if S0 is not None else [None] * n_models
+            S0 = np.array_split(S0, n_models) if S0 is not None else np.full(n_models, None)
 
             predicted = [None] * n_models
 
