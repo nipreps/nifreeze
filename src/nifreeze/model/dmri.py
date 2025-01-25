@@ -181,15 +181,15 @@ class AverageDWIModel(ExpectationModel):
         ----------
         dataset : :obj:`~nifreeze.data.dmri.DWI`
             Reference to a DWI object.
-        stat : :obj:`str`
+        stat : :obj:`str`, optional
             Whether the summary statistic to apply is ``"mean"`` or ``"median"``.
-        th_low : :obj:`numbers.Number`
+        th_low : :obj:`numbers.Number`, optional
             A lower bound for the b-value corresponding to the diffusion weighted images
             that will be averaged.
-        th_high : :obj:`numbers.Number`
+        th_high : :obj:`numbers.Number`, optional
             An upper bound for the b-value corresponding to the diffusion weighted images
             that will be averaged.
-        detrend : :obj:`bool`
+        detrend : :obj:`bool`, optional
             Whether the overall distribution of each diffusion weighted image will be
             standardized and centered around the
             :data:`src.nifreeze.model.base.DEFAULT_CLIP_PERCENTILE` percentile.
