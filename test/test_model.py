@@ -101,7 +101,7 @@ def test_average_model():
     dataset = DWI(dataobj=data, gradients=gtab, brainmask=mask)
 
     tmodel_mean = model.AverageDWIModel(dataset, stat="mean")
-    tmodel_mean_full = model.AverageDWIModel(dataset, stat="mean", th_low=2000, th_high=2000)
+    tmodel_mean_full = model.AverageDWIModel(dataset, stat="mean", atol_low=2000, atol_high=2000)
     tmodel_median = model.AverageDWIModel(dataset)
 
     # Verify that average cannot be calculated in shells with one single value
@@ -115,8 +115,8 @@ def test_average_model():
     del grads[1]
     assert np.allclose(tmodel_mean_full.fit_predict(1), np.mean(grads))
 
-    tmodel_mean_2000 = model.AverageDWIModel(dataset, stat="mean", th_low=1100)
-    tmodel_median_2000 = model.AverageDWIModel(dataset, th_low=1100)
+    tmodel_mean_2000 = model.AverageDWIModel(dataset, stat="mean", atol_low=1100)
+    tmodel_median_2000 = model.AverageDWIModel(dataset, atol_low=1100)
 
     assert np.allclose(tmodel_mean_2000.fit_predict(9), gtab[3:-1, -1].mean())
     assert np.allclose(tmodel_median_2000.fit_predict(9), 1000)
@@ -164,8 +164,8 @@ def test_factory(datadir):
     dmri_dataset = DWI.from_filename(datadir / "dwi.h5")
 
     modelargs = {
-        "th_low": 25,
-        "th_high": 25,
+        "atol_low": 25,
+        "atol_high": 25,
         "detrend": True,
         "stat": "mean",
     }
@@ -177,6 +177,6 @@ def test_factory(datadir):
 
     assert model1._dataset == model2._dataset
     assert model1._detrend == model2._detrend
-    assert model1._th_low == model2._th_low
-    assert model1._th_high == model2._th_high
+    assert model1._atol_low == model2._atol_low
+    assert model1._atol_high == model2._atol_high
     assert model1._stat == model2._stat
