@@ -53,25 +53,25 @@ def test_len(random_dataset: BaseDataset):
     assert len(random_dataset) == 5  # last dimension is 5 volumes
 
 
-def test_getitem_volume_index(random_dataset: BaseDataset[()]):
+def test_getitem_volume_index(random_dataset: BaseDataset):
     """
     Test that __getitem__ returns the correct (volume, affine) tuple.
 
     By default, motion_affines is None, so we expect to get None for the affine.
     """
-    # Single volume
-    volume0, aff0 = random_dataset[0]
+    # Single volume  # Note that the type ignore can be removed once we can use *Ts
+    volume0, aff0 = random_dataset[0]  # type: ignore[misc]  # PY310
     assert volume0.shape == (32, 32, 32)
     # No transforms have been applied yet, so there's no motion_affines array
     assert aff0 is None
 
     # Slice of volumes
-    volume_slice, aff_slice = random_dataset[2:4]
+    volume_slice, aff_slice = random_dataset[2:4]  # type: ignore[misc]  # PY310
     assert volume_slice.shape == (32, 32, 32, 2)
     assert aff_slice is None
 
 
-def test_set_transform(random_dataset: BaseDataset[()]):
+def test_set_transform(random_dataset: BaseDataset):
     """
     Test that calling set_transform changes the data and motion_affines.
     For simplicity, we'll apply an identity transform and check that motion_affines is updated.
@@ -83,7 +83,7 @@ def test_set_transform(random_dataset: BaseDataset[()]):
     random_dataset.set_transform(idx, affine, order=1)
 
     # Data shouldn't have changed (since transform is identity).
-    volume0, aff0 = random_dataset[idx]
+    volume0, aff0 = random_dataset[idx]  # type: ignore[misc]  # PY310
     assert np.allclose(data_before, volume0)
 
     # motion_affines should be created and match the transform matrix.

@@ -27,7 +27,7 @@ from __future__ import annotations
 from collections import namedtuple
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Any, Generic, TypeVarTuple
+from typing import Any, Generic
 
 import attr
 import h5py
@@ -35,6 +35,7 @@ import nibabel as nb
 import numpy as np
 from nibabel.spatialimages import SpatialHeader, SpatialImage
 from nitransforms.linear import Affine
+from typing_extensions import TypeVarTuple, Unpack
 
 from nifreeze.utils.ndimage import load_api
 
@@ -58,7 +59,7 @@ def _cmp(lh: Any, rh: Any) -> bool:
 
 
 @attr.s(slots=True)
-class BaseDataset(Generic[*Ts]):
+class BaseDataset(Generic[Unpack[Ts]]):
     """
     Base dataset representation structure.
 
@@ -99,13 +100,12 @@ class BaseDataset(Generic[*Ts]):
 
         return self.dataobj.shape[-1]
 
-    def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[*Ts]:
-        # PY312: Default values for TypeVarTuples are not yet supported
+    def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[Unpack[Ts]]:
         return ()  # type: ignore[return-value]
 
     def __getitem__(
         self, idx: int | slice | tuple | np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray | None, *Ts]:
+    ) -> tuple[np.ndarray, np.ndarray | None, Unpack[Ts]]:
         """
         Returns volume(s) and corresponding affine(s) through fancy indexing.
 
