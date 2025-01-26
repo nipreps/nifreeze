@@ -32,9 +32,40 @@ permissions:
   contents: read
 
 jobs:
+  cache-data:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+      - name: Install datalad
+        run: |
+          uvx datalad-installer --sudo ok git-annex
+          uv tool install --with=datalad-osf --with=datalad-next datalad
+          uv tool install --with=datalad-next datalad-osf
+          datalad wtf
+      - uses: actions/cache@v4
+        id: test-data
+        with:
+          path: /home/runner/nifreeze-tests/
+          key: data-v1
+          restore-keys: |
+            data-v1
+            data-v0
+      - name: Get test data with DataLad
+        if: steps.test-data.outputs.cache-hit != 'true'
+        run: |
+          if [[ ! -d "${TEST_DATA_HOME}" ]]; then
+            datalad install -rg --source=https://gin.g-node.org/nipreps-data/tests-nifreeze.git ${TEST_DATA_HOME}
+          else
+            cd ${TEST_DATA_HOME}
+            datalad update --merge -r .
+            datalad get -r -J4 *
+          fi
+
   stable:
     # Unit tests only on Linux/Python 3.12
     runs-on: 'ubuntu-latest'
+    needs: ['cache-data']
     steps:
       - uses: actions/checkout@v4
         with:
@@ -56,20 +87,12 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: /home/runner/nifreeze-tests/
-          key: data-v0
-      - name: Get test data with DataLad
+          key: data-v1
+      - name: Update test data
         run: |
-          if [[ ! -d "${TEST_DATA_HOME}" ]]; then
-            datalad install -rg --source=https://gin.g-node.org/nipreps-data/tests-nifreeze.git ${TEST_DATA_HOME}
-          else
-            cd ${TEST_DATA_HOME}
-            datalad update --merge -r .
-            datalad get -r -J4 *
-          fi
-      - uses: actions/cache/save@v4
-        with:
-          path: /home/runner/nifreeze-tests/
-          key: data-v0
+          cd ${TEST_DATA_HOME}
+          datalad update --merge -r .
+          datalad get -r -J4 *
       - name: Install TeX Live
         run: |
           sudo apt-get update
