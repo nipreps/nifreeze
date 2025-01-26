@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="nifreeze.model.gpr module" href="nifreeze.model.gpr.html" /><link rel="prev" title="nifreeze.model.base module" href="nifreeze.model.base.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.model.dmri module - nifreeze 25.0.0.dev137 documentation</title>
+        <title>nifreeze.model.dmri module - nifreeze 25.0.0.dev144 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
@@ -167,7 +167,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev137 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev144 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -190,14 +190,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev137</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev144</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev137</span>
+  <span class="sidebar-brand-text">25.0.0.dev144</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -309,14 +309,15 @@
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>th_low</strong> (<a class="reference external" href="https://docs.python.org/3/library/numbers.html#numbers.Number" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numbers.Number</span></code></a>) – A lower bound for the b-value corresponding to the diffusion weighted images
+<li><p><strong>dataset</strong> (<a class="reference internal" href="nifreeze.data.dmri.html#nifreeze.data.dmri.DWI" title="nifreeze.data.dmri.DWI"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DWI</span></code></a>) – Reference to a DWI object.</p></li>
+<li><p><strong>stat</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, optional) – Whether the summary statistic to apply is <code class="docutils literal notranslate"><span class="pre">&quot;mean&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;median&quot;</span></code>.</p></li>
+<li><p><strong>th_low</strong> (<a class="reference external" href="https://docs.python.org/3/library/numbers.html#numbers.Number" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numbers.Number</span></code></a>, optional) – A lower bound for the b-value corresponding to the diffusion weighted images
 that will be averaged.</p></li>
-<li><p><strong>th_high</strong> (<a class="reference external" href="https://docs.python.org/3/library/numbers.html#numbers.Number" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numbers.Number</span></code></a>) – An upper bound for the b-value corresponding to the diffusion weighted images
+<li><p><strong>th_high</strong> (<a class="reference external" href="https://docs.python.org/3/library/numbers.html#numbers.Number" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numbers.Number</span></code></a>, optional) – An upper bound for the b-value corresponding to the diffusion weighted images
 that will be averaged.</p></li>
-<li><p><strong>detrend</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a>) – Whether the overall distribution of each diffusion weighted image will be
+<li><p><strong>detrend</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a>, optional) – Whether the overall distribution of each diffusion weighted image will be
 standardized and centered around the
 <code class="xref py py-data docutils literal notranslate"><span class="pre">src.nifreeze.model.base.DEFAULT_CLIP_PERCENTILE</span></code> percentile.</p></li>
-<li><p><strong>stat</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>) – Whether the summary statistic to apply is <code class="docutils literal notranslate"><span class="pre">&quot;mean&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;median&quot;</span></code>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -471,7 +472,7 @@ standardized and centered around the
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=b2998a41"></script>
+</div><script src="../_static/documentation_options.js?v=607f37b6"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
