@@ -246,8 +246,8 @@ class DWI(BaseDataset[np.ndarray | None]):
 
         # Save bvecs and bvals to text files
         # Each row of bvecs is one direction (3 rows, N columns).
-        np.savetxt(bvecs_file, self.bvecs.T, fmt="%.6f")
-        np.savetxt(bvals_file, self.bvals, fmt="%.6f")
+        np.savetxt(bvecs_file, self.bvecs, fmt="%.6f")
+        np.savetxt(bvals_file, self.bvals[np.newaxis, :], fmt="%.6f")
 
 
 def load(
