@@ -233,12 +233,8 @@ class DWI(BaseDataset[np.ndarray | None]):
         # Convert filename to a Path object.
         out_root = Path(filename).absolute()
 
-        # Remove .gz if present, then remove .nii if present.
-        # This yields the base stem for writing .bvec / .bval.
-        if out_root.suffix == ".gz":
-            out_root = out_root.with_suffix("")  # remove '.gz'
-        if out_root.suffix == ".nii":
-            out_root = out_root.with_suffix("")  # remove '.nii'
+        # Get the base stem for writing .bvec / .bval.
+        out_root = out_root.parent / out_root.name.replace("".join(out_root.suffixes), "")
 
         # Construct sidecar file paths.
         bvecs_file = out_root.with_suffix(".bvec")
