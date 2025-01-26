@@ -73,7 +73,7 @@ class DWI(BaseDataset[np.ndarray | None]):
     gradients = attr.ib(default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp))
     """A 2D numpy array of the gradient table (4xN)."""
     eddy_xfms = attr.ib(default=None)
-    """List of transforms to correct for estimatted eddy current distortions."""
+    """List of transforms to correct for estimated eddy current distortions."""
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray | None]:
         return (self.gradients[..., idx] if self.gradients is not None else None,)
@@ -390,6 +390,8 @@ def find_shelling_scheme(
         Number of bins.
     multishell_nonempty_bin_count_thr : :obj:`int`, optional
         Bin count to consider a multi-shell scheme.
+    bval_cap : :obj:`int`, optional
+        Maximum b-value to be considered in a multi-shell scheme.
 
     Returns
     -------
