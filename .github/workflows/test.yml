@@ -91,7 +91,15 @@ jobs:
         uses: astral-sh/setup-uv@v5
       - name: Install ANTs
         run: |
-          conda install -c conda-forge ants=2.5
+          # Override libiconv pre-installed from anaconda channel
+          # See https://github.com/conda-forge/libitk-feedstock/issues/98
+          # Since we're not creating a new environment, we must be explicit
+          conda install -c conda-forge ants=2.5 libiconv
+      - name: Verify antsRegistration path
+        run: |
+          export PATH=$ANTSPATH:$PATH
+          which antsRegistration
+          antsRegistration --version
       - uses: actions/cache/restore@v4
         with:
           path: /home/runner/nifreeze-tests/
@@ -105,11 +113,6 @@ jobs:
           uv tool install --with=tox-uv --with=tox-gh-actions tox
       - name: Show tox config
         run: tox c
-      - name: Verify antsRegistration path
-        run: |
-          export PATH=$ANTSPATH:$PATH
-          which antsRegistration
-          antsRegistration --version
       - name: Run tox
         run: |
           export PATH=$ANTSPATH:$PATH
