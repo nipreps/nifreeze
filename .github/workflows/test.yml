@@ -23,6 +23,7 @@ env:
   ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS: 4
   ANTSPATH: /usr/share/miniconda/bin/
   NIFREEZE_WERRORS: 1
+  TEST_DATA_REPO: https://gin.g-node.org/nipreps-data/tests-nifreeze
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -32,9 +33,58 @@ permissions:
   contents: read
 
 jobs:
+  cache-test-data:
+    runs-on: 'ubuntu-latest'
+    outputs:
+      SHA: ${{ steps.test-head.outputs.SHA }}
+    steps:
+      - name: Check remote HEAD
+        id: test-head
+        run: |
+          SHA=$( git ls-remote $TEST_DATA_REPO HEAD | cut -f 1 )
+          echo SHA=$SHA >> $GITHUB_OUTPUT
+          echo SHA7=${SHA:0:7} >> $GITHUB_OUTPUT
+      - name: Check for data-v1-${{ steps.test-head.outputs.SHA }}
+        uses: actions/cache@v4
+        id: test-data
+        with:
+          path: /home/runner/nifreeze-tests/
+          key: data-v1-${{ steps.test-head.outputs.SHA }}
+          lookup-only: true
+      - name: Create data-v1-${{ steps.test-head.outputs.SHA }}
+        uses: actions/cache@v4
+        if: steps.test-data.outputs.cache-hit != 'true'
+        with:
+          path: /home/runner/nifreeze-tests/
+          key: data-v1-${{ steps.test-head.outputs.SHA }}
+          restore-keys: |
+            data-v1
+            data-v0
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+        if: steps.test-data.outputs.cache-hit != 'true'
+      - name: Install datalad
+        if: steps.test-data.outputs.cache-hit != 'true'
+        run: |
+          uvx datalad-installer --sudo ok git-annex
+          uv tool install --with=datalad-osf --with=datalad-next datalad
+          uv tool install --with=datalad-next datalad-osf
+          datalad wtf
+      - name: Checkout commit ${{ steps.test-head.outputs.SHA7 }}
+        if: steps.test-data.outputs.cache-hit != 'true'
+        run: |
+          if [[ ! -d "${TEST_DATA_HOME}" ]]; then
+            datalad install -rg --source=${TEST_DATA_REPO} ${TEST_DATA_HOME}
+          else
+            cd ${TEST_DATA_HOME}
+            datalad update --merge -r .
+            datalad get -r -J4 *
+          fi
+
   stable:
     # Unit tests only on Linux/Python 3.12
     runs-on: 'ubuntu-latest'
+    needs: ['cache-test-data']
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,40 +94,30 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
       - name: Install ANTs
         run: |
-          conda install -c conda-forge ants=2.5
-      - name: Install datalad
+          # Override libiconv pre-installed from anaconda channel
+          # See https://github.com/conda-forge/libitk-feedstock/issues/98
+          # Since we're not creating a new environment, we must be explicit
+          conda install -c conda-forge ants=2.5 libiconv
+      - name: Verify antsRegistration path
         run: |
-          python -m pip install datalad-installer
-          datalad-installer --sudo ok git-annex
-          python -m pip install datalad datalad-osf
-          datalad wtf
+          export PATH=$ANTSPATH:$PATH
+          which antsRegistration
+          antsRegistration --version
       - uses: actions/cache/restore@v4
         with:
           path: /home/runner/nifreeze-tests/
-          key: data-v0
-      - name: Get test data with DataLad
-        run: |
-          if [[ ! -d "${TEST_DATA_HOME}" ]]; then
-            datalad install -rg --source=https://gin.g-node.org/nipreps-data/tests-nifreeze.git ${TEST_DATA_HOME}
-          else
-            cd ${TEST_DATA_HOME}
-            datalad update --merge -r .
-            datalad get -r -J4 *
-          fi
-      - uses: actions/cache/save@v4
-        with:
-          path: /home/runner/nifreeze-tests/
-          key: data-v0
+          key: data-v1-${{ needs.cache-test-data.outputs.SHA }}
       - name: Install TeX Live
         run: |
           sudo apt-get update
           sudo apt install texlive texlive-latex-extra texlive-fonts-recommended cm-super dvipng
       - name: Install tox
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install tox tox-gh-actions
+          uv tool install --with=tox-uv --with=tox-gh-actions tox
       - name: Show tox config
         run: tox c
       - name: Run tox
