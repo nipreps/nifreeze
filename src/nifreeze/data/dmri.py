@@ -208,7 +208,13 @@ class DWI(BaseDataset[np.ndarray | None]):
         with h5py.File(filename, "r+") as out_file:
             out_file.attrs["Type"] = "dmri"
 
-    def to_nifti(self, filename: Path | str, insert_b0: bool = False) -> None:
+    def to_nifti(
+        self,
+        filename: Path | str,
+        insert_b0: bool = False,
+        bvals_dec_places: int = 2,
+        bvecs_dec_places: int = 6,
+    ) -> None:
         """
         Write a NIfTI file to disk.
 
@@ -218,6 +224,10 @@ class DWI(BaseDataset[np.ndarray | None]):
             The output NIfTI file path.
         insert_b0 : :obj:`bool`, optional
             Insert a :math:`b=0` at the front of the output NIfTI.
+        bvals_dec_places : :obj:`int`, optional
+            Decimal places to use when serializing b-values.
+        bvecs_dec_places : :obj:`int`, optional
+            Decimal places to use when serializing b-vectors.
 
         """
         if not insert_b0:
@@ -242,8 +252,8 @@ class DWI(BaseDataset[np.ndarray | None]):
 
         # Save bvecs and bvals to text files
         # Each row of bvecs is one direction (3 rows, N columns).
-        np.savetxt(bvecs_file, self.bvecs, fmt="%.6f")
-        np.savetxt(bvals_file, self.bvals[np.newaxis, :], fmt="%.6f")
+        np.savetxt(bvecs_file, self.bvecs, fmt=f"%.{bvecs_dec_places}f")
+        np.savetxt(bvals_file, self.bvals[np.newaxis, :], fmt=f"%.{bvals_dec_places}f")
 
 
 def load(
