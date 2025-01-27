@@ -216,7 +216,7 @@ class DWI(BaseDataset[np.ndarray | None]):
         ----------
         filename : :obj:`os.pathlike`
             The output NIfTI file path.
-        insert_b0 : :obj:`bool`
+        insert_b0 : :obj:`bool`, optional
             Insert a :math:`b=0` at the front of the output NIfTI.
 
         """
