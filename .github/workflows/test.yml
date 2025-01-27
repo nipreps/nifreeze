@@ -87,6 +87,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
       - name: Install ANTs
         run: |
           conda install -c conda-forge ants=2.5
@@ -100,10 +102,14 @@ jobs:
           sudo apt install texlive texlive-latex-extra texlive-fonts-recommended cm-super dvipng
       - name: Install tox
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install tox tox-gh-actions
+          uv tool install --with=tox-uv --with=tox-gh-actions tox
       - name: Show tox config
         run: tox c
+      - name: Verify antsRegistration path
+        run: |
+          export PATH=$ANTSPATH:$PATH
+          which antsRegistration
+          antsRegistration --version
       - name: Run tox
         run: |
           export PATH=$ANTSPATH:$PATH
