@@ -36,7 +36,7 @@ class ModelFactory:
     """A factory for instantiating data models."""
 
     @staticmethod
-    def init(model=None, **kwargs):
+    def init(model: str | None = None, **kwargs):
         """
         Instantiate a diffusion model.
 
@@ -136,7 +136,7 @@ class ExpectationModel(BaseModel):
         super().__init__(dataset, **kwargs)
         self._stat = stat
 
-    def fit_predict(self, index, **kwargs):
+    def fit_predict(self, index: int, **kwargs):
         """
         Return the expectation map.
 

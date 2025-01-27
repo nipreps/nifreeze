@@ -33,6 +33,7 @@ import attr
 import h5py
 import nibabel as nb
 import numpy as np
+import numpy.typing as npt
 from nibabel.spatialimages import SpatialImage
 from nitransforms.linear import Affine
 
@@ -369,11 +370,11 @@ def load(
 
 
 def find_shelling_scheme(
-    bvals,
-    num_bins=DEFAULT_NUM_BINS,
-    multishell_nonempty_bin_count_thr=DEFAULT_MULTISHELL_BIN_COUNT_THR,
-    bval_cap=DEFAULT_HIGHB_THRESHOLD,
-):
+    bvals: np.ndarray,
+    num_bins: int = DEFAULT_NUM_BINS,
+    multishell_nonempty_bin_count_thr: int = DEFAULT_MULTISHELL_BIN_COUNT_THR,
+    bval_cap: float = DEFAULT_HIGHB_THRESHOLD,
+) -> tuple[str, list[npt.NDArray[np.floating]], list[np.floating]]:
     """
     Find the shelling scheme on the given b-values.
 
@@ -390,7 +391,7 @@ def find_shelling_scheme(
         Number of bins.
     multishell_nonempty_bin_count_thr : :obj:`int`, optional
         Bin count to consider a multi-shell scheme.
-    bval_cap : :obj:`int`, optional
+    bval_cap : :obj:`float`, optional
         Maximum b-value to be considered in a multi-shell scheme.
 
     Returns

@@ -29,6 +29,7 @@ from joblib import Parallel, delayed
 from nifreeze.data.dmri import (
     DEFAULT_CLIP_PERCENTILE,
     DTI_MIN_ORIENTATIONS,
+    DWI,
 )
 from nifreeze.model.base import BaseModel, ExpectationModel
 
@@ -51,7 +52,7 @@ class BaseDWIModel(BaseModel):
         "_modelargs": "Arguments acceptable by the underlying DIPY-like model.",
     }
 
-    def __init__(self, dataset, **kwargs):
+    def __init__(self, dataset: DWI, **kwargs):
         r"""Initialization.
 
         Parameters
@@ -117,7 +118,7 @@ class BaseDWIModel(BaseModel):
         self._model = None  # Preempt further actions on the model
         return n_jobs
 
-    def fit_predict(self, index, **kwargs):
+    def fit_predict(self, index: int, **kwargs):
         """
         Predict asynchronously chunk-by-chunk the diffusion signal.
 
@@ -140,7 +141,7 @@ class BaseDWIModel(BaseModel):
         if n_models == 1:
             predicted, _ = _exec_predict(self._model, **(kwargs | {"gtab": gradient, "S0": S0}))
         else:
-            S0 = np.array_split(S0, n_models) if S0 is not None else [None] * n_models
+            S0 = np.array_split(S0, n_models) if S0 is not None else np.full(n_models, None)
 
             predicted = [None] * n_models
 
@@ -173,7 +174,15 @@ class AverageDWIModel(ExpectationModel):
 
     __slots__ = ("_th_low", "_th_high", "_detrend")
 
-    def __init__(self, dataset, stat="median", th_low=100, th_high=100, detrend=False, **kwargs):
+    def __init__(
+        self,
+        dataset: DWI,
+        stat: str = "median",
+        th_low: float = 100.0,
+        th_high: float = 100.0,
+        detrend: bool = False,
+        **kwargs,
+    ):
         r"""
         Implement object initialization.
 
@@ -183,10 +192,10 @@ class AverageDWIModel(ExpectationModel):
             Reference to a DWI object.
         stat : :obj:`str`, optional
             Whether the summary statistic to apply is ``"mean"`` or ``"median"``.
-        th_low : :obj:`numbers.Number`, optional
+        th_low : :obj:`float`, optional
             A lower bound for the b-value corresponding to the diffusion weighted images
             that will be averaged.
-        th_high : :obj:`numbers.Number`, optional
+        th_high : :obj:`float`, optional
             An upper bound for the b-value corresponding to the diffusion weighted images
             that will be averaged.
         detrend : :obj:`bool`, optional
