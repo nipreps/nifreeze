@@ -17,11 +17,17 @@ jobs:
   build-package:
     name: Build & verify package
     runs-on: ubuntu-latest
+    permissions:
+      attestations: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: hynek/build-and-inspect-python-package@v2
+        with:
+          # Always true, but we will likely want to reuse this job in PR builds
+          attest-build-provenance-github: ${{ github.event_name != 'pull_request' }}
 
   auto-release-test-pypi:
     runs-on: ubuntu-latest
