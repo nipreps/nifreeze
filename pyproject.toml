@@ -82,7 +82,6 @@ types = [
   "types-PyYAML",
   "types-tqdm",
   "pytest",
-  "microsoft-python-type-stubs @ git+https://github.com/microsoft/python-type-stubs.git",
 ]
 
 notebooks = [
