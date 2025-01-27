@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.model.dmri - nifreeze 25.0.0.dev146 documentation</title>
+        <title>nifreeze.model.dmri - nifreeze 25.0.0.dev150 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev146 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev150 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev146</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev150</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev146</span>
+  <span class="sidebar-brand-text">25.0.0.dev150</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -323,6 +323,7 @@
 <span class="kn">from</span> <span class="nn">nifreeze.data.dmri</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">DEFAULT_CLIP_PERCENTILE</span><span class="p">,</span>
     <span class="n">DTI_MIN_ORIENTATIONS</span><span class="p">,</span>
+    <span class="n">DWI</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">nifreeze.model.base</span> <span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ExpectationModel</span>
 
@@ -347,7 +348,7 @@
         <span class="s2">&quot;_modelargs&quot;</span><span class="p">:</span> <span class="s2">&quot;Arguments acceptable by the underlying DIPY-like model.&quot;</span><span class="p">,</span>
     <span class="p">}</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">DWI</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Initialization.</span>
 
 <span class="sd">        Parameters</span>
@@ -415,7 +416,7 @@
 
 <div class="viewcode-block" id="BaseDWIModel.fit_predict">
 <a class="viewcode-back" href="../../../api/nifreeze.model.dmri.html#nifreeze.model.BaseDWIModel.fit_predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Predict asynchronously chunk-by-chunk the diffusion signal.</span>
 
@@ -438,7 +439,7 @@
         <span class="k">if</span> <span class="n">n_models</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">predicted</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_exec_predict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">,</span> <span class="o">**</span><span class="p">(</span><span class="n">kwargs</span> <span class="o">|</span> <span class="p">{</span><span class="s2">&quot;gtab&quot;</span><span class="p">:</span> <span class="n">gradient</span><span class="p">,</span> <span class="s2">&quot;S0&quot;</span><span class="p">:</span> <span class="n">S0</span><span class="p">}))</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">S0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array_split</span><span class="p">(</span><span class="n">S0</span><span class="p">,</span> <span class="n">n_models</span><span class="p">)</span> <span class="k">if</span> <span class="n">S0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_models</span>
+            <span class="n">S0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array_split</span><span class="p">(</span><span class="n">S0</span><span class="p">,</span> <span class="n">n_models</span><span class="p">)</span> <span class="k">if</span> <span class="n">S0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">n_models</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
             <span class="n">predicted</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_models</span>
 
@@ -475,7 +476,15 @@
 
     <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;_th_low&quot;</span><span class="p">,</span> <span class="s2">&quot;_th_high&quot;</span><span class="p">,</span> <span class="s2">&quot;_detrend&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="s2">&quot;median&quot;</span><span class="p">,</span> <span class="n">th_low</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">th_high</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">detrend</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">dataset</span><span class="p">:</span> <span class="n">DWI</span><span class="p">,</span>
+        <span class="n">stat</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;median&quot;</span><span class="p">,</span>
+        <span class="n">th_low</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">100.0</span><span class="p">,</span>
+        <span class="n">th_high</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">100.0</span><span class="p">,</span>
+        <span class="n">detrend</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Implement object initialization.</span>
 
@@ -485,10 +494,10 @@
 <span class="sd">            Reference to a DWI object.</span>
 <span class="sd">        stat : :obj:`str`, optional</span>
 <span class="sd">            Whether the summary statistic to apply is ``&quot;mean&quot;`` or ``&quot;median&quot;``.</span>
-<span class="sd">        th_low : :obj:`numbers.Number`, optional</span>
+<span class="sd">        th_low : :obj:`float`, optional</span>
 <span class="sd">            A lower bound for the b-value corresponding to the diffusion weighted images</span>
 <span class="sd">            that will be averaged.</span>
-<span class="sd">        th_high : :obj:`numbers.Number`, optional</span>
+<span class="sd">        th_high : :obj:`float`, optional</span>
 <span class="sd">            An upper bound for the b-value corresponding to the diffusion weighted images</span>
 <span class="sd">            that will be averaged.</span>
 <span class="sd">        detrend : :obj:`bool`, optional</span>
@@ -606,7 +615,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=f3ff39c5"></script>
+</div><script src="../../../_static/documentation_options.js?v=f8c1fd55"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>
