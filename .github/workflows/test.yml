@@ -44,9 +44,16 @@ jobs:
           SHA=$( git ls-remote $TEST_DATA_REPO HEAD | cut -f 1 )
           echo SHA=$SHA >> $GITHUB_OUTPUT
           echo SHA7=${SHA:0:7} >> $GITHUB_OUTPUT
-      - uses: actions/cache@v4
-        name: Cache data-v1-${{ steps.test-head.outputs.SHA }}
+      - name: Check for data-v1-${{ steps.test-head.outputs.SHA }}
+        uses: actions/cache@v4
         id: test-data
+        with:
+          path: /home/runner/nifreeze-tests/
+          key: data-v1-${{ steps.test-head.outputs.SHA }}
+          lookup-only: true
+      - name: Create data-v1-${{ steps.test-head.outputs.SHA }}
+        uses: actions/cache@v4
+        if: steps.test-data.outputs.cache-hit != 'true'
         with:
           path: /home/runner/nifreeze-tests/
           key: data-v1-${{ steps.test-head.outputs.SHA }}
