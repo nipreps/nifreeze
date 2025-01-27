@@ -26,9 +26,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Self, TypeVar
+from typing import TypeVar
 
 from tqdm import tqdm
+from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset
 from nifreeze.model.base import BaseModel, ModelFactory
