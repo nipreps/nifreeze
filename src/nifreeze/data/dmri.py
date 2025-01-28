@@ -140,6 +140,14 @@ class DWI(BaseDataset[np.ndarray | None]):
 
         return cls(**data)
 
+    @property
+    def bvals(self):
+        return self.gradients[-1, ...]
+
+    @property
+    def bvecs(self):
+        return self.gradients[:-1, ...]
+
     def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
         """
         Set an affine transform for a particular index and update the data object.
@@ -164,14 +172,14 @@ class DWI(BaseDataset[np.ndarray | None]):
         reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
 
         xform = Affine(matrix=affine, reference=reference)
-        bvec = self.gradients[:3, index]
+        bvec = self.bvecs[:, index]
 
         # invert transform transform b-vector and origin
         r_bvec = (~xform).map([bvec, (0.0, 0.0, 0.0)])
         # Reset b-vector's origin
         new_bvec = r_bvec[1] - r_bvec[0]
         # Normalize and update
-        self.gradients[:3, index] = new_bvec / np.linalg.norm(new_bvec)
+        self.bvecs[:, index] = new_bvec / np.linalg.norm(new_bvec)
 
         super().set_transform(index, affine, order)
 
@@ -201,7 +209,13 @@ class DWI(BaseDataset[np.ndarray | None]):
         with h5py.File(filename, "r+") as out_file:
             out_file.attrs["Type"] = "dmri"
 
-    def to_nifti(self, filename: Path | str, insert_b0: bool = False) -> None:
+    def to_nifti(
+        self,
+        filename: Path | str,
+        insert_b0: bool = False,
+        bvals_dec_places: int = 2,
+        bvecs_dec_places: int = 6,
+    ) -> None:
         """
         Write a NIfTI file to disk.
 
@@ -209,8 +223,12 @@ class DWI(BaseDataset[np.ndarray | None]):
         ----------
         filename : :obj:`os.pathlike`
             The output NIfTI file path.
-        insert_b0 : :obj:`bool`
+        insert_b0 : :obj:`bool`, optional
             Insert a :math:`b=0` at the front of the output NIfTI.
+        bvals_dec_places : :obj:`int`, optional
+            Decimal places to use when serializing b-values.
+        bvecs_dec_places : :obj:`int`, optional
+            Decimal places to use when serializing b-vectors.
 
         """
         if not insert_b0:
@@ -226,12 +244,8 @@ class DWI(BaseDataset[np.ndarray | None]):
         # Convert filename to a Path object.
         out_root = Path(filename).absolute()
 
-        # Remove .gz if present, then remove .nii if present.
-        # This yields the base stem for writing .bvec / .bval.
-        if out_root.suffix == ".gz":
-            out_root = out_root.with_suffix("")  # remove '.gz'
-        if out_root.suffix == ".nii":
-            out_root = out_root.with_suffix("")  # remove '.nii'
+        # Get the base stem for writing .bvec / .bval.
+        out_root = out_root.parent / out_root.name.replace("".join(out_root.suffixes), "")
 
         # Construct sidecar file paths.
         bvecs_file = out_root.with_suffix(".bvec")
@@ -239,8 +253,8 @@ class DWI(BaseDataset[np.ndarray | None]):
 
         # Save bvecs and bvals to text files
         # Each row of bvecs is one direction (3 rows, N columns).
-        np.savetxt(bvecs_file, self.gradients[:3, ...].T, fmt="%.6f")
-        np.savetxt(bvals_file, self.gradients[:3, ...], fmt="%.6f")
+        np.savetxt(bvecs_file, self.bvecs, fmt=f"%.{bvecs_dec_places}f")
+        np.savetxt(bvals_file, self.bvals[np.newaxis, :], fmt=f"%.{bvals_dec_places}f")
 
 
 def load(
