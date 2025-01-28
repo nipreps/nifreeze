@@ -256,6 +256,42 @@ class DWI(BaseDataset[np.ndarray | None]):
         np.savetxt(bvecs_file, self.bvecs, fmt=f"%.{bvecs_dec_places}f")
         np.savetxt(bvals_file, self.bvals[np.newaxis, :], fmt=f"%.{bvals_dec_places}f")
 
+    def shells(
+        self,
+        num_bins: int = DEFAULT_NUM_BINS,
+        multishell_nonempty_bin_count_thr: int = DEFAULT_MULTISHELL_BIN_COUNT_THR,
+        bval_cap: int = DEFAULT_HIGHB_THRESHOLD,
+    ) -> list:
+        """Get the shell data according to the b-value groups.
+
+        Bin the shell data according to the b-value groups found by `~find_shelling_scheme`.
+
+        Parameters
+        ----------
+        num_bins : :obj:`int`, optional
+            Number of bins.
+        multishell_nonempty_bin_count_thr : :obj:`int`, optional
+            Bin count to consider a multi-shell scheme.
+        bval_cap : :obj:`int`, optional
+            Maximum b-value to be considered in a multi-shell scheme.
+
+        Returns
+        -------
+        :obj:`list`
+            Tuples of binned b-values and corresponding shell data.
+        """
+
+        _, bval_groups, bval_estimated = find_shelling_scheme(
+            self.gradients[-1, ...],
+            num_bins=num_bins,
+            multishell_nonempty_bin_count_thr=multishell_nonempty_bin_count_thr,
+            bval_cap=bval_cap,
+        )
+        indices = [
+            np.hstack(np.where(np.isin(self.gradients[-1, ...], bvals))) for bvals in bval_groups
+        ]
+        return [(bval_estimated[idx], *self[indices]) for idx, indices in enumerate(indices)]
+
 
 def load(
     filename: Path | str,
