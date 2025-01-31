@@ -22,6 +22,8 @@
 #
 """Unit tests exercising the dMRI data structure."""
 
+from pathlib import Path
+
 import nibabel as nb
 import numpy as np
 import pytest
@@ -74,40 +76,83 @@ def test_main(datadir):
     assert isinstance(load(input_file), DWI)
 
 
-def test_load(datadir, tmp_path):
+@pytest.mark.parametrize("insert_b0", (False, True))
+def test_load(datadir, tmp_path, insert_b0):
     dwi_h5 = DWI.from_filename(datadir / "dwi.h5")
     dwi_nifti_path = tmp_path / "dwi.nii.gz"
     gradients_path = tmp_path / "dwi.tsv"
-    bvecs_path = tmp_path / "dwi.bvecs"
-    bvals_path = tmp_path / "dwi.bvals"
 
-    grad_table = np.hstack((np.zeros((4, 1)), dwi_h5.gradients))
-
-    dwi_h5.to_nifti(dwi_nifti_path, insert_b0=True)
-    np.savetxt(str(gradients_path), grad_table.T)
-    np.savetxt(str(bvecs_path), grad_table[:3])
-    np.savetxt(str(bvals_path), grad_table[-1])
+    dwi_h5.to_nifti(dwi_nifti_path, insert_b0=insert_b0)
 
     with pytest.raises(RuntimeError):
         from_nii(dwi_nifti_path)
 
-    # Try loading NIfTI + gradients table
-    dwi_from_nifti1 = from_nii(dwi_nifti_path, gradients_file=gradients_path)
-
-    assert np.allclose(dwi_h5.dataobj, dwi_from_nifti1.dataobj)
-    assert np.allclose(dwi_h5.bzero, dwi_from_nifti1.bzero)
-    assert np.allclose(dwi_h5.gradients, dwi_from_nifti1.gradients)
-
     # Try loading NIfTI + b-vecs/vals
-    dwi_from_nifti2 = from_nii(
+    out_root = dwi_nifti_path.parent / dwi_nifti_path.name.replace(
+        "".join(dwi_nifti_path.suffixes), ""
+    )
+    bvecs_path = out_root.with_suffix(".bvec")
+    bvals_path = out_root.with_suffix(".bval")
+    dwi_from_nifti1 = from_nii(
         dwi_nifti_path,
         bvec_file=bvecs_path,
         bval_file=bvals_path,
     )
 
+    assert np.allclose(dwi_h5.dataobj, dwi_from_nifti1.dataobj)
+    if insert_b0:
+        assert np.allclose(dwi_h5.bzero, dwi_from_nifti1.bzero)
+    assert np.allclose(dwi_h5.gradients, dwi_from_nifti1.gradients, atol=1e-6)
+    assert np.allclose(dwi_h5.bvals, dwi_from_nifti1.bvals, atol=1e-6)
+    assert np.allclose(dwi_h5.bvecs, dwi_from_nifti1.bvecs, atol=1e-6)
+
+    grad_table = dwi_h5.gradients
+    if insert_b0:
+        grad_table = np.hstack((np.zeros((4, 1)), dwi_h5.gradients))
+    np.savetxt(str(gradients_path), grad_table)
+
+    # Try loading NIfTI + gradients table
+    dwi_from_nifti2 = from_nii(dwi_nifti_path, gradients_file=gradients_path)
+
     assert np.allclose(dwi_h5.dataobj, dwi_from_nifti2.dataobj)
-    assert np.allclose(dwi_h5.bzero, dwi_from_nifti2.bzero)
+    if insert_b0:
+        assert np.allclose(dwi_h5.bzero, dwi_from_nifti2.bzero)
     assert np.allclose(dwi_h5.gradients, dwi_from_nifti2.gradients)
+    assert np.allclose(dwi_h5.bvals, dwi_from_nifti2.bvals, atol=1e-6)
+    assert np.allclose(dwi_h5.bvecs, dwi_from_nifti2.bvecs, atol=1e-6)
+
+    # Get the existing bzero data from the DWI instance, write it as a separate
+    # file, and do the round-trip
+    bzero = dwi_h5.bzero
+    nii = nb.Nifti1Image(bzero, dwi_h5.affine, dwi_h5.datahdr)
+    if dwi_h5.datahdr is None:
+        nii.header.set_xyzt_units("mm")
+    b0_file = Path(str(out_root) + "-b0").with_suffix(".nii.gz")
+    nii.to_filename(b0_file)
+
+    dwi_h5.to_nifti(dwi_nifti_path, insert_b0=insert_b0)
+
+    dwi_from_nifti3 = from_nii(
+        dwi_nifti_path,
+        bvec_file=bvecs_path,
+        bval_file=bvals_path,
+        b0_file=b0_file,
+    )
+
+    assert np.allclose(dwi_h5.dataobj, dwi_from_nifti3.dataobj)
+    assert np.allclose(dwi_h5.bzero, dwi_from_nifti3.bzero)
+    assert np.allclose(dwi_h5.gradients, dwi_from_nifti3.gradients, atol=1e-6)
+    assert np.allclose(dwi_h5.bvals, dwi_from_nifti3.bvals, atol=1e-6)
+    assert np.allclose(dwi_h5.bvecs, dwi_from_nifti3.bvecs, atol=1e-6)
+
+    # Try loading NIfTI + gradients table
+    dwi_from_nifti4 = from_nii(dwi_nifti_path, gradients_file=gradients_path, b0_file=b0_file)
+
+    assert np.allclose(dwi_h5.dataobj, dwi_from_nifti4.dataobj)
+    assert np.allclose(dwi_h5.bzero, dwi_from_nifti4.bzero)
+    assert np.allclose(dwi_h5.gradients, dwi_from_nifti4.gradients)
+    assert np.allclose(dwi_h5.bvals, dwi_from_nifti4.bvals, atol=1e-6)
+    assert np.allclose(dwi_h5.bvecs, dwi_from_nifti4.bvecs, atol=1e-6)
 
 
 @pytest.mark.random_gtab_data(10, (1000,), 1)

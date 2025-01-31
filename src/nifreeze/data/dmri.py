@@ -205,12 +205,16 @@ class DWI(BaseDataset[np.ndarray | None]):
         """
         Write a NIfTI file to disk.
 
+        This method assumes that the ``bzero`` attribute of `~nifreeze.data.dmri.DWI`
+        is not ``None``.
+
         Parameters
         ----------
         filename : :obj:`os.pathlike`
             The output NIfTI file path.
         insert_b0 : :obj:`bool`, optional
-            Insert a :math:`b=0` at the front of the output NIfTI.
+            Insert a :math:`b=0` at the front of the output NIfTI and add the corresponding
+            null gradient value to the output bval/bvec files.
         bvals_dec_places : :obj:`int`, optional
             Decimal places to use when serializing b-values.
         bvecs_dec_places : :obj:`int`, optional
@@ -221,6 +225,7 @@ class DWI(BaseDataset[np.ndarray | None]):
             # Parent's to_nifti to handle the primary NIfTI export.
             super().to_nifti(filename)
         else:
+            # Assume bzero is never None
             data = np.concatenate((self.bzero[..., np.newaxis], self.dataobj), axis=-1)
             nii = nb.Nifti1Image(data, self.affine, self.datahdr)
             if self.datahdr is None:
@@ -237,10 +242,18 @@ class DWI(BaseDataset[np.ndarray | None]):
         bvecs_file = out_root.with_suffix(".bvec")
         bvals_file = out_root.with_suffix(".bval")
 
+        # If inserting a b0 volume is requested, add the corresponding null
+        # gradient value to the bval/bvec pair
+        bvals = self.bvals
+        bvecs = self.bvecs
+        if insert_b0:
+            bvals = np.concatenate((np.zeros(1), bvals))
+            bvecs = np.concatenate((np.zeros(3)[:, np.newaxis], bvecs), axis=-1)
+
         # Save bvecs and bvals to text files
         # Each row of bvecs is one direction (3 rows, N columns).
-        np.savetxt(bvecs_file, self.bvecs, fmt=f"%.{bvecs_dec_places}f")
-        np.savetxt(bvals_file, self.bvals[np.newaxis, :], fmt=f"%.{bvals_dec_places}f")
+        np.savetxt(bvecs_file, bvecs, fmt=f"%.{bvecs_dec_places}f")
+        np.savetxt(bvals_file, bvals[np.newaxis, :], fmt=f"%.{bvals_dec_places}f")
 
     def shells(
         self,
