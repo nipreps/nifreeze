@@ -159,3 +159,9 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
             "Warnings as errors: Activated.\n"
             f"{len(have_warnings)} warnings were raised and treated as errors.\n"
         )
+
+
+@pytest.fixture(autouse=True)
+def random_number_generator(request):
+    """Automatically set a fixed-seed random number generator for all tests."""
+    request.node.rng = np.random.default_rng(1234)

@@ -33,9 +33,11 @@ from nifreeze.data.base import NFDH5_EXT, BaseDataset, load
 
 
 @pytest.fixture
-def random_dataset() -> BaseDataset:
+def random_dataset(request) -> BaseDataset:
     """Create a BaseDataset with random data for testing."""
-    data = np.random.rand(32, 32, 32, 5).astype(np.float32)
+
+    rng = request.node.rng
+    data = rng.random((32, 32, 32, 5)).astype(np.float32)
     affine = np.eye(4, dtype=np.float32)
     return BaseDataset(dataobj=data, affine=affine)
 
