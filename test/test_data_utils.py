@@ -5,8 +5,8 @@ import numpy.testing as npt
 from nifreeze.data.utils import apply_affines
 
 
-def test_apply_affines():
-    rng = np.random.default_rng(1234)
+def test_apply_affines(request):
+    rng = request.node.rng
 
     # Create synthetic dataset
     nii_data = rng.random((10, 10, 10, 10))

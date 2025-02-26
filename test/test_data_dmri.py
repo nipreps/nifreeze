@@ -29,8 +29,8 @@ import pytest
 from nifreeze.data.dmri import find_shelling_scheme, load
 
 
-def _create_dwi_random_dataobj():
-    rng = np.random.default_rng(1234)
+def _create_dwi_random_dataobj(request):
+    rng = request.node.rng
 
     n_gradients = 10
     b0s = 1
@@ -134,7 +134,7 @@ def test_load(datadir, tmp_path):
     assert np.allclose(dwi_h5.gradients, dwi_from_nifti2.gradients)
 
 
-def test_equality_operator(tmp_path):
+def test_equality_operator(tmp_path, request):
     # Create some random data
     (
         dwi_dataobj,
@@ -143,7 +143,7 @@ def test_equality_operator(tmp_path):
         b0_dataobj,
         gradients,
         b0_thres,
-    ) = _create_dwi_random_dataobj()
+    ) = _create_dwi_random_dataobj(request)
 
     dwi, brainmask, b0 = _create_dwi_random_data(
         dwi_dataobj,

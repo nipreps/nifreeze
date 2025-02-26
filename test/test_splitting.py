@@ -28,7 +28,7 @@ from nifreeze.data.dmri import DWI
 from nifreeze.data.splitting import lovo_split
 
 
-def test_lovo_split(datadir):
+def test_lovo_split(request, datadir):
     """
     Test the lovo_split function.
 
@@ -46,7 +46,8 @@ def test_lovo_split(datadir):
     data.gradients[:] = 0
 
     # Select a random index
-    index = np.random.randint(len(data))
+    rng = request.node.rng
+    index = rng.integers(len(data))
 
     # Set 1 in dataobj and gradients of the dwi object at this specific index
     data.dataobj[..., index] = 1
