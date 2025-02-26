@@ -29,8 +29,8 @@ import pytest
 from nifreeze.data.dmri import find_shelling_scheme, load
 
 
-def _create_dwi_random_dataobj():
-    rng = np.random.default_rng(1234)
+def _create_dwi_random_dataobj(request):
+    rng = request.node.rng
 
     n_gradients = 10
     b0s = 1
