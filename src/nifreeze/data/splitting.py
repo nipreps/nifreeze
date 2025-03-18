@@ -1,7 +1,7 @@
 # emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 #
-# Copyright 2022 The NiPreps Developers <nipreps@gmail.com>
+# Copyright The NiPreps Developers <nipreps@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,65 +22,36 @@
 #
 """Data splitting helpers."""
 
-from pathlib import Path
+from __future__ import annotations
 
-import h5py
+from typing import Any
+
 import numpy as np
 
+from nifreeze.data.base import BaseDataset
 
-def lovo_split(dataset, index, with_b0=False):
+
+def lovo_split(dataset: BaseDataset, index: int) -> tuple[Any, Any]:
     """
     Produce one fold of LOVO (leave-one-volume-out).
 
     Parameters
     ----------
-    dataset : :obj:`nifreeze.data.dmri.DWI`
-        DWI object
+    dataset : :obj:`nifreeze.data.base.BaseDataset`
+        Dataset object.
     index : :obj:`int`
-        Index of the DWI orientation to be left out in this fold.
+        Index of the volume to be left out in this fold.
 
     Returns
     -------
-    (train_data, train_gradients) : :obj:`tuple`
-        Training DWI and corresponding gradients.
-        Training data/gradients come **from the updated dataset**.
-    (test_data, test_gradients) :obj:`tuple`
-        Test 3D map (one DWI orientation) and corresponding b-vector/value.
-        The test data/gradient come **from the original dataset**.
+    :obj:`tuple` of :obj:`tuple`
+        A tuple of two elements, the first element being  the components
+        of the *train* data (including the data themselves and other metadata
+        such as gradients for dMRI, or frame times for PET), and the second
+        element being the *test* data.
 
     """
-
-    if not Path(dataset.get_filename()).exists():
-        dataset.to_filename(dataset.get_filename())
-
-    # read original DWI data & b-vector
-    with h5py.File(dataset.get_filename(), "r") as in_file:
-        root = in_file["/0"]
-        data = np.asanyarray(root["dataobj"])
-        gradients = np.asanyarray(root["gradients"])
-
-    # if the size of the mask does not match data, cache is stale
-    mask = np.zeros(data.shape[-1], dtype=bool)
+    mask = np.zeros(len(dataset), dtype=bool)
     mask[index] = True
 
-    train_data = data[..., ~mask]
-    train_gradients = gradients[..., ~mask]
-    test_data = data[..., mask]
-    test_gradients = gradients[..., mask]
-
-    if with_b0:
-        train_data = np.concatenate(
-            (np.asanyarray(dataset.bzero)[..., np.newaxis], train_data),
-            axis=-1,
-        )
-        b0vec = np.zeros((4, 1))
-        b0vec[0, 0] = 1
-        train_gradients = np.concatenate(
-            (b0vec, train_gradients),
-            axis=-1,
-        )
-
-    return (
-        (train_data, train_gradients),
-        (test_data, test_gradients),
-    )
+    return (dataset[~mask], dataset[mask])

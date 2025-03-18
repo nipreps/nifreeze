@@ -49,7 +49,7 @@ def cross_validate(
     cv: int,
     n_repeats: int,
     gpr: DiffusionGPR,
-) -> dict[int, list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]]:
+) -> np.ndarray:
     """
     Perform the experiment by estimating the dMRI signal using a Gaussian process model.
 
@@ -74,7 +74,14 @@ def cross_validate(
     """
 
     rkf = RepeatedKFold(n_splits=cv, n_repeats=n_repeats)
-    scores = cross_val_score(gpr, X, y, scoring="neg_root_mean_squared_error", cv=rkf)
+    # scikit-learn stubs do not recognize rkf as a BaseCrossValidator
+    scores = cross_val_score(
+        gpr,
+        X,
+        y,
+        scoring="neg_root_mean_squared_error",
+        cv=rkf,  # type: ignore[arg-type]
+    )
     return scores
 
 
@@ -204,10 +211,10 @@ def main() -> None:
 
     if args.kfold:
         # Use Scikit-learn cross validation
-        scores = defaultdict(list, {})
+        scores: dict[str, list] = defaultdict(list, {})
         for n in args.kfold:
             for i in range(args.repeats):
-                cv_scores = -1.0 * cross_validate(X, y.T, n, gpr)
+                cv_scores = -1.0 * cross_validate(X, y.T, n, i, gpr)
                 scores["rmse"] += cv_scores.tolist()
                 scores["repeat"] += [i] * len(cv_scores)
                 scores["n_folds"] += [n] * len(cv_scores)
@@ -217,7 +224,7 @@ def main() -> None:
             print(f"Finished {n}-fold cross-validation")
 
         scores_df = pd.DataFrame(scores)
-        scores_df.to_csv(args.output_scores, sep="\t", index=None, na_rep="n/a")
+        scores_df.to_csv(args.output_scores, sep="\t", index=False, na_rep="n/a")
 
         grouped = scores_df.groupby(["n_folds"])
         print(grouped[["rmse"]].mean())

@@ -20,16 +20,17 @@ classifiers = [
 license = "Apache-2.0"
 requires-python = ">=3.10"
 dependencies = [
-    "dipy>=1.3.0",
+    "dipy>=1.5.0",
     "joblib",
     "nipype>= 1.5.1,<2.0",
     "nitransforms>=21.0.0,<24",
     "nireports",
-    "numpy>=1.17.3",
+    "numpy>=1.21.3",
     "nest-asyncio>=1.5.1",
-    "scikit-image>=0.14.2",
-    "scikit_learn>=0.18",
+    "scikit-image>=0.15.0",
+    "scikit_learn>=1.3.0",
     "scipy>=1.8.0",
+    "typing_extensions >=4.12",
 ]
 dynamic = ["version"]
 
@@ -68,18 +69,42 @@ resmon = ["psutil >=5.4"]
 
 test = [
     "coverage",
+    "ipykernel",
+    "mriqc-learn",
     "pytest >= 4.4",
     "pytest-console-scripts",
     "pytest-cov",
     "pytest-env",
     "pytest-xdist >= 1.28"
 ]
+types = [
+  "pandas-stubs",
+  "types-setuptools",
+  "scipy-stubs",
+  "types-PyYAML",
+  "types-tqdm",
+  "pytest",
+]
+
+notebooks = [
+    "jupyter",
+    "nbclient",
+    "nbmake",
+    "mriqc_learn",
+    "nipreps-synthstrip",
+]
 
 antsopt = [
     "ConfigSpace",
     "nipreps",
-    "skimage",
+    "scikit-image",
     "smac",
+]
+
+benchmark = [
+    "asv",
+    "pyperf",
+    "virtualenv",
 ]
 
 # Aliases
@@ -122,6 +147,21 @@ version-file = "src/nifreeze/_version.py"
 #
 # Developer tool configurations
 #
+
+[[tool.mypy.overrides]]
+module = [
+  "nipype.*",
+  "nilearn.*",
+  "nireports.*",
+  "nitransforms.*",
+  "seaborn",
+  "dipy.*",
+  "smac.*",
+  "joblib",
+  "h5py",
+  "ConfigSpace",
+]
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 99
@@ -177,7 +217,13 @@ norecursedirs = [".*", "_*"]
 addopts = "-v --doctest-modules"
 doctest_optionflags = "ALLOW_UNICODE NORMALIZE_WHITESPACE ELLIPSIS"
 env = "PYTHONHASHSEED=0"
-filterwarnings = ["ignore::DeprecationWarning"]
+filterwarnings = [
+  "ignore::DeprecationWarning",
+  # DIPY
+  "ignore:Updating b0_threshold to.*:UserWarning",
+  # scikit-learn
+  "ignore:The optimal value found for dimension.*:sklearn.exceptions.ConvergenceWarning",
+]
 
 
 [tool.coverage.run]

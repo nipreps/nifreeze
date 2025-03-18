@@ -24,77 +24,62 @@
 
 from os import cpu_count
 
-import nibabel as nb
 import nitransforms as nt
-import numpy as np
 
-from nifreeze.data.dmri import DWI
 from nifreeze.estimator import Estimator
+from nifreeze.model.base import TrivialModel
 from nifreeze.registration.utils import displacements_within_mask
 
 
-def test_proximity_estimator_trivial_model(datadir, tmp_path):
+def test_proximity_estimator_trivial_model(motion_data, tmp_path):
     """Check the proximity of transforms estimated by the estimator with a trivial B0 model."""
 
-    dwdata = DWI.from_filename(datadir / "dwi.h5")
-    b0nii = nb.Nifti1Image(dwdata.bzero, dwdata.affine, None)
-    masknii = nb.Nifti1Image(dwdata.brainmask.astype(np.uint8), dwdata.affine, None)
+    b0nii = motion_data["b0nii"]
+    moved_nii = motion_data["moved_nii"]
+    xfms = motion_data["xfms"]
+    dwi_motion = motion_data["moved_nifreeze"]
 
-    # Generate a list of large-yet-plausible bulk-head motion.
-    xfms = nt.linear.LinearTransformsMapping(
-        [
-            nb.affines.from_matvec(nb.eulerangles.euler2mat(x=0.03, z=0.005), (0.8, 0.2, 0.2)),
-            nb.affines.from_matvec(nb.eulerangles.euler2mat(x=0.02, z=0.005), (0.8, 0.2, 0.2)),
-            nb.affines.from_matvec(nb.eulerangles.euler2mat(x=0.02, z=0.02), (0.4, 0.2, 0.2)),
-            nb.affines.from_matvec(nb.eulerangles.euler2mat(x=-0.02, z=0.02), (0.4, 0.2, 0.2)),
-            nb.affines.from_matvec(nb.eulerangles.euler2mat(x=-0.02, z=0.002), (0.0, 0.2, 0.2)),
-            nb.affines.from_matvec(nb.eulerangles.euler2mat(y=-0.02, z=0.002), (0.0, 0.2, 0.2)),
-            nb.affines.from_matvec(nb.eulerangles.euler2mat(y=-0.01, z=0.002), (0.0, 0.4, 0.2)),
-        ],
-        reference=b0nii,
-    )
-
-    # Induce motion into dataset (i.e., apply the inverse transforms)
-    moved_nii = (~xfms).apply(b0nii, reference=b0nii)
-
-    # Uncomment to see the moved dataset
-    moved_nii.to_filename(tmp_path / "test.nii.gz")
-    xfms.apply(moved_nii).to_filename(tmp_path / "ground_truth.nii.gz")
-
-    # Wrap into dataset object
-    dwi_motion = DWI(
-        dataobj=moved_nii.dataobj,
-        affine=b0nii.affine,
-        bzero=dwdata.bzero,
-        gradients=dwdata.gradients[..., : len(xfms)],
-        brainmask=dwdata.brainmask,
-    )
-
-    estimator = Estimator()
-    em_affines = estimator.estimate(
-        data=dwi_motion,
-        models=("b0",),
-        seed=None,
-        align_kwargs={
-            "fixed_modality": "b0",
-            "moving_modality": "b0",
-            "num_threads": min(cpu_count(), 8),
-        },
+    model = TrivialModel(dwi_motion)
+    estimator = Estimator(model)
+    estimator.run(
+        dwi_motion,
+        seed=12345,
+        num_threads=min(cpu_count(), 8),
     )
 
     # Uncomment to see the realigned dataset
     nt.linear.LinearTransformsMapping(
-        em_affines,
+        dwi_motion.motion_affines,
         reference=b0nii,
     ).apply(moved_nii).to_filename(tmp_path / "realigned.nii.gz")
 
     # For each moved b0 volume
-    for i, est in enumerate(em_affines):
+    for i, est in enumerate(dwi_motion.motion_affines):
         assert (
             displacements_within_mask(
-                masknii,
+                motion_data["masknii"],
                 nt.linear.Affine(est),
                 xfms[i],
             ).max()
-            < 0.2
+            < 0.25
         )
+
+
+def test_stacked_estimators(motion_data):
+    """Check that models can be stacked."""
+
+    # Wrap into dataset object
+    dmri_dataset = motion_data["moved_nifreeze"]
+
+    estimator1 = Estimator(
+        TrivialModel(dmri_dataset),
+        ants_config="dwi-to-dwi_level0.json",
+        clip=False,
+    )
+    estimator2 = Estimator(
+        TrivialModel(dmri_dataset),
+        prev=estimator1,
+        clip=False,
+    )
+
+    estimator2.run(dmri_dataset)

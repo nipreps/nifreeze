@@ -1,7 +1,7 @@
 # emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 #
-# Copyright 2022 The NiPreps Developers <nipreps@gmail.com>
+# Copyright The NiPreps Developers <nipreps@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,230 +22,155 @@
 #
 """A model-based algorithm for the realignment of dMRI data."""
 
+from __future__ import annotations
+
 from pathlib import Path
-from tempfile import TemporaryDirectory, mkstemp
+from tempfile import TemporaryDirectory
+from typing import TypeVar
 
-import nibabel as nb
 from tqdm import tqdm
+from typing_extensions import Self
 
-from nifreeze.data.splitting import lovo_split
-from nifreeze.model.base import ModelFactory
-from nifreeze.registration.ants import _prepare_registration_data, _run_registration
+from nifreeze.data.base import BaseDataset
+from nifreeze.model.base import BaseModel, ModelFactory
+from nifreeze.registration.ants import (
+    _prepare_registration_data,
+    _run_registration,
+)
 from nifreeze.utils import iterators
+
+DatasetT = TypeVar("DatasetT", bound=BaseDataset)
+
+
+class Filter:
+    """Alters an input data object (e.g., downsampling)."""
+
+    def run(self, dataset: DatasetT, **kwargs) -> DatasetT:
+        """
+        Trigger execution of the designated filter.
+
+        Parameters
+        ----------
+        dataset : :obj:`~nifreeze.data.base.BaseDataset`
+            The input dataset this estimator operates on.
+
+        Returns
+        -------
+        dataset : :obj:`~nifreeze.data.base.BaseDataset`
+            The dataset, after filtering.
+
+        """
+        return dataset
 
 
 class Estimator:
     """Estimates rigid-body head-motion and distortions derived from eddy-currents."""
 
-    @staticmethod
-    def estimate(
-        data,
-        *,
-        align_kwargs=None,
-        iter_kwargs=None,
-        models=("b0",),
-        omp_nthreads=None,
-        n_jobs=None,
+    __slots__ = ("_model", "_strategy", "_prev", "_model_kwargs", "_align_kwargs")
+
+    def __init__(
+        self,
+        model: BaseModel | str,
+        strategy: str = "random",
+        prev: Estimator | Filter | None = None,
+        model_kwargs: dict | None = None,
         **kwargs,
     ):
-        r"""
-        Estimate head-motion and Eddy currents.
+        self._model = model
+        self._prev = prev
+        self._strategy = strategy
+        self._model_kwargs = model_kwargs or {}
+        self._align_kwargs = kwargs or {}
+
+    def run(self, dataset: DatasetT, **kwargs) -> Self:
+        """
+        Trigger execution of the workflow this estimator belongs.
 
         Parameters
         ----------
-        data : :obj:`~nifreeze.dmri.DWI`
-            The target DWI dataset, represented by this tool's internal
-            type. The object is used in-place, and will contain the estimated
-            parameters in its ``em_affines`` property, as well as the rotated
-            *b*-vectors within its ``gradients`` property.
-        n_iter : :obj:`int`
-            Number of iterations this particular model is going to be repeated.
-        align_kwargs : :obj:`dict`
-            Parameters to configure the image registration process.
-        iter_kwargs : :obj:`dict`
-            Parameters to configure the iterator strategy to traverse timepoints/orientations.
-        models : :obj:`list`
-            Selects the diffusion model that will generate the registration target
-            corresponding to each gradient map.
-            See :obj:`~nifreeze.model.ModelFactory` for allowed models (and corresponding
-            keywords).
-        omp_nthreads : :obj:`int`
-            Maximum number of threads an individual process may use.
-        n_jobs : :obj:`int`
-            Number of parallel jobs.
+        dataset : :obj:`~nifreeze.data.base.BaseDataset`
+            The input dataset this estimator operates on.
 
-        Return
-        ------
-        :obj:`list` of :obj:`numpy.ndarray`
-            A list of :math:`4 \times 4` affine matrices encoding the estimated
-            parameters of the deformations caused by head-motion and eddy-currents.
+        Returns
+        -------
+        :obj:`~nifreeze.estimator.Estimator`
+            The estimator, after fitting.
 
         """
+        if self._prev is not None:
+            result = self._prev.run(dataset, **kwargs)
+            if isinstance(self._prev, Filter):
+                dataset = result  # type: ignore[assignment]
 
-        # Massage iterator configuration
-        iter_kwargs = iter_kwargs or {}
-        iter_kwargs = {
-            "seed": None,
-            "bvals": None,  # TODO: extract b-vals here if pertinent
-        } | iter_kwargs
-        iter_kwargs["size"] = len(data)
+        n_jobs = kwargs.get("n_jobs", None)
 
-        iterfunc = getattr(iterators, f"{iter_kwargs.pop('strategy', 'random')}_iterator")
-        index_order = list(iterfunc(**iter_kwargs))
+        # Prepare iterator
+        iterfunc = getattr(iterators, f"{self._strategy}_iterator")
+        index_iter = iterfunc(len(dataset), seed=kwargs.get("seed", None))
 
-        align_kwargs = align_kwargs or {}
+        # Initialize model
+        if isinstance(self._model, str):
+            # Factory creates the appropriate model and pipes arguments
+            self._model = ModelFactory.init(
+                model=self._model,
+                dataset=dataset,
+                **self._model_kwargs,
+            )
 
-        if "num_threads" not in align_kwargs and omp_nthreads is not None:
-            align_kwargs["num_threads"] = omp_nthreads
+        kwargs["num_threads"] = kwargs.pop("omp_nthreads", None) or kwargs.pop("num_threads", None)
+        kwargs = self._align_kwargs | kwargs
 
-        n_iter = len(models)
+        dataset_length = len(dataset)
+        with TemporaryDirectory() as tmp_dir:
+            print(f"Processing in <{tmp_dir}>")
+            ptmp_dir = Path(tmp_dir)
 
-        reg_target_type = (
-            align_kwargs.pop("fixed_modality", None),
-            align_kwargs.pop("moving_modality", None),
-        )
+            bmask_path = None
+            if dataset.brainmask is not None:
+                import nibabel as nb
 
-        for i_iter, model in enumerate(models):
-            # When downsampling these need to be set per-level
-            bmask_img = _prepare_brainmask_data(data.brainmask, data.affine)
+                bmask_path = ptmp_dir / "brainmask.nii.gz"
+                nb.Nifti1Image(
+                    dataset.brainmask.astype("uint8"), dataset.affine, None
+                ).to_filename(bmask_path)
 
-            _prepare_kwargs(data, kwargs)
+            with tqdm(total=dataset_length, unit="vols.") as pbar:
+                # run a original-to-synthetic affine registration
+                for i in index_iter:
+                    pbar.set_description_str(f"Fit and predict vol. <{i}>")
 
-            single_model = model.lower() in (
-                "b0",
-                "s0",
-                "avg",
-                "average",
-                "mean",
-                "gp",
-            ) or model.lower().startswith("full")
+                    # fit the model
+                    test_set = dataset[i]
+                    predicted = self._model.fit_predict(  # type: ignore[union-attr]
+                        i,
+                        n_jobs=n_jobs,
+                    )
 
-            dwmodel = None
-            if single_model:
-                if model.lower().startswith("full"):
-                    model = model[4:]
+                    # prepare data for running ANTs
+                    predicted_path, volume_path, init_path = _prepare_registration_data(
+                        test_set[0],
+                        predicted,
+                        dataset.affine,
+                        i,
+                        ptmp_dir,
+                        kwargs.pop("clip", "both"),
+                    )
 
-                # Factory creates the appropriate model and pipes arguments
-                dwmodel = ModelFactory.init(
-                    model=model,
-                    **kwargs,
-                )
-                dwmodel.fit(data.dataobj, n_jobs=n_jobs)
+                    pbar.set_description_str(f"Realign vol. <{i}>")
 
-            with TemporaryDirectory() as tmp_dir:
-                print(f"Processing in <{tmp_dir}>")
-                ptmp_dir = Path(tmp_dir)
-                with tqdm(total=len(index_order), unit="dwi") as pbar:
-                    # run a original-to-synthetic affine registration
-                    for i in index_order:
-                        pbar.set_description_str(
-                            f"Pass {i_iter + 1}/{n_iter} | Fit and predict b-index <{i}>"
-                        )
-                        data_train, data_test = lovo_split(data, i, with_b0=True)
-                        grad_str = f"{i}, {data_test[1][:3]}, b={int(data_test[1][3])}"
-                        pbar.set_description_str(f"[{grad_str}], {n_jobs} jobs")
+                    xform = _run_registration(
+                        predicted_path,
+                        volume_path,
+                        i,
+                        ptmp_dir,
+                        init_affine=init_path,
+                        fixedmask_path=bmask_path,
+                        output_transform_prefix=f"ants-{i:05d}",
+                        **kwargs,
+                    )
 
-                        if not single_model:  # A true LOGO estimator
-                            if hasattr(data, "gradients"):
-                                kwargs["gtab"] = data_train[1]
-                            # Factory creates the appropriate model and pipes arguments
-                            dwmodel = ModelFactory.init(
-                                model=model,
-                                n_jobs=n_jobs,
-                                **kwargs,
-                            )
+                    # update
+                    dataset.set_transform(i, xform.matrix)
+                    pbar.update()
 
-                            # fit the model
-                            dwmodel.fit(
-                                data_train[0],
-                                n_jobs=n_jobs,
-                            )
-
-                        # generate a synthetic dw volume for the test gradient
-                        predicted = dwmodel.predict(data_test[1])
-
-                        # prepare data for running ANTs
-                        fixed, moving = _prepare_registration_data(
-                            data_test[0], predicted, data.affine, i, ptmp_dir, reg_target_type
-                        )
-
-                        pbar.set_description_str(
-                            f"Pass {i_iter + 1}/{n_iter} | Realign b-index <{i}>"
-                        )
-
-                        xform = _run_registration(
-                            fixed,
-                            moving,
-                            bmask_img,
-                            data.em_affines,
-                            data.affine,
-                            data.dataobj.shape[:3],
-                            data_test[1][3],
-                            data.fieldmap,
-                            i_iter,
-                            i,
-                            ptmp_dir,
-                            reg_target_type,
-                            align_kwargs,
-                        )
-
-                        # update
-                        data.set_transform(i, xform.matrix)
-                        pbar.update()
-
-        return data.em_affines
-
-
-def _prepare_brainmask_data(brainmask, affine):
-    """Prepare the brainmask data: save the data to disk.
-
-    Parameters
-    ----------
-    brainmask : :obj:`numpy.ndarray`
-        Brainmask data.
-    affine : :obj:`numpy.ndarray`
-        Affine transformation matrix.
-
-    Returns
-    -------
-    bmask_img : :class:`~nibabel.nifti1.Nifti1Image`
-        Brainmask image.
-    """
-
-    bmask_img = None
-    if brainmask is not None:
-        _, bmask_img = mkstemp(suffix="_bmask.nii.gz")
-        nb.Nifti1Image(brainmask.astype("uint8"), affine, None).to_filename(bmask_img)
-    return bmask_img
-
-
-def _prepare_kwargs(data, kwargs):
-    """Prepare the keyword arguments depending on the DWI data: add attributes corresponding to
-    the ``brainmask``, ``bzero``, ``gradients``, ``frame_time``, and ``total_duration`` DWI data
-    properties.
-
-    Modifies kwargs in-place.
-
-    Parameters
-    ----------
-    data : :class:`nifreeze.data.dmri.DWI`
-        DWI data object.
-    kwargs : :obj:`dict`
-        Keyword arguments.
-    """
-    from nifreeze.data.filtering import advanced_clip as _advanced_clip
-
-    if data.brainmask is not None:
-        kwargs["mask"] = data.brainmask
-
-    if hasattr(data, "bzero") and data.bzero is not None:
-        kwargs["S0"] = _advanced_clip(data.bzero)
-
-    if hasattr(data, "gradients"):
-        kwargs["gtab"] = data.gradients
-
-    if hasattr(data, "frame_time"):
-        kwargs["timepoints"] = data.frame_time
-
-    if hasattr(data, "total_duration"):
-        kwargs["xlim"] = data.total_duration
+        return self

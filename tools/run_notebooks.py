@@ -20,28 +20,14 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""Data models."""
 
-from nifreeze.model.base import (
-    ExpectationModel,
-    ModelFactory,
-    TrivialModel,
-)
-from nifreeze.model.dmri import (
-    AverageDWIModel,
-    DKIModel,
-    DTIModel,
-    GPModel,
-)
-from nifreeze.model.pet import PETModel
+import glob
+import subprocess
+import sys
 
-__all__ = (
-    "ModelFactory",
-    "ExpectationModel",
-    "AverageDWIModel",
-    "DKIModel",
-    "DTIModel",
-    "GPModel",
-    "TrivialModel",
-    "PETModel",
-)
+notebooks = glob.glob("docs/notebooks/*.ipynb")
+# Make bold_realignment.ipynb Jupyter notebook an exception as it involves running a realignment
+# process for several DataLad datasets, which requires long running times.
+notebooks.remove("docs/notebooks/bold_realignment.ipynb")
+
+sys.exit(subprocess.call(["pytest", "--nbmake"] + notebooks))
