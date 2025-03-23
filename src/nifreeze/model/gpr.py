@@ -158,12 +158,12 @@ class DiffusionGPR(GaussianProcessRegressor):
 
     _parameter_constraints = {
         "kernel": [None, Kernel],
-        "alpha": [Interval(Real, 0, None, closed="left"), np.ndarray],
-        "optimizer": [StrOptions(SUPPORTED_OPTIMIZERS), callable, None],
-        "n_restarts_optimizer": [Interval(Integral, 0, None, closed="left")],
+        "alpha": [Interval(Real, 0, None, closed="left"), np.ndarray],  # type: ignore
+        "optimizer": [StrOptions(SUPPORTED_OPTIMIZERS), callable, None],  # type: ignore
+        "n_restarts_optimizer": [Interval(Integral, 0, None, closed="left")],  # type: ignore
         "copy_X_train": ["boolean"],
         "normalize_y": ["boolean"],
-        "n_targets": [Interval(Integral, 1, None, closed="left"), None],
+        "n_targets": [Interval(Integral, 1, None, closed="left"), None],  # type: ignore
         "random_state": ["random_state"],
     }
 
