@@ -27,7 +27,7 @@ from __future__ import annotations
 import nibabel as nb
 import numpy as np
 from dipy.core.geometry import sphere2cart
-from dipy.core.gradients import gradient_table
+from dipy.core.gradients import GradientTable, gradient_table
 from dipy.core.sphere import HemiSphere, Sphere, disperse_charges
 from dipy.sims.voxel import all_tensor_evecs, multi_tensor, single_tensor
 
@@ -148,7 +148,7 @@ def create_diffusion_encoding_gradient_dirs(
 
 def create_single_shell_gradient_table(
     hsph_dirs: int, bval_shell: float, iterations: int = 5000
-) -> gradient_table:
+) -> GradientTable:
     """
     Create a single-shell gradient table.
 
@@ -163,7 +163,7 @@ def create_single_shell_gradient_table(
 
     Returns
     -------
-    :obj:`~dipy.core.gradients.gradient_table`
+    :obj:`~dipy.core.gradients.GradientTable`
         The gradient table for the single-shell.
 
     """
@@ -182,7 +182,7 @@ def create_single_shell_gradient_table(
 
 
 def get_query_vectors(
-    gtab: gradient_table, train_mask: np.ndarray
+    gtab: GradientTable, train_mask: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Get the diffusion-encoding gradient vectors for estimation from the gradient table.
@@ -193,7 +193,7 @@ def get_query_vectors(
 
     Parameters
     ----------
-    gtab : :obj:`~dipy.core.gradients.gradient_table`
+    gtab : :obj:`~dipy.core.gradients.GradientTable`
         Gradient table.
     train_mask : :obj:`~numpy.ndarray`
         Mask for selecting training vectors.
