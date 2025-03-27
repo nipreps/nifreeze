@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.testing.simulations - nifreeze 25.0.0.dev171 documentation</title>
+        <title>nifreeze.testing.simulations - nifreeze 25.0.0.dev177 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev171 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev177 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev171</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev177</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev171</span>
+  <span class="sidebar-brand-text">25.0.0.dev177</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -321,7 +321,7 @@
 <span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nb</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">dipy.core.geometry</span> <span class="kn">import</span> <span class="n">sphere2cart</span>
-<span class="kn">from</span> <span class="nn">dipy.core.gradients</span> <span class="kn">import</span> <span class="n">gradient_table</span>
+<span class="kn">from</span> <span class="nn">dipy.core.gradients</span> <span class="kn">import</span> <span class="n">GradientTable</span><span class="p">,</span> <span class="n">gradient_table</span>
 <span class="kn">from</span> <span class="nn">dipy.core.sphere</span> <span class="kn">import</span> <span class="n">HemiSphere</span><span class="p">,</span> <span class="n">Sphere</span><span class="p">,</span> <span class="n">disperse_charges</span>
 <span class="kn">from</span> <span class="nn">dipy.sims.voxel</span> <span class="kn">import</span> <span class="n">all_tensor_evecs</span><span class="p">,</span> <span class="n">multi_tensor</span><span class="p">,</span> <span class="n">single_tensor</span>
 
@@ -456,7 +456,7 @@
 <a class="viewcode-back" href="../../../api/nifreeze.testing.simulations.html#nifreeze.testing.simulations.create_single_shell_gradient_table">[docs]</a>
 <span class="k">def</span> <span class="nf">create_single_shell_gradient_table</span><span class="p">(</span>
     <span class="n">hsph_dirs</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">bval_shell</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5000</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">gradient_table</span><span class="p">:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GradientTable</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Create a single-shell gradient table.</span>
 
@@ -471,7 +471,7 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    :obj:`~dipy.core.gradients.gradient_table`</span>
+<span class="sd">    :obj:`~dipy.core.gradients.GradientTable`</span>
 <span class="sd">        The gradient table for the single-shell.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -493,7 +493,7 @@
 <div class="viewcode-block" id="get_query_vectors">
 <a class="viewcode-back" href="../../../api/nifreeze.testing.simulations.html#nifreeze.testing.simulations.get_query_vectors">[docs]</a>
 <span class="k">def</span> <span class="nf">get_query_vectors</span><span class="p">(</span>
-    <span class="n">gtab</span><span class="p">:</span> <span class="n">gradient_table</span><span class="p">,</span> <span class="n">train_mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">gtab</span><span class="p">:</span> <span class="n">GradientTable</span><span class="p">,</span> <span class="n">train_mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get the diffusion-encoding gradient vectors for estimation from the gradient table.</span>
@@ -504,7 +504,7 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    gtab : :obj:`~dipy.core.gradients.gradient_table`</span>
+<span class="sd">    gtab : :obj:`~dipy.core.gradients.GradientTable`</span>
 <span class="sd">        Gradient table.</span>
 <span class="sd">    train_mask : :obj:`~numpy.ndarray`</span>
 <span class="sd">        Mask for selecting training vectors.</span>
@@ -869,7 +869,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=9526d9c4"></script>
+</div><script src="../../../_static/documentation_options.js?v=fad7cd10"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>
