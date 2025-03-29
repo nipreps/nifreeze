@@ -142,11 +142,11 @@ def robust_minmax_normalization(data: np.ndarray, mask: np.ndarray | None = None
     return (data - p5) * p95.mean() / p95 + p5.mean()
 
 
-def detrend_dwi_median(data: np.ndarray, mask: np.ndarray | None = None) -> np.ndarray:
-    """Detrend DWI data.
+def grand_mean_normalization(data: np.ndarray, mask: np.ndarray | None = None, newcenter: float = DEFAULT_CLIP_PERCENTILE) -> np.ndarray:
+    """Robust grand mean normalization.
 
-    Regresses out global DWI signal differences so that its standardized and centered around the
-    :data:`src.nifreeze.model.base.DEFAULT_CLIP_PERCENTILE` percentile.
+    Regresses out global signal differences so that data are normalized and centered around
+    a given percentile.
 
     If a mask is provided, only the data within the mask are considered.
 
@@ -163,21 +163,21 @@ def detrend_dwi_median(data: np.ndarray, mask: np.ndarray | None = None) -> np.n
         Detrended data.
     """
 
-    shelldata = data[..., mask]
+    volumes = data[..., mask]
 
     centers = np.median(shelldata, axis=(0, 1, 2))
-    reference = np.percentile(centers[centers >= 1.0], DEFAULT_CLIP_PERCENTILE)
+    reference = np.percentile(centers[centers >= 1.0], newcenter)
     centers[centers < 1.0] = reference
     drift = reference / centers
     return shelldata * drift
 
 
-def clip_dwi_shell_data(
+def dwi_select_shells(
     data: np.ndarray,
     gradients: np.ndarray,
     index: int,
-    th_low: float = BVAL_THRESHOLD,
-    th_high: float = BVAL_THRESHOLD,
+    th_low: float | None = None,
+    th_high: float | None = None,
 ) -> np.ndarray:
     """Clip DWI shell data around the given index and lower and upper b-value bounds.
 
@@ -201,6 +201,11 @@ def clip_dwi_shell_data(
     clipped_dataset : :obj:`~numpy.ndarray`
         Clipped data.
     """
+
+    if th_low is None and th_high is None:
+        return data
+    th_low = 0 if th_low is None else th_low
+    th_high = gradients[:, -1].max() if th_high is None else th_high
 
     clipped_data = copy.deepcopy(data)
 

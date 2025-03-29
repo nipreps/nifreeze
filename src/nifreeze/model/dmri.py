@@ -175,8 +175,8 @@ class AverageDWIModel(ExpectationModel):
         self,
         dataset: DWI,
         stat: str = "median",
-        th_low: float = BVAL_THRESHOLD,
-        th_high: float = BVAL_THRESHOLD,
+        atol_low: float = BVAL_ATOL,
+        atol_high: float = BVAL_ATOL,
         detrend: bool = False,
         **kwargs,
     ):
