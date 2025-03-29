@@ -24,12 +24,18 @@
 
 from __future__ import annotations
 
+import copy
+
 import numpy as np
 from scipy.ndimage import median_filter
 from skimage.morphology import ball
 
+from nifreeze.data.dmri import DEFAULT_CLIP_PERCENTILE
+
 DEFAULT_DTYPE = "int16"
 """The default image's data type."""
+BVAL_THRESHOLD = 100.0
+"""b-value threshold value."""
 
 
 def advanced_clip(
@@ -96,3 +102,126 @@ def advanced_clip(
         data = np.round(255 * data).astype(dtype)
 
     return data
+
+
+def robust_minmax_normalization(data: np.ndarray, mask: np.ndarray | None = None, pmin: float = 5.0, pmax: float = 95.0) -> np.ndarray:
+    r"""Normalize min-max percentiles of each volume to the grand min-max percentiles.
+
+    Robust min/max normalization of the volumes in the dataset following:
+
+    .. math::
+        \text{data}_{\text{detrended}} = \frac{(\text{data} - p_{5}) \cdot p_{\text{mean}}}{p_{\text{range}}} + p_{5}^{\text{mean}}
+
+    where
+
+    .. math::
+        p_{\text{range}} = p_{95} - p_{5}, \quad p_{\text{mean}} = \frac{1}{N} \sum_{i=1}^N p_{\text{range}_i}, \quad p_{5}^{\text{mean}} = \frac{1}{N} \sum_{i=1}^N p_{5_i}
+
+    :math:`p_{5}` and :math:`p_{95}` being the 5th percentile and the 95th percentile of the data,
+    respectively.
+
+    If a mask is provided, only the data within the mask are considered.
+
+    Parameters
+    ----------
+    data : :obj:`~numpy.ndarray`
+        Data to be detrended.
+    mask : :obj:`~numpy.ndarray`, optional
+        Mask. If provided, only the data within the mask are considered.
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        Detrended data.
+    """
+
+    data = data.copy().astype("float32")
+    reshaped_data = data.reshape((-1, data.shape[-1])) if mask is None else data[mask]
+    p5 = np.percentile(reshaped_data, pmin, axis=0)
+    p95 = np.percentile(reshaped_data, pmax, axis=0) - p5
+    return (data - p5) * p95.mean() / p95 + p5.mean()
+
+
+def grand_mean_normalization(data: np.ndarray, mask: np.ndarray | None = None, newcenter: float = DEFAULT_CLIP_PERCENTILE) -> np.ndarray:
+    """Robust grand mean normalization.
+
+    Regresses out global signal differences so that data are normalized and centered around
+    a given percentile.
+
+    If a mask is provided, only the data within the mask are considered.
+
+    Parameters
+    ----------
+    data : :obj:`~numpy.ndarray`
+        Data to be detrended.
+    mask : :obj:`~numpy.ndarray`, optional
+        Mask. If provided, only the data within the mask are considered.
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        Detrended data.
+    """
+
+    volumes = data[..., mask]
+
+    centers = np.median(shelldata, axis=(0, 1, 2))
+    reference = np.percentile(centers[centers >= 1.0], newcenter)
+    centers[centers < 1.0] = reference
+    drift = reference / centers
+    return shelldata * drift
+
+
+def dwi_select_shells(
+    data: np.ndarray,
+    gradients: np.ndarray,
+    index: int,
+    th_low: float | None = None,
+    th_high: float | None = None,
+) -> np.ndarray:
+    """Clip DWI shell data around the given index and lower and upper b-value bounds.
+
+    Clip DWI data around the given index with the provided lower and upper bound b-values.
+
+    Parameters
+    ----------
+    data : :obj:`~numpy.ndarray`
+        Data to be clipped.
+    gradients : :obj:`~numpy.ndarray`
+        Gradients.
+    index : :obj:`int`
+        Index of the shell data.
+    th_low : :obj:`float`, optional
+        A lower bound for the b-value.
+    th_high : :obj:`float`, optional
+        An upper bound for the b-value.
+
+    Returns
+    -------
+    clipped_dataset : :obj:`~numpy.ndarray`
+        Clipped data.
+    """
+
+    if th_low is None and th_high is None:
+        return data
+    th_low = 0 if th_low is None else th_low
+    th_high = gradients[:, -1].max() if th_high is None else th_high
+
+    clipped_data = copy.deepcopy(data)
+
+    bvalues = gradients[:, -1]
+    bcenter = bvalues[index]
+
+    shellmask = np.ones(clipped_data.shape[-1], dtype=bool)
+
+    # Keep only bvalues within the range defined by th_high and th_low
+    shellmask[index] = False
+    shellmask[bvalues > (bcenter + th_high)] = False
+    shellmask[bvalues < (bcenter - th_low)] = False
+
+    if not shellmask.sum():
+        raise RuntimeError(f"Shell corresponding to index {index} (b={bcenter}) is empty.")
+
+    clipped_data = clipped_data[..., shellmask]
+
+    return clipped_data

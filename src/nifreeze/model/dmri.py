@@ -26,11 +26,8 @@ from importlib import import_module
 import numpy as np
 from joblib import Parallel, delayed
 
-from nifreeze.data.dmri import (
-    DEFAULT_CLIP_PERCENTILE,
-    DTI_MIN_ORIENTATIONS,
-    DWI,
-)
+from nifreeze.data.dmri import DTI_MIN_ORIENTATIONS, DWI
+from nifreeze.data.filtering import BVAL_THRESHOLD, clip_dwi_shell_data, detrend_dwi_median
 from nifreeze.model.base import BaseModel, ExpectationModel
 
 
@@ -178,8 +175,8 @@ class AverageDWIModel(ExpectationModel):
         self,
         dataset: DWI,
         stat: str = "median",
-        th_low: float = 100.0,
-        th_high: float = 100.0,
+        atol_low: float = BVAL_ATOL,
+        atol_high: float = BVAL_ATOL,
         detrend: bool = False,
         **kwargs,
     ):
@@ -210,36 +207,26 @@ class AverageDWIModel(ExpectationModel):
         self._th_high = th_high
         self._detrend = detrend
 
-    def fit_predict(self, index, *_, **kwargs):
+    def fit_predict(self, index: int, *_, **kwargs):
         """Return the average map."""
-
-        bvalues = self._dataset.gradients[:, -1]
-        bcenter = bvalues[index]
-
-        shellmask = np.ones(len(self._dataset), dtype=bool)
-
-        # Keep only bvalues within the range defined by th_high and th_low
-        shellmask[index] = False
-        shellmask[bvalues > (bcenter + self._th_high)] = False
-        shellmask[bvalues < (bcenter - self._th_low)] = False
-
-        if not shellmask.sum():
-            raise RuntimeError(f"Shell corresponding to index {index} (b={bcenter}) is empty.")
-
-        shelldata = self._dataset.dataobj[..., shellmask]
-
-        # Regress out global signal differences
-        if self._detrend:
-            centers = np.median(shelldata, axis=(0, 1, 2))
-            reference = np.percentile(centers[centers >= 1.0], DEFAULT_CLIP_PERCENTILE)
-            centers[centers < 1.0] = reference
-            drift = reference / centers
-            shelldata = shelldata * drift
 
         # Select the summary statistic
         avg_func = np.median if self._stat == "median" else np.mean
+
+        clipped_dwi = clip_dwi_shell_data(
+            self._dataset.dataobj,
+            self._dataset.gradients,
+            index,
+            th_low=self._th_low,
+            th_high=self._th_high,
+        )
+
+        dwi_data = clipped_dwi
+        if self._detrend:
+            dwi_data = detrend_dwi_median(dwi_data, mask=None)
+
         # Calculate the average
-        return avg_func(shelldata, axis=-1)
+        return avg_func(dwi_data, axis=-1)
 
 
 class DTIModel(BaseDWIModel):
