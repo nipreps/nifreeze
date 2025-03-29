@@ -107,8 +107,7 @@ def advanced_clip(
 def robust_minmax_normalization(data: np.ndarray, mask: np.ndarray | None = None, pmin: float = 5.0, pmax: float = 95.0) -> np.ndarray:
     r"""Normalize min-max percentiles of each volume to the grand min-max percentiles.
 
-    Regresses out global signal differences so that its values are centered around the middle 90%
-    of the data following:
+    Robust min/max normalization of the volumes in the dataset following:
 
     .. math::
         \text{data}_{\text{detrended}} = \frac{(\text{data} - p_{5}) \cdot p_{\text{mean}}}{p_{\text{range}}} + p_{5}^{\text{mean}}
