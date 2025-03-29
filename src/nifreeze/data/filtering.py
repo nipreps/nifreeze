@@ -137,8 +137,8 @@ def robust_minmax_normalization(data: np.ndarray, mask: np.ndarray | None = None
 
     data = data.copy().astype("float32")
     reshaped_data = data.reshape((-1, data.shape[-1])) if mask is None else data[mask]
-    p5 = np.percentile(reshaped_data, 5.0, axis=0)
-    p95 = np.percentile(reshaped_data, 95.0, axis=0) - p5
+    p5 = np.percentile(reshaped_data, pmin, axis=0)
+    p95 = np.percentile(reshaped_data, pmax, axis=0) - p5
     return (data - p5) * p95.mean() / p95 + p5.mean()
 
 
