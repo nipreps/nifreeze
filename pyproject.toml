@@ -218,6 +218,10 @@ norecursedirs = [".*", "_*"]
 addopts = "-v --doctest-modules"
 doctest_optionflags = "ALLOW_UNICODE NORMALIZE_WHITESPACE ELLIPSIS"
 env = "PYTHONHASHSEED=0"
+markers = [
+    "random_gtab_data: Custom marker for random gtab data tests",
+    "random_dwi_data: Custom marker for random dwi data tests",
+]
 filterwarnings = [
   "ignore::DeprecationWarning",
   # DIPY
