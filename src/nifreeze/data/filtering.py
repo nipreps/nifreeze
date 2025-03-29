@@ -104,7 +104,7 @@ def advanced_clip(
     return data
 
 
-def detrend_data_percentile(data: np.ndarray, mask: np.ndarray | None = None) -> np.ndarray:
+def robust_minmax_normalization(data: np.ndarray, mask: np.ndarray | None = None, pmin: float = 5.0, pmax: float = 95.0) -> np.ndarray:
     r"""Detrend data.
 
     Regresses out global signal differences so that its values are centered around the middle 90%
