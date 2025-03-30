@@ -28,6 +28,7 @@ Information on specific functions, classes, and methods.
 .. toctree::
    :glob:
 
+   api/nifreeze.analysis
    api/nifreeze.cli
    api/nifreeze.data
    api/nifreeze.data.dmri
