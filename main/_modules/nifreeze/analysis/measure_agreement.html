@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.data.utils - nifreeze 25.0.0.dev181 documentation</title>
+        <title>nifreeze.analysis.measure_agreement - nifreeze 25.0.0.dev181 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -296,51 +296,172 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <h1>Source code for nifreeze.data.utils</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+          <h1>Source code for nifreeze.analysis.measure_agreement</h1><div class="highlight"><pre>
+<span></span><span class="c1"># emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-</span>
+<span class="c1"># vi: set ft=python sts=4 ts=4 sw=4 et:</span>
+<span class="c1">#</span>
+<span class="c1"># Copyright The NiPreps Developers &lt;nipreps@gmail.com&gt;</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+<span class="c1"># We support and encourage derived works from this project, please read</span>
+<span class="c1"># about our expectations at</span>
+<span class="c1">#</span>
+<span class="c1">#     https://www.nipreps.org/community/licensing/</span>
+<span class="c1">#</span>
+<span class="sd">&quot;&quot;&quot;Measure agreement computation.&quot;&quot;&quot;</span>
 
-<span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nb</span>
-<span class="kn">import</span> <span class="nn">nitransforms</span> <span class="k">as</span> <span class="nn">nt</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.stats</span> <span class="k">as</span> <span class="nn">stats</span>
 
 
-<div class="viewcode-block" id="apply_affines">
-<a class="viewcode-back" href="../../../api/nifreeze.data.utils.html#nifreeze.data.utils.apply_affines">[docs]</a>
-<span class="k">def</span> <span class="nf">apply_affines</span><span class="p">(</span><span class="n">nii</span><span class="p">,</span> <span class="n">em_affines</span><span class="p">,</span> <span class="n">output_filename</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Apply affines to supplied nii data</span>
+<span class="k">def</span> <span class="nf">_check_ci</span><span class="p">(</span><span class="n">ci</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check that the confidence interval size is in the [0, 1] range.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    nii : :obj:`Nifti1Image`</span>
-<span class="sd">        Nifti1Image data to be transformed</span>
-<span class="sd">    em_affines : :obj:`ndarray`</span>
-<span class="sd">        Nx4x4 array</span>
-<span class="sd">    output_filename : :obj:`str`, optional</span>
-<span class="sd">        String specifying filepath to which to save transformed Nifti1Image data</span>
+<span class="sd">    ci : :obj:`float`</span>
+<span class="sd">        Confidence interval size.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">ci</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">ci</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Confidence interval size must be between 0 and 1&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_check_bland_altman_data</span><span class="p">(</span><span class="n">data1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check that the data for the Bland-Altman agreement analysis are compliant.</span>
+
+<span class="sd">    Checks that</span>
+<span class="sd">        - The data are one-dimensional.</span>
+<span class="sd">        - The data have the same dimensionality.</span>
+<span class="sd">        - There is no missing values.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data1 : :obj:`numpy.ndarray`</span>
+<span class="sd">        Data values.</span>
+<span class="sd">    data2 : :obj:`numpy.ndarray`</span>
+<span class="sd">        Data values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">data1</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">data2</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Data arrays must be 1D&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">data1</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">data2</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Data arrays must have equal size&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">data1</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">data2</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Missing values are not supported&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="compute_z_score">
+<a class="viewcode-back" href="../../../api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.compute_z_score">[docs]</a>
+<span class="k">def</span> <span class="nf">compute_z_score</span><span class="p">(</span><span class="n">ci</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the critical z-score for being outside a confidence interval.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ci : :obj:`float`</span>
+<span class="sd">        Confidence interval size. Must be in the [0, 1] range.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    nii_t_img : :obj:`Nifti1Image`</span>
-<span class="sd">        Transformed Nifti1Image data</span>
-
+<span class="sd">    :obj:`float`</span>
+<span class="sd">        Z-score value.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">transformed_nii</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">nii</span><span class="o">.</span><span class="n">dataobj</span><span class="p">))</span>
 
-    <span class="k">for</span> <span class="n">ii</span><span class="p">,</span> <span class="n">bvecnii</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">nb</span><span class="o">.</span><span class="n">four_to_three</span><span class="p">(</span><span class="n">nii</span><span class="p">)):</span>
-        <span class="n">xfms</span> <span class="o">=</span> <span class="n">nt</span><span class="o">.</span><span class="n">linear</span><span class="o">.</span><span class="n">Affine</span><span class="p">(</span><span class="n">em_affines</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span>
-        <span class="n">transformed_nii</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">((</span><span class="o">~</span><span class="n">xfms</span><span class="p">)</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">bvecnii</span><span class="p">,</span> <span class="n">reference</span><span class="o">=</span><span class="n">nii</span><span class="p">)</span><span class="o">.</span><span class="n">dataobj</span><span class="p">)</span>
+    <span class="n">_check_ci</span><span class="p">(</span><span class="n">ci</span><span class="p">)</span>
 
-    <span class="n">nii_t_img</span> <span class="o">=</span> <span class="n">nii</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">transformed_nii</span><span class="p">,</span> <span class="n">nii</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">nii</span><span class="o">.</span><span class="n">header</span><span class="p">)</span>
+    <span class="c1"># Compute the z-score for confidence interval (two-tailed)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">ci</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">p</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="n">q</span><span class="p">))</span></div>
 
-    <span class="k">if</span> <span class="n">output_filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="c1"># Ensure directories in output_filename exist</span>
-        <span class="n">Path</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-        <span class="c1"># Save as .nii</span>
-        <span class="n">nii_t_img</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">nii_t_img</span></div>
+<div class="viewcode-block" id="compute_bland_altman_features">
+<a class="viewcode-back" href="../../../api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.compute_bland_altman_features">[docs]</a>
+<span class="k">def</span> <span class="nf">compute_bland_altman_features</span><span class="p">(</span>
+    <span class="n">data1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">ci</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute quantities of interest for the Bland-Altman plot.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data1 : :obj:`numpy.ndarray`</span>
+<span class="sd">        Data values.</span>
+<span class="sd">    data2 : :obj:`numpy.ndarray`</span>
+<span class="sd">        Data values.</span>
+<span class="sd">    ci : :obj:`float`</span>
+<span class="sd">        Confidence interval size. Must be in the [0, 1] range.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    diff : :obj:`numpy.ndarray`</span>
+<span class="sd">        Differences.</span>
+<span class="sd">    mean : :obj:`numpy.ndarray`</span>
+<span class="sd">        Mean values (across both data arrays).</span>
+<span class="sd">    mean_diff : :obj:`float`</span>
+<span class="sd">        Mean differences.</span>
+<span class="sd">    std_diff : :obj:`float`</span>
+<span class="sd">        Standard deviation of differences.</span>
+<span class="sd">    loa_lower : :obj:`float`</span>
+<span class="sd">        Lower limit of agreement.</span>
+<span class="sd">    loa_upper : :obj:`float`</span>
+<span class="sd">        Upper limit of agreement.</span>
+<span class="sd">    ci_mean : :obj:`float`</span>
+<span class="sd">        Confidence interval of mean values.</span>
+<span class="sd">    ci_loa : :obj:`float`</span>
+<span class="sd">        Confidence interval of limits of agreement.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_check_bland_altman_data</span><span class="p">(</span><span class="n">data1</span><span class="p">,</span> <span class="n">data2</span><span class="p">)</span>
+    <span class="n">_check_ci</span><span class="p">(</span><span class="n">ci</span><span class="p">)</span>
+
+    <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="c1"># Compute mean</span>
+    <span class="n">mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">data1</span><span class="p">,</span> <span class="n">data2</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+
+    <span class="c1"># Compute differences, mean difference, and std dev of differences</span>
+    <span class="n">diff</span> <span class="o">=</span> <span class="n">data1</span> <span class="o">-</span> <span class="n">data2</span>
+    <span class="n">mean_diff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span>
+    <span class="n">std_diff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+    <span class="c1"># std_diff = np.std(diff, ddof=1)  # Use Bessel&#39;s correction</span>
+
+    <span class="c1"># Compute confidence interval limits of agreement (LoA)</span>
+    <span class="n">z_score</span> <span class="o">=</span> <span class="n">compute_z_score</span><span class="p">(</span><span class="n">ci</span><span class="p">)</span>
+    <span class="n">loa_lower</span> <span class="o">=</span> <span class="n">mean_diff</span> <span class="o">-</span> <span class="n">z_score</span> <span class="o">*</span> <span class="n">std_diff</span>
+    <span class="n">loa_upper</span> <span class="o">=</span> <span class="n">mean_diff</span> <span class="o">+</span> <span class="n">z_score</span> <span class="o">*</span> <span class="n">std_diff</span>
+
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span>
+
+    <span class="c1"># Compute the t-distribution critical value for the confidence intervals</span>
+    <span class="c1"># (CIs)</span>
+    <span class="n">t_val</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">ppf</span><span class="p">((</span><span class="mi">1</span> <span class="o">+</span> <span class="n">ci</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Compute confidence intervals</span>
+
+    <span class="c1"># Confidence interval for the mean difference</span>
+    <span class="n">std_err_mean</span> <span class="o">=</span> <span class="n">std_diff</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="n">ci_mean</span> <span class="o">=</span> <span class="n">t_val</span> <span class="o">*</span> <span class="n">std_err_mean</span>
+
+    <span class="c1"># Confidence interval for the LoA</span>
+    <span class="c1"># Follows Bland-Altman 1999 and Altman 1983, where the standard error of LoA</span>
+    <span class="c1"># SE_{LoA} = \sigma_{d} \ sqrt{2/n}</span>
+    <span class="c1"># The confidence interval (CI) for LoA is then calculated using the</span>
+    <span class="c1"># t-distribution critical value.</span>
+    <span class="n">std_err_loa</span> <span class="o">=</span> <span class="n">std_diff</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">/</span> <span class="n">n</span><span class="p">)</span>
+    <span class="n">ci_loa</span> <span class="o">=</span> <span class="n">t_val</span> <span class="o">*</span> <span class="n">std_err_loa</span>
+
+    <span class="k">return</span> <span class="n">diff</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">mean_diff</span><span class="p">,</span> <span class="n">std_diff</span><span class="p">,</span> <span class="n">loa_lower</span><span class="p">,</span> <span class="n">loa_upper</span><span class="p">,</span> <span class="n">ci_mean</span><span class="p">,</span> <span class="n">ci_loa</span></div>
 
 </pre></div>
         </article>

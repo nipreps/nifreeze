@@ -1,0 +1,15 @@
+nifreeze.analysis package
+=========================
+
+.. automodule:: nifreeze.analysis
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   nifreeze.analysis.measure_agreement

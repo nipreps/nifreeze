@@ -3,10 +3,10 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="nifreeze.data.utils module" href="nifreeze.data.utils.html" /><link rel="prev" title="nifreeze.data.pet module" href="nifreeze.data.pet.html" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="nifreeze.viz.signals module" href="nifreeze.viz.signals.html" /><link rel="prev" title="nifreeze.viz package" href="nifreeze.viz.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.data.splitting module - nifreeze 25.0.0.dev181 documentation</title>
+        <title>nifreeze.viz.bland_altman module - nifreeze 25.0.0.dev181 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
@@ -222,12 +222,12 @@
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.cli.run.html">nifreeze.cli.run module</a></li>
 </ul>
 </li>
-<li class="toctree-l2 current has-children"><a class="reference internal" href="nifreeze.data.html">nifreeze.data package</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of nifreeze.data package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.data.html">nifreeze.data package</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of nifreeze.data package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.data.base.html">nifreeze.data.base module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.data.dmri.html">nifreeze.data.dmri module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.data.filtering.html">nifreeze.data.filtering module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.data.pet.html">nifreeze.data.pet module</a></li>
-<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">nifreeze.data.splitting module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.data.splitting.html">nifreeze.data.splitting module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.data.utils.html">nifreeze.data.utils module</a></li>
 </ul>
 </li>
@@ -255,8 +255,8 @@
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.utils.ndimage.html">nifreeze.utils.ndimage module</a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.viz.html">nifreeze.viz package</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of nifreeze.viz package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l3"><a class="reference internal" href="nifreeze.viz.bland_altman.html">nifreeze.viz.bland_altman module</a></li>
+<li class="toctree-l2 current has-children"><a class="reference internal" href="nifreeze.viz.html">nifreeze.viz package</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of nifreeze.viz package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">nifreeze.viz.bland_altman module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.viz.signals.html">nifreeze.viz.signals module</a></li>
 </ul>
 </li>
@@ -283,7 +283,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../_sources/api/nifreeze.data.splitting.rst.txt" title="View this page">
+  <a class="muted-link" href="../_sources/api/nifreeze.viz.bland_altman.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -303,30 +303,40 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="module-nifreeze.data.splitting">
-<span id="nifreeze-data-splitting-module"></span><h1>nifreeze.data.splitting module<a class="headerlink" href="#module-nifreeze.data.splitting" title="Link to this heading">¶</a></h1>
-<p>Data splitting helpers.</p>
+          <section id="module-nifreeze.viz.bland_altman">
+<span id="nifreeze-viz-bland-altman-module"></span><h1>nifreeze.viz.bland_altman module<a class="headerlink" href="#module-nifreeze.viz.bland_altman" title="Link to this heading">¶</a></h1>
+<p>Bland-Altman plot.</p>
 <dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.data.splitting.lovo_split">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.data.splitting.</span></span><span class="sig-name descname"><span class="pre">lovo_split</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="nifreeze.data.base.html#nifreeze.data.base.BaseDataset" title="nifreeze.data.base.BaseDataset"><span class="pre">BaseDataset</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/data/splitting.html#lovo_split"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.splitting.lovo_split" title="Link to this definition">¶</a></dt>
-<dd><p>Produce one fold of LOVO (leave-one-volume-out).</p>
+<dt class="sig sig-object py" id="nifreeze.viz.bland_altman.plot_bland_altman">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.viz.bland_altman.</span></span><span class="sig-name descname"><span class="pre">plot_bland_altman</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">data2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">ci</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.95</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><span class="pre">tuple</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(15,</span> <span class="pre">10)</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">matplotlib.pyplot.Figure</span></span></span><a class="reference internal" href="../_modules/nifreeze/viz/bland_altman.html#plot_bland_altman"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.viz.bland_altman.plot_bland_altman" title="Link to this definition">¶</a></dt>
+<dd><p>Create a Bland-Altman plot.</p>
+<p>Create a Bland-Altman plot <a class="reference internal" href="#bland86" id="id1"><span>[Bland86]</span></a> and highlight <code class="docutils literal notranslate"><span class="pre">size</span></code> lower and upper
+extremes along the X coordinates.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>dataset</strong> (<a class="reference internal" href="nifreeze.data.base.html#nifreeze.data.base.BaseDataset" title="nifreeze.data.base.BaseDataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nifreeze.data.base.BaseDataset</span></code></a>) – Dataset object.</p></li>
-<li><p><strong>index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>) – Index of the volume to be left out in this fold.</p></li>
+<li><p><strong>data1</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a>) – Data values.</p></li>
+<li><p><strong>data2</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a>) – Data values.</p></li>
+<li><p><strong>ci</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional) – Confidence interval value. Must be in the [0, 1] range.</p></li>
+<li><p><strong>figsize</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tuple</span></code></a>, optional) – Figure size.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A tuple of two elements, the first element being  the components
-of the <em>train</em> data (including the data themselves and other metadata
-such as gradients for dMRI, or frame times for PET), and the second
-element being the <em>test</em> data.</p>
+<dd class="field-even"><p><strong>fig</strong> – Matplotlib figure.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tuple</span></code></a> of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tuple</span></code></a></p>
+<dd class="field-odd"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">matplotlib.pyplot.Figure</span></code></p>
 </dd>
 </dl>
+<p class="rubric">References</p>
+<div role="list" class="citation-list">
+<div class="citation" id="bland86" role="doc-biblioentry">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">Bland86</a><span class="fn-bracket">]</span></span>
+<p>J. Martin Bland and Douglas G. Altman, Statistical methods for
+assessing agreement between two methods of clinical measurement, The
+Lancet 327(8476) (1986) 307-310</p>
+</div>
+</div>
 </dd></dl>
 
 </section>
@@ -336,23 +346,23 @@ element being the <em>test</em> data.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="nifreeze.data.utils.html">
+          <a class="next-page" href="nifreeze.viz.signals.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">nifreeze.data.utils module</div>
+                <div class="title">nifreeze.viz.signals module</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="nifreeze.data.pet.html">
+          <a class="prev-page" href="nifreeze.viz.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">nifreeze.data.pet module</div>
+                <div class="title">nifreeze.viz package</div>
                 
               </div>
             </a>
@@ -386,8 +396,8 @@ element being the <em>test</em> data.</p>
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">nifreeze.data.splitting module</a><ul>
-<li><a class="reference internal" href="#nifreeze.data.splitting.lovo_split"><code class="docutils literal notranslate"><span class="pre">lovo_split()</span></code></a></li>
+<li><a class="reference internal" href="#">nifreeze.viz.bland_altman module</a><ul>
+<li><a class="reference internal" href="#nifreeze.viz.bland_altman.plot_bland_altman"><code class="docutils literal notranslate"><span class="pre">plot_bland_altman()</span></code></a></li>
 </ul>
 </li>
 </ul>
