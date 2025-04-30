@@ -24,8 +24,10 @@
 
 from os import cpu_count
 
+import nibabel as nib
 import numpy as np
 from joblib import Parallel, delayed
+from nibabel.processing import smooth_image
 
 from nifreeze.model.base import BaseModel
 
@@ -36,7 +38,8 @@ DEFAULT_TIMEFRAME_MIDPOINT_TOL = 1e-2
 class PETModel(BaseModel):
     """A PET imaging realignment model based on B-Spline approximation."""
 
-    __slots__ = ("_t", "_x", "_xlim", "_order", "_n_ctrl")
+
+    __slots__ = ("_t", "_x", "_xlim", "_order", "_coeff", "_n_ctrl", "_datashape", "_mask")
 
     def __init__(self, timepoints=None, xlim=None, n_ctrl=None, order=3, **kwargs):
         """
@@ -55,7 +58,7 @@ class PETModel(BaseModel):
             model.
 
         """
-        super.__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if timepoints is None or xlim is None:
             raise TypeError("timepoints must be provided in initialization")
@@ -75,6 +78,14 @@ class PETModel(BaseModel):
 
         # B-Spline knots
         self._t = np.arange(-3, float(self._n_ctrl) + 4, dtype="float32")
+
+        self._coeff = None
+        self._datashape = None
+        self._mask = None
+
+    @property
+    def is_fitted(self):
+        return self._coeff is not None
 
     def _fit(self, index: int | None = None, n_jobs=None, **kwargs):
         """Fit the model."""
