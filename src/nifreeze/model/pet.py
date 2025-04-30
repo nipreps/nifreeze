@@ -121,7 +121,7 @@ class PETModel(BaseModel):
         if index is None:
             raise ValueError("A timepoint index to be simulated must be provided.")
 
-        if not self._is_fitted:
+        if not self.is_fitted:
             raise ModelNotFittedError(f"{type(self).__name__} must be fitted before predicting")
 
         # Project sample timing into B-Spline coordinates
