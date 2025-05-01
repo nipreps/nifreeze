@@ -55,7 +55,7 @@ class ModelFactory:
         if model is None:
             raise RuntimeError("No model identifier provided.")
 
-        if model.lower() in ("s0", "b0"):
+        if model.lower() == "trivial":
             return TrivialModel(kwargs.pop("dataset"))
 
         if model.lower() in ("avg", "average", "mean"):
@@ -150,8 +150,8 @@ class ExpectationModel(BaseModel):
         avg_func = getattr(np, kwargs.pop("stat", self._stat))
 
         # Create index mask
-        mask = np.ones(len(self._dataset), dtype=bool)
-        mask[index] = False
+        index_mask = np.ones(len(self._dataset), dtype=bool)
+        index_mask[index] = False
 
         # Calculate the average
-        return avg_func(self._dataset.dataobj[mask][0], axis=-1)
+        return avg_func(self._dataset[index_mask][0], axis=-1)

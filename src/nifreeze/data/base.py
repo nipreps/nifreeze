@@ -294,5 +294,7 @@ def load(
     if brainmask_file:
         mask = load_api(brainmask_file, SpatialImage)
         retval.brainmask = np.asanyarray(mask.dataobj)
+    else:
+        retval.brainmask = np.ones(img.shape[:3], dtype=bool)
 
     return retval

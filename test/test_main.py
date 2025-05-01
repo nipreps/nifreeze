@@ -54,13 +54,13 @@ def test_main(tmp_path, datadir):
                 str(input_file),
                 "--models",
                 "b0",
-                "--omp_nthreads",
+                "--nthreads",
                 "1",
-                "--n_jobs",
+                "--njobs",
                 "1",
                 "--seed",
                 "1234",
-                "--output_dir",
+                "--output-dir",
                 str(tmp_path),
             ]
         )
