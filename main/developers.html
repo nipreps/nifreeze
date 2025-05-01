@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="nifreeze.analysis package" href="api/nifreeze.analysis.html" /><link rel="prev" title="Running NiFreeze" href="running.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>For developers - nifreeze 25.0.0.dev183 documentation</title>
+        <title>For developers - nifreeze 25.0.0.dev185 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
@@ -167,7 +167,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 25.0.0.dev183 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 25.0.0.dev185 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -190,14 +190,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev183</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev185</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev183</span>
+  <span class="sidebar-brand-text">25.0.0.dev185</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -334,8 +334,19 @@ $ make -C docs/ html
 <li class="toctree-l1"><a class="reference internal" href="api/nifreeze.analysis.html">nifreeze.analysis package</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="api/nifreeze.analysis.html#submodules">Submodules</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.measure_agreement.html">nifreeze.analysis.measure_agreement module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.BASalientEntity"><code class="docutils literal notranslate"><span class="pre">BASalientEntity</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.BASalientEntity.LEFT_INDICES"><code class="docutils literal notranslate"><span class="pre">BASalientEntity.LEFT_INDICES</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.BASalientEntity.LEFT_MASK"><code class="docutils literal notranslate"><span class="pre">BASalientEntity.LEFT_MASK</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.BASalientEntity.RELIABILITY_INDICES"><code class="docutils literal notranslate"><span class="pre">BASalientEntity.RELIABILITY_INDICES</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.BASalientEntity.RELIABILITY_MASK"><code class="docutils literal notranslate"><span class="pre">BASalientEntity.RELIABILITY_MASK</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.BASalientEntity.RIGHT_INDICES"><code class="docutils literal notranslate"><span class="pre">BASalientEntity.RIGHT_INDICES</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.BASalientEntity.RIGHT_MASK"><code class="docutils literal notranslate"><span class="pre">BASalientEntity.RIGHT_MASK</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.compute_bland_altman_features"><code class="docutils literal notranslate"><span class="pre">compute_bland_altman_features()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.compute_z_score"><code class="docutils literal notranslate"><span class="pre">compute_z_score()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.get_reliability_mask"><code class="docutils literal notranslate"><span class="pre">get_reliability_mask()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.identify_bland_altman_salient_data"><code class="docutils literal notranslate"><span class="pre">identify_bland_altman_salient_data()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -643,6 +654,12 @@ $ make -C docs/ html
 <li class="toctree-l1"><a class="reference internal" href="api/nifreeze.viz.html">nifreeze.viz package</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="api/nifreeze.viz.html#submodules">Submodules</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.viz.bland_altman.html">nifreeze.viz.bland_altman module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.viz.bland_altman.html#nifreeze.viz.bland_altman.BASalientEntityColor"><code class="docutils literal notranslate"><span class="pre">BASalientEntityColor</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/nifreeze.viz.bland_altman.html#nifreeze.viz.bland_altman.BASalientEntityColor.LEFT_COLOR"><code class="docutils literal notranslate"><span class="pre">BASalientEntityColor.LEFT_COLOR</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/nifreeze.viz.bland_altman.html#nifreeze.viz.bland_altman.BASalientEntityColor.RELIABLE_COLOR"><code class="docutils literal notranslate"><span class="pre">BASalientEntityColor.RELIABLE_COLOR</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/nifreeze.viz.bland_altman.html#nifreeze.viz.bland_altman.BASalientEntityColor.RIGHT_COLOR"><code class="docutils literal notranslate"><span class="pre">BASalientEntityColor.RIGHT_COLOR</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l4"><a class="reference internal" href="api/nifreeze.viz.bland_altman.html#nifreeze.viz.bland_altman.plot_bland_altman"><code class="docutils literal notranslate"><span class="pre">plot_bland_altman()</span></code></a></li>
 </ul>
 </li>
@@ -736,7 +753,7 @@ $ make -C docs/ html
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=73246e88"></script>
+</div><script src="_static/documentation_options.js?v=1cd57a5c"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=5fa4622c"></script>

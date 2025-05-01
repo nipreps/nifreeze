@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.viz.bland_altman - nifreeze 25.0.0.dev183 documentation</title>
+        <title>nifreeze.viz.bland_altman - nifreeze 25.0.0.dev185 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev183 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev185 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev183</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev185</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev183</span>
+  <span class="sidebar-brand-text">25.0.0.dev185</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -321,13 +321,25 @@
 <span class="c1">#</span>
 <span class="sd">&quot;&quot;&quot;Bland-Altman plot.&quot;&quot;&quot;</span>
 
+<span class="kn">import</span> <span class="nn">enum</span>
+
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">nifreeze.analysis.measure_agreement</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">BASalientEntity</span><span class="p">,</span>
     <span class="n">compute_bland_altman_features</span><span class="p">,</span>
     <span class="n">compute_z_score</span><span class="p">,</span>
 <span class="p">)</span>
+
+
+<div class="viewcode-block" id="BASalientEntityColor">
+<a class="viewcode-back" href="../../../api/nifreeze.viz.bland_altman.html#nifreeze.viz.bland_altman.BASalientEntityColor">[docs]</a>
+<span class="k">class</span> <span class="nc">BASalientEntityColor</span><span class="p">(</span><span class="n">enum</span><span class="o">.</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="n">RELIABLE_COLOR</span> <span class="o">=</span> <span class="s2">&quot;reliable_color&quot;</span>
+    <span class="n">LEFT_COLOR</span> <span class="o">=</span> <span class="s2">&quot;left_color&quot;</span>
+    <span class="n">RIGHT_COLOR</span> <span class="o">=</span> <span class="s2">&quot;right_color&quot;</span></div>
+
 
 
 <div class="viewcode-block" id="plot_bland_altman">
@@ -336,6 +348,7 @@
     <span class="n">data1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">data2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">ci</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.95</span><span class="p">,</span>
+    <span class="n">salient_data</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">figsize</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">plt</span><span class="o">.</span><span class="n">Figure</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a Bland-Altman plot.</span>
@@ -351,6 +364,11 @@
 <span class="sd">        Data values.</span>
 <span class="sd">    ci : :obj:`float`, optional</span>
 <span class="sd">        Confidence interval value. Must be in the [0, 1] range.</span>
+<span class="sd">    salient_data : :obj:`dict`, optional</span>
+<span class="sd">        Salient data values. Must be in the same format as ``data1``. Contains:</span>
+<span class="sd">        -</span>
+<span class="sd">        -</span>
+<span class="sd">        - ...</span>
 <span class="sd">    figsize : :obj:`tuple`, optional</span>
 <span class="sd">        Figure size.</span>
 
@@ -406,8 +424,32 @@
         <span class="n">plt</span><span class="o">.</span><span class="n">axhspan</span><span class="p">(</span><span class="n">span</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">span</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="n">alpha_l</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">)</span>
 
     <span class="c1"># Plot the BA data points</span>
-    <span class="n">alpha_p</span> <span class="o">=</span> <span class="mf">0.5</span>
+    <span class="n">alpha_p</span> <span class="o">=</span> <span class="mf">0.95</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">diff</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="n">alpha_p</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Data&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;gray&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Overlay the salient data</span>
+    <span class="k">if</span> <span class="n">salient_data</span><span class="p">:</span>
+        <span class="n">salient_data_key</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">BASalientEntity</span><span class="o">.</span><span class="n">RELIABILITY_MASK</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">BASalientEntity</span><span class="o">.</span><span class="n">LEFT_MASK</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">BASalientEntity</span><span class="o">.</span><span class="n">RIGHT_MASK</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="n">salient_data_color_key</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">BASalientEntityColor</span><span class="o">.</span><span class="n">RELIABLE_COLOR</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">BASalientEntityColor</span><span class="o">.</span><span class="n">LEFT_COLOR</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">BASalientEntityColor</span><span class="o">.</span><span class="n">RIGHT_COLOR</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Reliable&quot;</span><span class="p">,</span> <span class="s2">&quot;Top N in lower part&quot;</span><span class="p">,</span> <span class="s2">&quot;Top N in upper part&quot;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">data_key</span><span class="p">,</span> <span class="n">color_key</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+            <span class="n">salient_data_key</span><span class="p">,</span> <span class="n">salient_data_color_key</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="n">strict</span>
+        <span class="p">):</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span>
+                <span class="n">mean</span><span class="p">[</span><span class="n">salient_data</span><span class="p">[</span><span class="n">data_key</span><span class="p">]],</span>
+                <span class="n">diff</span><span class="p">[</span><span class="n">salient_data</span><span class="p">[</span><span class="n">data_key</span><span class="p">]],</span>
+                <span class="n">color</span><span class="o">=</span><span class="n">salient_data</span><span class="p">[</span><span class="n">color_key</span><span class="p">],</span>
+                <span class="n">alpha</span><span class="o">=</span><span class="n">alpha_p</span><span class="p">,</span>
+                <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
+            <span class="p">)</span>
 
     <span class="c1"># Add the mean and limit of agreement text</span>
     <span class="n">factor</span> <span class="o">=</span> <span class="mf">1.02</span>
@@ -468,7 +510,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=73246e88"></script>
+</div><script src="../../../_static/documentation_options.js?v=1cd57a5c"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>

@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.analysis.measure_agreement - nifreeze 25.0.0.dev183 documentation</title>
+        <title>nifreeze.analysis.measure_agreement - nifreeze 25.0.0.dev185 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev183 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev185 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev183</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev185</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev183</span>
+  <span class="sidebar-brand-text">25.0.0.dev185</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -321,8 +321,22 @@
 <span class="c1">#</span>
 <span class="sd">&quot;&quot;&quot;Measure agreement computation.&quot;&quot;&quot;</span>
 
+<span class="kn">import</span> <span class="nn">enum</span>
+
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">scipy.stats</span> <span class="k">as</span> <span class="nn">stats</span>
+
+
+<div class="viewcode-block" id="BASalientEntity">
+<a class="viewcode-back" href="../../../api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.BASalientEntity">[docs]</a>
+<span class="k">class</span> <span class="nc">BASalientEntity</span><span class="p">(</span><span class="n">enum</span><span class="o">.</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="n">RELIABILITY_INDICES</span> <span class="o">=</span> <span class="s2">&quot;reliability_indices&quot;</span>
+    <span class="n">RELIABILITY_MASK</span> <span class="o">=</span> <span class="s2">&quot;reliability_mask&quot;</span>
+    <span class="n">LEFT_INDICES</span> <span class="o">=</span> <span class="s2">&quot;left_indices&quot;</span>
+    <span class="n">LEFT_MASK</span> <span class="o">=</span> <span class="s2">&quot;left_mask&quot;</span>
+    <span class="n">RIGHT_INDICES</span> <span class="o">=</span> <span class="s2">&quot;right_indices&quot;</span>
+    <span class="n">RIGHT_MASK</span> <span class="o">=</span> <span class="s2">&quot;right_mask&quot;</span></div>
+
 
 
 <span class="k">def</span> <span class="nf">_check_ci</span><span class="p">(</span><span class="n">ci</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -455,13 +469,129 @@
 
     <span class="c1"># Confidence interval for the LoA</span>
     <span class="c1"># Follows Bland-Altman 1999 and Altman 1983, where the standard error of LoA</span>
-    <span class="c1"># SE_{LoA} = \sigma_{d} \ sqrt{2/n}</span>
-    <span class="c1"># The confidence interval (CI) for LoA is then calculated using the</span>
-    <span class="c1"># t-distribution critical value.</span>
+    <span class="c1"># SE_{LoA} = \sigma_{d} \sqrt{2/n}</span>
+    <span class="c1"># where \sigma_{d} is the standard deviation of the differences and n is the</span>
+    <span class="c1"># sample size.</span>
+    <span class="c1"># The confidence interval for the LoA is then calculated using the</span>
+    <span class="c1"># t-distribution critical value</span>
     <span class="n">std_err_loa</span> <span class="o">=</span> <span class="n">std_diff</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">/</span> <span class="n">n</span><span class="p">)</span>
     <span class="n">ci_loa</span> <span class="o">=</span> <span class="n">t_val</span> <span class="o">*</span> <span class="n">std_err_loa</span>
 
     <span class="k">return</span> <span class="n">diff</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">mean_diff</span><span class="p">,</span> <span class="n">std_diff</span><span class="p">,</span> <span class="n">loa_lower</span><span class="p">,</span> <span class="n">loa_upper</span><span class="p">,</span> <span class="n">ci_mean</span><span class="p">,</span> <span class="n">ci_loa</span></div>
+
+
+
+<div class="viewcode-block" id="get_reliability_mask">
+<a class="viewcode-back" href="../../../api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.get_reliability_mask">[docs]</a>
+<span class="k">def</span> <span class="nf">get_reliability_mask</span><span class="p">(</span><span class="n">diff</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">loa_lower</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">loa_upper</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get reliability mask as the data within the lower and upper limits of</span>
+<span class="sd">    agreement.</span>
+
+<span class="sd">    Boundaries are inclusive.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    diff : :obj:`numpy.ndarray`</span>
+<span class="sd">        Differences data.</span>
+<span class="sd">    loa_lower : :obj:`float`</span>
+<span class="sd">        Lower limit of agreement.</span>
+<span class="sd">    loa_upper : :obj:`float`</span>
+<span class="sd">        Upper limit of agreement.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    :obj:`numpy.ndarray`</span>
+<span class="sd">        Reliability mask.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">diff</span> <span class="o">&gt;=</span> <span class="n">loa_lower</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">diff</span> <span class="o">&lt;=</span> <span class="n">loa_upper</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="identify_bland_altman_salient_data">
+<a class="viewcode-back" href="../../../api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.identify_bland_altman_salient_data">[docs]</a>
+<span class="k">def</span> <span class="nf">identify_bland_altman_salient_data</span><span class="p">(</span>
+    <span class="n">data1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">ci</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">top_n</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">percentile</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.75</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Identify the Bland-Altman (BA) plot salient data.</span>
+
+<span class="sd">    Given the Bland-Altman data arrays, identifies the left- and right-most</span>
+<span class="sd">    `top_n` data points from the BA plot.</span>
+
+<span class="sd">    Once the left-most data points identified, the right-most `percentile` data</span>
+<span class="sd">    points are considered from the remaining data points, and `top_n` data</span>
+<span class="sd">    points are identified out of these.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data1 : :obj:`numpy.ndarray`</span>
+<span class="sd">        Data array 1.</span>
+<span class="sd">    data2 : :obj:`numpy.ndarray`</span>
+<span class="sd">        Data array 2.</span>
+<span class="sd">    ci : :obj:`float`</span>
+<span class="sd">        Confidence interval.</span>
+<span class="sd">    top_n : :obj:`float`</span>
+<span class="sd">        Number of top-N salient data points to identify.</span>
+<span class="sd">    percentile: :obj:`float`, optional</span>
+<span class="sd">        Percentile of right-most salient data points to identify.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    :obj:`dict`</span>
+<span class="sd">        Reliability, left- and right-most data point indices, and corresponding</span>
+<span class="sd">        data masks as specified by the `:obj:`~nifreeze.analysis.measure_agreement.BASalientEntity`</span>
+<span class="sd">        keys.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="p">(</span>
+        <span class="n">diff</span><span class="p">,</span>
+        <span class="n">mean</span><span class="p">,</span>
+        <span class="n">mean_diff</span><span class="p">,</span>
+        <span class="n">std_diff</span><span class="p">,</span>
+        <span class="n">loa_lower</span><span class="p">,</span>
+        <span class="n">loa_upper</span><span class="p">,</span>
+        <span class="n">_</span><span class="p">,</span>
+        <span class="n">_</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">=</span> <span class="n">compute_bland_altman_features</span><span class="p">(</span><span class="n">data1</span><span class="p">,</span> <span class="n">data2</span><span class="p">,</span> <span class="n">ci</span><span class="p">)</span>
+
+    <span class="c1"># Filter data outside the confidence intervals</span>
+    <span class="n">reliability_mask</span> <span class="o">=</span> <span class="n">get_reliability_mask</span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="n">loa_lower</span><span class="p">,</span> <span class="n">loa_upper</span><span class="p">)</span>
+    <span class="n">reliability_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">reliability_mask</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="c1"># Select the top_n lowest median values from the left side of the BA plot</span>
+    <span class="n">lower_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">mean</span><span class="p">[</span><span class="n">reliability_idx</span><span class="p">])[:</span><span class="n">top_n</span><span class="p">]</span>
+    <span class="n">left_indices</span> <span class="o">=</span> <span class="n">reliability_idx</span><span class="p">[</span><span class="n">lower_idx</span><span class="p">]</span>
+    <span class="n">left_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">reliability_mask</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="n">left_mask</span><span class="p">[</span><span class="n">left_indices</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="c1"># Select the top_n highest median values from the right side of the BA plot</span>
+    <span class="c1"># which are also closest to the zero mean difference value</span>
+    <span class="n">remaining_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">reliability_idx</span><span class="p">,</span> <span class="n">left_indices</span><span class="p">)</span>
+
+    <span class="c1"># Sort indices by descending mean (rightmost values first)</span>
+    <span class="n">right_sort_mean</span> <span class="o">=</span> <span class="n">remaining_idx</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">mean</span><span class="p">[</span><span class="n">remaining_idx</span><span class="p">])[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+
+    <span class="c1"># Take top percentile of the rightmost points</span>
+    <span class="n">top_p_count</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">percentile</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">right_sort_mean</span><span class="p">))</span>
+    <span class="n">top_p_sorted</span> <span class="o">=</span> <span class="n">right_sort_mean</span><span class="p">[:</span><span class="n">top_p_count</span><span class="p">]</span>
+
+    <span class="c1"># Get absolute difference from mean_diff (closeness to zero mean difference)</span>
+    <span class="n">diff_distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">diff</span><span class="p">[</span><span class="n">top_p_sorted</span><span class="p">]</span> <span class="o">-</span> <span class="n">mean_diff</span><span class="p">)</span>
+
+    <span class="c1"># Sort rightmost points by closeness to zero diff</span>
+    <span class="n">upper_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">diff_distance</span><span class="p">)</span>
+
+    <span class="c1"># Take top_n of them</span>
+    <span class="n">right_mask</span> <span class="o">=</span> <span class="n">right_sort_mean</span><span class="p">[</span><span class="n">upper_idx</span><span class="p">[:</span><span class="n">top_n</span><span class="p">]]</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="n">BASalientEntity</span><span class="o">.</span><span class="n">RELIABILITY_INDICES</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> <span class="n">reliability_idx</span><span class="p">,</span>
+        <span class="n">BASalientEntity</span><span class="o">.</span><span class="n">RELIABILITY_MASK</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> <span class="n">reliability_mask</span><span class="p">,</span>
+        <span class="n">BASalientEntity</span><span class="o">.</span><span class="n">LEFT_INDICES</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> <span class="n">lower_idx</span><span class="p">,</span>
+        <span class="n">BASalientEntity</span><span class="o">.</span><span class="n">LEFT_MASK</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> <span class="n">left_mask</span><span class="p">,</span>
+        <span class="n">BASalientEntity</span><span class="o">.</span><span class="n">RIGHT_INDICES</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> <span class="n">upper_idx</span><span class="p">,</span>
+        <span class="n">BASalientEntity</span><span class="o">.</span><span class="n">RIGHT_MASK</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> <span class="n">right_mask</span><span class="p">,</span>
+    <span class="p">}</span></div>
 
 </pre></div>
         </article>
@@ -495,7 +625,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=73246e88"></script>
+</div><script src="../../../_static/documentation_options.js?v=1cd57a5c"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>

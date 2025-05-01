@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="nifreeze.cli package" href="nifreeze.cli.html" /><link rel="prev" title="nifreeze.analysis package" href="nifreeze.analysis.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.analysis.measure_agreement module - nifreeze 25.0.0.dev183 documentation</title>
+        <title>nifreeze.analysis.measure_agreement module - nifreeze 25.0.0.dev185 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
@@ -167,7 +167,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev183 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev185 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -190,14 +190,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev183</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev185</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev183</span>
+  <span class="sidebar-brand-text">25.0.0.dev185</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -306,6 +306,42 @@
           <section id="module-nifreeze.analysis.measure_agreement">
 <span id="nifreeze-analysis-measure-agreement-module"></span><h1>nifreeze.analysis.measure_agreement module<a class="headerlink" href="#module-nifreeze.analysis.measure_agreement" title="Link to this heading">¶</a></h1>
 <p>Measure agreement computation.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="nifreeze.analysis.measure_agreement.BASalientEntity">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.analysis.measure_agreement.</span></span><span class="sig-name descname"><span class="pre">BASalientEntity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/analysis/measure_agreement.html#BASalientEntity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.analysis.measure_agreement.BASalientEntity" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/enum.html#enum.Enum" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></a></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nifreeze.analysis.measure_agreement.BASalientEntity.LEFT_INDICES">
+<span class="sig-name descname"><span class="pre">LEFT_INDICES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'left_indices'</span></em><a class="headerlink" href="#nifreeze.analysis.measure_agreement.BASalientEntity.LEFT_INDICES" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nifreeze.analysis.measure_agreement.BASalientEntity.LEFT_MASK">
+<span class="sig-name descname"><span class="pre">LEFT_MASK</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'left_mask'</span></em><a class="headerlink" href="#nifreeze.analysis.measure_agreement.BASalientEntity.LEFT_MASK" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nifreeze.analysis.measure_agreement.BASalientEntity.RELIABILITY_INDICES">
+<span class="sig-name descname"><span class="pre">RELIABILITY_INDICES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'reliability_indices'</span></em><a class="headerlink" href="#nifreeze.analysis.measure_agreement.BASalientEntity.RELIABILITY_INDICES" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nifreeze.analysis.measure_agreement.BASalientEntity.RELIABILITY_MASK">
+<span class="sig-name descname"><span class="pre">RELIABILITY_MASK</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'reliability_mask'</span></em><a class="headerlink" href="#nifreeze.analysis.measure_agreement.BASalientEntity.RELIABILITY_MASK" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nifreeze.analysis.measure_agreement.BASalientEntity.RIGHT_INDICES">
+<span class="sig-name descname"><span class="pre">RIGHT_INDICES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'right_indices'</span></em><a class="headerlink" href="#nifreeze.analysis.measure_agreement.BASalientEntity.RIGHT_INDICES" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nifreeze.analysis.measure_agreement.BASalientEntity.RIGHT_MASK">
+<span class="sig-name descname"><span class="pre">RIGHT_MASK</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'right_mask'</span></em><a class="headerlink" href="#nifreeze.analysis.measure_agreement.BASalientEntity.RIGHT_MASK" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.analysis.measure_agreement.compute_bland_altman_features">
 <span class="sig-prename descclassname"><span class="pre">nifreeze.analysis.measure_agreement.</span></span><span class="sig-name descname"><span class="pre">compute_bland_altman_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">data2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">ci</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/analysis/measure_agreement.html#compute_bland_altman_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.analysis.measure_agreement.compute_bland_altman_features" title="Link to this definition">¶</a></dt>
@@ -347,6 +383,59 @@
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nifreeze.analysis.measure_agreement.get_reliability_mask">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.analysis.measure_agreement.</span></span><span class="sig-name descname"><span class="pre">get_reliability_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">diff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">loa_lower</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">loa_upper</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/analysis/measure_agreement.html#get_reliability_mask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.analysis.measure_agreement.get_reliability_mask" title="Link to this definition">¶</a></dt>
+<dd><p>Get reliability mask as the data within the lower and upper limits of
+agreement.</p>
+<p>Boundaries are inclusive.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>diff</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a>) – Differences data.</p></li>
+<li><p><strong>loa_lower</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>) – Lower limit of agreement.</p></li>
+<li><p><strong>loa_upper</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>) – Upper limit of agreement.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reliability mask.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nifreeze.analysis.measure_agreement.identify_bland_altman_salient_data">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.analysis.measure_agreement.</span></span><span class="sig-name descname"><span class="pre">identify_bland_altman_salient_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">data2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">ci</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">percentile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.75</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/analysis/measure_agreement.html#identify_bland_altman_salient_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.analysis.measure_agreement.identify_bland_altman_salient_data" title="Link to this definition">¶</a></dt>
+<dd><p>Identify the Bland-Altman (BA) plot salient data.</p>
+<p>Given the Bland-Altman data arrays, identifies the left- and right-most
+<cite>top_n</cite> data points from the BA plot.</p>
+<p>Once the left-most data points identified, the right-most <cite>percentile</cite> data
+points are considered from the remaining data points, and <cite>top_n</cite> data
+points are identified out of these.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data1</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a>) – Data array 1.</p></li>
+<li><p><strong>data2</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a>) – Data array 2.</p></li>
+<li><p><strong>ci</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>) – Confidence interval.</p></li>
+<li><p><strong>top_n</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>) – Number of top-N salient data points to identify.</p></li>
+<li><p><strong>percentile</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional) – Percentile of right-most salient data points to identify.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reliability, left- and right-most data point indices, and corresponding
+data masks as specified by the <cite>:obj:`~nifreeze.analysis.measure_agreement.BASalientEntity</cite>
+keys.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -409,8 +498,19 @@
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">nifreeze.analysis.measure_agreement module</a><ul>
+<li><a class="reference internal" href="#nifreeze.analysis.measure_agreement.BASalientEntity"><code class="docutils literal notranslate"><span class="pre">BASalientEntity</span></code></a><ul>
+<li><a class="reference internal" href="#nifreeze.analysis.measure_agreement.BASalientEntity.LEFT_INDICES"><code class="docutils literal notranslate"><span class="pre">BASalientEntity.LEFT_INDICES</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.measure_agreement.BASalientEntity.LEFT_MASK"><code class="docutils literal notranslate"><span class="pre">BASalientEntity.LEFT_MASK</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.measure_agreement.BASalientEntity.RELIABILITY_INDICES"><code class="docutils literal notranslate"><span class="pre">BASalientEntity.RELIABILITY_INDICES</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.measure_agreement.BASalientEntity.RELIABILITY_MASK"><code class="docutils literal notranslate"><span class="pre">BASalientEntity.RELIABILITY_MASK</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.measure_agreement.BASalientEntity.RIGHT_INDICES"><code class="docutils literal notranslate"><span class="pre">BASalientEntity.RIGHT_INDICES</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.measure_agreement.BASalientEntity.RIGHT_MASK"><code class="docutils literal notranslate"><span class="pre">BASalientEntity.RIGHT_MASK</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#nifreeze.analysis.measure_agreement.compute_bland_altman_features"><code class="docutils literal notranslate"><span class="pre">compute_bland_altman_features()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.analysis.measure_agreement.compute_z_score"><code class="docutils literal notranslate"><span class="pre">compute_z_score()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.measure_agreement.get_reliability_mask"><code class="docutils literal notranslate"><span class="pre">get_reliability_mask()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.measure_agreement.identify_bland_altman_salient_data"><code class="docutils literal notranslate"><span class="pre">identify_bland_altman_salient_data()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -422,7 +522,7 @@
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=73246e88"></script>
+</div><script src="../_static/documentation_options.js?v=1cd57a5c"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
