@@ -123,22 +123,7 @@ class DWI(BaseDataset[np.ndarray | None]):
             The constructed dataset with data loaded from the file.
 
         """
-        # Reuse the parent `from_filename` logic to load all attributes
-        # that do not start with '_'. Then simply return DWI(**loaded_data).
-        from attr import fields
-
-        data: dict[str, Any] = {}
-        with h5py.File(filename, "r") as in_file:
-            root = in_file["/0"]
-            for f in fields(cls):
-                if f.name.startswith("_"):
-                    continue
-                if f.name in root:
-                    data[f.name] = np.asanyarray(root[f.name])
-                else:
-                    data[f.name] = None
-
-        return cls(**data)
+        return super().from_filename(filename)
 
     @property
     def bvals(self):

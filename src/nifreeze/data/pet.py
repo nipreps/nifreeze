@@ -92,23 +92,7 @@ class PET(BaseDataset[np.ndarray | None]):
             A PET dataset with data loaded from the specified file.
 
         """
-        import attr
-
-        filename = Path(filename)
-        data: dict[str, Any] = {}
-
-        with h5py.File(filename, "r") as in_file:
-            root = in_file["/0"]
-            for f in attr.fields(cls):
-                # skip private attributes (start with '_')
-                if f.name.startswith("_"):
-                    continue
-                if f.name in root:
-                    data[f.name] = np.asanyarray(root[f.name])
-                else:
-                    data[f.name] = None
-
-        return cls(**data)
+        return super().from_filename(filename)
 
     def to_filename(
         self,

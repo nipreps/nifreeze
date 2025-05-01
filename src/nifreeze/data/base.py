@@ -33,16 +33,13 @@ import attr
 import h5py
 import nibabel as nb
 import numpy as np
-from nibabel.spatialimages import SpatialHeader, SpatialImage
+from nibabel.spatialimages import SpatialHeader
 from nitransforms.linear import Affine
 from typing_extensions import TypeVarTuple, Unpack
 
-from nifreeze.utils.ndimage import load_api
+Ts = TypeVarTuple("Ts")
 
 NFDH5_EXT = ".h5"
-
-
-Ts = TypeVarTuple("Ts")
 
 
 def _data_repr(value: np.ndarray | None) -> str:
@@ -250,51 +247,3 @@ class BaseDataset(Generic[Unpack[Ts]]):
         if self.datahdr is None:
             nii.header.set_xyzt_units("mm")
         nii.to_filename(filename)
-
-
-def load(
-    filename: Path | str,
-    brainmask_file: Path | str | None = None,
-    motion_file: Path | str | None = None,
-) -> BaseDataset[()]:
-    """
-    Load 4D data from a filename or an HDF5 file.
-
-    Parameters
-    ----------
-    filename : :obj:`os.pathlike`
-        The NIfTI or HDF5 file.
-    brainmask_file : :obj:`os.pathlike`, optional
-        A brainmask NIfTI file. If provided, will be loaded and
-        stored in the returned dataset.
-    motion_file : :obj:`os.pathlike`
-        A file containing head-motion affine matrices (linear).
-
-    Returns
-    -------
-    :obj:`~nifreeze.data.base.BaseDataset`
-        The loaded dataset.
-
-    Raises
-    ------
-    ValueError
-        If the file extension is not supported or the file cannot be loaded.
-
-    """
-    if motion_file:
-        raise NotImplementedError
-
-    filename = Path(filename)
-    if filename.name.endswith(NFDH5_EXT):
-        return BaseDataset.from_filename(filename)
-
-    img = load_api(filename, SpatialImage)
-    retval: BaseDataset[()] = BaseDataset(dataobj=np.asanyarray(img.dataobj), affine=img.affine)
-
-    if brainmask_file:
-        mask = load_api(brainmask_file, SpatialImage)
-        retval.brainmask = np.asanyarray(mask.dataobj)
-    else:
-        retval.brainmask = np.ones(img.shape[:3], dtype=bool)
-
-    return retval
