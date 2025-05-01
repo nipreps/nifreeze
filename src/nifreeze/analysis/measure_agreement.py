@@ -22,8 +22,19 @@
 #
 """Measure agreement computation."""
 
+import enum
+
 import numpy as np
 import scipy.stats as stats
+
+
+class BASalientEntity(enum.Enum):
+    RELIABILITY_INDICES = "reliability_indices"
+    RELIABILITY_MASK = "reliability_mask"
+    LEFT_INDICES = "left_indices"
+    LEFT_MASK = "left_mask"
+    RIGHT_INDICES = "right_indices"
+    RIGHT_MASK = "right_mask"
 
 
 def _check_ci(ci: float) -> None:
@@ -151,10 +162,120 @@ def compute_bland_altman_features(
 
     # Confidence interval for the LoA
     # Follows Bland-Altman 1999 and Altman 1983, where the standard error of LoA
-    # SE_{LoA} = \sigma_{d} \ sqrt{2/n}
-    # The confidence interval (CI) for LoA is then calculated using the
-    # t-distribution critical value.
+    # SE_{LoA} = \sigma_{d} \sqrt{2/n}
+    # where \sigma_{d} is the standard deviation of the differences and n is the
+    # sample size.
+    # The confidence interval for the LoA is then calculated using the
+    # t-distribution critical value
     std_err_loa = std_diff * np.sqrt(2 / n)
     ci_loa = t_val * std_err_loa
 
     return diff, mean, mean_diff, std_diff, loa_lower, loa_upper, ci_mean, ci_loa
+
+
+def get_reliability_mask(diff: np.ndarray, loa_lower: float, loa_upper: float) -> np.ndarray:
+    """Get reliability mask as the data within the lower and upper limits of
+    agreement.
+
+    Boundaries are inclusive.
+
+    Parameters
+    ----------
+    diff : :obj:`numpy.ndarray`
+        Differences data.
+    loa_lower : :obj:`float`
+        Lower limit of agreement.
+    loa_upper : :obj:`float`
+        Upper limit of agreement.
+
+    Returns
+    -------
+    :obj:`numpy.ndarray`
+        Reliability mask.
+    """
+
+    return (diff >= loa_lower) & (diff <= loa_upper)
+
+
+def identify_bland_altman_salient_data(
+    data1: np.ndarray, data2: np.ndarray, ci: float, top_n: int, percentile: float = 0.75
+) -> dict:
+    """Identify the Bland-Altman (BA) plot salient data.
+
+    Given the Bland-Altman data arrays, identifies the left- and right-most
+    `top_n` data points from the BA plot.
+
+    Once the left-most data points identified, the right-most `percentile` data
+    points are considered from the remaining data points, and `top_n` data
+    points are identified out of these.
+
+    Parameters
+    ----------
+    data1 : :obj:`numpy.ndarray`
+        Data array 1.
+    data2 : :obj:`numpy.ndarray`
+        Data array 2.
+    ci : :obj:`float`
+        Confidence interval.
+    top_n : :obj:`float`
+        Number of top-N salient data points to identify.
+    percentile: :obj:`float`, optional
+        Percentile of right-most salient data points to identify.
+
+    Returns
+    -------
+    :obj:`dict`
+        Reliability, left- and right-most data point indices, and corresponding
+        data masks as specified by the `:obj:`~nifreeze.analysis.measure_agreement.BASalientEntity`
+        keys.
+    """
+
+    (
+        diff,
+        mean,
+        mean_diff,
+        std_diff,
+        loa_lower,
+        loa_upper,
+        _,
+        _,
+    ) = compute_bland_altman_features(data1, data2, ci)
+
+    # Filter data outside the confidence intervals
+    reliability_mask = get_reliability_mask(diff, loa_lower, loa_upper)
+    reliability_idx = np.where(reliability_mask)[0]
+
+    # Select the top_n lowest median values from the left side of the BA plot
+    lower_idx = np.argsort(mean[reliability_idx])[:top_n]
+    left_indices = reliability_idx[lower_idx]
+    left_mask = np.zeros_like(reliability_mask, dtype=bool)
+    left_mask[left_indices] = True
+
+    # Select the top_n highest median values from the right side of the BA plot
+    # which are also closest to the zero mean difference value
+    remaining_idx = np.setdiff1d(reliability_idx, left_indices)
+
+    # Sort indices by descending mean (rightmost values first)
+    right_sort_mean = remaining_idx[np.argsort(mean[remaining_idx])[::-1]]
+
+    # Take top percentile of the rightmost points
+    top_p_count = int(percentile * len(right_sort_mean))
+    top_p_sorted = right_sort_mean[:top_p_count]
+
+    # Get absolute difference from mean_diff (closeness to zero mean difference)
+    diff_distance = np.abs(diff[top_p_sorted] - mean_diff)
+
+    # Sort rightmost points by closeness to zero diff
+    upper_idx = np.argsort(diff_distance)
+
+    # Take top_n of them
+    right_mask = right_sort_mean[upper_idx[:top_n]]
+
+    return {
+        BASalientEntity.RELIABILITY_INDICES.value: reliability_idx,
+        BASalientEntity.RELIABILITY_MASK.value: reliability_mask,
+        BASalientEntity.LEFT_INDICES.value: lower_idx,
+        BASalientEntity.LEFT_MASK.value: left_mask,
+        BASalientEntity.RIGHT_INDICES.value: upper_idx,
+        BASalientEntity.RIGHT_MASK.value: right_mask,
+    }

@@ -22,19 +22,29 @@
 #
 """Bland-Altman plot."""
 
+import enum
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 from nifreeze.analysis.measure_agreement import (
+    BASalientEntity,
     compute_bland_altman_features,
     compute_z_score,
 )
+
+
+class BASalientEntityColor(enum.Enum):
+    RELIABLE_COLOR = "reliable_color"
+    LEFT_COLOR = "left_color"
+    RIGHT_COLOR = "right_color"
 
 
 def plot_bland_altman(
     data1: np.ndarray,
     data2: np.ndarray,
     ci: float = 0.95,
+    salient_data: dict | None = None,
     figsize: tuple | None = (15, 10),
 ) -> plt.Figure:
     """Create a Bland-Altman plot.
@@ -50,6 +60,11 @@ def plot_bland_altman(
         Data values.
     ci : :obj:`float`, optional
         Confidence interval value. Must be in the [0, 1] range.
+    salient_data : :obj:`dict`, optional
+        Salient data values. Must be in the same format as ``data1``. Contains:
+        -
+        -
+        - ...
     figsize : :obj:`tuple`, optional
         Figure size.
 
@@ -105,8 +120,32 @@ def plot_bland_altman(
         plt.axhspan(span[0], span[1], color=color, alpha=alpha_l, label=label)
 
     # Plot the BA data points
-    alpha_p = 0.5
+    alpha_p = 0.95
     plt.scatter(mean, diff, alpha=alpha_p, label="Data", color="gray")
+
+    # Overlay the salient data
+    if salient_data:
+        salient_data_key = [
+            BASalientEntity.RELIABILITY_MASK.value,
+            BASalientEntity.LEFT_MASK.value,
+            BASalientEntity.RIGHT_MASK.value,
+        ]
+        salient_data_color_key = [
+            BASalientEntityColor.RELIABLE_COLOR.value,
+            BASalientEntityColor.LEFT_COLOR.value,
+            BASalientEntityColor.RIGHT_COLOR.value,
+        ]
+        labels = ["Reliable", "Top N in lower part", "Top N in upper part"]
+        for data_key, color_key, label in zip(
+            salient_data_key, salient_data_color_key, labels, strict=strict
+        ):
+            plt.scatter(
+                mean[salient_data[data_key]],
+                diff[salient_data[data_key]],
+                color=salient_data[color_key],
+                alpha=alpha_p,
+                label=label,
+            )
 
     # Add the mean and limit of agreement text
     factor = 1.02

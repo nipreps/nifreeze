@@ -24,14 +24,16 @@
 
 import numpy as np
 import pytest
+from matplotlib import pyplot as plt
 
-from nifreeze.viz.bland_altman import plot_bland_altman
+from nifreeze.analysis.measure_agreement import BASalientEntity, identify_bland_altman_salient_data
+from nifreeze.viz.bland_altman import BASalientEntityColor, plot_bland_altman
 
 
 def test_plot_bland_altman(request, tmp_path):
     rng = request.node.rng
 
-    n_samples = 350
+    n_samples = 450
 
     # Verify that the data is compliant
 
@@ -71,4 +73,29 @@ def test_plot_bland_altman(request, tmp_path):
     fig = plot_bland_altman(_data1, _data2, ci=ci)
 
     out_svg = tmp_path / "bland-altman.svg"
+    fig.savefig(out_svg, format="svg")
+
+    top_n = 100
+    percentile = 0.75
+    salient_data = identify_bland_altman_salient_data(
+        _data1, _data2, ci, top_n=top_n, percentile=percentile
+    )
+
+    cmap = plt.get_cmap("cividis")
+    left_color = cmap(0)
+    right_color = cmap(cmap.N - 1)
+
+    salient_data = {
+        BASalientEntity.RELIABILITY_MASK.value: salient_data[
+            BASalientEntity.RELIABILITY_MASK.value
+        ],
+        BASalientEntityColor.RELIABLE_COLOR.value: "powderblue",
+        BASalientEntity.LEFT_MASK.value: salient_data[BASalientEntity.LEFT_MASK.value],
+        BASalientEntityColor.LEFT_COLOR.value: left_color,
+        BASalientEntity.RIGHT_MASK.value: salient_data[BASalientEntity.RIGHT_MASK.value],
+        BASalientEntityColor.RIGHT_COLOR.value: right_color,
+    }
+    fig = plot_bland_altman(_data1, _data2, ci=ci, salient_data=salient_data)
+
+    out_svg = tmp_path / "bland-altman_salient_data.svg"
     fig.savefig(out_svg, format="svg")
