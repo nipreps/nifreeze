@@ -45,6 +45,8 @@ from nifreeze.registration.ants import (
     _run_registration,
 )
 from nifreeze.utils import iterators
+from nifreeze.registration.ants import Registration
+from nifreeze.model.pet import PETModel
 
 DatasetT = TypeVar("DatasetT", bound=BaseDataset)
 
@@ -192,74 +194,87 @@ class Estimator:
 
         return self
 
-
 class PETMotionEstimator:
-    """Estimates motion within PET imaging data."""
+    """Estimates motion within PET imaging data aligned with generic Estimator workflow."""
 
-    @staticmethod
-    def estimate(
-        pet_data,
-        *,
-        align_kwargs=None,
-        omp_nthreads=None,
-        n_jobs=None,
-        seed=None,
-        **kwargs,
-    ):
-        """
-        Estimate motion parameters for PET data.
+    def __init__(self, model, align_kwargs=None, strategy="lofo"):
+        self.model = model
+        self.align_kwargs = align_kwargs or {}
+        self.strategy = strategy
 
-        Parameters
-        ----------
-        pet_data : :obj:`PET`
-            The PET dataset to be processed.
-        align_kwargs : :obj:`dict`
-            Configuration parameters for the registration algorithm.
-        omp_nthreads : :obj:`int`
-            Maximum number of OpenMP threads to use.
-        n_jobs : :obj:`int`
-            Number of parallel jobs.
-        seed : :obj:`int` or :obj:`bool`
-            Seed for random number generation.
-        """
-        align_kwargs = align_kwargs or {}
-        index_order = np.arange(len(pet_data))
+    def run(self, pet_dataset, omp_nthreads=None, n_jobs=None, seed=None, debug_dir=None):
+        n_frames = len(pet_dataset)
+        frame_indices = np.arange(n_frames)
 
-        if "num_threads" not in align_kwargs and omp_nthreads is not None:
-            align_kwargs["num_threads"] = omp_nthreads
+        if omp_nthreads:
+            self.align_kwargs["num_threads"] = omp_nthreads
+
+        if debug_dir:
+            debug_dir = Path(debug_dir)
+            debug_dir.mkdir(parents=True, exist_ok=True)
 
         affine_matrices = []
-        for i in tqdm(index_order, desc="Estimating PET motion"):
-            train_data, test_data = pet_data.lofo_split(i)
 
-            with NamedTemporaryFile(delete=False, suffix='.nii.gz') as fixed_file, \
-                 NamedTemporaryFile(delete=False, suffix='.nii.gz') as moving_file:
+        with TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
 
-                nib.Nifti1Image(train_data[0], pet_data.affine).to_filename(fixed_file.name)
-                nib.Nifti1Image(test_data[0], pet_data.affine).to_filename(moving_file.name)
+            for idx in tqdm(frame_indices, desc="Estimating PET motion"):
+                (train_data, train_times), (test_data, test_time) = pet_dataset.lofo_split(idx)
 
-                # Dynamically resolve the path to registration JSON
+                if train_times is None:
+                    raise ValueError(f"train_times is None at index {idx}, check midframe initialization.")
+
+                # Instantiate PETModel explicitly
+                model = PETModel(
+                    dataset=pet_dataset,
+                    timepoints=train_times,
+                    xlim=pet_dataset.total_duration
+                )
+                model.fit(train_data)
+
+                # Predict the reference volume at the test frame's timepoint
+                predicted = model.predict(test_time)
+
+                fixed_image_path = debug_dir / f"fixed_frame_{idx:03d}.nii.gz"
+                moving_image_path = debug_dir / f"moving_frame_{idx:03d}.nii.gz"
+
+                fixed_img = nib.Nifti1Image(predicted, pet_dataset.affine)
+                moving_img = nib.Nifti1Image(test_data, pet_dataset.affine)
+
+                moving_img = nib.as_closest_canonical(moving_img, enforce_diag=True)
+
+                fixed_img.to_filename(fixed_image_path)
+                moving_img.to_filename(moving_image_path)
+
                 registration_config = files('nifreeze.registration.config').joinpath('pet-to-pet_level1.json')
 
                 registration = Registration(
                     from_file=registration_config,
-                    fixed_image=fixed_file.name,
-                    moving_image=moving_file.name,
-                    **align_kwargs
+                    fixed_image=str(fixed_image_path),
+                    moving_image=str(moving_image_path),
+                    output_warped_image=True,
+                    output_transform_prefix=f"ants_{idx:03d}",
+                    **self.align_kwargs
                 )
 
+                # Save ANTs command line for debugging
+                cmd_path = debug_dir / f"ants_cmd_{idx:03d}.sh"
+                cmd_path.write_text(registration.cmdline)
+
                 try:
-                    result = registration.run()
+                    result = registration.run(cwd=str(tmp_path))
                     if result.outputs.forward_transforms:
                         transform = nt.io.itk.ITKLinearTransform.from_filename(result.outputs.forward_transforms[0])
-                        matrix = transform.to_ras(reference=fixed_file.name, moving=moving_file.name)
+                        matrix = transform.to_ras(reference=str(fixed_image_path), moving=str(moving_image_path))
                         affine_matrices.append(matrix)
-                    else:
-                        print(f"No transforms produced for index {i}")
-                except Exception as e:
-                    print(f"Failed to process frame {i} due to {e}")
 
-            os.unlink(fixed_file.name)
-            os.unlink(moving_file.name)
+                        if debug_dir and hasattr(result.outputs, 'warped_image') and result.outputs.warped_image:
+                            Path(result.outputs.warped_image).rename(debug_dir / f"corrected_frame_{idx:03d}.nii.gz")
+                    else:
+                        affine_matrices.append(np.eye(4))
+                        print(f"No transforms produced for index {idx}")
+                except Exception as e:
+                    affine_matrices.append(np.eye(4))
+                    print(f"Failed to process frame {idx} due to {e}")
 
         return affine_matrices
