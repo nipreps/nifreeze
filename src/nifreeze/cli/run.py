@@ -66,7 +66,10 @@ def main(argv=None) -> None:
     output_path: Path = Path(args.output_dir) / output_filename
 
     # Save the DWI dataset to the output path
-    dataset.to_filename(output_path)
+    if args.write_hdf5:
+        dataset.to_filename(output_path)
+
+    dataset.to_nifti(output_path)
 
 
 if __name__ == "__main__":

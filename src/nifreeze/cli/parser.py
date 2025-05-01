@@ -122,6 +122,8 @@ def _build_parser() -> ArgumentParser:
         ),
     )
 
+    parser.add_argument("--write-hdf5", action="store_true", help=("Generate an HDF5 file also."))
+
     return parser
 
 
