@@ -36,10 +36,10 @@ from nifreeze.testing import simulations as _sim
 
 
 @pytest.mark.parametrize("use_mask", (False, True))
-def test_trivial_model(use_mask):
+def test_trivial_model(request, use_mask):
     """Check the implementation of the trivial B0 model."""
 
-    rng = np.random.default_rng(1234)
+    rng = request.node.rng
 
     # Should not allow initialization without an oracle
     with pytest.raises(TypeError):
