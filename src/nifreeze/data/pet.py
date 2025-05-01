@@ -189,9 +189,9 @@ class PET(BaseDataset[np.ndarray | None]):
         return cls(**data)
 
     def load(
-            filename,
-            json_file,
-            brainmask_file=None
+        filename,
+        json_file,
+        brainmask_file=None
     ):
         """Load PET data."""
         filename = Path(filename)
@@ -213,6 +213,7 @@ class PET(BaseDataset[np.ndarray | None]):
         midframe = frame_times_start + frame_duration / 2
 
         retval.midframe = midframe
+        retval.total_duration = float(frame_times_start[-1] + frame_duration[-1])
 
         assert len(retval.midframe) == retval.dataobj.shape[-1]
 
