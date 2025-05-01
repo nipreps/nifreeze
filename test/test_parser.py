@@ -23,11 +23,21 @@
 
 """Test parser."""
 
+import sys
+
 import pytest
 
+from nifreeze.__main__ import main
 from nifreeze.cli.parser import _build_parser
 
 MIN_ARGS = ["data/dwi.h5"]
+
+
+@pytest.fixture(autouse=True)
+def set_command(monkeypatch):
+    with monkeypatch.context() as m:
+        m.setattr(sys, "argv", ["nifreeze"])
+        yield
 
 
 @pytest.mark.parametrize(
@@ -59,7 +69,7 @@ def test_parser_valid(tmp_path, args):
     opts = _build_parser().parse_args(args)
 
     assert opts.input_file == datapath
-    assert opts.models == ["b0"]
+    assert opts.models == ["trivial"]
 
 
 @pytest.mark.parametrize(
@@ -81,3 +91,37 @@ def test_models_arg(tmp_path, argval, _models):
     opts = _build_parser().parse_args(args)
 
     assert opts.models == [_models]
+
+
+def test_help(capsys):
+    with pytest.raises(SystemExit):
+        main(["--help"])
+    captured = capsys.readouterr()
+    assert captured.out.startswith("usage: nifreeze [-h]")
+
+
+def test_parser(tmp_path, datadir):
+    input_file = datadir / "dwi.h5"
+
+    with pytest.raises(SystemExit):
+        _build_parser().parse_args([str(input_file), str(tmp_path)])
+
+    args = _build_parser().parse_args(
+        [
+            str(input_file),
+            "--models",
+            "trivial",
+            "--nthreads",
+            "1",
+            "--njobs",
+            "1",
+            "--seed",
+            "1234",
+            "--output-dir",
+            str(tmp_path),
+        ]
+    )
+
+    assert args.input_file == input_file
+    assert args.njobs == 1
+    assert args.output_dir == tmp_path

@@ -25,7 +25,7 @@
 from pathlib import Path
 
 from nifreeze.cli.parser import parse_args
-from nifreeze.data.base import BaseDataset
+from nifreeze.data.base import BaseDataset, load
 from nifreeze.estimator import Estimator
 
 
@@ -36,11 +36,14 @@ def main(argv=None) -> None:
     Returns
     -------
     None
+
     """
     args = parse_args(argv)
 
     # Open the data with the given file path
-    dataset: BaseDataset = BaseDataset.from_filename(args.input_file)
+    dataset: BaseDataset = load(
+        args.input_file, brainmask_file=args.brainmask if args.brainmask else None
+    )
 
     prev_model: Estimator | None = None
     for _model in args.models:
@@ -63,7 +66,10 @@ def main(argv=None) -> None:
     output_path: Path = Path(args.output_dir) / output_filename
 
     # Save the DWI dataset to the output path
-    dataset.to_filename(output_path)
+    if args.write_hdf5:
+        dataset.to_filename(output_path)
+
+    dataset.to_nifti(output_path)
 
 
 if __name__ == "__main__":

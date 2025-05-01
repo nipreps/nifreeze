@@ -26,6 +26,7 @@ import sys
 import pytest
 
 from nifreeze.__main__ import main
+from nifreeze.cli.parser import parse_args
 
 
 @pytest.fixture(autouse=True)
@@ -42,28 +43,28 @@ def test_help(capsys):
     assert captured.out.startswith("usage: nifreeze [-h]")
 
 
-def test_main(tmp_path, datadir):
+def test_parser(tmp_path, datadir):
     input_file = datadir / "dwi.h5"
 
     with pytest.raises(SystemExit):
-        main([str(input_file), str(tmp_path)])
+        parse_args([str(input_file), str(tmp_path)])
 
-    with pytest.raises(SystemExit):
-        main(
-            [
-                str(input_file),
-                "--models",
-                "b0",
-                "--omp_nthreads",
-                "1",
-                "--n_jobs",
-                "1",
-                "--seed",
-                "1234",
-                "--output_dir",
-                str(tmp_path),
-            ]
-        )
-    # assert Path(output_dir).joinpath("dwi.h5").exists()  # Empty
+    args = parse_args(
+        [
+            str(input_file),
+            "--models",
+            "trivial",
+            "--nthreads",
+            "1",
+            "--njobs",
+            "1",
+            "--seed",
+            "1234",
+            "--output-dir",
+            str(tmp_path),
+        ]
+    )
 
-    # Also, call python -m nifreeze or nifreeze from GHA ??
+    assert args.input_file == input_file
+    assert args.njobs == 1
+    assert args.output_dir == tmp_path

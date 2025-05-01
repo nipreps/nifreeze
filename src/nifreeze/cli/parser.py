@@ -66,10 +66,15 @@ def _build_parser() -> ArgumentParser:
         "input_file",
         action="store",
         type=Path,
-        help="Path to the HDF5 file containing the original DWI data.",
+        help="Path to the HDF5 file containing the original 4D data.",
     )
+
     parser.add_argument(
-        "--align_config",
+        "--brainmask", action="store", type=Path, help="Path to a brain mask in NIfTI format."
+    )
+
+    parser.add_argument(
+        "--align-config",
         action="store",
         type=_parse_yaml_config,
         default=None,
@@ -82,8 +87,8 @@ def _build_parser() -> ArgumentParser:
         "--models",
         action="store",
         nargs="+",
-        default=["b0"],
-        help="Select the diffusion model for registration targets.",
+        default=["trivial"],
+        help="Select the data model to generate registration targets.",
     )
     parser.add_argument(
         "--nthreads",
@@ -107,7 +112,7 @@ def _build_parser() -> ArgumentParser:
         help="Seed the random number generator for deterministic estimation.",
     )
     parser.add_argument(
-        "--output_dir",
+        "--output-dir",
         action="store",
         type=Path,
         default=Path.cwd(),
@@ -116,6 +121,8 @@ def _build_parser() -> ArgumentParser:
             "The output file will have the same name as the input file."
         ),
     )
+
+    parser.add_argument("--write-hdf5", action="store_true", help=("Generate an HDF5 file also."))
 
     return parser
 

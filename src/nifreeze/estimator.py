@@ -41,6 +41,9 @@ from nifreeze.utils import iterators
 
 DatasetT = TypeVar("DatasetT", bound=BaseDataset)
 
+FIT_MSG = "Fit&predict"
+REG_MSG = "Realign"
+
 
 class Filter:
     """Alters an input data object (e.g., downsampling)."""
@@ -137,7 +140,7 @@ class Estimator:
             with tqdm(total=dataset_length, unit="vols.") as pbar:
                 # run a original-to-synthetic affine registration
                 for i in index_iter:
-                    pbar.set_description_str(f"Fit and predict vol. <{i}>")
+                    pbar.set_description_str(f"{FIT_MSG: <16} vol. <{i}>")
 
                     # fit the model
                     test_set = dataset[i]
@@ -156,7 +159,7 @@ class Estimator:
                         kwargs.pop("clip", "both"),
                     )
 
-                    pbar.set_description_str(f"Realign vol. <{i}>")
+                    pbar.set_description_str(f"{REG_MSG: <16} vol. <{i}>")
 
                     xform = _run_registration(
                         predicted_path,
