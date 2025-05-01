@@ -28,6 +28,8 @@ import nibabel as nib
 import numpy as np
 from joblib import Parallel, delayed
 from nibabel.processing import smooth_image
+from scipy.interpolate import BSpline
+from scipy.sparse.linalg import cg
 
 from nifreeze.model.base import BaseModel
 
@@ -38,10 +40,9 @@ DEFAULT_TIMEFRAME_MIDPOINT_TOL = 1e-2
 class PETModel(BaseModel):
     """A PET imaging realignment model based on B-Spline approximation."""
 
+    __slots__ = ("_t", "_x", "_xlim", "_order", "_coeff", "_n_ctrl", "_datashape", "_mask", "_smooth_fwhm", "_thresh_pct")
 
-    __slots__ = ("_t", "_x", "_xlim", "_order", "_coeff", "_n_ctrl", "_datashape", "_mask")
-
-    def __init__(self, timepoints=None, xlim=None, n_ctrl=None, order=3, **kwargs):
+    def __init__(self, timepoints=None, xlim=None, n_ctrl=None, order=3, smooth_fwhm=10, thresh_pct=20, **kwargs):
         """
         Create the B-Spline interpolating matrix.
 
@@ -64,9 +65,10 @@ class PETModel(BaseModel):
             raise TypeError("timepoints must be provided in initialization")
 
         self._order = order
-
         self._x = np.array(timepoints, dtype="float32")
         self._xlim = xlim
+        self._smooth_fwhm = smooth_fwhm
+        self._thresh_pct = thresh_pct
 
         if self._x[0] < DEFAULT_TIMEFRAME_MIDPOINT_TOL:
             raise ValueError("First frame midpoint should not be zero or negative")
@@ -97,12 +99,19 @@ class PETModel(BaseModel):
 
         if index is not None:
             raise NotImplementedError("Fitting with held-out data is not supported")
-
         timepoints = kwargs.get("timepoints", None) or self._x
         x = (np.array(timepoints, dtype="float32") / self._xlim) * self._n_ctrl
 
         data = self._dataset.dataobj
         brainmask = self._dataset.brainmask
+
+        if self._smooth_fwhm > 0:
+            smoothed_img = smooth_image(nib.Nifti1Image(data, affine), self._smooth_fwhm)
+            data = smoothed_img.get_fdata()
+
+        if self._thresh_pct > 0:
+            thresh_val = np.percentile(data, self._thresh_pct)
+            data[data < thresh_val] = 0
 
         # Convert data into V (voxels) x T (timepoints)
         data = data.reshape((-1, data.shape[-1])) if brainmask is None else data[brainmask]
