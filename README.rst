@@ -59,7 +59,7 @@ and positron-emission tomography (PET) data.
 
 .. BEGIN FLOWCHART
 
-.. image:: https://raw.githubusercontent.com/nipreps/nifreeze/9588b4d0e410cc648f73f5581eb8feb38baf6e2b/docs/_static/nifreeze-flowchart.svg
+.. image:: https://raw.githubusercontent.com/nipreps/nifreeze/main/docs/_static/nifreeze-flowchart.svg
    :alt: The nifreeze flowchart
 
 .. END FLOWCHART
