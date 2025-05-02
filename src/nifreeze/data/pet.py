@@ -121,7 +121,7 @@ class PET(BaseDataset[np.ndarray | None]):
             out_file.attrs["Type"] = "pet"
 
 
-def load(
+def from_nii(
     filename: Path | str,
     brainmask_file: Path | str | None = None,
     motion_file: Path | str | None = None,
@@ -129,12 +129,12 @@ def load(
     frame_duration: np.ndarray | list[float] | None = None,
 ) -> PET:
     """
-    Load PET data from HDF5 or NIfTI, creating a PET object with appropriate metadata.
+    Load PET data from NIfTI, creating a PET object with appropriate metadata.
 
     Parameters
     ----------
     filename : :obj:`os.pathlike`
-        The NIfTI or HDF5 file.
+        The NIfTI file.
     brainmask_file : :obj:`os.pathlike`, optional
         A brainmask NIfTI file. If provided, will be loaded and
         stored in the returned dataset.
@@ -163,24 +163,13 @@ def load(
         raise NotImplementedError
 
     filename = Path(filename)
-    if filename.suffix == ".h5":
-        # Load from HDF5
-        pet_obj = PET.from_filename(filename)
-    else:
-        # Load from NIfTI
-        img = load_api(filename, SpatialImage)
-        data = img.get_fdata(dtype=np.float32)
-        pet_obj = PET(
-            dataobj=data,
-            affine=img.affine,
-        )
-
-    # Verify the user provided frame_time if not already in the PET object
-    if pet_obj.frame_time is None and frame_time is None:
-        raise RuntimeError(
-            "The `frame_time` is mandatory for PET data to comply with BIDS. "
-            "See https://bids-specification.readthedocs.io for details."
-        )
+    # Load from NIfTI
+    img = load_api(filename, SpatialImage)
+    data = img.get_fdata(dtype=np.float32)
+    pet_obj = PET(
+        dataobj=data,
+        affine=img.affine,
+    )
 
     # If the user supplied new values, set them
     if frame_time is not None:

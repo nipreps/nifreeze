@@ -33,6 +33,7 @@ def load(
     filename: Path | str,
     brainmask_file: Path | str | None = None,
     motion_file: Path | str | None = None,
+    **kwargs,
 ) -> BaseDataset[()]:
     """
     Load 4D data from a filename or an HDF5 file.
@@ -77,8 +78,17 @@ def load(
 
         raise TypeError("Could not read data")
 
+    if "gradients_file" in kwargs or "bvec_file" in kwargs:
+        from nifreeze.data.dmri import from_nii
+
+        return from_nii(filename, brainmask_file=brainmask_file, motion_file=motion_file, **kwargs)
+    elif "frame_time" in kwargs or "frame_duration" in kwargs:
+        from nifreeze.data.pet import from_nii
+
+        return from_nii(filename, brainmask_file=brainmask_file, motion_file=motion_file, **kwargs)
+
     img = load_api(filename, SpatialImage)
-    retval: BaseDataset[()] = BaseDataset(dataobj=np.asanyarray(img.dataobj), affine=img.affine)
+    retval = BaseDataset(dataobj=np.asanyarray(img.dataobj), affine=img.affine)
 
     if brainmask_file:
         mask = load_api(brainmask_file, SpatialImage)

@@ -28,7 +28,7 @@ import sys
 import pytest
 
 from nifreeze.__main__ import main
-from nifreeze.cli.parser import _build_parser
+from nifreeze.cli.parser import build_parser
 
 MIN_ARGS = ["data/dwi.h5"]
 
@@ -49,7 +49,7 @@ def set_command(monkeypatch):
 def test_parser_errors(args, code):
     """Check behavior of the parser."""
     with pytest.raises(SystemExit) as error:
-        _build_parser().parse_args(args)
+        build_parser().parse_args(args)
 
     assert error.value.code == code
 
@@ -66,7 +66,7 @@ def test_parser_valid(tmp_path, args):
     datapath.mkdir(exist_ok=True)
     args[0] = str(datapath)
 
-    opts = _build_parser().parse_args(args)
+    opts = build_parser().parse_args(args)
 
     assert opts.input_file == datapath
     assert opts.models == ["trivial"]
@@ -88,7 +88,7 @@ def test_models_arg(tmp_path, argval, _models):
     datapath.mkdir(exist_ok=True)
 
     args = [str(datapath)] + ["--models", argval]
-    opts = _build_parser().parse_args(args)
+    opts = build_parser().parse_args(args)
 
     assert opts.models == [_models]
 
@@ -104,9 +104,9 @@ def test_parser(tmp_path, datadir):
     input_file = datadir / "dwi.h5"
 
     with pytest.raises(SystemExit):
-        _build_parser().parse_args([str(input_file), str(tmp_path)])
+        build_parser().parse_args([str(input_file), str(tmp_path)])
 
-    args = _build_parser().parse_args(
+    args = build_parser().parse_args(
         [
             str(input_file),
             "--models",

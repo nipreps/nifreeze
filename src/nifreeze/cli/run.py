@@ -24,7 +24,7 @@
 
 from pathlib import Path
 
-from nifreeze.cli.parser import parse_args
+from nifreeze.cli.parser import build_parser
 from nifreeze.data import BaseDataset, load
 from nifreeze.estimator import Estimator
 
@@ -38,11 +38,33 @@ def main(argv=None) -> None:
     None
 
     """
-    args = parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    extra_kwargs = {}
+
+    if args.gradient_file:
+        nfiles = len(args.gradient_file)
+
+        if nfiles == 1:
+            extra_kwargs["gradients_file"] = args.gradient_file[0]
+        elif nfiles == 2:
+            extra_kwargs["bvec_file"] = args.gradient_file[0]
+            extra_kwargs["bval_file"] = args.gradient_file[1]
+        else:
+            parser.error("--gradient-file must be one or two files")
+
+    if args.b0_file:
+        extra_kwargs["b0_file"] = args.b0_file
+
+    if args.timing_file:
+        raise NotImplementedError("Cannot load PET timing information")
 
     # Open the data with the given file path
     dataset: BaseDataset = load(
-        args.input_file, brainmask_file=args.brainmask if args.brainmask else None
+        args.input_file,
+        brainmask_file=args.brainmask if args.brainmask else None,
+        **extra_kwargs,
     )
 
     prev_model: Estimator | None = None
