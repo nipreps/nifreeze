@@ -139,7 +139,7 @@ class BaseDWIModel(BaseModel):
         brainmask = self._dataset.brainmask
         gradient = self._dataset.gradients[:, index]
 
-        if "dipy" in self._model_class:
+        if "dipy" in getattr(self, "_model_class", ""):
             gradient = gradient_table_from_bvals_bvecs(
                 gradient[np.newaxis, -1], gradient[np.newaxis, :-1]
             )
