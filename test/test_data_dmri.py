@@ -27,7 +27,8 @@ import numpy as np
 import pytest
 from dipy.io.gradients import read_bvals_bvecs
 
-from nifreeze.data.dmri import DWI, find_shelling_scheme, load
+from nifreeze.data import load
+from nifreeze.data.dmri import DWI, find_shelling_scheme, from_nii
 
 
 def _create_random_gtab_dataobj(request, n_gradients=10, b0s=1):
@@ -103,11 +104,17 @@ def _serialize_dwi_data(
     )
 
 
+def test_main(datadir):
+    input_file = datadir / "dwi.h5"
+
+    assert isinstance(load(input_file), DWI)
+
+
 def test_load(datadir, tmp_path):
     """Check that the registration parameters for b=0
     gives a good estimate of known affine"""
 
-    dwi_h5 = load(datadir / "dwi.h5")
+    dwi_h5 = DWI.from_filename(datadir / "dwi.h5")
     dwi_nifti_path = tmp_path / "dwi.nii.gz"
     gradients_path = tmp_path / "dwi.tsv"
     bvecs_path = tmp_path / "dwi.bvecs"
@@ -121,17 +128,17 @@ def test_load(datadir, tmp_path):
     np.savetxt(str(bvals_path), grad_table[-1])
 
     with pytest.raises(RuntimeError):
-        load(dwi_nifti_path)
+        from_nii(dwi_nifti_path)
 
     # Try loading NIfTI + gradients table
-    dwi_from_nifti1 = load(dwi_nifti_path, gradients_file=gradients_path)
+    dwi_from_nifti1 = from_nii(dwi_nifti_path, gradients_file=gradients_path)
 
     assert np.allclose(dwi_h5.dataobj, dwi_from_nifti1.dataobj)
     assert np.allclose(dwi_h5.bzero, dwi_from_nifti1.bzero)
     assert np.allclose(dwi_h5.gradients, dwi_from_nifti1.gradients)
 
     # Try loading NIfTI + b-vecs/vals
-    dwi_from_nifti2 = load(
+    dwi_from_nifti2 = from_nii(
         dwi_nifti_path,
         bvec_file=bvecs_path,
         bval_file=bvals_path,
@@ -175,7 +182,7 @@ def test_equality_operator(tmp_path, request):
         tmp_path,
     )
 
-    dwi_obj = load(
+    dwi_obj = from_nii(
         dwi_fname,
         gradients_file=gradients_fname,
         b0_file=b0_fname,
@@ -185,7 +192,7 @@ def test_equality_operator(tmp_path, request):
     hdf5_filename = tmp_path / "test_dwi.h5"
     dwi_obj.to_filename(hdf5_filename)
 
-    round_trip_dwi_obj = load(hdf5_filename)
+    round_trip_dwi_obj = DWI.from_filename(hdf5_filename)
 
     # Symmetric equality
     assert dwi_obj == round_trip_dwi_obj
