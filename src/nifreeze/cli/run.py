@@ -25,7 +25,7 @@
 from pathlib import Path
 
 from nifreeze.cli.parser import parse_args
-from nifreeze.data.base import BaseDataset, load
+from nifreeze.data import BaseDataset, load
 from nifreeze.estimator import Estimator
 
 
