@@ -24,7 +24,17 @@
 import glob
 import subprocess
 import sys
+from os import getenv
+from pathlib import Path
 
+# Download the data
+DATA_PATH = Path(getenv("TEST_DATA_HOME", str(Path.home() / "nifreeze-tests")))
+DATA_PATH.mkdir(parents=True, exist_ok=True)
+
+script_path = Path(__file__).resolve().parent / "../scripts/fetch_fmri_nb_openneuro_data.sh"
+subprocess.run(["bash", str(script_path), str(DATA_PATH)], check=True)
+
+# Find and run the notebooks
 notebooks = glob.glob("docs/notebooks/*.ipynb")
 # Make bold_realignment.ipynb Jupyter notebook an exception as it involves running a realignment
 # process for several DataLad datasets, which requires long running times.
