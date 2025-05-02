@@ -27,7 +27,7 @@ from __future__ import annotations
 from collections import namedtuple
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Any, Generic, Self
+from typing import Any, Generic
 
 import attr
 import h5py
@@ -35,7 +35,7 @@ import nibabel as nb
 import numpy as np
 from nibabel.spatialimages import SpatialHeader
 from nitransforms.linear import Affine
-from typing_extensions import TypeVarTuple, Unpack
+from typing_extensions import Self, TypeVarTuple, Unpack
 
 Ts = TypeVarTuple("Ts")
 
