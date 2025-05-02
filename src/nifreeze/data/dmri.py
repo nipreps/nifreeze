@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from collections import namedtuple
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 from warnings import warn
 
 import attr
@@ -108,7 +108,7 @@ class DWI(BaseDataset[np.ndarray | None]):
         return super().__getitem__(idx)
 
     @classmethod
-    def from_filename(cls, filename: Path | str) -> DWI:
+    def from_filename(cls, filename: Path | str) -> Self:
         """
         Read an HDF5 file from disk and create a DWI object.
 

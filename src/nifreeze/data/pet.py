@@ -25,7 +25,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, Self, Union
 
 import attr
 import h5py
@@ -77,7 +77,7 @@ class PET(BaseDataset[np.ndarray | None]):
         return super().__getitem__(idx)
 
     @classmethod
-    def from_filename(cls, filename: Union[str, Path]) -> PET:
+    def from_filename(cls, filename: Union[str, Path]) -> Self:
         """
         Read an HDF5 file from disk and create a PET object.
 

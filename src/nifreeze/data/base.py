@@ -27,7 +27,7 @@ from __future__ import annotations
 from collections import namedtuple
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Any, Generic
+from typing import Any, Generic, Self
 
 import attr
 import h5py
@@ -128,7 +128,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
         return self.dataobj[..., idx], affine, *self._getextra(idx)
 
     @classmethod
-    def from_filename(cls, filename: Path | str) -> BaseDataset:
+    def from_filename(cls, filename: Path | str) -> Self:
         """
         Read an HDF5 file from disk and create a BaseDataset.
 
