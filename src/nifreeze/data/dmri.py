@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from collections import namedtuple
 from pathlib import Path
-from typing import Any, Self
+from typing import Any
 from warnings import warn
 
 import attr
@@ -36,6 +36,7 @@ import numpy as np
 import numpy.typing as npt
 from nibabel.spatialimages import SpatialImage
 from nitransforms.linear import Affine
+from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr
 from nifreeze.utils.ndimage import load_api

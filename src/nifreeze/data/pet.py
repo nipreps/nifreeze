@@ -25,12 +25,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Self, Union
+from typing import Any, Union
 
 import attr
 import h5py
 import numpy as np
 from nibabel.spatialimages import SpatialImage
+from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr
 from nifreeze.utils.ndimage import load_api
