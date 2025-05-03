@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it as below."
+title: "An open implementation of FSL's eddy with volume-to-volume artifact estimation for neuroimaging beyond diffusion MRI"
+authors:
+  - family-names: Legarreta
+    given-names: Jon Haitz
+  - family-names: Savary
+    given-names: Elodie
+  - family-names: Markiewicz
+    given-names: Christopher J.
+  - family-names: Rokem
+    given-names: Ariel
+  - family-names: Norgaard
+    given-names: Martin
+  - family-names: Esteban
+    given-names: Oscar
+date-released: 2025-05-10
+conference:
+  name: "34th Annual Conference & Exhibition of the International Society for Magnetic Resonance in Medicine (ISMRM)"
+  place: "Honolulu, HI USA"
+  date: 2025-05-10
+type: conference-paper
+abstract: "Accepted. Program #3252"
+url: "https://osf.io/preprints/psyarxiv/gfny9_v2"
