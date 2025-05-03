@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.data.dmri - nifreeze 25.0.0.dev200 documentation</title>
+        <title>nifreeze.data.dmri - nifreeze 25.0.0.dev210 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev200 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev210 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev200</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev210</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev200</span>
+  <span class="sidebar-brand-text">25.0.0.dev210</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -335,6 +335,7 @@
 <span class="kn">import</span> <span class="nn">numpy.typing</span> <span class="k">as</span> <span class="nn">npt</span>
 <span class="kn">from</span> <span class="nn">nibabel.spatialimages</span> <span class="kn">import</span> <span class="n">SpatialImage</span>
 <span class="kn">from</span> <span class="nn">nitransforms.linear</span> <span class="kn">import</span> <span class="n">Affine</span>
+<span class="kn">from</span> <span class="nn">typing_extensions</span> <span class="kn">import</span> <span class="n">Self</span>
 
 <span class="kn">from</span> <span class="nn">nifreeze.data.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span><span class="p">,</span> <span class="n">_cmp</span><span class="p">,</span> <span class="n">_data_repr</span>
 <span class="kn">from</span> <span class="nn">nifreeze.utils.ndimage</span> <span class="kn">import</span> <span class="n">load_api</span>
@@ -411,7 +412,7 @@
 <div class="viewcode-block" id="DWI.from_filename">
 <a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI.from_filename">[docs]</a>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">from_filename</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DWI</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">from_filename</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Read an HDF5 file from disk and create a DWI object.</span>
 
@@ -426,22 +427,7 @@
 <span class="sd">            The constructed dataset with data loaded from the file.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Reuse the parent `from_filename` logic to load all attributes</span>
-        <span class="c1"># that do not start with &#39;_&#39;. Then simply return DWI(**loaded_data).</span>
-        <span class="kn">from</span> <span class="nn">attr</span> <span class="kn">import</span> <span class="n">fields</span>
-
-        <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">in_file</span><span class="p">:</span>
-            <span class="n">root</span> <span class="o">=</span> <span class="n">in_file</span><span class="p">[</span><span class="s2">&quot;/0&quot;</span><span class="p">]</span>
-            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-                <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">):</span>
-                    <span class="k">continue</span>
-                <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">root</span><span class="p">:</span>
-                    <span class="n">data</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">root</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">])</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">data</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-
-        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="n">data</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">from_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span></div>
 
 
     <span class="nd">@property</span>
@@ -610,9 +596,9 @@
 
 
 
-<div class="viewcode-block" id="load">
-<a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.load">[docs]</a>
-<span class="k">def</span> <span class="nf">load</span><span class="p">(</span>
+<div class="viewcode-block" id="from_nii">
+<a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.from_nii">[docs]</a>
+<span class="k">def</span> <span class="nf">from_nii</span><span class="p">(</span>
     <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">brainmask_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">motion_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -623,16 +609,15 @@
     <span class="n">b0_thres</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_LOWB_THRESHOLD</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DWI</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Load DWI data and construct a DWI object.</span>
+<span class="sd">    Load DWI data from NIfTI and construct a DWI object.</span>
 
-<span class="sd">    This function can load data from either an HDF5 file (if the filename ends with ``.h5``)</span>
-<span class="sd">    or from a NIfTI file, optionally loading a gradient table from either a separate gradients</span>
-<span class="sd">    file or from .bvec / .bval files.</span>
+<span class="sd">    This function loads data from a NIfTI file, optionally loading a gradient table</span>
+<span class="sd">    from either a separate gradients file or from .bvec / .bval files.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    filename : :obj:`os.pathlike`</span>
-<span class="sd">        The main DWI data file (NIfTI or HDF5).</span>
+<span class="sd">        The main DWI data file (NIfTI).</span>
 <span class="sd">    brainmask_file : :obj:`os.pathlike`, optional</span>
 <span class="sd">        A brainmask NIfTI file. If provided, will be loaded and</span>
 <span class="sd">        stored in the returned dataset.</span>
@@ -670,16 +655,13 @@
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
     <span class="n">filename</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-    <span class="c1"># 1) If this is an HDF5 file, just load via the DWI.from_filename method</span>
-    <span class="k">if</span> <span class="n">filename</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">&quot;.h5&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">DWI</span><span class="o">.</span><span class="n">from_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
 
-    <span class="c1"># 2) Otherwise, load a NIfTI</span>
+    <span class="c1"># 1) Load a NIfTI</span>
     <span class="n">img</span> <span class="o">=</span> <span class="n">load_api</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">SpatialImage</span><span class="p">)</span>
     <span class="n">fulldata</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">get_fdata</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
     <span class="n">affine</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">affine</span>
 
-    <span class="c1"># 3) Determine the gradients array from either gradients_file or bvec/bval</span>
+    <span class="c1"># 2) Determine the gradients array from either gradients_file or bvec/bval</span>
     <span class="k">if</span> <span class="n">gradients_file</span><span class="p">:</span>
         <span class="n">grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">gradients_file</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">bvec_file</span> <span class="ow">and</span> <span class="n">bval_file</span><span class="p">:</span>
@@ -702,7 +684,7 @@
             <span class="s2">&quot;Please specify either a gradients_file or (bvec_file &amp; bval_file).&quot;</span>
         <span class="p">)</span>
 
-    <span class="c1"># 4) Create the DWI instance. We&#39;ll filter out volumes where b-value &gt; b0_thres</span>
+    <span class="c1"># 3) Create the DWI instance. We&#39;ll filter out volumes where b-value &gt; b0_thres</span>
     <span class="c1">#    as &quot;DW volumes&quot; if the user wants to store only the high-b volumes here</span>
     <span class="n">gradmsk</span> <span class="o">=</span> <span class="n">grad</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">b0_thres</span> <span class="k">if</span> <span class="n">grad</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span> <span class="k">else</span> <span class="n">grad</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">b0_thres</span>
 
@@ -715,7 +697,7 @@
 
     <span class="n">dwi_obj</span><span class="o">.</span><span class="n">gradients</span> <span class="o">=</span> <span class="n">grad</span><span class="p">[:,</span> <span class="n">gradmsk</span><span class="p">]</span> <span class="k">if</span> <span class="n">grad</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span> <span class="k">else</span> <span class="n">grad</span><span class="p">[</span><span class="n">gradmsk</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span>
 
-    <span class="c1"># 6) b=0 volume (bzero)</span>
+    <span class="c1"># 4) b=0 volume (bzero)</span>
     <span class="c1">#    If the user provided a b0_file, load it</span>
     <span class="k">if</span> <span class="n">b0_file</span><span class="p">:</span>
         <span class="n">b0img</span> <span class="o">=</span> <span class="n">load_api</span><span class="p">(</span><span class="n">b0_file</span><span class="p">,</span> <span class="n">SpatialImage</span><span class="p">)</span>
@@ -730,7 +712,7 @@
         <span class="c1"># Note that axis=3 is valid only if your data is 4D (x, y, z, volumes).</span>
         <span class="n">dwi_obj</span><span class="o">.</span><span class="n">bzero</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">b0_volumes</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
 
-    <span class="c1"># 7) If a brainmask_file was provided, load it</span>
+    <span class="c1"># 5) If a brainmask_file was provided, load it</span>
     <span class="k">if</span> <span class="n">brainmask_file</span><span class="p">:</span>
         <span class="n">mask_img</span> <span class="o">=</span> <span class="n">load_api</span><span class="p">(</span><span class="n">brainmask_file</span><span class="p">,</span> <span class="n">SpatialImage</span><span class="p">)</span>
         <span class="n">dwi_obj</span><span class="o">.</span><span class="n">brainmask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">mask_img</span><span class="o">.</span><span class="n">dataobj</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
@@ -858,7 +840,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=463fb4ab"></script>
+</div><script src="../../../_static/documentation_options.js?v=22f064ef"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>
