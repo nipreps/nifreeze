@@ -111,9 +111,6 @@ def test_main(datadir):
 
 
 def test_load(datadir, tmp_path):
-    """Check that the registration parameters for b=0
-    gives a good estimate of known affine"""
-
     dwi_h5 = DWI.from_filename(datadir / "dwi.h5")
     dwi_nifti_path = tmp_path / "dwi.nii.gz"
     gradients_path = tmp_path / "dwi.tsv"
