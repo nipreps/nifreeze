@@ -92,12 +92,14 @@ def main(argv=None) -> None:
     )
 
     # Set the output filename to be the same as the input filename
-    output_filename: str = Path(args.input_file).name
+    output_filename = Path(Path(args.input_file).name).stem + ".nii.gz"
     output_path: Path = Path(args.output_dir) / output_filename
 
     # Save the DWI dataset to the output path
     if args.write_hdf5:
-        dataset.to_filename(output_path)
+        output_h5_filename = Path(Path(args.input_file).name).stem + ".h5"
+        output_h5_path: Path = Path(args.output_dir) / output_h5_filename
+        dataset.to_filename(output_h5_path)
 
     dataset.to_nifti(output_path)
 
