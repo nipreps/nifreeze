@@ -25,10 +25,12 @@
 import numpy as np
 import pytest
 
+from nifreeze.analysis.filtering import normalize
 from nifreeze.analysis.measure_agreement import (
     compute_bland_altman_features,
     compute_z_score,
 )
+from nifreeze.analysis.motion_analysis import identify_motion_spikes
 
 
 def test_compute_z_score():
@@ -105,3 +107,34 @@ def test_compute_bland_altman_features(request):
     assert loa_lower < loa_upper
     assert np.isscalar(ci_mean)
     assert np.isscalar(ci_loa)
+
+
+def test_normalize(request):
+    rng = request.node.rng
+
+    n_samples = 450
+
+    x = rng.normal(0, 5, n_samples)
+    expected_z_score = (x - np.mean(x)) / np.std(x)
+
+    obtained_z_score = normalize(x)
+
+    assert np.allclose(obtained_z_score, expected_z_score)
+
+
+def test_identify_motion_spikes(request):
+    rng = request.node.rng
+
+    n_samples = 450
+
+    fd = rng.normal(0, 5, n_samples)
+    threshold = 2.0
+
+    expected_indices = np.asarray([5, 57, 85, 100, 127, 180, 191, 202, 335, 393, 409])
+    expected_mask = np.zeros(n_samples, dtype=bool)
+    expected_mask[expected_indices] = True
+
+    obtained_indices, obtained_mask = identify_motion_spikes(fd, threshold=threshold)
+
+    assert np.array_equal(obtained_indices, expected_indices)
+    assert np.array_equal(obtained_mask, expected_mask)
