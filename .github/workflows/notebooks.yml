@@ -3,6 +3,8 @@ name: Run notebooks
 on:
   schedule:
     - cron: '0 0 * * 1'  # Every Monday at 00:00 UTC
+  # Allow job to be triggered manually from GitHub interface
+  workflow_dispatch:
 
 jobs:
   run-notebooks:
