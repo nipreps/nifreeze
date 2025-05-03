@@ -24,6 +24,7 @@
 from importlib import import_module
 
 import numpy as np
+from dipy.core.gradients import gradient_table_from_bvals_bvecs
 from joblib import Parallel, delayed
 
 from nifreeze.data.dmri import (
@@ -69,7 +70,7 @@ class BaseDWIModel(BaseModel):
         if not hasattr(dataset, "gradients") or dataset.gradients is None:
             raise ValueError("Dataset MUST have a gradient table.")
 
-        if dataset.gradients.shape[0] < DTI_MIN_ORIENTATIONS:
+        if len(dataset) < DTI_MIN_ORIENTATIONS:
             raise ValueError(
                 f"DWI dataset is too small ({dataset.gradients.shape[0]} directions)."
             )
@@ -89,7 +90,10 @@ class BaseDWIModel(BaseModel):
         data = data[brainmask, ...] if brainmask is not None else data.reshape(-1, data.shape[-1])
 
         # DIPY models (or one with a fully-compliant interface)
-        model_str = getattr(self, "_model_class", None)
+        model_str = getattr(self, "_model_class", "")
+        if "dipy" in model_str:
+            gtab = gradient_table_from_bvals_bvecs(gtab[-1, :], gtab[:-1, :].T)
+
         if model_str:
             module_name, class_name = model_str.rsplit(".", 1)
             self._model = getattr(
@@ -100,7 +104,7 @@ class BaseDWIModel(BaseModel):
         # One single CPU - linear execution (full model)
         if n_jobs == 1:
             self._model, _ = _exec_fit(self._model, data)
-            return
+            return 1
 
         # Split data into chunks of group of slices
         data_chunks = np.array_split(data, n_jobs)
@@ -130,9 +134,15 @@ class BaseDWIModel(BaseModel):
         """
 
         n_models = self._fit(index, **kwargs)
+        kwargs.pop("n_jobs")
 
         brainmask = self._dataset.brainmask
-        gradient = self._dataset.gradients[index]
+        gradient = self._dataset.gradients[:, index]
+
+        if "dipy" in getattr(self, "_model_class", ""):
+            gradient = gradient_table_from_bvals_bvecs(
+                gradient[np.newaxis, -1], gradient[np.newaxis, :-1]
+            )
 
         S0 = self._dataset.bzero
         if S0 is not None:
@@ -141,6 +151,7 @@ class BaseDWIModel(BaseModel):
         if n_models == 1:
             predicted, _ = _exec_predict(self._model, **(kwargs | {"gtab": gradient, "S0": S0}))
         else:
+            print(n_models, S0)
             S0 = np.array_split(S0, n_models) if S0 is not None else np.full(n_models, None)
 
             predicted = [None] * n_models
@@ -164,7 +175,7 @@ class BaseDWIModel(BaseModel):
             retval = np.zeros_like(brainmask, dtype="float32")
             retval[brainmask, ...] = predicted
         else:
-            retval = predicted.reshape(self._dataset.shape[:-1])
+            retval = predicted.reshape(self._dataset.dataobj.shape[:-1])
 
         return retval
 

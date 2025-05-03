@@ -22,9 +22,8 @@
 #
 """Parser module."""
 
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, Namespace
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
@@ -48,7 +47,7 @@ def _parse_yaml_config(file_path: str) -> dict:
     return config
 
 
-def _build_parser() -> ArgumentParser:
+def build_parser() -> ArgumentParser:
     """
     Build parser object.
 
@@ -124,24 +123,33 @@ def _build_parser() -> ArgumentParser:
 
     parser.add_argument("--write-hdf5", action="store_true", help=("Generate an HDF5 file also."))
 
+    g_dmri = parser.add_argument_group("Options for dMRI inputs")
+    g_dmri.add_argument(
+        "--gradient-file",
+        action="store",
+        nargs="+",
+        type=Path,
+        metavar="FILE",
+        help="A gradient file containing b-vectors and b-values",
+    )
+    g_dmri.add_argument(
+        "--b0-file",
+        action="store",
+        type=Path,
+        metavar="FILE",
+        help="A NIfTI file containing the b-zero reference",
+    )
+
+    g_pet = parser.add_argument_group("Options for PET inputs")
+    g_pet.add_argument(
+        "--timing-file",
+        action="store",
+        type=Path,
+        metavar="FILE",
+        help=(
+            "A NIfTI file containing the timing information (onsets and durations) "
+            "corresponding to the input file"
+        ),
+    )
+
     return parser
-
-
-def parse_args(args: Optional[list] = None, namespace: Optional[Namespace] = None) -> Namespace:
-    """
-    Parse args and run further checks on the command line.
-
-    Parameters
-    ----------
-    args : list of str, optional
-        List of strings representing the command line arguments. Defaults to None.
-    namespace : :class:`~argparse.Namespace`, optional
-        An object to parse the arguments into. Defaults to None.
-
-    Returns
-    -------
-    :class:`~argparse.Namespace`
-        An object holding the parsed arguments.
-    """
-    parser = _build_parser()
-    return parser.parse_args(args, namespace)

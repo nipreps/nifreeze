@@ -36,6 +36,7 @@ import numpy as np
 import numpy.typing as npt
 from nibabel.spatialimages import SpatialImage
 from nitransforms.linear import Affine
+from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr
 from nifreeze.utils.ndimage import load_api
@@ -108,7 +109,7 @@ class DWI(BaseDataset[np.ndarray | None]):
         return super().__getitem__(idx)
 
     @classmethod
-    def from_filename(cls, filename: Path | str) -> DWI:
+    def from_filename(cls, filename: Path | str) -> Self:
         """
         Read an HDF5 file from disk and create a DWI object.
 
@@ -123,22 +124,7 @@ class DWI(BaseDataset[np.ndarray | None]):
             The constructed dataset with data loaded from the file.
 
         """
-        # Reuse the parent `from_filename` logic to load all attributes
-        # that do not start with '_'. Then simply return DWI(**loaded_data).
-        from attr import fields
-
-        data: dict[str, Any] = {}
-        with h5py.File(filename, "r") as in_file:
-            root = in_file["/0"]
-            for f in fields(cls):
-                if f.name.startswith("_"):
-                    continue
-                if f.name in root:
-                    data[f.name] = np.asanyarray(root[f.name])
-                else:
-                    data[f.name] = None
-
-        return cls(**data)
+        return super().from_filename(filename)
 
     @property
     def bvals(self):
@@ -293,7 +279,7 @@ class DWI(BaseDataset[np.ndarray | None]):
         return [(bval_estimated[idx], *self[indices]) for idx, indices in enumerate(indices)]
 
 
-def load(
+def from_nii(
     filename: Path | str,
     brainmask_file: Path | str | None = None,
     motion_file: Path | str | None = None,
@@ -304,16 +290,15 @@ def load(
     b0_thres: float = DEFAULT_LOWB_THRESHOLD,
 ) -> DWI:
     """
-    Load DWI data and construct a DWI object.
+    Load DWI data from NIfTI and construct a DWI object.
 
-    This function can load data from either an HDF5 file (if the filename ends with ``.h5``)
-    or from a NIfTI file, optionally loading a gradient table from either a separate gradients
-    file or from .bvec / .bval files.
+    This function loads data from a NIfTI file, optionally loading a gradient table
+    from either a separate gradients file or from .bvec / .bval files.
 
     Parameters
     ----------
     filename : :obj:`os.pathlike`
-        The main DWI data file (NIfTI or HDF5).
+        The main DWI data file (NIfTI).
     brainmask_file : :obj:`os.pathlike`, optional
         A brainmask NIfTI file. If provided, will be loaded and
         stored in the returned dataset.
@@ -351,16 +336,13 @@ def load(
         raise NotImplementedError
 
     filename = Path(filename)
-    # 1) If this is an HDF5 file, just load via the DWI.from_filename method
-    if filename.suffix == ".h5":
-        return DWI.from_filename(filename)
 
-    # 2) Otherwise, load a NIfTI
+    # 1) Load a NIfTI
     img = load_api(filename, SpatialImage)
     fulldata = img.get_fdata(dtype=np.float32)
     affine = img.affine
 
-    # 3) Determine the gradients array from either gradients_file or bvec/bval
+    # 2) Determine the gradients array from either gradients_file or bvec/bval
     if gradients_file:
         grad = np.loadtxt(gradients_file, dtype="float32")
         if bvec_file and bval_file:
@@ -383,7 +365,7 @@ def load(
             "Please specify either a gradients_file or (bvec_file & bval_file)."
         )
 
-    # 4) Create the DWI instance. We'll filter out volumes where b-value > b0_thres
+    # 3) Create the DWI instance. We'll filter out volumes where b-value > b0_thres
     #    as "DW volumes" if the user wants to store only the high-b volumes here
     gradmsk = grad[-1] > b0_thres if grad.shape[0] == 4 else grad[:, -1] > b0_thres
 
@@ -396,7 +378,7 @@ def load(
 
     dwi_obj.gradients = grad[:, gradmsk] if grad.shape[0] == 4 else grad[gradmsk, :].T
 
-    # 6) b=0 volume (bzero)
+    # 4) b=0 volume (bzero)
     #    If the user provided a b0_file, load it
     if b0_file:
         b0img = load_api(b0_file, SpatialImage)
@@ -411,7 +393,7 @@ def load(
         # Note that axis=3 is valid only if your data is 4D (x, y, z, volumes).
         dwi_obj.bzero = np.median(b0_volumes, axis=3)
 
-    # 7) If a brainmask_file was provided, load it
+    # 5) If a brainmask_file was provided, load it
     if brainmask_file:
         mask_img = load_api(brainmask_file, SpatialImage)
         dwi_obj.brainmask = np.asanyarray(mask_img.dataobj, dtype=bool)

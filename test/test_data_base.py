@@ -24,12 +24,13 @@
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Any
 
 import nibabel as nb
 import numpy as np
 import pytest
 
-from nifreeze.data.base import NFDH5_EXT, BaseDataset, load
+from nifreeze.data import NFDH5_EXT, BaseDataset, load
 
 
 @pytest.fixture
@@ -106,7 +107,7 @@ def test_to_filename_and_from_filename(random_dataset: BaseDataset):
         assert h5_file.is_file()
 
         # Read from filename
-        ds2 = BaseDataset.from_filename(h5_file)
+        ds2: BaseDataset[Any] = BaseDataset.from_filename(h5_file)
         assert ds2.dataobj is not None
         assert ds2.dataobj.shape == (32, 32, 32, 5)
         assert ds2.affine.shape == (4, 4)
