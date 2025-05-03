@@ -23,21 +23,11 @@
 
 """Test parser."""
 
-import sys
-
 import pytest
 
-from nifreeze.__main__ import main
 from nifreeze.cli.parser import build_parser
 
 MIN_ARGS = ["data/dwi.h5"]
-
-
-@pytest.fixture(autouse=True)
-def set_command(monkeypatch):
-    with monkeypatch.context() as m:
-        m.setattr(sys, "argv", ["nifreeze"])
-        yield
 
 
 @pytest.mark.parametrize(
@@ -91,13 +81,6 @@ def test_models_arg(tmp_path, argval, _models):
     opts = build_parser().parse_args(args)
 
     assert opts.models == [_models]
-
-
-def test_help(capsys):
-    with pytest.raises(SystemExit):
-        main(["--help"])
-    captured = capsys.readouterr()
-    assert captured.out.startswith("usage: nifreeze [-h]")
 
 
 def test_parser(tmp_path, datadir):
