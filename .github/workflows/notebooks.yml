@@ -23,6 +23,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Install TeX Live
+        run: |
+          sudo apt-get update
+          sudo apt install texlive texlive-latex-extra texlive-fonts-recommended cm-super dvipng
+
       - name: Install git-annex
         run: |
           sudo apt-get update
