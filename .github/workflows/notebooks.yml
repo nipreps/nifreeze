@@ -28,6 +28,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y git-annex
 
+      - name: Configure Git user for DataLad
+        run: |
+          git config --global user.email "nipreps@gmail.com"
+          git config --global user.name "nipreps-bot"
+
       - name: Install DataLad
         run: pip install datalad
 
