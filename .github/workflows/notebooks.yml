@@ -29,5 +29,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install tox
 
+      - name: Download data
+        run: |
+          DATA_PATH="${{ env.TEST_DATA_HOME || github.workspace }}/nifreeze-tests"
+          mkdir -p "$DATA_PATH"
+          bash scripts/fetch_fmri_nb_openneuro_data.sh "$DATA_PATH"
+
       - name: Run notebooks with tox
         run: tox -e notebooks
