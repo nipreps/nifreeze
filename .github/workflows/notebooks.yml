@@ -41,6 +41,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Download data file from G-Node GIN
+        run: |
+          mkdir ${TEST_DATA_HOME}
+          curl -L -o "${TEST_DATA_HOME}/hcpdata.npz" https://gin.g-node.org/nipreps-data/tests-nifreeze/src/master/hcpdata.npz
+
       - name: Install TeX Live
         run: |
           sudo apt-get update
