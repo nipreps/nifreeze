@@ -10,6 +10,13 @@ defaults:
   run:
     shell: bash
 
+# Force tox and pytest to use color
+env:
+  FORCE_COLOR: true
+  TEST_DATA_HOME: /home/runner/nifreeze-tests/
+  NIFREEZE_WERRORS: 1
+  TEST_DATA_REPO: https://gin.g-node.org/nipreps-data/tests-nifreeze
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -19,7 +26,7 @@ permissions:
 
 jobs:
   run-notebooks:
-    runs-on: ubuntu-latest
+    runs-on: 'ubuntu-latest'
 
     strategy:
       matrix:
@@ -57,11 +64,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install tox
 
-      - name: Download data
+      - name: Download data from OpenNeuro
         run: |
-          DATA_PATH="${{ env.TEST_DATA_HOME || github.workspace }}/nifreeze-tests"
-          mkdir -p "$DATA_PATH"
-          scripts/fetch_fmri_nb_openneuro_data.sh "$DATA_PATH"
+          ${{ github.workspace }}/scripts/fetch_fmri_nb_openneuro_data.sh "${TEST_DATA_HOME}"
 
       - name: Run notebooks with tox
         run: tox -e notebooks
