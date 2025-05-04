@@ -258,7 +258,7 @@ def identify_bland_altman_salient_data(
     # Sort indices by descending mean (rightmost values first)
     right_sort_mean = remaining_idx[np.argsort(mean[remaining_idx])[::-1]]
 
-    # Take top percentile of the rightmost points
+    # Take a percentile of the rightmost points
     top_p_count = int(percentile * len(right_sort_mean))
     top_p_sorted = right_sort_mean[:top_p_count]
 
@@ -266,10 +266,12 @@ def identify_bland_altman_salient_data(
     diff_distance = np.abs(diff[top_p_sorted] - mean_diff)
 
     # Sort rightmost points by closeness to zero diff
-    upper_idx = np.argsort(diff_distance)
+    top_p_idx = np.argsort(diff_distance)
 
     # Take top_n of them
-    right_mask = right_sort_mean[upper_idx[:top_n]]
+    upper_idx = top_p_sorted[top_p_idx][:top_n]
+    right_mask = np.zeros_like(reliability_mask, dtype=bool)
+    right_mask[upper_idx] = True
 
     return {
         BASalientEntity.RELIABILITY_INDICES.value: reliability_idx,
