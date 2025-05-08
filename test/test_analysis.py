@@ -26,8 +26,10 @@ import numpy as np
 import pytest
 
 from nifreeze.analysis.measure_agreement import (
+    BASalientEntity,
     compute_bland_altman_features,
     compute_z_score,
+    identify_bland_altman_salient_data,
 )
 
 
@@ -105,3 +107,37 @@ def test_compute_bland_altman_features(request):
     assert loa_lower < loa_upper
     assert np.isscalar(ci_mean)
     assert np.isscalar(ci_loa)
+
+
+def test_identify_bland_altman_salient_data():
+    _data1 = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    _data2 = np.array([1.1, 2.1, 1.1, 2.7, 3.4, 5.1, 2.2, 6.3, 7.6, 8.2])
+
+    ci = 0.95
+
+    # Verify that a sufficient number of data points exists to get the requested
+    # number of salient data points exists
+    top_n = 6
+    with pytest.raises(ValueError):
+        identify_bland_altman_salient_data(_data1, _data2, ci, top_n)
+
+    top_n = 4
+
+    # Verify that the percentile is not restrictive enough to get the requested
+    # number of rightmost salient data points exists
+    percentile = 0.75
+    with pytest.raises(ValueError):
+        identify_bland_altman_salient_data(_data1, _data2, ci, top_n, percentile=percentile)
+
+    percentile = 0.8
+    salient_data = identify_bland_altman_salient_data(
+        _data1, _data2, ci, top_n, percentile=percentile
+    )
+
+    assert len(salient_data[BASalientEntity.RELIABILITY_MASK.value]) == len(_data1)
+
+    assert len(salient_data[BASalientEntity.LEFT_INDICES.value]) == top_n
+    assert len(salient_data[BASalientEntity.LEFT_MASK.value]) == len(_data1)
+
+    assert len(salient_data[BASalientEntity.RIGHT_INDICES.value]) == top_n
+    assert len(salient_data[BASalientEntity.RIGHT_MASK.value]) == len(_data1)
