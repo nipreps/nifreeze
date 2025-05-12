@@ -206,9 +206,9 @@ def identify_bland_altman_salient_data(
     `top_n` data points from the BA plot.
 
     Once the left-most data points identified, the right-most `percentile` data
-    points are considered from the remaining data points. Among these, the
-    `top_n` data points that are closest to the zero mean difference are
-    identified.
+    points are considered from the remaining data points.
+    The ``top_n`` data points closest to the zero mean difference are
+    identified among these.
 
     Parameters
     ----------
