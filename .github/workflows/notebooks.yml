@@ -69,6 +69,8 @@ jobs:
       - name: Download SynthStrip model
         run: |
           wget https://ftp.nmr.mgh.harvard.edu/pub/dist/freesurfer/synthstrip/models/synthstrip.1.pt -P "${TEST_DATA_HOME}"
+          echo "Test data home"
+          tree ${TEST_DATA_HOME}
 
       - name: Install TeX Live
         run: |
