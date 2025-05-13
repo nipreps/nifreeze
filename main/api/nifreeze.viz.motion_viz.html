@@ -3,10 +3,10 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="nifreeze.cli.parser module" href="nifreeze.cli.parser.html" /><link rel="prev" title="nifreeze.analysis.motion module" href="nifreeze.analysis.motion.html" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="nifreeze.viz.signals module" href="nifreeze.viz.signals.html" /><link rel="prev" title="nifreeze.viz.bland_altman module" href="nifreeze.viz.bland_altman.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.cli package - nifreeze 25.0.0.dev242 documentation</title>
+        <title>nifreeze.viz.motion_viz module - nifreeze 25.0.0.dev242 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
@@ -218,7 +218,7 @@
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.motion.html">nifreeze.analysis.motion module</a></li>
 </ul>
 </li>
-<li class="toctree-l2 current has-children current-page"><a class="current reference internal" href="#">nifreeze.cli package</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of nifreeze.cli package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.cli.html">nifreeze.cli package</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of nifreeze.cli package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.cli.parser.html">nifreeze.cli.parser module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.cli.run.html">nifreeze.cli.run module</a></li>
 </ul>
@@ -256,9 +256,9 @@
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.utils.ndimage.html">nifreeze.utils.ndimage module</a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.viz.html">nifreeze.viz package</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of nifreeze.viz package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 current has-children"><a class="reference internal" href="nifreeze.viz.html">nifreeze.viz package</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of nifreeze.viz package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.viz.bland_altman.html">nifreeze.viz.bland_altman module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="nifreeze.viz.motion_viz.html">nifreeze.viz.motion_viz module</a></li>
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">nifreeze.viz.motion_viz module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.viz.signals.html">nifreeze.viz.signals module</a></li>
 </ul>
 </li>
@@ -285,7 +285,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../_sources/api/nifreeze.cli.rst.txt" title="View this page">
+  <a class="muted-link" href="../_sources/api/nifreeze.viz.motion_viz.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -305,17 +305,85 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="module-nifreeze.cli">
-<span id="nifreeze-cli-package"></span><h1>nifreeze.cli package<a class="headerlink" href="#module-nifreeze.cli" title="Link to this heading">¶</a></h1>
-<section id="submodules">
-<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">¶</a></h2>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="nifreeze.cli.parser.html">nifreeze.cli.parser module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="nifreeze.cli.run.html">nifreeze.cli.run module</a></li>
+          <section id="module-nifreeze.viz.motion_viz">
+<span id="nifreeze-viz-motion-viz-module"></span><h1>nifreeze.viz.motion_viz module<a class="headerlink" href="#module-nifreeze.viz.motion_viz" title="Link to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="nifreeze.viz.motion_viz.plot_framewise_displacement">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.viz.motion_viz.</span></span><span class="sig-name descname"><span class="pre">plot_framewise_displacement</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fd</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmap_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'viridis'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.html#matplotlib.axes.Axes" title="(in Matplotlib v3.10.3)"><span class="pre">matplotlib.axes.Axes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.html#matplotlib.axes.Axes" title="(in Matplotlib v3.10.3)"><span class="pre">matplotlib.axes.Axes</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/viz/motion_viz.html#plot_framewise_displacement"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.viz.motion_viz.plot_framewise_displacement" title="Link to this definition">¶</a></dt>
+<dd><p>Plot frame-wise displacement data.</p>
+<p>Plots the frame-wise displacement data corresponding to different
+realizations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fd</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">DataFrame</span></code>) – Frame-wise displacement values corresponding.</p></li>
+<li><p><strong>labels</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>) – Labels for legend.</p></li>
+<li><p><strong>cmap_name</strong> (<em>str, optional</em>) – Colormap name.</p></li>
+<li><p><strong>ax</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">Axes</span></code>, optional) – Figure axes.</p></li>
 </ul>
-</div>
-</section>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ax</strong> – Figure plot axis.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">Axes</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nifreeze.viz.motion_viz.plot_motion_overlay">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.viz.motion_viz.</span></span><span class="sig-name descname"><span class="pre">plot_motion_overlay</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rel_diff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">img_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">brain_mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">orientation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">slice_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">smooth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.html#matplotlib.axes.Axes" title="(in Matplotlib v3.10.3)"><span class="pre">matplotlib.axes.Axes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.html#matplotlib.axes.Axes" title="(in Matplotlib v3.10.3)"><span class="pre">matplotlib.axes.Axes</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/viz/motion_viz.html#plot_motion_overlay"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.viz.motion_viz.plot_motion_overlay" title="Link to this definition">¶</a></dt>
+<dd><p>Plot motion relative difference as an overlay on a given orientation and slice of the imaging data.</p>
+<p>The values of the relative difference can optionally be smoothed using a
+Gaussian filter for a more appealing visual result.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rel_diff</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – Relative motion difference.</p></li>
+<li><p><strong>img_data</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – Imaging data.</p></li>
+<li><p><strong>brain_mask</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – Brain mask.</p></li>
+<li><p><strong>orientation</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>) – Orientation. Can be one of obj:<cite>ORIENTATIONS</cite>.</p></li>
+<li><p><strong>slice_idx</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>) – Slice index to be plot.</p></li>
+<li><p><strong>smooth</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a>, optional) – <code class="docutils literal notranslate"><span class="pre">True</span></code> to smooth the motion relative difference.</p></li>
+<li><p><strong>ax</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">Axes</span></code>, optional) – Figure axis.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ax</strong> – Figure plot axis.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">Axes</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nifreeze.viz.motion_viz.plot_volumewise_motion">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.viz.motion_viz.</span></span><span class="sig-name descname"><span class="pre">plot_volumewise_motion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">motion_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/viz/motion_viz.html#plot_volumewise_motion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.viz.motion_viz.plot_volumewise_motion" title="Link to this definition">¶</a></dt>
+<dd><p>Plot mean volume-wise motion parameters.</p>
+<p>Plots the mean translation and rotation parameters along the <code class="docutils literal notranslate"><span class="pre">x</span></code>, <cite>y`</cite>,
+and <code class="docutils literal notranslate"><span class="pre">z</span></code> axes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>frames</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – Frame indices.</p></li>
+<li><p><strong>motion_params</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – Motion parameters.Motion parameters: translation and rotation. Each row
+represents one frame, and columns represent each coordinate axis <code class="docutils literal notranslate"><span class="pre">x</span></code>,
+<cite>y`</cite>, and <code class="docutils literal notranslate"><span class="pre">z</span></code>. Translation parameters are followed by rotation
+parameters column-wise.</p></li>
+<li><p><strong>ax</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>, optional) – Figure axes.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ax</strong> – Figure plot axes array.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
         </article>
@@ -323,23 +391,23 @@
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="nifreeze.cli.parser.html">
+          <a class="next-page" href="nifreeze.viz.signals.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">nifreeze.cli.parser module</div>
+                <div class="title">nifreeze.viz.signals module</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="nifreeze.analysis.motion.html">
+          <a class="prev-page" href="nifreeze.viz.bland_altman.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">nifreeze.analysis.motion module</div>
+                <div class="title">nifreeze.viz.bland_altman module</div>
                 
               </div>
             </a>
@@ -373,8 +441,10 @@
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">nifreeze.cli package</a><ul>
-<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#">nifreeze.viz.motion_viz module</a><ul>
+<li><a class="reference internal" href="#nifreeze.viz.motion_viz.plot_framewise_displacement"><code class="docutils literal notranslate"><span class="pre">plot_framewise_displacement()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.viz.motion_viz.plot_motion_overlay"><code class="docutils literal notranslate"><span class="pre">plot_motion_overlay()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.viz.motion_viz.plot_volumewise_motion"><code class="docutils literal notranslate"><span class="pre">plot_volumewise_motion()</span></code></a></li>
 </ul>
 </li>
 </ul>

@@ -13,3 +13,4 @@ Submodules
    :maxdepth: 1
 
    nifreeze.analysis.measure_agreement
+   nifreeze.analysis.motion

@@ -1,0 +1,7 @@
+nifreeze.viz.motion\_viz module
+===============================
+
+.. automodule:: nifreeze.viz.motion_viz
+   :members:
+   :undoc-members:
+   :show-inheritance:

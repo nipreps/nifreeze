@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.cli.run - nifreeze 25.0.0.dev242 documentation</title>
+        <title>nifreeze.analysis.motion - nifreeze 25.0.0.dev242 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -298,7 +298,7 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <h1>Source code for nifreeze.cli.run</h1><div class="highlight"><pre>
+          <h1>Source code for nifreeze.analysis.motion</h1><div class="highlight"><pre>
 <span></span><span class="c1"># emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-</span>
 <span class="c1"># vi: set ft=python sts=4 ts=4 sw=4 et:</span>
 <span class="c1">#</span>
@@ -321,85 +321,46 @@
 <span class="c1">#</span>
 <span class="c1">#     https://www.nipreps.org/community/licensing/</span>
 <span class="c1">#</span>
-<span class="sd">&quot;&quot;&quot;NiFreeze runner.&quot;&quot;&quot;</span>
 
-<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-
-<span class="kn">from</span> <span class="nn">nifreeze.cli.parser</span> <span class="kn">import</span> <span class="n">build_parser</span>
-<span class="kn">from</span> <span class="nn">nifreeze.data</span> <span class="kn">import</span> <span class="n">BaseDataset</span><span class="p">,</span> <span class="n">load</span>
-<span class="kn">from</span> <span class="nn">nifreeze.estimator</span> <span class="kn">import</span> <span class="n">Estimator</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 
-<div class="viewcode-block" id="main">
-<a class="viewcode-back" href="../../../api/nifreeze.cli.run.html#nifreeze.cli.run.main">[docs]</a>
-<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">argv</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Entry point.</span>
+<div class="viewcode-block" id="compute_percentage_change">
+<a class="viewcode-back" href="../../../api/nifreeze.analysis.motion.html#nifreeze.analysis.motion.compute_percentage_change">[docs]</a>
+<span class="k">def</span> <span class="nf">compute_percentage_change</span><span class="p">(</span>
+    <span class="n">reference</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">test</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute motion change between reference and test as a percentage.</span>
+
+<span class="sd">    If a mask is provided, the computation is only provided within the mask.</span>
+<span class="sd">    Also, null values are ignored.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    reference : :obj:`~numpy.ndarray`</span>
+<span class="sd">        Reference imaging volume.</span>
+<span class="sd">    test : :obj:`~numpy.ndarray`</span>
+<span class="sd">        Test (shifted) imaging volume.</span>
+<span class="sd">    mask : :obj:`~numpy.ndarray`</span>
+<span class="sd">        Mask for value consideration.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    None</span>
-
+<span class="sd">    rel_diff : :obj:`~numpy.ndarray`</span>
+<span class="sd">        Motion change between reference and test.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">parser</span> <span class="o">=</span> <span class="n">build_parser</span><span class="p">()</span>
-    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
 
-    <span class="n">extra_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c1"># Avoid divide-by-zero errors</span>
+    <span class="n">eps</span> <span class="o">=</span> <span class="mf">1e-5</span>
+    <span class="n">rel_diff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">reference</span><span class="p">)</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">reference</span> <span class="o">&lt;=</span> <span class="n">eps</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">rel_diff</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">100</span> <span class="o">*</span> <span class="p">(</span><span class="n">test</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">-</span> <span class="n">reference</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span> <span class="o">/</span> <span class="n">reference</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
 
-    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">gradient_file</span><span class="p">:</span>
-        <span class="n">nfiles</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">gradient_file</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">rel_diff</span></div>
 
-        <span class="k">if</span> <span class="n">nfiles</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">extra_kwargs</span><span class="p">[</span><span class="s2">&quot;gradients_file&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">gradient_file</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="k">elif</span> <span class="n">nfiles</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="n">extra_kwargs</span><span class="p">[</span><span class="s2">&quot;bvec_file&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">gradient_file</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">extra_kwargs</span><span class="p">[</span><span class="s2">&quot;bval_file&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">gradient_file</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">parser</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;--gradient-file must be one or two files&quot;</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">b0_file</span><span class="p">:</span>
-        <span class="n">extra_kwargs</span><span class="p">[</span><span class="s2">&quot;b0_file&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">b0_file</span>
-
-    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">timing_file</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Cannot load PET timing information&quot;</span><span class="p">)</span>
-
-    <span class="c1"># Open the data with the given file path</span>
-    <span class="n">dataset</span><span class="p">:</span> <span class="n">BaseDataset</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span>
-        <span class="n">args</span><span class="o">.</span><span class="n">input_file</span><span class="p">,</span>
-        <span class="n">brainmask_file</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">brainmask</span> <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">brainmask</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="o">**</span><span class="n">extra_kwargs</span><span class="p">,</span>
-    <span class="p">)</span>
-
-    <span class="n">prev_model</span><span class="p">:</span> <span class="n">Estimator</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="k">for</span> <span class="n">_model</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">models</span><span class="p">:</span>
-        <span class="n">estimator</span><span class="p">:</span> <span class="n">Estimator</span> <span class="o">=</span> <span class="n">Estimator</span><span class="p">(</span>
-            <span class="n">_model</span><span class="p">,</span>
-            <span class="n">prev</span><span class="o">=</span><span class="n">prev_model</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="n">prev_model</span> <span class="o">=</span> <span class="n">estimator</span>
-
-    <span class="n">_</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-        <span class="n">dataset</span><span class="p">,</span>
-        <span class="n">align_kwargs</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">align_config</span><span class="p">,</span>
-        <span class="n">omp_nthreads</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">nthreads</span><span class="p">,</span>
-        <span class="n">njobs</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">njobs</span><span class="p">,</span>
-        <span class="n">seed</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">seed</span><span class="p">,</span>
-    <span class="p">)</span>
-
-    <span class="c1"># Set the output filename to be the same as the input filename</span>
-    <span class="n">output_filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">input_file</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
-    <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">output_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">output_filename</span>
-
-    <span class="c1"># Save the DWI dataset to the output path</span>
-    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">write_hdf5</span><span class="p">:</span>
-        <span class="n">dataset</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
-
-    <span class="n">dataset</span><span class="o">.</span><span class="n">to_nifti</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span></div>
-
-
-
-<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-    <span class="n">main</span><span class="p">()</span>
 </pre></div>
         </article>
       </div>
