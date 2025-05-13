@@ -21,6 +21,8 @@
 #     https://www.nipreps.org/community/licensing/
 #
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -37,7 +39,9 @@ from nifreeze.viz.motion_viz import (
     plot_volumewise_motion,
 )
 
-fetch_stanford_hardi()
+if not (Path.home() / ".dipy" / "stanfoed_hardi").exists():
+    fetch_stanford_hardi()
+
 img, _ = read_stanford_hardi()
 img_data = img.get_fdata()
 
