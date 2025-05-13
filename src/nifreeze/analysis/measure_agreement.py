@@ -206,8 +206,9 @@ def identify_bland_altman_salient_data(
     `top_n` data points from the BA plot.
 
     Once the left-most data points identified, the right-most `percentile` data
-    points are considered from the remaining data points, and `top_n` data
-    points are identified out of these.
+    points are considered from the remaining data points.
+    The ``top_n`` data points closest to the zero mean difference are
+    identified among these.
 
     Parameters
     ----------
@@ -245,6 +246,18 @@ def identify_bland_altman_salient_data(
     reliability_mask = get_reliability_mask(diff, loa_lower, loa_upper)
     reliability_idx = np.where(reliability_mask)[0]
 
+    # Check that there are enough data points left to identify the requested
+    # number of salient data points
+    reliability_point_count = len(reliability_idx)
+    salient_point_count = 2 * top_n
+    if reliability_point_count < salient_point_count:
+        raise ValueError(
+            f"Too few reliable data points ({reliability_point_count}) to "
+            f"identify the requested Bland-Altman salient points "
+            f"(2 * {top_n}). Reduce the number of salient data points "
+            f"requested ({top_n})"
+        )
+
     # Select the top_n lowest median values from the left side of the BA plot
     lower_idx = np.argsort(mean[reliability_idx])[:top_n]
     left_indices = reliability_idx[lower_idx]
@@ -258,18 +271,29 @@ def identify_bland_altman_salient_data(
     # Sort indices by descending mean (rightmost values first)
     right_sort_mean = remaining_idx[np.argsort(mean[remaining_idx])[::-1]]
 
-    # Take top percentile of the rightmost points
+    # Take a percentile of the rightmost points
     top_p_count = int(percentile * len(right_sort_mean))
     top_p_sorted = right_sort_mean[:top_p_count]
+
+    # Check that there are enough data points left to identify the requested
+    # number of rightmost points
+    if top_p_count < top_n:
+        raise ValueError(
+            f"Too few data points ({top_p_count}) to identify the requested "
+            f"Bland-Altman right-most salient points ({top_n}). Increase the "
+            f"percentile requested ({top_n})"
+        )
 
     # Get absolute difference from mean_diff (closeness to zero mean difference)
     diff_distance = np.abs(diff[top_p_sorted] - mean_diff)
 
     # Sort rightmost points by closeness to zero diff
-    upper_idx = np.argsort(diff_distance)
+    top_p_idx = np.argsort(diff_distance)
 
     # Take top_n of them
-    right_mask = right_sort_mean[upper_idx[:top_n]]
+    upper_idx = top_p_sorted[top_p_idx][:top_n]
+    right_mask = np.zeros_like(reliability_mask, dtype=bool)
+    right_mask[upper_idx] = True
 
     return {
         BASalientEntity.RELIABILITY_INDICES.value: reliability_idx,
