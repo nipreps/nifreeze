@@ -109,7 +109,7 @@ benchmark = [
 # Aliases
 docs = ["nifreeze[doc]"]
 tests = ["nifreeze[test]"]
-all = ["nifreeze[doc,test,dev,plotting,resmon,antsopt]"]
+all = ["nifreeze[antsopt,benchmark,dev,doc,notebooks,plotting,resmon,test,types]"]
 
 [project.scripts]
 nifreeze = "nifreeze.cli.run:main"
