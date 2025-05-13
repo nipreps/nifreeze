@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.analysis.measure_agreement - nifreeze 25.0.0.dev234 documentation</title>
+        <title>nifreeze.analysis.measure_agreement - nifreeze 25.0.0.dev239 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev234 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev239 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev234</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev239</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev234</span>
+  <span class="sidebar-brand-text">25.0.0.dev239</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -519,8 +519,9 @@
 <span class="sd">    `top_n` data points from the BA plot.</span>
 
 <span class="sd">    Once the left-most data points identified, the right-most `percentile` data</span>
-<span class="sd">    points are considered from the remaining data points, and `top_n` data</span>
-<span class="sd">    points are identified out of these.</span>
+<span class="sd">    points are considered from the remaining data points.</span>
+<span class="sd">    The ``top_n`` data points closest to the zero mean difference are</span>
+<span class="sd">    identified among these.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -558,6 +559,18 @@
     <span class="n">reliability_mask</span> <span class="o">=</span> <span class="n">get_reliability_mask</span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="n">loa_lower</span><span class="p">,</span> <span class="n">loa_upper</span><span class="p">)</span>
     <span class="n">reliability_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">reliability_mask</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 
+    <span class="c1"># Check that there are enough data points left to identify the requested</span>
+    <span class="c1"># number of salient data points</span>
+    <span class="n">reliability_point_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">reliability_idx</span><span class="p">)</span>
+    <span class="n">salient_point_count</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">top_n</span>
+    <span class="k">if</span> <span class="n">reliability_point_count</span> <span class="o">&lt;</span> <span class="n">salient_point_count</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Too few reliable data points (</span><span class="si">{</span><span class="n">reliability_point_count</span><span class="si">}</span><span class="s2">) to &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;identify the requested Bland-Altman salient points &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;(2 * </span><span class="si">{</span><span class="n">top_n</span><span class="si">}</span><span class="s2">). Reduce the number of salient data points &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;requested (</span><span class="si">{</span><span class="n">top_n</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="p">)</span>
+
     <span class="c1"># Select the top_n lowest median values from the left side of the BA plot</span>
     <span class="n">lower_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">mean</span><span class="p">[</span><span class="n">reliability_idx</span><span class="p">])[:</span><span class="n">top_n</span><span class="p">]</span>
     <span class="n">left_indices</span> <span class="o">=</span> <span class="n">reliability_idx</span><span class="p">[</span><span class="n">lower_idx</span><span class="p">]</span>
@@ -571,18 +584,29 @@
     <span class="c1"># Sort indices by descending mean (rightmost values first)</span>
     <span class="n">right_sort_mean</span> <span class="o">=</span> <span class="n">remaining_idx</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">mean</span><span class="p">[</span><span class="n">remaining_idx</span><span class="p">])[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
 
-    <span class="c1"># Take top percentile of the rightmost points</span>
+    <span class="c1"># Take a percentile of the rightmost points</span>
     <span class="n">top_p_count</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">percentile</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">right_sort_mean</span><span class="p">))</span>
     <span class="n">top_p_sorted</span> <span class="o">=</span> <span class="n">right_sort_mean</span><span class="p">[:</span><span class="n">top_p_count</span><span class="p">]</span>
+
+    <span class="c1"># Check that there are enough data points left to identify the requested</span>
+    <span class="c1"># number of rightmost points</span>
+    <span class="k">if</span> <span class="n">top_p_count</span> <span class="o">&lt;</span> <span class="n">top_n</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Too few data points (</span><span class="si">{</span><span class="n">top_p_count</span><span class="si">}</span><span class="s2">) to identify the requested &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Bland-Altman right-most salient points (</span><span class="si">{</span><span class="n">top_n</span><span class="si">}</span><span class="s2">). Increase the &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;percentile requested (</span><span class="si">{</span><span class="n">top_n</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="p">)</span>
 
     <span class="c1"># Get absolute difference from mean_diff (closeness to zero mean difference)</span>
     <span class="n">diff_distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">diff</span><span class="p">[</span><span class="n">top_p_sorted</span><span class="p">]</span> <span class="o">-</span> <span class="n">mean_diff</span><span class="p">)</span>
 
     <span class="c1"># Sort rightmost points by closeness to zero diff</span>
-    <span class="n">upper_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">diff_distance</span><span class="p">)</span>
+    <span class="n">top_p_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">diff_distance</span><span class="p">)</span>
 
     <span class="c1"># Take top_n of them</span>
-    <span class="n">right_mask</span> <span class="o">=</span> <span class="n">right_sort_mean</span><span class="p">[</span><span class="n">upper_idx</span><span class="p">[:</span><span class="n">top_n</span><span class="p">]]</span>
+    <span class="n">upper_idx</span> <span class="o">=</span> <span class="n">top_p_sorted</span><span class="p">[</span><span class="n">top_p_idx</span><span class="p">][:</span><span class="n">top_n</span><span class="p">]</span>
+    <span class="n">right_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">reliability_mask</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="n">right_mask</span><span class="p">[</span><span class="n">upper_idx</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
 
     <span class="k">return</span> <span class="p">{</span>
         <span class="n">BASalientEntity</span><span class="o">.</span><span class="n">RELIABILITY_INDICES</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> <span class="n">reliability_idx</span><span class="p">,</span>
@@ -625,7 +649,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=171edec0"></script>
+</div><script src="../../../_static/documentation_options.js?v=6c847371"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>
