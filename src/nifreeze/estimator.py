@@ -70,7 +70,7 @@ class Filter:
 class Estimator:
     """Orchestrates components for a single estimation step."""
 
-    __slots__ = ("_model", "_strategy", "_prev", "_model_kwargs", "_align_kwargs")
+    __slots__ = ("_model", "_single_fit", "_strategy", "_prev", "_model_kwargs", "_align_kwargs")
 
     def __init__(
         self,
@@ -78,11 +78,13 @@ class Estimator:
         strategy: str = "random",
         prev: Estimator | Filter | None = None,
         model_kwargs: dict | None = None,
+        single_fit: bool = False,
         **kwargs,
     ):
         self._model = model
         self._prev = prev
         self._strategy = strategy
+        self._single_fit = single_fit
         self._model_kwargs = model_kwargs or {}
         self._align_kwargs = kwargs or {}
 
@@ -115,11 +117,16 @@ class Estimator:
         # Initialize model
         if isinstance(self._model, str):
             # Factory creates the appropriate model and pipes arguments
-            self._model = ModelFactory.init(
+            model = ModelFactory.init(
                 model=self._model,
                 dataset=dataset,
                 **self._model_kwargs,
             )
+        else:
+            model = self._model
+
+        if self._single_fit:
+            model.fit_predict(None, n_jobs=n_jobs)
 
         kwargs["num_threads"] = kwargs.pop("omp_nthreads", None) or kwargs.pop("num_threads", None)
         kwargs = self._align_kwargs | kwargs
@@ -145,7 +152,7 @@ class Estimator:
 
                     # fit the model
                     test_set = dataset[i]
-                    predicted = self._model.fit_predict(  # type: ignore[union-attr]
+                    predicted = model.fit_predict(  # type: ignore[union-attr]
                         i,
                         n_jobs=n_jobs,
                     )
