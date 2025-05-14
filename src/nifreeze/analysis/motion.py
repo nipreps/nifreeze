@@ -20,8 +20,10 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
+"""Motion analysis."""
 
 import numpy as np
+from scipy.stats import zscore
 
 
 def compute_percentage_change(
@@ -57,3 +59,33 @@ def compute_percentage_change(
     rel_diff[mask] = 100 * (test[mask] - reference[mask]) / reference[mask]
 
     return rel_diff
+
+
+def identify_spikes(fd: np.ndarray, threshold: float = 2.0):
+    """Identify motion spikes in framewise displacement data.
+
+    Identifies high-motion frames as timepoint exceeding a given threshold value
+    based on z-score normalized framewise displacement (FD) values.
+
+    Parameters
+    ----------
+    fd : :obj:`~numpy.ndarray`
+        Framewise displacement data.
+    threshold : :obj:`float`, optional
+        Threshold value to determine motion spikes.
+
+    Returns
+    -------
+    indices : :obj:`~numpy.ndarray`
+        Indices of identified motion spikes.
+    mask : :obj:`~numpy.ndarray`
+        Mask of identified motion spikes.
+    """
+
+    # Normalize (z-score)
+    fd_norm = zscore(fd)
+
+    mask = fd_norm > threshold
+    indices = np.where(mask)[0]
+
+    return indices, mask
