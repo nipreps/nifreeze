@@ -100,7 +100,21 @@ class BaseModel:
 
     @abstractmethod
     def fit_predict(self, index: int | None = None, **kwargs) -> np.ndarray:
-        """Fit and predict the indicated index of the dataset (abstract signature)."""
+        """
+        Fit and predict the indicated index of the dataset (abstract signature).
+        
+        If ``index`` is ``None``, then the model is executed in *single-fit mode* meaning
+        that it will be run only once in all the data available.
+        Please note that all the predictions of this model will suffer from data leakage
+        from the original volume.
+
+        Parameters
+        ----------
+        index : :obj:`int` or ``None``
+            The index to predict.
+            If ``None``, no prediction will be executed.
+
+        """
         raise NotImplementedError("Cannot call fit_predict() on a BaseModel instance.")
 
 
