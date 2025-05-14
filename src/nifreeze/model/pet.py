@@ -36,7 +36,7 @@ DEFAULT_TIMEFRAME_MIDPOINT_TOL = 1e-2
 class PETModel(BaseModel):
     """A PET imaging realignment model based on B-Spline approximation."""
 
-    __slots__ = ("_t", "_x", "_xlim", "_order", "_coeff", "_n_ctrl")
+    __slots__ = ("_t", "_x", "_xlim", "_order", "_n_ctrl")
 
     def __init__(self, timepoints=None, xlim=None, n_ctrl=None, order=3, **kwargs):
         """
@@ -76,12 +76,16 @@ class PETModel(BaseModel):
         # B-Spline knots
         self._t = np.arange(-3, float(self._n_ctrl) + 4, dtype="float32")
 
-        self._coeff = None
-
-    def _fit(self, n_jobs=None, **kwargs):
+    def _fit(self, index: int | None = None, n_jobs=None, **kwargs):
         """Fit the model."""
         from scipy.interpolate import BSpline
         from scipy.sparse.linalg import cg
+
+        if self._locked_fit is not None:
+            return n_jobs
+
+        if index is not None:
+            raise NotImplementedError("Fitting with held-out data is not supported")
 
         timepoints = kwargs.get("timepoints", None) or self._x
         x = (np.array(timepoints, dtype="float32") / self._xlim) * self._n_ctrl
@@ -101,15 +105,15 @@ class PETModel(BaseModel):
         with Parallel(n_jobs=n_jobs or min(cpu_count() or 1, 8)) as executor:
             results = executor(delayed(cg)(ATdotA, AT @ v) for v in data)
 
-        self._coeff = np.array([r[0] for r in results])
+        self._locked_fit = np.array([r[0] for r in results])
 
     def fit_predict(self, index: int | None = None, **kwargs):
         """Return the corrected volume using B-spline interpolation."""
         from scipy.interpolate import BSpline
 
         # Fit the BSpline basis on all data
-        if self._coeff is None:
-            self._fit(n_jobs=kwargs.pop("n_jobs", None))
+        if self._locked_fit is None:
+            self._fit(index, n_jobs=kwargs.pop("n_jobs", None), **kwargs)
 
         if index is None:  # If no index, just fit the data.
             return None
@@ -120,7 +124,7 @@ class PETModel(BaseModel):
 
         # A is 1 (num. timepoints) x C (num. coeff)
         # self._coeff is V (num. voxels) x K - 4
-        predicted = np.squeeze(A @ self._coeff.T)
+        predicted = np.squeeze(A @ self._locked_fit.T)
 
         brainmask = self._dataset.brainmask
         datashape = self._dataset.dataobj.shape[:3]

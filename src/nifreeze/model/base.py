@@ -87,46 +87,59 @@ class BaseModel:
 
     """
 
-    __slots__ = ("_dataset",)
+    __slots__ = ("_dataset", "_locked_fit")
 
     def __init__(self, dataset, **kwargs):
         """Base initialization."""
 
+        self._locked_fit = None
         self._dataset = dataset
         # Warn if mask not present
         if dataset.brainmask is None:
             warn(mask_absence_warn_msg, stacklevel=2)
 
     @abstractmethod
-    def fit_predict(self, index, **kwargs) -> np.ndarray:
-        """Fit and predict the indicate index of the dataset (abstract signature)."""
+    def fit_predict(self, index: int | None = None, **kwargs) -> np.ndarray:
+        """
+        Fit and predict the indicated index of the dataset (abstract signature).
+
+        If ``index`` is ``None``, then the model is executed in *single-fit mode* meaning
+        that it will be run only once in all the data available.
+        Please note that all the predictions of this model will suffer from data leakage
+        from the original volume.
+
+        Parameters
+        ----------
+        index : :obj:`int` or ``None``
+            The index to predict.
+            If ``None``, no prediction will be executed.
+
+        """
         raise NotImplementedError("Cannot call fit_predict() on a BaseModel instance.")
 
 
 class TrivialModel(BaseModel):
     """A trivial model that returns a given map always."""
 
-    __slots__ = ("_predicted",)
-
     def __init__(self, dataset, predicted=None, **kwargs):
         """Implement object initialization."""
 
         super().__init__(dataset, **kwargs)
-        self._predicted = (
+        self._locked_fit = (
             predicted
             if predicted is not None
             # Infer from dataset if not provided at initialization
             else getattr(dataset, "reference", getattr(dataset, "bzero", None))
         )
 
-        if self._predicted is None:
+        if self._locked_fit is None:
             raise TypeError("This model requires the predicted map at initialization")
 
     def fit_predict(self, *_, **kwargs):
         """Return the reference map."""
 
         # No need to check fit (if not fitted, has raised already)
-        return self._predicted
+        return self._locked_fit
 
 
 class ExpectationModel(BaseModel):
@@ -139,7 +152,7 @@ class ExpectationModel(BaseModel):
         super().__init__(dataset, **kwargs)
         self._stat = stat
 
-    def fit_predict(self, index: int, **kwargs):
+    def fit_predict(self, index: int | None = None, **kwargs):
         """
         Return the expectation map.
 
@@ -149,12 +162,20 @@ class ExpectationModel(BaseModel):
             The volume index that is left-out in fitting, and then predicted.
 
         """
+
+        if self._locked_fit is not None:
+            return self._locked_fit
+
         # Select the summary statistic
         avg_func = getattr(np, kwargs.pop("stat", self._stat))
 
         # Create index mask
         index_mask = np.ones(len(self._dataset), dtype=bool)
-        index_mask[index] = False
 
-        # Calculate the average
-        return avg_func(self._dataset[index_mask][0], axis=-1)
+        if index is not None:
+            index_mask[index] = False
+            # Calculate the average
+            return avg_func(self._dataset[index_mask][0], axis=-1)
+
+        self._locked_fit = avg_func(self._dataset[index_mask][0], axis=-1)
+        return self._locked_fit

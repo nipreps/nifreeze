@@ -51,6 +51,7 @@ class BaseDWIModel(BaseModel):
     __slots__ = {
         "_model_class": "Defining a model class, DIPY models are instantiated automagically",
         "_modelargs": "Arguments acceptable by the underlying DIPY-like model.",
+        "_models": "List with one or more (if parallel execution) model instances",
     }
 
     def __init__(self, dataset: DWI, **kwargs):
@@ -77,13 +78,21 @@ class BaseDWIModel(BaseModel):
 
         super().__init__(dataset, **kwargs)
 
-    def _fit(self, index, n_jobs=None, **kwargs):
+    def _fit(self, index: int | None = None, n_jobs=None, **kwargs):
         """Fit the model chunk-by-chunk asynchronously"""
+
         n_jobs = n_jobs or 1
+
+        if self._locked_fit is not None:
+            return n_jobs
 
         brainmask = self._dataset.brainmask
         idxmask = np.ones(len(self._dataset), dtype=bool)
-        idxmask[index] = False
+
+        if index is not None:
+            idxmask[index] = False
+        else:
+            self._locked_fit = True
 
         data, _, gtab = self._dataset[idxmask]
         # Select voxels within mask or just unravel 3D if no mask
@@ -96,14 +105,15 @@ class BaseDWIModel(BaseModel):
 
         if model_str:
             module_name, class_name = model_str.rsplit(".", 1)
-            self._model = getattr(
+            model = getattr(
                 import_module(module_name),
                 class_name,
             )(gtab, **kwargs)
 
         # One single CPU - linear execution (full model)
         if n_jobs == 1:
-            self._model, _ = _exec_fit(self._model, data)
+            _modelfit, _ = _exec_fit(model, data)
+            self._models = [_modelfit]
             return 1
 
         # Split data into chunks of group of slices
@@ -114,15 +124,14 @@ class BaseDWIModel(BaseModel):
         # Parallelize process with joblib
         with Parallel(n_jobs=n_jobs) as executor:
             results = executor(
-                delayed(_exec_fit)(self._model, dchunk, i) for i, dchunk in enumerate(data_chunks)
+                delayed(_exec_fit)(model, dchunk, i) for i, dchunk in enumerate(data_chunks)
             )
         for submodel, rindex in results:
             self._models[rindex] = submodel
 
-        self._model = None  # Preempt further actions on the model
         return n_jobs
 
-    def fit_predict(self, index: int, **kwargs):
+    def fit_predict(self, index: int | None = None, **kwargs):
         """
         Predict asynchronously chunk-by-chunk the diffusion signal.
 
@@ -133,8 +142,14 @@ class BaseDWIModel(BaseModel):
 
         """
 
-        n_models = self._fit(index, **kwargs)
-        kwargs.pop("n_jobs")
+        n_models = self._fit(
+            index,
+            n_jobs=kwargs.pop("n_jobs"),
+            **kwargs,
+        )
+
+        if index is None:
+            return None
 
         brainmask = self._dataset.brainmask
         gradient = self._dataset.gradients[:, index]
@@ -149,9 +164,10 @@ class BaseDWIModel(BaseModel):
             S0 = S0[brainmask, ...] if brainmask is not None else S0.reshape(-1)
 
         if n_models == 1:
-            predicted, _ = _exec_predict(self._model, **(kwargs | {"gtab": gradient, "S0": S0}))
+            predicted, _ = _exec_predict(
+                self._models[0], **(kwargs | {"gtab": gradient, "S0": S0})
+            )
         else:
-            print(n_models, S0)
             S0 = np.array_split(S0, n_models) if S0 is not None else np.full(n_models, None)
 
             predicted = [None] * n_models
@@ -221,8 +237,11 @@ class AverageDWIModel(ExpectationModel):
         self._th_high = th_high
         self._detrend = detrend
 
-    def fit_predict(self, index, *_, **kwargs):
+    def fit_predict(self, index: int | None = None, *_, **kwargs):
         """Return the average map."""
+
+        if index is None:
+            raise RuntimeError(f"Model {self.__class__.__name__} does not allow locking.")
 
         bvalues = self._dataset.gradients[:, -1]
         bcenter = bvalues[index]
