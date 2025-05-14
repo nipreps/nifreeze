@@ -141,12 +141,14 @@ class BaseDWIModel(BaseModel):
 
         """
 
-        n_models = self._fit(index, **kwargs)
+        n_models = self._fit(
+            index,
+            n_jobs=max(kwargs.pop("n_jobs", None) or 1, kwargs.pop("njobs", None) or 1),
+            **kwargs,
+        )
 
         if index is None:
             return None
-
-        kwargs.pop("n_jobs")
 
         brainmask = self._dataset.brainmask
         gradient = self._dataset.gradients[:, index]
@@ -163,7 +165,6 @@ class BaseDWIModel(BaseModel):
         if n_models == 1:
             predicted, _ = _exec_predict(self._model, **(kwargs | {"gtab": gradient, "S0": S0}))
         else:
-            print(n_models, S0)
             S0 = np.array_split(S0, n_models) if S0 is not None else np.full(n_models, None)
 
             predicted = [None] * n_models

@@ -69,7 +69,7 @@ class Filter:
 class Estimator:
     """Estimates rigid-body head-motion and distortions derived from eddy-currents."""
 
-    __slots__ = ("_model", "_strategy", "_prev", "_model_kwargs", "_align_kwargs")
+    __slots__ = ("_model", "_single_fit", "_strategy", "_prev", "_model_kwargs", "_align_kwargs")
 
     def __init__(
         self,
@@ -77,11 +77,13 @@ class Estimator:
         strategy: str = "random",
         prev: Estimator | Filter | None = None,
         model_kwargs: dict | None = None,
+        single_fit: bool = False,
         **kwargs,
     ):
         self._model = model
         self._prev = prev
         self._strategy = strategy
+        self._single_fit = single_fit
         self._model_kwargs = model_kwargs or {}
         self._align_kwargs = kwargs or {}
 
@@ -120,7 +122,7 @@ class Estimator:
                 **self._model_kwargs,
             )
 
-        if kwargs.pop("single_fit", False):
+        if self._single_fit:
             self._model.fit_predict(None, njobs=n_jobs)
 
         kwargs["num_threads"] = kwargs.pop("omp_nthreads", None) or kwargs.pop("num_threads", None)
