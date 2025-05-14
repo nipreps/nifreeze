@@ -81,7 +81,7 @@ class BaseDWIModel(BaseModel):
         """Fit the model chunk-by-chunk asynchronously"""
 
         n_jobs = n_jobs or 1
-    
+
         if self._locked_fit is not None:
             return n_jobs
 

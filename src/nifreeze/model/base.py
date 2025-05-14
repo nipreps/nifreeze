@@ -102,7 +102,7 @@ class BaseModel:
     def fit_predict(self, index: int | None = None, **kwargs) -> np.ndarray:
         """
         Fit and predict the indicated index of the dataset (abstract signature).
-        
+
         If ``index`` is ``None``, then the model is executed in *single-fit mode* meaning
         that it will be run only once in all the data available.
         Please note that all the predictions of this model will suffer from data leakage
@@ -162,10 +162,10 @@ class ExpectationModel(BaseModel):
             The volume index that is left-out in fitting, and then predicted.
 
         """
-        
+
         if self._locked_fit is not None:
             return self._locked_fit
-    
+
         # Select the summary statistic
         avg_func = getattr(np, kwargs.pop("stat", self._stat))
 
@@ -176,7 +176,6 @@ class ExpectationModel(BaseModel):
             index_mask[index] = False
             # Calculate the average
             return avg_func(self._dataset[index_mask][0], axis=-1)
-        
+
         self._locked_fit = avg_func(self._dataset[index_mask][0], axis=-1)
         return self._locked_fit
-
