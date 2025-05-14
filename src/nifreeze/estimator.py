@@ -120,6 +120,9 @@ class Estimator:
                 **self._model_kwargs,
             )
 
+        if kwargs.pop("single_fit", False):
+            self._model.fit_predict(None, njobs=n_jobs)
+
         kwargs["num_threads"] = kwargs.pop("omp_nthreads", None) or kwargs.pop("num_threads", None)
         kwargs = self._align_kwargs | kwargs
 

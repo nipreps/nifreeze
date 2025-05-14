@@ -69,9 +69,11 @@ def main(argv=None) -> None:
 
     prev_model: Estimator | None = None
     for _model in args.models:
+        single_fit = _model.lower().startswith("single")
         estimator: Estimator = Estimator(
-            _model,
+            _model.lower().replace("single", ""),
             prev=prev_model,
+            single_fit=single_fit,
         )
         prev_model = estimator
 
