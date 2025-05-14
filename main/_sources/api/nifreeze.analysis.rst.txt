@@ -12,5 +12,6 @@ Submodules
 .. toctree::
    :maxdepth: 1
 
+   nifreeze.analysis.filtering
    nifreeze.analysis.measure_agreement
    nifreeze.analysis.motion

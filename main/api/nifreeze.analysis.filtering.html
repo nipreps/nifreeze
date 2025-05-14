@@ -3,10 +3,10 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="nifreeze.data package" href="nifreeze.data.html" /><link rel="prev" title="nifreeze.cli.parser module" href="nifreeze.cli.parser.html" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="nifreeze.analysis.measure_agreement module" href="nifreeze.analysis.measure_agreement.html" /><link rel="prev" title="nifreeze.analysis package" href="nifreeze.analysis.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.cli.run module - nifreeze 25.0.0.dev248 documentation</title>
+        <title>nifreeze.analysis.filtering module - nifreeze 25.0.0.dev248 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
@@ -213,15 +213,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../usage.html">How to Use</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../running.html">Running <em>NiFreeze</em></a></li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="../developers.html">For developers</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of For developers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
-<li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.analysis.html">nifreeze.analysis package</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of nifreeze.analysis package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.filtering.html">nifreeze.analysis.filtering module</a></li>
+<li class="toctree-l2 current has-children"><a class="reference internal" href="nifreeze.analysis.html">nifreeze.analysis package</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of nifreeze.analysis package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">nifreeze.analysis.filtering module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.measure_agreement.html">nifreeze.analysis.measure_agreement module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.motion.html">nifreeze.analysis.motion module</a></li>
 </ul>
 </li>
-<li class="toctree-l2 current has-children"><a class="reference internal" href="nifreeze.cli.html">nifreeze.cli package</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of nifreeze.cli package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.cli.html">nifreeze.cli package</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of nifreeze.cli package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.cli.parser.html">nifreeze.cli.parser module</a></li>
-<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">nifreeze.cli.run module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.cli.run.html">nifreeze.cli.run module</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.data.html">nifreeze.data package</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of nifreeze.data package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -286,7 +286,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../_sources/api/nifreeze.cli.run.rst.txt" title="View this page">
+  <a class="muted-link" href="../_sources/api/nifreeze.analysis.filtering.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -306,16 +306,30 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="module-nifreeze.cli.run">
-<span id="nifreeze-cli-run-module"></span><h1>nifreeze.cli.run module<a class="headerlink" href="#module-nifreeze.cli.run" title="Link to this heading">¶</a></h1>
-<p>NiFreeze runner.</p>
+          <section id="module-nifreeze.analysis.filtering">
+<span id="nifreeze-analysis-filtering-module"></span><h1>nifreeze.analysis.filtering module<a class="headerlink" href="#module-nifreeze.analysis.filtering" title="Link to this heading">¶</a></h1>
+<p>Analysis data filtering.</p>
 <dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.cli.run.main">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.cli.run.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/cli/run.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.cli.run.main" title="Link to this definition">¶</a></dt>
-<dd><p>Entry point.</p>
+<dt class="sig sig-object py" id="nifreeze.analysis.filtering.normalize">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.analysis.filtering.</span></span><span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><span class="pre">ndarray</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/analysis/filtering.html#normalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.analysis.filtering.normalize" title="Link to this definition">¶</a></dt>
+<dd><p>Normalize data using the z-score.</p>
+<p>The z-score normalization is computed as:</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[z_i = \frac{x_i - \mu}{\sigma}\]</div>
+</div>
+<p>where $x_i$ is the framewise displacement at point $i$, $mu$ is the mean
+of all values, $sigma$ is the standard deviation of the values, and $z_i$
+is the normalized z-score.</p>
 <dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>x</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – Data to be normalized.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Normalized data.</p>
+</dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>None</p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -327,23 +341,23 @@
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="nifreeze.data.html">
+          <a class="next-page" href="nifreeze.analysis.measure_agreement.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">nifreeze.data package</div>
+                <div class="title">nifreeze.analysis.measure_agreement module</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="nifreeze.cli.parser.html">
+          <a class="prev-page" href="nifreeze.analysis.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">nifreeze.cli.parser module</div>
+                <div class="title">nifreeze.analysis package</div>
                 
               </div>
             </a>
@@ -377,8 +391,8 @@
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">nifreeze.cli.run module</a><ul>
-<li><a class="reference internal" href="#nifreeze.cli.run.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li><a class="reference internal" href="#">nifreeze.analysis.filtering module</a><ul>
+<li><a class="reference internal" href="#nifreeze.analysis.filtering.normalize"><code class="docutils literal notranslate"><span class="pre">normalize()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -394,6 +408,7 @@
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="../_static/js/version-switch.js?v=8028bf13"></script>
     </body>
 </html>

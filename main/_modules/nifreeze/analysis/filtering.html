@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.analysis.motion - nifreeze 25.0.0.dev248 documentation</title>
+        <title>nifreeze.analysis.filtering - nifreeze 25.0.0.dev248 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -299,7 +299,7 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <h1>Source code for nifreeze.analysis.motion</h1><div class="highlight"><pre>
+          <h1>Source code for nifreeze.analysis.filtering</h1><div class="highlight"><pre>
 <span></span><span class="c1"># emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-</span>
 <span class="c1"># vi: set ft=python sts=4 ts=4 sw=4 et:</span>
 <span class="c1">#</span>
@@ -322,80 +322,38 @@
 <span class="c1">#</span>
 <span class="c1">#     https://www.nipreps.org/community/licensing/</span>
 <span class="c1">#</span>
-<span class="sd">&quot;&quot;&quot;Motion analysis.&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;Analysis data filtering.&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">zscore</span>
 
 
-<div class="viewcode-block" id="compute_percentage_change">
-<a class="viewcode-back" href="../../../api/nifreeze.analysis.motion.html#nifreeze.analysis.motion.compute_percentage_change">[docs]</a>
-<span class="k">def</span> <span class="nf">compute_percentage_change</span><span class="p">(</span>
-    <span class="n">reference</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">test</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute motion change between reference and test as a percentage.</span>
+<div class="viewcode-block" id="normalize">
+<a class="viewcode-back" href="../../../api/nifreeze.analysis.filtering.html#nifreeze.analysis.filtering.normalize">[docs]</a>
+<span class="k">def</span> <span class="nf">normalize</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Normalize data using the z-score.</span>
 
-<span class="sd">    If a mask is provided, the computation is only provided within the mask.</span>
-<span class="sd">    Also, null values are ignored.</span>
+<span class="sd">    The z-score normalization is computed as:</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    reference : :obj:`~numpy.ndarray`</span>
-<span class="sd">        Reference imaging volume.</span>
-<span class="sd">    test : :obj:`~numpy.ndarray`</span>
-<span class="sd">        Test (shifted) imaging volume.</span>
-<span class="sd">    mask : :obj:`~numpy.ndarray`</span>
-<span class="sd">        Mask for value consideration.</span>
+<span class="sd">    .. math::</span>
 
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    rel_diff : :obj:`~numpy.ndarray`</span>
-<span class="sd">        Motion change between reference and test.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">        z_i = \frac{x_i - \mu}{\sigma}</span>
 
-    <span class="c1"># Avoid divide-by-zero errors</span>
-    <span class="n">eps</span> <span class="o">=</span> <span class="mf">1e-5</span>
-    <span class="n">rel_diff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">reference</span><span class="p">)</span>
-    <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-    <span class="n">mask</span><span class="p">[</span><span class="n">reference</span> <span class="o">&lt;=</span> <span class="n">eps</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="n">rel_diff</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">100</span> <span class="o">*</span> <span class="p">(</span><span class="n">test</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">-</span> <span class="n">reference</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span> <span class="o">/</span> <span class="n">reference</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
-
-    <span class="k">return</span> <span class="n">rel_diff</span></div>
-
-
-
-<div class="viewcode-block" id="identify_spikes">
-<a class="viewcode-back" href="../../../api/nifreeze.analysis.motion.html#nifreeze.analysis.motion.identify_spikes">[docs]</a>
-<span class="k">def</span> <span class="nf">identify_spikes</span><span class="p">(</span><span class="n">fd</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Identify motion spikes in framewise displacement data.</span>
-
-<span class="sd">    Identifies high-motion frames as timepoint exceeding a given threshold value</span>
-<span class="sd">    based on z-score normalized framewise displacement (FD) values.</span>
+<span class="sd">    where $x_i$ is the framewise displacement at point $i$, $\mu$ is the mean</span>
+<span class="sd">    of all values, $\sigma$ is the standard deviation of the values, and $z_i$</span>
+<span class="sd">    is the normalized z-score.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    fd : :obj:`~numpy.ndarray`</span>
-<span class="sd">        Framewise displacement data.</span>
-<span class="sd">    threshold : :obj:`float`, optional</span>
-<span class="sd">        Threshold value to determine motion spikes.</span>
+<span class="sd">    x : :obj:`~numpy.ndarray`</span>
+<span class="sd">        Data to be normalized.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    indices : :obj:`~numpy.ndarray`</span>
-<span class="sd">        Indices of identified motion spikes.</span>
-<span class="sd">    mask : :obj:`~numpy.ndarray`</span>
-<span class="sd">        Mask of identified motion spikes.</span>
+<span class="sd">    :obj:`~numpy.ndarray`</span>
+<span class="sd">        Normalized data.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="c1"># Normalize (z-score)</span>
-    <span class="n">fd_norm</span> <span class="o">=</span> <span class="n">zscore</span><span class="p">(</span><span class="n">fd</span><span class="p">)</span>
-
-    <span class="n">mask</span> <span class="o">=</span> <span class="n">fd_norm</span> <span class="o">&gt;</span> <span class="n">threshold</span>
-    <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mask</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-
-    <span class="k">return</span> <span class="n">indices</span><span class="p">,</span> <span class="n">mask</span></div>
+    <span class="k">return</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">x</span><span class="p">))</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div>
 
 </pre></div>
         </article>
