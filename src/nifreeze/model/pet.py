@@ -112,7 +112,7 @@ class PETModel(BaseModel):
 
         self._coeff = np.array([r[0] for r in results])
 
-    def predict(self, index=None, **kwargs):
+    def predict(self, index: int | None = None, **kwargs):
         """Return the corrected volume using B-spline interpolation."""
         from scipy.interpolate import BSpline
 
