@@ -41,6 +41,33 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Check for nvcc and set CUDA flag
+        id: detect-cuda
+        run: |
+          if command -v nvcc &> /dev/null; then
+            echo "nvcc found: CUDA is available"
+            echo "HAS_CUDA=true" >> $GITHUB_ENV
+          else
+            echo "nvcc not found: CUDA is not available"
+            echo "HAS_CUDA=false" >> $GITHUB_ENV
+          fi
+
+      - name: Install AFNI
+        run: |
+          # Detect Ubuntu version
+          UBUNTU_VERSION=$(lsb_release -rs | cut -d. -f1)
+          AFNI_PACKAGE="linux_ubuntu_${UBUNTU_VERSION}_64"
+          echo "Detected Ubuntu version: $UBUNTU_VERSION"
+          echo "Using AFNI package: $AFNI_PACKAGE"
+          # Install dependencies
+          sudo apt-get update
+          sudo apt-get install -y tcsh curl libglu1-mesa libxmu6 libxm4 libgsl-dev libglw1-mesa
+          # Download and install AFNI
+          curl -O https://afni.nimh.nih.gov/pub/dist/bin/${AFNI_PACKAGE}/@update.afni.binaries
+          tcsh @update.afni.binaries -package $AFNI_PACKAGE -do_extras
+          # Add AFNI to PATH
+          echo "$HOME/abin" >> $GITHUB_PATH
+
       - name: Install TeX Live
         run: |
           sudo apt-get update
@@ -68,6 +95,10 @@ jobs:
           mkdir ${TEST_DATA_HOME}
           pip install osfclient
           osf -p 39k4x fetch hcpdata.npz "${TEST_DATA_HOME}/hcpdata.npz"
+
+      - name: Download SynthStrip model
+        run: |
+          wget https://ftp.nmr.mgh.harvard.edu/pub/dist/freesurfer/synthstrip/models/synthstrip.1.pt -P "${TEST_DATA_HOME}"
 
       - name: Install tox
         run: |
