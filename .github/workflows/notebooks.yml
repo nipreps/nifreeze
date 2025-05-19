@@ -86,13 +86,15 @@ jobs:
       - name: Install DataLad
         run: pip install datalad
 
+      - name: Create test data directory
+        run: mkdir ${TEST_DATA_HOME}
+
       - name: Download data from OpenNeuro
         run: |
           ${{ github.workspace }}/scripts/fetch_fmri_nb_openneuro_data.sh "${TEST_DATA_HOME}"
 
       - name: Download data from OSF
         run: |
-          mkdir ${TEST_DATA_HOME}
           pip install osfclient
           osf -p 39k4x fetch hcpdata.npz "${TEST_DATA_HOME}/hcpdata.npz"
 
