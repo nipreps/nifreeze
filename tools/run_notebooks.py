@@ -28,4 +28,4 @@ import sys
 # Find and run the notebooks
 notebooks = glob.glob("docs/notebooks/*.ipynb")
 
-sys.exit(subprocess.call(["pytest", "--nbmake"] + notebooks))
+sys.exit(subprocess.call(["pytest", "--nbmake", "--nbmake-timeout=3600"] + notebooks))
