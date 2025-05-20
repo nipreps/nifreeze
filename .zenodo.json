@@ -48,13 +48,52 @@
     {
       "affiliation": "Perelman School of Medicine, University of Pennsylvania, PA, USA",
       "name": "Cieslak, Matthew",
-      "orcid": "0000-0002-1931-4734",
-      "type": "Researcher"
+      "orcid": "0000-0002-1931-4734"
     },
     {
       "affiliation": "Sagol School of Neuroscience, Tel Aviv University",
       "name": "Ben-Zvi, Gal",
       "orcid": "0000-0002-5655-9423"
+    },
+    {
+      "affiliation": "The Centre for Addiction and Mental Health",
+      "name": "Joseph, Michael",
+      "orcid": "0000-0002-0068-230X"
+    },
+    {
+      "affiliation": "Department of Radiology, Lausanne University Hospital and University of Lausanne, Switzerland",
+      "name": "Provins, Céline",
+      "orcid": "0000-0002-1668-9629"
+    },
+    {
+      "affiliation": "Department of Radiology, Lausanne University Hospital and University of Lausanne, Switzerland",
+      "name": "Pavan, Tomasso",
+      "orcid": "0000-0002-3436-688"
+    },
+    {
+      "affiliation": "Brigham and Women's Hospital, Mass General Brigham, Harvard Medical School, MA, USA",
+      "name": "Legarreta Gorroño, Jon Haitz",
+      "orcid": "0000-0002-9661-1396"
+    },
+    {
+      "affiliation": "Department of Radiology, Lausanne University Hospital and University of Lausanne, Switzerland",
+      "name": "Savary, Elodie",
+      "orcid": "0000-0002-3896-6906"
+    },
+    {
+      "affiliation": "Department of Psychology, Stanford University, CA, USA",
+      "name": "Markiewicz, Christopher J.",
+      "orcid": "0000-0002-6533-164X"
+    },
+    {
+      "affiliation": "Department of Computer Science, University of Copenhagen, Denmark",
+      "name": "Norgaard, Martin",
+      "orcid": "0000-0003-2131-5688"
+    },
+    {
+      "affiliation": "The University of Washington eScience Institute, WA, USA",
+      "name": "Gomez, Teresa",
+      "orcid": ""
     }
   ]
 }
