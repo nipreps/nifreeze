@@ -1,7 +1,10 @@
 *NiFreeze*
-============
-An open-source framework for volume-to-volume motion estimation in d/fMRI and PET,
-and Eddy-current-derived distortion estimation in dMRI.
+==========
+
+**Model-based estimation and correction of head motion and eddy current distortions in 4D neuroimaging**.
+
+*NiFreeze* is a flexible framework for volume-to-volume motion estimation and correction in d/fMRI and PET,
+and eddy-current-derived distortion estimation in dMRI.
 
 .. important:: *NiFreeze* is a fork of *eddymotion*
 
