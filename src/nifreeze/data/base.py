@@ -61,8 +61,8 @@ class BaseDataset(Generic[Unpack[Ts]]):
     Base dataset representation structure.
 
     A general data structure to represent 4D images and the necessary metadata
-    for head-motion estimation (that is, potentially a brain mask and the head-motion
-    estimates).
+    for head motion estimation (that is, potentially a brain mask and the head
+    motion estimates).
 
     The data structure has a direct HDF5 mapping to facilitate memory efficiency.
     For modalities requiring additional metadata such as DWI (which requires the gradient table

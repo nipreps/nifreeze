@@ -67,7 +67,7 @@ class Filter:
 
 
 class Estimator:
-    """Estimates rigid-body head-motion and distortions derived from eddy-currents."""
+    """Estimates rigid-body head motion and distortions derived from eddy-currents."""
 
     __slots__ = ("_model", "_strategy", "_prev", "_model_kwargs", "_align_kwargs")
 
