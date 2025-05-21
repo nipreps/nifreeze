@@ -31,6 +31,10 @@ and Eddy-current-derived distortion estimation in dMRI.
    :target: https://github.com/nipreps/nifreeze/actions/workflows/test.yml
    :alt: Testing
 
+.. image:: https://github.com/nipreps/nifreeze/actions/workflows/notebooks.yml/badge.svg
+   :target: https://github.com/nipreps/nifreeze/actions/workflows/notebooks.yml
+   :alt: Examples
+
 .. image:: https://github.com/nipreps/nifreeze/actions/workflows/pages/pages-build-deployment/badge.svg
    :target: https://www.nipreps.org/nifreeze/main/index.html
    :alt: Documentation
@@ -38,6 +42,14 @@ and Eddy-current-derived distortion estimation in dMRI.
 .. image:: https://github.com/nipreps/nifreeze/actions/workflows/pythonpackage.yml/badge.svg
    :target: https://github.com/nipreps/nifreeze/actions/workflows/pythonpackage.yml
    :alt: Python package
+
+.. image:: https://github.com/nipreps/nifreeze/actions/workflows/contrib.yml/badge.svg
+   :target: https://github.com/nipreps/nifreeze/actions/workflows/contrib.yml
+   :alt: Contribution checks
+
+.. image:: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
+   :target: https://github.com/astral-sh/ruff
+   :alt: Code format
 
 Diffusion and functional MRI (d/fMRI) generally employ echo-planar imaging (EPI) for fast
 whole-brain acquisition.
