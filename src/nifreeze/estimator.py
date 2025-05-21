@@ -20,7 +20,7 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""A model-based algorithm for the realignment of dMRI data."""
+"""Orchestrates model and registration in volume-to-volume artifact estimation."""
 
 from __future__ import annotations
 
@@ -67,7 +67,7 @@ class Filter:
 
 
 class Estimator:
-    """Estimates rigid-body head-motion and distortions derived from eddy-currents."""
+    """Orchestrates components for a single estimation step."""
 
     __slots__ = ("_model", "_strategy", "_prev", "_model_kwargs", "_align_kwargs")
 

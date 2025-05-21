@@ -46,7 +46,7 @@ def load(
         A brainmask NIfTI file. If provided, will be loaded and
         stored in the returned dataset.
     motion_file : :obj:`os.pathlike`
-        A file containing head-motion affine matrices (linear).
+        A file containing head motion affine matrices (linear).
 
     Returns
     -------
