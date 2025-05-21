@@ -5,7 +5,7 @@ This document lists the contributors to *eddymotion*.
 Some of the authors named here may be active contributors to *NiFreeze*, and their names listed in the `CONTRIBUTORS.md` file.
 
 | **Lastname** | **Name** | **Handle** | **ORCID** |
-| --- | --- | --- | --- | --- |
+| --- | --- | --- | --- |
 | Ben-Zvi | Gal | @GalKepler | 0000-0002-5655-9423 |
 | Dickie | Erin W. | @edickie | 0000-0003-3028-9864 |
 | Gomez | Teresa | @teresamg | |
