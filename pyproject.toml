@@ -20,6 +20,7 @@ classifiers = [
 license = "Apache-2.0"
 requires-python = ">=3.10"
 dependencies = [
+    "attrs",
     "dipy>=1.5.0",
     "joblib",
     "nipype>= 1.5.1,<2.0",
@@ -80,6 +81,7 @@ types = [
   "pandas-stubs",
   "types-setuptools",
   "scipy-stubs",
+  "types-attrs",
   "types-PyYAML",
   "types-tqdm",
   "pytest",

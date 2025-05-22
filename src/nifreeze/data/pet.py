@@ -27,7 +27,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Union
 
-import attr
+import attrs
 import h5py
 import numpy as np
 from nibabel.spatialimages import SpatialImage
@@ -37,15 +37,15 @@ from nifreeze.data.base import BaseDataset, _cmp, _data_repr
 from nifreeze.utils.ndimage import load_api
 
 
-@attr.s(slots=True)
+@attrs.define(slots=True)
 class PET(BaseDataset[np.ndarray | None]):
     """Data representation structure for PET data."""
 
-    frame_time: np.ndarray | None = attr.ib(
-        default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp)
+    frame_time: np.ndarray | None = attrs.field(
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp)
     )
     """A (N,) numpy array specifying the midpoint timing of each sample or frame."""
-    total_duration: float | None = attr.ib(default=None, repr=True)
+    total_duration: float | None = attrs.field(default=None, repr=True)
     """A float representing the total duration of the dataset."""
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray | None]:
