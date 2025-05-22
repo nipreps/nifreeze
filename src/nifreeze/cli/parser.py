@@ -97,7 +97,10 @@ def build_parser() -> ArgumentParser:
         help="Maximum number of threads an individual process may use.",
     )
     parser.add_argument(
+        "-J",
+        "--n-jobs",
         "--njobs",
+        dest="n_jobs",
         action="store",
         type=int,
         default=None,

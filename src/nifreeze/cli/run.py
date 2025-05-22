@@ -79,7 +79,7 @@ def main(argv=None) -> None:
         dataset,
         align_kwargs=args.align_config,
         omp_nthreads=args.nthreads,
-        njobs=args.njobs,
+        n_jobs=args.n_jobs,
         seed=args.seed,
     )
 
