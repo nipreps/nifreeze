@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "nifreeze"
-description = "Pure python eddy-current and head-motion correction for dMRI, an extension of QSIprep's SHOREline algorithm (Cieslak, 2020) to multiple diffusion models."
+description = "A flexible framework for volume-to-volume artifact estimation and correction across multiple 4D neuroimaging modalities (diffusion MRI, functional MRI, and PET)."
 readme = "README.rst"
 authors = [{name = "The NiPreps Developers", email = "nipreps@gmail.com"}]
 classifiers = [

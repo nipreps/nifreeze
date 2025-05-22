@@ -1,5 +1,5 @@
 {
-  "description": "<p>Open-source eddy-current and head-motion correction for diffusion MRI, an extension of SHOREline (Cieslak, 2020) to multiple models.</p>",
+  "description": "<p>A flexible framework for volume-to-volume artifact estimation and correction across multiple 4D neuroimaging modalities (diffusion MRI, functional MRI, and PET).</p>",
   "keywords": [
     "neuroimaging",
     "head-motion",
@@ -20,7 +20,7 @@
       "scheme": "doi"
     }
   ],
-  "title": "nifreeze: model-based estimation of head-motion and eddy-current distortions",
+  "title": "NiFreeze: model-based estimation and correction of head motion and eddy current distortions in 4D neuroimaging",
   "upload_type": "software",
   "creators": [
     {
