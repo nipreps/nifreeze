@@ -29,7 +29,7 @@ from pathlib import Path
 from tempfile import mkdtemp
 from typing import Any, Generic
 
-import attr
+import attrs
 import h5py
 import nibabel as nb
 import numpy as np
@@ -55,7 +55,7 @@ def _cmp(lh: Any, rh: Any) -> bool:
     return lh == rh
 
 
-@attr.s(slots=True)
+@attrs.define(slots=True)
 class BaseDataset(Generic[Unpack[Ts]]):
     """
     Base dataset representation structure.
@@ -72,18 +72,18 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
     """
 
-    dataobj: np.ndarray = attr.ib(default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp))
+    dataobj: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
     """A :obj:`~numpy.ndarray` object for the data array."""
-    affine: np.ndarray = attr.ib(default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp))
+    affine: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
     """Best affine for RAS-to-voxel conversion of coordinates (NIfTI header)."""
-    brainmask: np.ndarray = attr.ib(default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp))
+    brainmask: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
     """A boolean ndarray object containing a corresponding brainmask."""
-    motion_affines: np.ndarray = attr.ib(default=None, eq=attr.cmp_using(eq=_cmp))
+    motion_affines: np.ndarray = attrs.field(default=None, eq=attrs.cmp_using(eq=_cmp))
     """List of :obj:`~nitransforms.linear.Affine` realigning the dataset."""
-    datahdr: SpatialHeader = attr.ib(default=None)
+    datahdr: SpatialHeader = attrs.field(default=None)
     """A :obj:`~nibabel.spatialimages.SpatialHeader` header corresponding to the data."""
 
-    _filepath = attr.ib(
+    _filepath: Path = attrs.field(
         factory=lambda: Path(mkdtemp()) / "hmxfms_cache.h5",
         repr=False,
         eq=False,
@@ -220,7 +220,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
             out_file.attrs["Version"] = np.uint16(1)
             root = out_file.create_group("/0")
             root.attrs["Type"] = "base dataset"
-            for f in attr.fields(self.__class__):
+            for f in attrs.fields(self.__class__):
                 if f.name.startswith("_"):
                     continue
 

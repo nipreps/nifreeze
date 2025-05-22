@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Any
 from warnings import warn
 
-import attr
+import attrs
 import h5py
 import nibabel as nb
 import numpy as np
@@ -66,15 +66,15 @@ DTI_MIN_ORIENTATIONS = 6
 """Minimum number of nonzero b-values in a DWI dataset."""
 
 
-@attr.s(slots=True)
+@attrs.define(slots=True)
 class DWI(BaseDataset[np.ndarray | None]):
     """Data representation structure for dMRI data."""
 
-    bzero = attr.ib(default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp))
+    bzero: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
     """A *b=0* reference map, preferably obtained by some smart averaging."""
-    gradients = attr.ib(default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp))
+    gradients: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
     """A 2D numpy array of the gradient table (4xN)."""
-    eddy_xfms = attr.ib(default=None)
+    eddy_xfms: list = attrs.field(default=None)
     """List of transforms to correct for estimated eddy current distortions."""
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray | None]:
