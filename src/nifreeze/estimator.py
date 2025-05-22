@@ -106,7 +106,7 @@ class Estimator:
             if isinstance(self._prev, Filter):
                 dataset = result  # type: ignore[assignment]
 
-        n_jobs = kwargs.pop("n_jobs", None) or min(cpu_count(), 8)
+        n_jobs = kwargs.pop("n_jobs", None) or min(cpu_count() or 1, 8)
 
         # Prepare iterator
         iterfunc = getattr(iterators, f"{self._strategy}_iterator")
