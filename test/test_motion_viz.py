@@ -39,7 +39,7 @@ from nifreeze.viz.motion_viz import (
     plot_volumewise_motion,
 )
 
-if not (Path.home() / ".dipy" / "stanfoed_hardi").exists():
+if not (Path.home() / ".dipy" / "stanford_hardi").exists():
     fetch_stanford_hardi()
 
 img, _ = read_stanford_hardi()
