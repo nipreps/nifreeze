@@ -87,9 +87,10 @@ class PETModel(BaseModel):
         x = (np.array(timepoints, dtype="float32") / self._xlim) * self._n_ctrl
 
         data = self._dataset.dataobj
+        brainmask = self._dataset.brainmask
 
         # Convert data into V (voxels) x T (timepoints)
-        data = data.reshape((-1, data.shape[-1])) if self._mask is None else data[self._mask]
+        data = data.reshape((-1, data.shape[-1])) if brainmask is None else data[brainmask]
 
         # A.shape = (T, K - 4); T= n. timepoints, K= n. knots (with padding)
         A = BSpline.design_matrix(x, self._t, k=self._order)
@@ -121,5 +122,12 @@ class PETModel(BaseModel):
         # self._coeff is V (num. voxels) x K - 4
         predicted = np.squeeze(A @ self._coeff.T)
 
+        brainmask = self._dataset.brainmask
         datashape = self._dataset.dataobj.shape[:3]
-        return predicted.reshape(datashape)
+
+        if brainmask is None:
+            return predicted.reshape(datashape)
+
+        retval = np.zeros_like(self._dataset.dataobj[..., 0])
+        retval[brainmask] = predicted
+        return retval
