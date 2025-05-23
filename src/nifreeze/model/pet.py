@@ -22,10 +22,11 @@
 #
 """Models for nuclear imaging."""
 
+from os import cpu_count
+
 import numpy as np
 from joblib import Parallel, delayed
 
-from nifreeze.exceptions import ModelNotFittedError
 from nifreeze.model.base import BaseModel
 
 DEFAULT_TIMEFRAME_MIDPOINT_TOL = 1e-2
@@ -77,21 +78,15 @@ class PETModel(BaseModel):
 
         self._coeff = None
 
-    @property
-    def is_fitted(self):
-        return self._coeff is not None
-
-    def fit(self, data, **kwargs):
+    def _fit(self, n_jobs=None, **kwargs):
         """Fit the model."""
         from scipy.interpolate import BSpline
         from scipy.sparse.linalg import cg
 
-        n_jobs = kwargs.pop("n_jobs", None) or 1
-
         timepoints = kwargs.get("timepoints", None) or self._x
         x = (np.array(timepoints, dtype="float32") / self._xlim) * self._n_ctrl
 
-        self._datashape = data.shape[:3]
+        data = self._dataset.dataobj
 
         # Convert data into V (voxels) x T (timepoints)
         data = data.reshape((-1, data.shape[-1])) if self._mask is None else data[self._mask]
@@ -101,26 +96,22 @@ class PETModel(BaseModel):
         AT = A.T
         ATdotA = AT @ A
 
-        # One single CPU - linear execution (full model)
-        if n_jobs == 1:
-            self._coeff = np.array([cg(ATdotA, AT @ v)[0] for v in data])
-            return
-
         # Parallelize process with joblib
-        with Parallel(n_jobs=n_jobs) as executor:
+        with Parallel(n_jobs=n_jobs or min(cpu_count() or 1, 8)) as executor:
             results = executor(delayed(cg)(ATdotA, AT @ v) for v in data)
 
         self._coeff = np.array([r[0] for r in results])
 
-    def predict(self, index=None, **kwargs):
+    def fit_predict(self, index: int | None = None, **kwargs):
         """Return the corrected volume using B-spline interpolation."""
         from scipy.interpolate import BSpline
 
-        if index is None:
-            raise ValueError("A timepoint index to be simulated must be provided.")
+        # Fit the BSpline basis on all data
+        if self._coeff is None:
+            self._fit(n_jobs=kwargs.pop("n_jobs", None))
 
-        if not self._is_fitted:
-            raise ModelNotFittedError(f"{type(self).__name__} must be fitted before predicting")
+        if index is None:  # If no index, just fit the data.
+            return None
 
         # Project sample timing into B-Spline coordinates
         x = (index / self._xlim) * self._n_ctrl
@@ -130,9 +121,5 @@ class PETModel(BaseModel):
         # self._coeff is V (num. voxels) x K - 4
         predicted = np.squeeze(A @ self._coeff.T)
 
-        if self._mask is None:
-            return predicted.reshape(self._datashape)
-
-        retval = np.zeros(self._datashape, dtype="float32")
-        retval[self._mask] = predicted
-        return retval
+        datashape = self._dataset.dataobj.shape[:3]
+        return predicted.reshape(datashape)
