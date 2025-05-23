@@ -113,7 +113,7 @@ def test_parser(tmp_path, datadir):
             "trivial",
             "--nthreads",
             "1",
-            "--njobs",
+            "--n-jobs",
             "1",
             "--seed",
             "1234",
@@ -123,5 +123,5 @@ def test_parser(tmp_path, datadir):
     )
 
     assert args.input_file == input_file
-    assert args.njobs == 1
+    assert args.n_jobs == 1
     assert args.output_dir == tmp_path
