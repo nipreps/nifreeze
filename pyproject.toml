@@ -229,6 +229,7 @@ filterwarnings = [
 
 [tool.coverage.run]
 branch = true
+parallel = true
 concurrency = ['multiprocessing']
 omit = [
     '*/tests/*',
