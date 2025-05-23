@@ -24,6 +24,7 @@
 
 from __future__ import annotations
 
+from os import cpu_count
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TypeVar
@@ -105,7 +106,7 @@ class Estimator:
             if isinstance(self._prev, Filter):
                 dataset = result  # type: ignore[assignment]
 
-        n_jobs = kwargs.get("n_jobs", None)
+        n_jobs = kwargs.pop("n_jobs", None) or min(cpu_count() or 1, 8)
 
         # Prepare iterator
         iterfunc = getattr(iterators, f"{self._strategy}_iterator")

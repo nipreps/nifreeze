@@ -20,6 +20,13 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#     "click",
+#     "fuzzywuzzy",
+# ]
+# ///
 """Update and sort the creators list of the zenodo record."""
 
 import json
