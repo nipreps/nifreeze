@@ -23,11 +23,10 @@
 """PET data representation."""
 
 from __future__ import annotations
-from collections import namedtuple
 
 import json
+from collections import namedtuple
 from pathlib import Path
-from typing import Any, Union
 
 import attrs
 import h5py
@@ -35,7 +34,6 @@ import nibabel as nib
 import numpy as np
 from nibabel.spatialimages import SpatialImage
 from nitransforms.linear import Affine
-from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr
 from nifreeze.utils.ndimage import load_api
@@ -184,15 +182,10 @@ class PET(BaseDataset[np.ndarray | None]):
         """Read an HDF5 file from disk."""
         with h5py.File(filename, "r") as in_file:
             root = in_file["/0"]
-            data = {k: np.asanyarray(v) for k, v in root.items() if
-                    not k.startswith("_")}
+            data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}
         return cls(**data)
 
-    def load(
-        filename,
-        json_file,
-        brainmask_file=None
-    ):
+    def load(filename, json_file, brainmask_file=None):
         """Load PET data."""
         filename = Path(filename)
         if filename.name.endswith(".h5"):
@@ -205,11 +198,11 @@ class PET(BaseDataset[np.ndarray | None]):
         )
 
         # Load metadata
-        with open(json_file, 'r') as f:
+        with open(json_file, "r") as f:
             metadata = json.load(f)
 
-        frame_duration = np.array(metadata['FrameDuration'])
-        frame_times_start = np.array(metadata['FrameTimesStart'])
+        frame_duration = np.array(metadata["FrameDuration"])
+        frame_times_start = np.array(metadata["FrameTimesStart"])
         midframe = frame_times_start + frame_duration / 2
 
         retval.midframe = midframe
