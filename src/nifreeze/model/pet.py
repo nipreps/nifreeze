@@ -40,9 +40,29 @@ DEFAULT_TIMEFRAME_MIDPOINT_TOL = 1e-2
 class PETModel(BaseModel):
     """A PET imaging realignment model based on B-Spline approximation."""
 
-    __slots__ = ("_t", "_x", "_xlim", "_order", "_coeff", "_n_ctrl", "_datashape", "_mask", "_smooth_fwhm", "_thresh_pct")
+    __slots__ = (
+        "_t",
+        "_x",
+        "_xlim",
+        "_order",
+        "_coeff",
+        "_n_ctrl",
+        "_datashape",
+        "_mask",
+        "_smooth_fwhm",
+        "_thresh_pct",
+    )
 
-    def __init__(self, timepoints=None, xlim=None, n_ctrl=None, order=3, smooth_fwhm=10, thresh_pct=20, **kwargs):
+    def __init__(
+        self,
+        timepoints=None,
+        xlim=None,
+        n_ctrl=None,
+        order=3,
+        smooth_fwhm=10,
+        thresh_pct=20,
+        **kwargs,
+    ):
         """
         Create the B-Spline interpolating matrix.
 
@@ -91,8 +111,6 @@ class PETModel(BaseModel):
 
     def _fit(self, index: int | None = None, n_jobs=None, **kwargs):
         """Fit the model."""
-        from scipy.interpolate import BSpline
-        from scipy.sparse.linalg import cg
 
         if self._locked_fit is not None:
             return n_jobs
@@ -130,7 +148,6 @@ class PETModel(BaseModel):
 
     def fit_predict(self, index: int | None = None, **kwargs):
         """Return the corrected volume using B-spline interpolation."""
-        from scipy.interpolate import BSpline
 
         # Fit the BSpline basis on all data
         if self._locked_fit is None:

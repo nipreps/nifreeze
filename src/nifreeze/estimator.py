@@ -24,29 +24,26 @@
 
 from __future__ import annotations
 
-import os
+from importlib.resources import files
 from os import cpu_count
 from pathlib import Path
-from tempfile import NamedTemporaryFile, TemporaryDirectory
+from tempfile import TemporaryDirectory
 from typing import TypeVar
-from importlib.resources import files
 
-import nitransforms as nt
 import nibabel as nib
+import nitransforms as nt
 import numpy as np
-from nipype.interfaces.ants.registration import Registration
 from tqdm import tqdm
 from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset
 from nifreeze.model.base import BaseModel, ModelFactory
 from nifreeze.registration.ants import (
+    Registration,
     _prepare_registration_data,
     _run_registration,
 )
 from nifreeze.utils import iterators
-from nifreeze.registration.ants import Registration
-from nifreeze.model.pet import PETModel
 
 DatasetT = TypeVar("DatasetT", bound=BaseDataset)
 
@@ -194,6 +191,7 @@ class Estimator:
 
         return self
 
+
 class PETMotionEstimator:
     """Estimates motion within PET imaging data aligned with generic Estimator workflow."""
 
@@ -222,13 +220,13 @@ class PETMotionEstimator:
                 (train_data, train_times), (test_data, test_time) = pet_dataset.lofo_split(idx)
 
                 if train_times is None:
-                    raise ValueError(f"train_times is None at index {idx}, check midframe initialization.")
+                    raise ValueError(
+                        f"train_times is None at index {idx}, check midframe initialization."
+                    )
 
                 # Instantiate PETModel explicitly
                 model = PETModel(
-                    dataset=pet_dataset,
-                    timepoints=train_times,
-                    xlim=pet_dataset.total_duration
+                    dataset=pet_dataset, timepoints=train_times, xlim=pet_dataset.total_duration
                 )
                 model.fit(train_data)
 
@@ -246,7 +244,9 @@ class PETMotionEstimator:
                 fixed_img.to_filename(fixed_image_path)
                 moving_img.to_filename(moving_image_path)
 
-                registration_config = files('nifreeze.registration.config').joinpath('pet-to-pet_level1.json')
+                registration_config = files("nifreeze.registration.config").joinpath(
+                    "pet-to-pet_level1.json"
+                )
 
                 registration = Registration(
                     from_file=registration_config,
@@ -254,7 +254,7 @@ class PETMotionEstimator:
                     moving_image=str(moving_image_path),
                     output_warped_image=True,
                     output_transform_prefix=f"ants_{idx:03d}",
-                    **self.align_kwargs
+                    **self.align_kwargs,
                 )
 
                 # Save ANTs command line for debugging
@@ -264,12 +264,22 @@ class PETMotionEstimator:
                 try:
                     result = registration.run(cwd=str(tmp_path))
                     if result.outputs.forward_transforms:
-                        transform = nt.io.itk.ITKLinearTransform.from_filename(result.outputs.forward_transforms[0])
-                        matrix = transform.to_ras(reference=str(fixed_image_path), moving=str(moving_image_path))
+                        transform = nt.io.itk.ITKLinearTransform.from_filename(
+                            result.outputs.forward_transforms[0]
+                        )
+                        matrix = transform.to_ras(
+                            reference=str(fixed_image_path), moving=str(moving_image_path)
+                        )
                         affine_matrices.append(matrix)
 
-                        if debug_dir and hasattr(result.outputs, 'warped_image') and result.outputs.warped_image:
-                            Path(result.outputs.warped_image).rename(debug_dir / f"corrected_frame_{idx:03d}.nii.gz")
+                        if (
+                            debug_dir
+                            and hasattr(result.outputs, "warped_image")
+                            and result.outputs.warped_image
+                        ):
+                            Path(result.outputs.warped_image).rename(
+                                debug_dir / f"corrected_frame_{idx:03d}.nii.gz"
+                            )
                     else:
                         affine_matrices.append(np.eye(4))
                         print(f"No transforms produced for index {idx}")
