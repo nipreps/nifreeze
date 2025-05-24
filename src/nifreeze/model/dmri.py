@@ -123,11 +123,21 @@ class BaseDWIModel(BaseModel):
                 class_name,
             )(gtab, **kwargs)
 
-        self._model_fit = model.fit(
-            data,
-            engine="serial" if n_jobs == 1 else "joblib",
-            n_jobs=n_jobs,
-        )
+        try:
+            self._model_fit = model.fit(
+                data,
+                engine="serial" if n_jobs == 1 else "joblib",
+                n_jobs=n_jobs,
+            )
+        except TypeError:
+            from nifreeze.model._dipy import multi_fit
+
+            self._model_fit = multi_fit(
+                model,
+                data,
+                engine="serial" if n_jobs == 1 else "ray",
+                n_jobs=n_jobs,
+            )
         return n_jobs
 
     def fit_predict(self, index: int | None = None, **kwargs):
