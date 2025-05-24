@@ -25,7 +25,6 @@ from importlib import import_module
 
 import numpy as np
 from dipy.core.gradients import gradient_table_from_bvals_bvecs
-from joblib import Parallel, delayed
 
 from nifreeze.data.dmri import (
     DEFAULT_CLIP_PERCENTILE,
@@ -35,23 +34,13 @@ from nifreeze.data.dmri import (
 from nifreeze.model.base import BaseModel, ExpectationModel
 
 
-def _exec_fit(model, data, chunk=None):
-    retval = model.fit(data)
-    return retval, chunk
-
-
-def _exec_predict(model, chunk=None, **kwargs):
-    """Propagate model parameters and call predict."""
-    return np.squeeze(model.predict(**kwargs)), chunk
-
-
 class BaseDWIModel(BaseModel):
     """Interface and default methods for DWI models."""
 
     __slots__ = {
         "_model_class": "Defining a model class, DIPY models are instantiated automagically",
         "_modelargs": "Arguments acceptable by the underlying DIPY-like model.",
-        "_models": "List with one or more (if parallel execution) model instances",
+        "_model_fit": "Fitted model",
     }
 
     def __init__(self, dataset: DWI, **kwargs):
@@ -81,8 +70,6 @@ class BaseDWIModel(BaseModel):
     def _fit(self, index: int | None = None, n_jobs=None, **kwargs):
         """Fit the model chunk-by-chunk asynchronously"""
 
-        n_jobs = n_jobs or 1
-
         if self._locked_fit is not None:
             return n_jobs
 
@@ -110,25 +97,21 @@ class BaseDWIModel(BaseModel):
                 class_name,
             )(gtab, **kwargs)
 
-        # One single CPU - linear execution (full model)
-        if n_jobs == 1:
-            _modelfit, _ = _exec_fit(model, data)
-            self._models = [_modelfit]
-            return 1
-
-        # Split data into chunks of group of slices
-        data_chunks = np.array_split(data, n_jobs)
-
-        self._models = [None] * n_jobs
-
-        # Parallelize process with joblib
-        with Parallel(n_jobs=n_jobs) as executor:
-            results = executor(
-                delayed(_exec_fit)(model, dchunk, i) for i, dchunk in enumerate(data_chunks)
+        try:
+            self._model_fit = model.fit(
+                data,
+                engine="serial" if n_jobs == 1 else "joblib",
+                n_jobs=n_jobs,
             )
-        for submodel, rindex in results:
-            self._models[rindex] = submodel
+        except TypeError:
+            from nifreeze.model._dipy import multi_fit
 
+            self._model_fit = multi_fit(
+                model,
+                data,
+                engine="serial" if n_jobs == 1 else "ray",
+                n_jobs=n_jobs,
+            )
         return n_jobs
 
     def fit_predict(self, index: int | None = None, **kwargs):
@@ -142,13 +125,14 @@ class BaseDWIModel(BaseModel):
 
         """
 
-        n_models = self._fit(
+        self._fit(
             index,
             n_jobs=kwargs.pop("n_jobs"),
             **kwargs,
         )
 
         if index is None:
+            self._locked_fit = True
             return None
 
         brainmask = self._dataset.brainmask
@@ -163,29 +147,12 @@ class BaseDWIModel(BaseModel):
         if S0 is not None:
             S0 = S0[brainmask, ...] if brainmask is not None else S0.reshape(-1)
 
-        if n_models == 1:
-            predicted, _ = _exec_predict(
-                self._models[0], **(kwargs | {"gtab": gradient, "S0": S0})
+        predicted = np.squeeze(
+            self._model_fit.predict(
+                gtab=gradient,
+                S0=S0,
             )
-        else:
-            S0 = np.array_split(S0, n_models) if S0 is not None else np.full(n_models, None)
-
-            predicted = [None] * n_models
-
-            # Parallelize process with joblib
-            with Parallel(n_jobs=n_models) as executor:
-                results = executor(
-                    delayed(_exec_predict)(
-                        model,
-                        chunk=i,
-                        **(kwargs | {"gtab": gradient, "S0": S0[i]}),
-                    )
-                    for i, model in enumerate(self._models)
-                )
-            for subprediction, index in results:
-                predicted[index] = subprediction
-
-            predicted = np.hstack(predicted)
+        )
 
         if brainmask is not None:
             retval = np.zeros_like(brainmask, dtype="float32")
