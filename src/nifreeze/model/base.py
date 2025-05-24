@@ -66,7 +66,7 @@ class ModelFactory:
 
             return AverageDWIModel(kwargs.pop("dataset"), **kwargs)
 
-        if model.lower() in ("dti", "dki", "pet"):
+        if model.lower() in ("gqi", "dti", "dki", "pet"):
             from importlib import import_module
 
             dmrimod = import_module("nifreeze.model.dmri")
