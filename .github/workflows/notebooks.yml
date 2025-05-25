@@ -93,6 +93,10 @@ jobs:
         run: |
           ${{ github.workspace }}/scripts/fetch_fmri_nb_openneuro_data.sh "${TEST_DATA_HOME}"
 
+      - name: Download data from GIN
+        run: |
+          ${{ github.workspace }}/scripts/fetch_pet_nb_gin_data.sh "${TEST_DATA_HOME}"
+
       - name: Download data from OSF
         run: |
           pip install osfclient
