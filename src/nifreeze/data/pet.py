@@ -272,12 +272,12 @@ def from_nii(
         # Convert to a float32 numpy array and zero out the earliest time
         frame_time_arr = np.array(frame_time, dtype=np.float32)
         frame_time_arr -= frame_time_arr[0]
-        pet_obj.frame_time = frame_time_arr
+        pet_obj.midframe = frame_time_arr
 
     # If the user doesn't provide frame_duration, we derive it:
     if frame_duration is None:
-        if pet_obj.frame_time is not None:
-            frame_time_arr = pet_obj.frame_time
+        if pet_obj.midframe is not None:
+            frame_time_arr = pet_obj.midframe
             # If shape is e.g. (N,), then we can do
             durations = np.diff(frame_time_arr)
             if len(durations) == (len(frame_time_arr) - 1):
@@ -287,7 +287,7 @@ def from_nii(
 
     # Set total_duration and shift frame_time to the midpoint
     pet_obj.total_duration = float(frame_time_arr[-1] + durations[-1])
-    pet_obj.frame_time = frame_time_arr + 0.5 * durations
+    pet_obj.midframe = frame_time_arr + 0.5 * durations
 
     # If a brain mask is provided, load and attach
     if brainmask_file is not None:
