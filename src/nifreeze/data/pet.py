@@ -24,14 +24,16 @@
 
 from __future__ import annotations
 
+import json
+from collections import namedtuple
 from pathlib import Path
-from typing import Any, Union
 
 import attrs
 import h5py
+import nibabel as nib
 import numpy as np
 from nibabel.spatialimages import SpatialImage
-from typing_extensions import Self
+from nitransforms.linear import Affine
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr
 from nifreeze.utils.ndimage import load_api
@@ -41,7 +43,7 @@ from nifreeze.utils.ndimage import load_api
 class PET(BaseDataset[np.ndarray | None]):
     """Data representation structure for PET data."""
 
-    frame_time: np.ndarray | None = attrs.field(
+    midframe: np.ndarray | None = attrs.field(
         default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp)
     )
     """A (N,) numpy array specifying the midpoint timing of each sample or frame."""
@@ -49,7 +51,7 @@ class PET(BaseDataset[np.ndarray | None]):
     """A float representing the total duration of the dataset."""
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray | None]:
-        return (self.frame_time[idx] if self.frame_time is not None else None,)
+        return (self.midframe[idx] if self.midframe is not None else None,)
 
     # For the sake of the docstring
     def __getitem__(
@@ -77,49 +79,142 @@ class PET(BaseDataset[np.ndarray | None]):
         """
         return super().__getitem__(idx)
 
-    @classmethod
-    def from_filename(cls, filename: Union[str, Path]) -> Self:
+    def lofo_split(self, index):
         """
-        Read an HDF5 file from disk and create a PET object.
+        Leave-one-frame-out (LOFO) for PET data.
 
         Parameters
         ----------
-        filename : :obj:`os.pathlike`
-            The HDF5 file path to read.
+        index : int
+            Index of the PET frame to be left out in this fold.
 
         Returns
         -------
-        :obj:`~nifreeze.data.pet.PET`
-            A PET dataset with data loaded from the specified file.
-
+        (train_data, train_timings) : tuple
+            Training data and corresponding timings, excluding the left-out frame.
+        (test_data, test_timing) : tuple
+            Test data (one PET frame) and corresponding timing.
         """
-        return super().from_filename(filename)
 
-    def to_filename(
-        self,
-        filename: Path | str,
-        compression: str | None = None,
-        compression_opts: Any = None,
-    ) -> None:
-        """
-        Write the PET dataset to an HDF5 file on disk.
+        if not Path(self._filepath).exists():
+            self.to_filename(self._filepath)
 
-        Parameters
-        ----------
-        filename : :obj:`os.pathlike`
-            The HDF5 file path to write to.
-        compression : :obj:`str`, optional
-            Compression strategy.
-            See :obj:`~h5py.Group.create_dataset` documentation.
-        compression_opts : :obj:`typing.Any`, optional
-            Parameters for compression
-            `filters <https://docs.h5py.org/en/stable/high/dataset.html#dataset-compression>`__.
+        # Read original PET data
+        with h5py.File(self._filepath, "r") as in_file:
+            root = in_file["/0"]
+            pet_frame = np.asanyarray(root["dataobj"][..., index])
+            if self.midframe is not None:
+                timing_frame = np.asanyarray(root["midframe"][..., index])
 
-        """
-        super().to_filename(filename, compression=compression, compression_opts=compression_opts)
-        # Overriding if you'd like to set a custom attribute, for example:
-        with h5py.File(filename, "r+") as out_file:
-            out_file.attrs["Type"] = "pet"
+        # Mask to exclude the selected frame
+        mask = np.ones(self.dataobj.shape[-1], dtype=bool)
+        mask[index] = False
+
+        train_data = self.dataobj[..., mask]
+        train_timings = self.midframe[mask] if self.midframe is not None else None
+
+        test_data = pet_frame
+        test_timing = timing_frame if self.midframe is not None else None
+
+        return ((train_data, train_timings), (test_data, test_timing))
+
+    def set_transform(self, index, affine, order=3):
+        """Set an affine, and update data object and gradients."""
+        reference = namedtuple("ImageGrid", ("shape", "affine"))(
+            shape=self.dataobj.shape[:3], affine=self.affine
+        )
+        xform = Affine(matrix=affine, reference=reference)
+
+        if not Path(self._filepath).exists():
+            self.to_filename(self._filepath)
+
+        # read original PET
+        with h5py.File(self._filepath, "r") as in_file:
+            root = in_file["/0"]
+            dframe = np.asanyarray(root["dataobj"][..., index])
+
+        dmoving = nib.Nifti1Image(dframe, self.affine, None)
+
+        # resample and update orientation at index
+        self.dataobj[..., index] = np.asanyarray(
+            xform.apply(dmoving, order=order).dataobj,
+            dtype=self.dataobj.dtype,
+        )
+
+        # update transform
+        if self.em_affines is None:
+            self.em_affines = [None] * len(self)
+
+        self.em_affines[index] = xform
+
+    def to_filename(self, filename, compression=None, compression_opts=None):
+        """Write an HDF5 file to disk."""
+        filename = Path(filename)
+        if not filename.name.endswith(".h5"):
+            filename = filename.parent / f"{filename.name}.h5"
+
+        with h5py.File(filename, "w") as out_file:
+            out_file.attrs["Format"] = "EMC/PET"
+            out_file.attrs["Version"] = np.uint16(1)
+            root = out_file.create_group("/0")
+            root.attrs["Type"] = "pet"
+            for f in attrs.fields(self.__class__):
+                if f.name.startswith("_"):
+                    continue
+
+                value = getattr(self, f.name)
+                if value is not None:
+                    root.create_dataset(
+                        f.name,
+                        data=value,
+                        compression=compression,
+                        compression_opts=compression_opts,
+                    )
+
+    def to_nifti(self, filename, *_):
+        """Write a NIfTI 1.0 file to disk."""
+        nii = nib.Nifti1Image(self.dataobj, self.affine, None)
+        nii.header.set_xyzt_units("mm")
+        nii.to_filename(filename)
+
+    @classmethod
+    def from_filename(cls, filename):
+        """Read an HDF5 file from disk."""
+        with h5py.File(filename, "r") as in_file:
+            root = in_file["/0"]
+            data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}
+        return cls(**data)
+
+    def load(filename, json_file, brainmask_file=None):
+        """Load PET data."""
+        filename = Path(filename)
+        if filename.name.endswith(".h5"):
+            return PET.from_filename(filename)
+
+        img = nib.load(filename)
+        retval = PET(
+            dataobj=img.get_fdata(dtype="float32"),
+            affine=img.affine,
+        )
+
+        # Load metadata
+        with open(json_file, "r") as f:
+            metadata = json.load(f)
+
+        frame_duration = np.array(metadata["FrameDuration"])
+        frame_times_start = np.array(metadata["FrameTimesStart"])
+        midframe = frame_times_start + frame_duration / 2
+
+        retval.midframe = midframe
+        retval.total_duration = float(frame_times_start[-1] + frame_duration[-1])
+
+        assert len(retval.midframe) == retval.dataobj.shape[-1]
+
+        if brainmask_file:
+            mask = nib.load(brainmask_file)
+            retval.brainmask = np.asanyarray(mask.dataobj)
+
+        return retval
 
 
 def from_nii(
@@ -177,12 +272,12 @@ def from_nii(
         # Convert to a float32 numpy array and zero out the earliest time
         frame_time_arr = np.array(frame_time, dtype=np.float32)
         frame_time_arr -= frame_time_arr[0]
-        pet_obj.frame_time = frame_time_arr
+        pet_obj.midframe = frame_time_arr
 
     # If the user doesn't provide frame_duration, we derive it:
     if frame_duration is None:
-        if pet_obj.frame_time is not None:
-            frame_time_arr = pet_obj.frame_time
+        if pet_obj.midframe is not None:
+            frame_time_arr = pet_obj.midframe
             # If shape is e.g. (N,), then we can do
             durations = np.diff(frame_time_arr)
             if len(durations) == (len(frame_time_arr) - 1):
@@ -192,7 +287,7 @@ def from_nii(
 
     # Set total_duration and shift frame_time to the midpoint
     pet_obj.total_duration = float(frame_time_arr[-1] + durations[-1])
-    pet_obj.frame_time = frame_time_arr + 0.5 * durations
+    pet_obj.midframe = frame_time_arr + 0.5 * durations
 
     # If a brain mask is provided, load and attach
     if brainmask_file is not None:
