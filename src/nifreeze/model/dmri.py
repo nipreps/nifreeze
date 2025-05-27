@@ -93,7 +93,7 @@ class BaseDWIModel(BaseModel):
 
         super().__init__(dataset, **kwargs)
 
-    def _fit(self, index: int | None = None, n_jobs=None, **kwargs):
+    def _fit(self, index: int | None = None, n_jobs=None, omp_nthreads=None, **kwargs):
         """Fit the model chunk-by-chunk asynchronously"""
 
         if self._locked_fit is not None:
@@ -123,20 +123,20 @@ class BaseDWIModel(BaseModel):
                 class_name,
             )(gtab, **kwargs)
 
+        fitargs = {"engine": "ray", "n_jobs": n_jobs} if n_jobs > 1 else {}
+
+        if "step" in kwargs:
+            fitargs["step"] = kwargs["step"]
+
         try:
-            self._model_fit = model.fit(
-                data,
-                engine="serial" if n_jobs == 1 else "joblib",
-                n_jobs=n_jobs,
-            )
+            self._model_fit = model.fit(data, **fitargs)
         except TypeError:
             from nifreeze.model._dipy import multi_fit
 
             self._model_fit = multi_fit(
                 model,
                 data,
-                engine="serial" if n_jobs == 1 else "ray",
-                n_jobs=n_jobs,
+                **fitargs,
             )
         return n_jobs
 
@@ -151,9 +151,14 @@ class BaseDWIModel(BaseModel):
 
         """
 
+        omp_nthreads = kwargs.pop("omp_nthreads", None)
+        n_jobs = kwargs.pop("n_jobs", None)
+
+        brainmask = self._dataset.brainmask
         self._fit(
             index,
-            n_jobs=kwargs.pop("n_jobs"),
+            n_jobs=n_jobs,
+            omp_nthreads=omp_nthreads,
             **kwargs,
         )
 
@@ -161,17 +166,18 @@ class BaseDWIModel(BaseModel):
             self._locked_fit = True
             return None
 
+        # Prepare gradient(s) for simulation
         gradient = self._dataset.gradients[:, index]
-
         if "dipy" in getattr(self, "_model_class", ""):
             gradient = gradient_table_from_bvals_bvecs(
                 gradient[np.newaxis, -1], gradient[np.newaxis, :-1]
             )
-
+        # Prediction
         predicted = np.squeeze(
             self._model_fit.predict(
                 gtab=gradient,
                 S0=self._S0,
+                **kwargs,
             )
         )
 
