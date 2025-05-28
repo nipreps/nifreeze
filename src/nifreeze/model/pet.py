@@ -98,7 +98,7 @@ class PETModel(BaseModel):
     def is_fitted(self):
         return self._coeff is not None
 
-    def _fit(self, index: int | None = None, n_jobs=None, **kwargs):
+    def _fit(self, data, affine, index: int | None = None, n_jobs=None, **kwargs):
         """Fit the model."""
 
         if self._locked_fit is not None:
@@ -119,9 +119,9 @@ class PETModel(BaseModel):
             )
             data = smoothed_img.get_fdata()
 
-        if self._thresh_pct > 0:
-            thresh_val = np.percentile(data, self._thresh_pct)
-            data[data < thresh_val] = 0
+        # if self._thresh_pct > 0:
+        #     thresh_val = np.percentile(data, self._thresh_pct)
+        #     data[data < thresh_val] = 0
 
         # Convert data into V (voxels) x T (timepoints)
         data = (
