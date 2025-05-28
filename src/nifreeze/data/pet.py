@@ -44,7 +44,7 @@ from nifreeze.utils.ndimage import load_api
 class PET(BaseDataset[np.ndarray | None]):
     """Data representation structure for PET data."""
 
-    midframe: np.ndarray | None = attr.ib(
+    midframe_time: np.ndarray | None = attr.ib(
         default=None, repr=_data_repr, eq=attr.cmp_using(eq=_cmp)
     )
     """A (N,) numpy array specifying the midpoint timing of each sample or frame."""
@@ -52,7 +52,7 @@ class PET(BaseDataset[np.ndarray | None]):
     """A float representing the total duration of the dataset."""
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray | None]:
-        return (self.midframe[idx] if self.midframe is not None else None,)
+        return (self.midframe_time[idx] if self.midframe_time is not None else None,)
 
     # For the sake of the docstring
     def __getitem__(
@@ -80,7 +80,7 @@ class PET(BaseDataset[np.ndarray | None]):
         """
         return super().__getitem__(idx)
 
-    def lofo_split(self, index):
+    def lofo_split(self, index, order: int = 3, pad_mode: str = "edge"):
         """
         Leave-one-frame-out (LOFO) for PET data.
 
@@ -88,6 +88,12 @@ class PET(BaseDataset[np.ndarray | None]):
         ----------
         index : int
             Index of the PET frame to be left out in this fold.
+        pad_mode : :obj:`str`, optional
+            Padding mode to be passed to :func:`numpy.pad` when extending the
+            training data and timing arrays. Default is ``"edge"``.
+
+        pad_mode : str
+            Padding mode passed to :func:`numpy.pad`.
 
         Returns
         -------
@@ -103,18 +109,27 @@ class PET(BaseDataset[np.ndarray | None]):
         with h5py.File(self._filepath, "r") as in_file:
             root = in_file["/0"]
             pet_frame = np.asanyarray(root["dataobj"][..., index])
-            if self.midframe is not None:
-                timing_frame = np.asanyarray(root["midframe"][..., index])
+            if self.midframe_time is not None:
+                timing_frame = np.asanyarray(root["midframe_time"][..., index])
 
         # Mask to exclude the selected frame
         mask = np.ones(self.dataobj.shape[-1], dtype=bool)
         mask[index] = False
 
         train_data = self.dataobj[..., mask]
-        train_timings = self.midframe[mask] if self.midframe is not None else None
+        train_timings = (
+            self.midframe_time[mask] if self.midframe_time is not None else None
+        )
+        if train_timings is not None:
+            train_data = np.pad(
+                train_data,
+                [(0, 0), (0, 0), (0, 0), (order, order)],
+                mode=pad_mode,
+            )
+            train_timings = np.pad(train_timings, (order, order), mode=pad_mode)
 
         test_data = pet_frame
-        test_timing = timing_frame if self.midframe is not None else None
+        test_timing = timing_frame if self.midframe_time is not None else None
 
         return ((train_data, train_timings), (test_data, test_timing))
 
@@ -208,12 +223,12 @@ class PET(BaseDataset[np.ndarray | None]):
 
         frame_duration = np.array(metadata['FrameDuration'])
         frame_times_start = np.array(metadata['FrameTimesStart'])
-        midframe = frame_times_start + frame_duration / 2
+        midframe_time = frame_times_start + frame_duration / 2
 
-        retval.midframe = midframe
+        retval.midframe_time = midframe_time
         retval.total_duration = float(frame_times_start[-1] + frame_duration[-1])
 
-        assert len(retval.midframe) == retval.dataobj.shape[-1]
+        assert len(retval.midframe_time) == retval.dataobj.shape[-1]
 
         if brainmask_file:
             mask = nib.load(brainmask_file)
@@ -226,7 +241,7 @@ def load(
     filename: Path | str,
     brainmask_file: Path | str | None = None,
     motion_file: Path | str | None = None,
-    frame_time: np.ndarray | list[float] | None = None,
+    midframe_time: np.ndarray | list[float] | None = None,
     frame_duration: np.ndarray | list[float] | None = None,
 ) -> PET:
     """
@@ -241,8 +256,8 @@ def load(
         stored in the returned dataset.
     motion_file : :obj:`os.pathlike`
         A file containing head-motion affine matrices (linear).
-    frame_time : :obj:`numpy.ndarray` or :obj:`list` of :obj:`float`, optional
-        The start times of each frame relative to the beginning of the acquisition.
+    midframe : :obj:`numpy.ndarray` or :obj:`list` of :obj:`float`, optional
+        The midframe times of each frame relative to the beginning of the acquisition.
         If ``None``, an error is raised (since BIDS requires ``FrameTimesStart``).
     frame_duration : :obj:`numpy.ndarray` or :obj:`list` of :obj:`float`, optional
         The duration of each frame.
@@ -257,7 +272,7 @@ def load(
     Raises
     ------
     RuntimeError
-        If ``frame_time`` is not provided (BIDS requires it).
+        If ``midframe_time`` is not provided (BIDS requires it).
 
     """
     if motion_file:
@@ -277,33 +292,33 @@ def load(
         )
 
     # Verify the user provided frame_time if not already in the PET object
-    if pet_obj.frame_time is None and frame_time is None:
+    if pet_obj.midframe_time is None and midframe_time is None:
         raise RuntimeError(
-            "The `frame_time` is mandatory for PET data to comply with BIDS. "
+            "The `midframe_time` is mandatory for PET data to comply with BIDS. "
             "See https://bids-specification.readthedocs.io for details."
         )
 
     # If the user supplied new values, set them
-    if frame_time is not None:
+    if midframe_time is not None:
         # Convert to a float32 numpy array and zero out the earliest time
-        frame_time_arr = np.array(frame_time, dtype=np.float32)
-        frame_time_arr -= frame_time_arr[0]
-        pet_obj.frame_time = frame_time_arr
+        midframe_time_arr = np.array(midframe_time, dtype=np.float32)
+        midframe_time_arr -= midframe_time_arr[0]
+        pet_obj.midframe_time = midframe_time_arr
 
     # If the user doesn't provide frame_duration, we derive it:
     if frame_duration is None:
-        if pet_obj.frame_time is not None:
-            frame_time_arr = pet_obj.frame_time
+        if pet_obj.midframe_time is not None:
+            midframe_time_arr = pet_obj.midframe_time
             # If shape is e.g. (N,), then we can do
-            durations = np.diff(frame_time_arr)
-            if len(durations) == (len(frame_time_arr) - 1):
+            durations = np.diff(midframe_time_arr)
+            if len(durations) == (len(midframe_time_arr) - 1):
                 durations = np.append(durations, durations[-1])  # last frame same as second-last
     else:
         durations = np.array(frame_duration, dtype=np.float32)
 
     # Set total_duration and shift frame_time to the midpoint
-    pet_obj.total_duration = float(frame_time_arr[-1] + durations[-1])
-    pet_obj.frame_time = frame_time_arr + 0.5 * durations
+    pet_obj.total_duration = float(midframe_time_arr[-1] + durations[-1])
+    pet_obj.midframe_time = midframe_time_arr + 0.5 * durations
 
     # If a brain mask is provided, load and attach
     if brainmask_file is not None:
