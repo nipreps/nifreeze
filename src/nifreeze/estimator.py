@@ -47,6 +47,7 @@ from nifreeze.registration.ants import (
 from nifreeze.utils import iterators
 from nifreeze.registration.ants import Registration
 from nifreeze.model.pet import PETModel
+from nifreeze.utils.iterators import centralsym_iterator
 
 DatasetT = TypeVar("DatasetT", bound=BaseDataset)
 
@@ -216,7 +217,7 @@ class PETMotionEstimator:
         self, pet_dataset, omp_nthreads=None, n_jobs=None, seed=None, debug_dir=None
     ):
         n_frames = len(pet_dataset)
-        frame_indices = np.arange(n_frames)
+        frame_indices = centralsym_iterator(n_frames)
 
         if omp_nthreads:
             self.align_kwargs["num_threads"] = omp_nthreads
@@ -246,7 +247,7 @@ class PETMotionEstimator:
                     timepoints=train_times,
                     xlim=pet_dataset.total_duration,
                 )
-                model.fit(train_data)
+                model.fit(train_data, affine=pet_dataset.affine)
 
                 # Predict the reference volume at the test frame's timepoint
                 predicted = model.predict(test_time)
