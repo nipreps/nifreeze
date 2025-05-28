@@ -46,6 +46,7 @@ from nifreeze.registration.ants import (
 )
 from nifreeze.utils import iterators
 from nifreeze.registration.ants import Registration
+from nipype.interfaces.ants import Registration as ANTSRegistration
 from nifreeze.model.pet import PETModel
 from nifreeze.utils.iterators import centralsym_iterator
 
@@ -228,6 +229,14 @@ class PETMotionEstimator:
 
         affine_matrices = []
 
+        # Instantiate and fit the model once
+        model = PETModel(
+            dataset=pet_dataset,
+            timepoints=pet_dataset.midframe_time,
+            xlim=pet_dataset.total_duration,
+        )
+        model.fit_predict(None, n_jobs=n_jobs)
+
         with TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
 
@@ -247,10 +256,10 @@ class PETMotionEstimator:
                     timepoints=train_times,
                     xlim=pet_dataset.total_duration,
                 )
-                model.fit(train_data, affine=pet_dataset.affine)
 
-                # Predict the reference volume at the test frame's timepoint
-                predicted = model.predict(test_time)
+                model.fit_predict(None, data=train_data, n_jobs=n_jobs)
+
+                predicted = model.fit_predict(test_time)
 
                 fixed_image_path = debug_dir / f"fixed_frame_{idx:03d}.nii.gz"
                 moving_image_path = debug_dir / f"moving_frame_{idx:03d}.nii.gz"
@@ -264,10 +273,10 @@ class PETMotionEstimator:
                 moving_img.to_filename(moving_image_path)
 
                 registration_config = files("nifreeze.registration.config").joinpath(
-                    "pet-to-pet_level1.json"
+                    "pet-to-pet_level1_v2.json"
                 )
 
-                registration = Registration(
+                registration = ANTSRegistration(
                     from_file=registration_config,
                     fixed_image=str(fixed_image_path),
                     moving_image=str(moving_image_path),
