@@ -25,6 +25,7 @@
 from __future__ import annotations
 
 from collections import namedtuple
+from importlib.resources import files
 from json import loads
 from pathlib import Path
 from warnings import warn
@@ -34,7 +35,6 @@ import nitransforms as nt
 import numpy as np
 from nipype.interfaces.ants.registration import Registration
 from nitransforms.linear import Affine
-from pkg_resources import resource_filename as pkg_fn
 
 PARAMETERS_SINGLE_VALUE = {
     "collapse_output_transforms",
@@ -180,12 +180,7 @@ def _get_ants_settings(settings: str = "b0-to-b0_level0") -> Path:
     PosixPath('.../config/b0-to-b0_level1.json')
 
     """
-    return Path(
-        pkg_fn(
-            "nifreeze.registration",
-            f"config/{settings}.json",
-        )
-    )
+    return Path(str(files("nifreeze.registration").joinpath(f"config/{settings}.json")))
 
 
 def _massage_mask_path(mask_path: str | Path | list[str], nlevels: int) -> list[str]:

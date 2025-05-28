@@ -22,6 +22,7 @@
 #
 """Unit tests exercising the estimator."""
 
+from importlib.resources import files
 from os import cpu_count
 
 import nibabel as nb
@@ -31,7 +32,6 @@ import pytest
 from nibabel.affines import from_matvec
 from nibabel.eulerangles import euler2mat
 from nipype.interfaces.ants.registration import Registration
-from pkg_resources import resource_filename as pkg_fn
 
 from nifreeze.registration.ants import _massage_mask_path
 from nifreeze.registration.utils import displacements_within_mask
@@ -61,10 +61,7 @@ def test_ANTs_config_b0(datadir, tmp_path, dataset, r_x, r_y, r_z, t_x, t_y, t_z
 
     registration = Registration(
         terminal_output="file",
-        from_file=pkg_fn(
-            "nifreeze.registration",
-            "config/b0-to-b0_level0.json",
-        ),
+        from_file=files("nifreeze.registration").joinpath("config/b0-to-b0_level0.json"),
         fixed_image=str(fixed.absolute()),
         moving_image=str(moving.absolute()),
         fixed_image_masks=[str(fixed_mask)],
