@@ -38,19 +38,27 @@ DEFAULT_TIMEFRAME_MIDPOINT_TOL = 1e-2
 
 
 class PETModel(BaseModel):
-    """A PET imaging realignment model based on B-Spline approximation."""
+    """A PET imaging realignment model based on B-Spline approximation.
+
+    Parameters
+    ----------
+    pad_mode : :class:`str`, optional
+        Padding mode forwarded to :func:`numpy.pad` when creating the knot vector.
+        Defaults to ``"edge"``.
+    """
 
     __slots__ = (
         "_t",
         "_x",
         "_xlim",
         "_order",
-        "_coeff",
         "_n_ctrl",
         "_datashape",
         "_mask",
         "_smooth_fwhm",
         "_thresh_pct",
+        "_locked_fit",
+        "_pad_mode",
     )
 
     def __init__(
@@ -62,11 +70,13 @@ class PETModel(BaseModel):
         order=3,
         smooth_fwhm=10,
         thresh_pct=20,
+        pad_mode: str = "edge",
         **kwargs,
     ):
         """Create the B-Spline interpolating matrix."""
 
         super().__init__(dataset, **kwargs)
+        self._pad_mode = pad_mode
 
         if timepoints is None or xlim is None:
             raise TypeError("timepoints must be provided in initialization")
@@ -80,26 +90,50 @@ class PETModel(BaseModel):
         if self._x[0] < DEFAULT_TIMEFRAME_MIDPOINT_TOL:
             raise ValueError("First frame midpoint should not be zero or negative")
         if self._x[-1] > (self._xlim - DEFAULT_TIMEFRAME_MIDPOINT_TOL):
-            raise ValueError(
-                "Last frame midpoint should not be equal or greater than duration"
-            )
+            raise ValueError("Last frame midpoint should not be equal or greater than duration")
 
         # Calculate index coordinates in the B-Spline grid
         self._n_ctrl = n_ctrl or (len(timepoints) // 4) + 1
 
         # B-Spline knots
-        self._t = np.arange(-3, float(self._n_ctrl) + 4, dtype="float32")
+        t_base = np.linspace(
+            0,
+            self._n_ctrl,
+            self._n_ctrl - self._order + 1,
+            dtype="float32",
+        )
+        self._t = np.pad(t_base, (self._order, self._order), mode=self._pad_mode)
 
-        self._coeff = None
+        self._locked_fit = None
         self._datashape = None
         self._mask = None
 
     @property
     def is_fitted(self):
-        return self._coeff is not None
+        return self._locked_fit is not None
 
-    def _fit(self, data, affine, index: int | None = None, n_jobs=None, **kwargs):
-        """Fit the model."""
+    def _fit(
+        self,
+        data=None,
+        index: int | None = None,
+        n_jobs=None,
+        timepoints=None,
+        **kwargs,
+    ):
+        """Fit the model.
+
+        Parameters
+        ----------
+        data : :class:`~numpy.ndarray`, optional
+            Data array to fit. If ``None``, the dataset's data is used.
+        index : :obj:`int` or ``None``
+            Currently unused. ``None`` is expected.
+        n_jobs : :obj:`int`, optional
+            Number of parallel workers.
+        timepoints : sequence, optional
+            Timing associated with ``data``. When ``None``, timings provided
+            at initialization are used.
+        """
 
         if self._locked_fit is not None:
             return n_jobs
@@ -107,10 +141,11 @@ class PETModel(BaseModel):
         if index is not None:
             raise NotImplementedError("Fitting with held-out data is not supported")
 
-        timepoints = kwargs.get("timepoints", None) or self._x
+        if timepoints is None:
+            timepoints = self._x
         x = (np.array(timepoints, dtype="float32") / self._xlim) * self._n_ctrl
 
-        data = self._dataset.dataobj
+        data = self._dataset.dataobj if data is None else data
         brainmask = self._dataset.brainmask
 
         if self._smooth_fwhm > 0:
@@ -124,9 +159,7 @@ class PETModel(BaseModel):
         #     data[data < thresh_val] = 0
 
         # Convert data into V (voxels) x T (timepoints)
-        data = (
-            data.reshape((-1, data.shape[-1])) if brainmask is None else data[brainmask]
-        )
+        data = data.reshape((-1, data.shape[-1])) if brainmask is None else data[brainmask]
 
         # A.shape = (T, K - 4); T= n. timepoints, K= n. knots (with padding)
         A = BSpline.design_matrix(x, self._t, k=self._order)
@@ -139,12 +172,33 @@ class PETModel(BaseModel):
 
         self._locked_fit = np.array([r[0] for r in results])
 
-    def fit_predict(self, index: int | None = None, **kwargs):
-        """Return the corrected volume using B-spline interpolation."""
+    def fit_predict(
+        self,
+        index: int | None = None,
+        *,
+        data=None,
+        affine=None,
+        timepoints=None,
+        **kwargs,
+    ):
+        """Return the corrected volume using B-spline interpolation.
+
+        When ``index`` is ``None``, this method only fits the model and returns
+        ``None``. In that case, any ``data`` and ``timepoints`` provided are
+        forwarded to :meth:`_fit`.
+        """
 
         # Fit the BSpline basis on all data
         if self._locked_fit is None:
-            self._fit(index, n_jobs=kwargs.pop("n_jobs", None), **kwargs)
+            if index is None:
+                self._fit(
+                    data=data,
+                    timepoints=timepoints,
+                    n_jobs=kwargs.pop("n_jobs", None),
+                    **kwargs,
+                )
+            else:
+                self._fit(n_jobs=kwargs.pop("n_jobs", None), **kwargs)
 
         if index is None:  # If no index, just fit the data.
             return None
@@ -154,7 +208,7 @@ class PETModel(BaseModel):
         A = BSpline.design_matrix(x, self._t, k=self._order)
 
         # A is 1 (num. timepoints) x C (num. coeff)
-        # self._coeff is V (num. voxels) x K - 4
+        # self._locked_fit is V (num. voxels) x K - 4
         predicted = np.squeeze(A @ self._locked_fit.T)
 
         brainmask = self._dataset.brainmask
