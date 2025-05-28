@@ -20,26 +20,27 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""A model-based algorithm for the realignment of dMRI data."""
+"""Orchestrates model and registration in volume-to-volume artifact estimation."""
 
 from __future__ import annotations
 
-import os
+from importlib.resources import files
+from os import cpu_count
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import TypeVar
 from importlib.resources import files
 
-import nitransforms as nt
 import nibabel as nib
+import nitransforms as nt
 import numpy as np
-from nipype.interfaces.ants.registration import Registration
 from tqdm import tqdm
 from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset
 from nifreeze.model.base import BaseModel, ModelFactory
 from nifreeze.registration.ants import (
+    Registration,
     _prepare_registration_data,
     _run_registration,
 )
@@ -48,6 +49,9 @@ from nifreeze.registration.ants import Registration
 from nifreeze.model.pet import PETModel
 
 DatasetT = TypeVar("DatasetT", bound=BaseDataset)
+
+FIT_MSG = "Fit&predict"
+REG_MSG = "Realign"
 
 
 class Filter:
@@ -72,9 +76,16 @@ class Filter:
 
 
 class Estimator:
-    """Estimates rigid-body head-motion and distortions derived from eddy-currents."""
+    """Orchestrates components for a single estimation step."""
 
-    __slots__ = ("_model", "_strategy", "_prev", "_model_kwargs", "_align_kwargs")
+    __slots__ = (
+        "_model",
+        "_single_fit",
+        "_strategy",
+        "_prev",
+        "_model_kwargs",
+        "_align_kwargs",
+    )
 
     def __init__(
         self,
@@ -82,11 +93,13 @@ class Estimator:
         strategy: str = "random",
         prev: Estimator | Filter | None = None,
         model_kwargs: dict | None = None,
+        single_fit: bool = False,
         **kwargs,
     ):
         self._model = model
         self._prev = prev
         self._strategy = strategy
+        self._single_fit = single_fit
         self._model_kwargs = model_kwargs or {}
         self._align_kwargs = kwargs or {}
 
@@ -110,7 +123,7 @@ class Estimator:
             if isinstance(self._prev, Filter):
                 dataset = result  # type: ignore[assignment]
 
-        n_jobs = kwargs.get("n_jobs", None)
+        n_jobs = kwargs.pop("n_jobs", None) or min(cpu_count() or 1, 8)
 
         # Prepare iterator
         iterfunc = getattr(iterators, f"{self._strategy}_iterator")
@@ -119,13 +132,20 @@ class Estimator:
         # Initialize model
         if isinstance(self._model, str):
             # Factory creates the appropriate model and pipes arguments
-            self._model = ModelFactory.init(
+            model = ModelFactory.init(
                 model=self._model,
                 dataset=dataset,
                 **self._model_kwargs,
             )
+        else:
+            model = self._model
 
-        kwargs["num_threads"] = kwargs.pop("omp_nthreads", None) or kwargs.pop("num_threads", None)
+        if self._single_fit:
+            model.fit_predict(None, n_jobs=n_jobs)
+
+        kwargs["num_threads"] = kwargs.pop("omp_nthreads", None) or kwargs.pop(
+            "num_threads", None
+        )
         kwargs = self._align_kwargs | kwargs
 
         dataset_length = len(dataset)
@@ -145,11 +165,11 @@ class Estimator:
             with tqdm(total=dataset_length, unit="vols.") as pbar:
                 # run a original-to-synthetic affine registration
                 for i in index_iter:
-                    pbar.set_description_str(f"Fit and predict vol. <{i}>")
+                    pbar.set_description_str(f"{FIT_MSG: <16} vol. <{i}>")
 
                     # fit the model
                     test_set = dataset[i]
-                    predicted = self._model.fit_predict(  # type: ignore[union-attr]
+                    predicted = model.fit_predict(  # type: ignore[union-attr]
                         i,
                         n_jobs=n_jobs,
                     )
@@ -164,7 +184,7 @@ class Estimator:
                         kwargs.pop("clip", "both"),
                     )
 
-                    pbar.set_description_str(f"Realign vol. <{i}>")
+                    pbar.set_description_str(f"{REG_MSG: <16} vol. <{i}>")
 
                     xform = _run_registration(
                         predicted_path,
@@ -183,6 +203,7 @@ class Estimator:
 
         return self
 
+
 class PETMotionEstimator:
     """Estimates motion within PET imaging data aligned with generic Estimator workflow."""
 
@@ -191,7 +212,9 @@ class PETMotionEstimator:
         self.align_kwargs = align_kwargs or {}
         self.strategy = strategy
 
-    def run(self, pet_dataset, omp_nthreads=None, n_jobs=None, seed=None, debug_dir=None):
+    def run(
+        self, pet_dataset, omp_nthreads=None, n_jobs=None, seed=None, debug_dir=None
+    ):
         n_frames = len(pet_dataset)
         frame_indices = np.arange(n_frames)
 
@@ -208,16 +231,20 @@ class PETMotionEstimator:
             tmp_path = Path(tmp_dir)
 
             for idx in tqdm(frame_indices, desc="Estimating PET motion"):
-                (train_data, train_times), (test_data, test_time) = pet_dataset.lofo_split(idx)
+                (train_data, train_times), (test_data, test_time) = (
+                    pet_dataset.lofo_split(idx)
+                )
 
                 if train_times is None:
-                    raise ValueError(f"train_times is None at index {idx}, check midframe initialization.")
+                    raise ValueError(
+                        f"train_times is None at index {idx}, check midframe initialization."
+                    )
 
                 # Instantiate PETModel explicitly
                 model = PETModel(
                     dataset=pet_dataset,
                     timepoints=train_times,
-                    xlim=pet_dataset.total_duration
+                    xlim=pet_dataset.total_duration,
                 )
                 model.fit(train_data)
 
@@ -235,7 +262,9 @@ class PETMotionEstimator:
                 fixed_img.to_filename(fixed_image_path)
                 moving_img.to_filename(moving_image_path)
 
-                registration_config = files('nifreeze.registration.config').joinpath('pet-to-pet_level1.json')
+                registration_config = files("nifreeze.registration.config").joinpath(
+                    "pet-to-pet_level1.json"
+                )
 
                 registration = Registration(
                     from_file=registration_config,
@@ -243,7 +272,7 @@ class PETMotionEstimator:
                     moving_image=str(moving_image_path),
                     output_warped_image=True,
                     output_transform_prefix=f"ants_{idx:03d}",
-                    **self.align_kwargs
+                    **self.align_kwargs,
                 )
 
                 # Save ANTs command line for debugging
@@ -253,12 +282,24 @@ class PETMotionEstimator:
                 try:
                     result = registration.run(cwd=str(tmp_path))
                     if result.outputs.forward_transforms:
-                        transform = nt.io.itk.ITKLinearTransform.from_filename(result.outputs.forward_transforms[0])
-                        matrix = transform.to_ras(reference=str(fixed_image_path), moving=str(moving_image_path))
+
+                        transform = nt.io.itk.ITKLinearTransform.from_filename(
+                            result.outputs.forward_transforms[0]
+                        )
+                        matrix = transform.to_ras(
+                            reference=str(fixed_image_path),
+                            moving=str(moving_image_path),
+                        )
                         affine_matrices.append(matrix)
 
-                        if debug_dir and hasattr(result.outputs, 'warped_image') and result.outputs.warped_image:
-                            Path(result.outputs.warped_image).rename(debug_dir / f"corrected_frame_{idx:03d}.nii.gz")
+                        if (
+                            debug_dir
+                            and hasattr(result.outputs, "warped_image")
+                            and result.outputs.warped_image
+                        ):
+                            Path(result.outputs.warped_image).rename(
+                                debug_dir / f"corrected_frame_{idx:03d}.nii.gz"
+                            )
                     else:
                         affine_matrices.append(np.eye(4))
                         print(f"No transforms produced for index {idx}")
