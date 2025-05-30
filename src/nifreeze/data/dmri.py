@@ -210,18 +210,24 @@ class DWI(BaseDataset[np.ndarray | None]):
         filename : :obj:`os.pathlike`
             The output NIfTI file path.
         insert_b0 : :obj:`bool`, optional
-            Insert a :math:`b=0` at the front of the output NIfTI.
+            Insert a :math:`b=0` at the front of the output NIfTI and add the corresponding
+            null gradient value to the output bval/bvec files.
         bvals_dec_places : :obj:`int`, optional
             Decimal places to use when serializing b-values.
         bvecs_dec_places : :obj:`int`, optional
             Decimal places to use when serializing b-vectors.
 
         """
+        bvecs = self.bvecs
+        bvals = self.bvals
+
         if not insert_b0:
             # Parent's to_nifti to handle the primary NIfTI export.
             super().to_nifti(filename)
         else:
             data = np.concatenate((self.bzero[..., np.newaxis], self.dataobj), axis=-1)
+            bvecs = np.concatenate((np.zeros(3)[:, np.newaxis], bvecs), axis=-1)
+            bvals = np.concatenate((np.zeros(1), bvals))
             nii = nb.Nifti1Image(data, self.affine, self.datahdr)
             if self.datahdr is None:
                 nii.header.set_xyzt_units("mm")
