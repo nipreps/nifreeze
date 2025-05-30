@@ -29,6 +29,7 @@ from typing import Any
 import numpy as np
 from dipy.core.gradients import GradientTable
 from dipy.reconst.base import ReconstModel
+from dipy.reconst.multi_voxel import multi_voxel_fit
 from sklearn.gaussian_process import GaussianProcessRegressor
 
 from nifreeze.model.gpr import (
@@ -36,6 +37,11 @@ from nifreeze.model.gpr import (
     ExponentialKriging,
     SphericalKriging,
 )
+
+
+@multi_voxel_fit
+def multi_fit(obj, data, *, mask=None, **kwargs):
+    return obj.fit(data, *obj.args, mask=mask)
 
 
 def gp_prediction(
