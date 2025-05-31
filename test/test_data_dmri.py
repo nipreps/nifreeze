@@ -25,19 +25,9 @@
 import nibabel as nb
 import numpy as np
 import pytest
-from dipy.io.gradients import read_bvals_bvecs
 
 from nifreeze.data import load
 from nifreeze.data.dmri import DWI, find_shelling_scheme, from_nii
-
-
-def _create_random_gtab_dataobj(request, n_gradients=10, b0s=1):
-    rng = request.node.rng
-
-    bvals = np.hstack([b0s * [0], n_gradients * [1000]])
-    bvecs = np.hstack([np.zeros((3, b0s)), rng.random((3, n_gradients))])
-
-    return bvals, bvecs
 
 
 def _create_dwi_random_dataobj(request, bvals, bvecs):
@@ -146,10 +136,9 @@ def test_load(datadir, tmp_path):
     assert np.allclose(dwi_h5.gradients, dwi_from_nifti2.gradients)
 
 
-def test_equality_operator(tmp_path, request):
-    # Create some random data
-    bvals, bvecs = _create_random_gtab_dataobj(request)
-
+@pytest.mark.random_gtab_data(10, (1000,), 1)
+@pytest.mark.random_dwi_data(50, (34, 36, 24), True)
+def test_equality_operator(tmp_path, setup_random_dwi_data):
     (
         dwi_dataobj,
         affine,
@@ -157,7 +146,7 @@ def test_equality_operator(tmp_path, request):
         b0_dataobj,
         gradients,
         b0_thres,
-    ) = _create_dwi_random_dataobj(request, bvals, bvecs)
+    ) = setup_random_dwi_data
 
     dwi, brainmask, b0 = _create_dwi_random_data(
         dwi_dataobj,
@@ -196,12 +185,8 @@ def test_equality_operator(tmp_path, request):
     assert round_trip_dwi_obj == dwi_obj
 
 
-def test_shells(request, repodata):
-    bvals, bvecs = read_bvals_bvecs(
-        str(repodata / "hcph_multishell.bval"),
-        str(repodata / "hcph_multishell.bvec"),
-    )
-
+@pytest.mark.random_dwi_data(50, (34, 36, 24), False)
+def test_shells(setup_random_dwi_data):
     (
         dwi_dataobj,
         affine,
@@ -209,7 +194,7 @@ def test_shells(request, repodata):
         b0_dataobj,
         gradients,
         _,
-    ) = _create_dwi_random_dataobj(request, bvals, bvecs.T)
+    ) = setup_random_dwi_data
 
     dwi_obj = DWI(
         dataobj=dwi_dataobj,
