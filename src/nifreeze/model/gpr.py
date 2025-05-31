@@ -288,11 +288,11 @@ class ExponentialKriging(Kernel):
 
     @property
     def hyperparameter_a(self) -> Hyperparameter:
-        return Hyperparameter("beta_a", "numeric", self.a_bounds)
+        return Hyperparameter("beta_a", "numeric", self.a_bounds)  # type: ignore
 
     @property
     def hyperparameter_l(self) -> Hyperparameter:
-        return Hyperparameter("beta_l", "numeric", self.l_bounds)
+        return Hyperparameter("beta_l", "numeric", self.l_bounds)  # type: ignore
 
     def __call__(
         self, X: np.ndarray, Y: np.ndarray | None = None, eval_gradient: bool = False
@@ -393,11 +393,11 @@ class SphericalKriging(Kernel):
 
     @property
     def hyperparameter_a(self) -> Hyperparameter:
-        return Hyperparameter("beta_a", "numeric", self.a_bounds)
+        return Hyperparameter("beta_a", "numeric", self.a_bounds)  # type: ignore
 
     @property
     def hyperparameter_l(self) -> Hyperparameter:
-        return Hyperparameter("beta_l", "numeric", self.l_bounds)
+        return Hyperparameter("beta_l", "numeric", self.l_bounds)  # type: ignore
 
     def __call__(
         self, X: np.ndarray, Y: np.ndarray | None = None, eval_gradient: bool = False
