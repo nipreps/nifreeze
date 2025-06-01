@@ -29,6 +29,7 @@ import nibabel as nb
 import nitransforms as nt
 import numpy as np
 import pytest
+from dipy.io.gradients import read_bvals_bvecs
 
 from nifreeze.data.dmri import DWI
 
@@ -165,3 +166,99 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 def random_number_generator(request):
     """Automatically set a fixed-seed random number generator for all tests."""
     request.node.rng = np.random.default_rng(1234)
+
+
+@pytest.fixture(autouse=True)
+def setup_random_uniform_4d_data(request):
+    """Automatically generate random data for tests."""
+    marker = request.node.get_closest_marker("random_uniform_4d_data_generator")
+
+    size = (32, 32, 32, 5)
+    a = 0.0
+    b = 1.0
+    if marker:
+        size, a, b = marker.args
+
+    rng = request.node.rng
+    data = rng.random(size=size).astype(np.float32)
+    return (b - a) * data + a
+
+
+def _generate_random_choices(request, values, count):
+    rng = request.node.rng
+
+    num_elements = len(values)
+
+    # Randomly distribute N among the given values
+    partitions = rng.multinomial(count, np.ones(num_elements) / num_elements)
+
+    # Create a list of selected values
+    selected_values = [
+        val for val, count in zip(values, partitions, strict=True) for _ in range(count)
+    ]
+
+    return sorted(selected_values)
+
+
+@pytest.fixture(autouse=True)
+def setup_random_gtab_data(request):
+    """Automatically generate random gtab data for tests."""
+    marker = request.node.get_closest_marker("random_gtab_data")
+
+    n_gradients = 10
+    shells = (1000, 2000, 3000)
+    b0s = 1
+    if marker:
+        n_gradients, shells, b0s = marker.args
+
+    rng = request.node.rng
+
+    # Generate a random number of elements for each shell
+    bvals_shells = _generate_random_choices(request, shells, n_gradients)
+
+    bvals = np.hstack([b0s * [0], bvals_shells])
+    bvecs = np.hstack([np.zeros((3, b0s)), rng.random((3, n_gradients))])
+
+    return bvals, bvecs
+
+
+@pytest.fixture(autouse=True)
+def setup_random_dwi_data(request, setup_random_gtab_data):
+    """Automatically generate random DWI data for tests."""
+    marker = request.node.get_closest_marker("random_dwi_data")
+
+    b0_thres = 50
+    vol_size = (2, 2, 2)
+    use_random_gtab = True
+    if marker:
+        b0_thres, vol_size, use_random_gtab = marker.args
+
+    rng = request.node.rng
+
+    if use_random_gtab:
+        bvals, bvecs = setup_random_gtab_data
+    else:
+        bvals, bvecs = read_bvals_bvecs(
+            str(_datadir / "hcph_multishell.bval"),
+            str(_datadir / "hcph_multishell.bvec"),
+        )
+        bvecs = bvecs.T
+
+    n_gradients = np.count_nonzero(bvals)
+    b0s = len(bvals) - n_gradients
+    volumes = n_gradients + b0s
+
+    dwi_dataobj = rng.random((*vol_size, volumes), dtype="float32")
+    affine = np.eye(4, dtype="float32")
+    brainmask_dataobj = rng.random(vol_size, dtype="float32")
+    b0_dataobj = rng.random(vol_size, dtype="float32")
+    gradients = np.vstack([bvecs, bvals[np.newaxis, :]], dtype="float32")
+
+    return (
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj,
+        b0_dataobj,
+        gradients,
+        b0_thres,
+    )
