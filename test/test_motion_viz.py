@@ -21,6 +21,7 @@
 #     https://www.nipreps.org/community/licensing/
 #
 
+from contextlib import suppress
 from pathlib import Path
 from time import sleep
 
@@ -47,9 +48,10 @@ from nifreeze.viz.motion_viz import (
 # for data existence very flaky.
 # Replacing with a pure lock based on directory creation.
 dipy_datapath = Path.home() / ".dipy"
-if not (lock_folder := dipy_datapath / ".lock-stanford_hardi").exists():
-    lock_folder.mkdir(parents=True)
-    fetch_stanford_hardi()
+dipy_datapath.mkdir(exist_ok=True)
+with suppress(FileExistsError):
+    (dipy_datapath / ".lock-stanford_hardi").mkdir(parents=True)
+    fetch_stanford_hardi()  # Execute only iff the lock folder doesn't exist
 
 MAX_CHECKS = 20
 try_num = 1
