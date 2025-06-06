@@ -34,6 +34,9 @@ from nifreeze.data.dmri import (
 )
 from nifreeze.model.base import BaseModel, ExpectationModel
 
+S0_EPSILON = 1e-6
+B_MIN = 50
+
 
 def _exec_fit(model, data, chunk=None):
     retval = model.fit(data)
@@ -49,12 +52,15 @@ class BaseDWIModel(BaseModel):
     """Interface and default methods for DWI models."""
 
     __slots__ = {
+        "_max_b": "The maximum b-value supported by the model",
+        "_data_mask": "A mask for the voxels that will be fitted and predicted",
+        "_S0": "The S0 (b=0 reference signal) that will be fed into DIPY models",
         "_model_class": "Defining a model class, DIPY models are instantiated automagically",
         "_modelargs": "Arguments acceptable by the underlying DIPY-like model.",
         "_models": "List with one or more (if parallel execution) model instances",
     }
 
-    def __init__(self, dataset: DWI, **kwargs):
+    def __init__(self, dataset: DWI, max_b: float | int | None = None, **kwargs):
         r"""Initialization.
 
         Parameters
@@ -75,6 +81,26 @@ class BaseDWIModel(BaseModel):
             raise ValueError(
                 f"DWI dataset is too small ({dataset.gradients.shape[0]} directions)."
             )
+
+        if max_b is not None and max_b > B_MIN:
+            self._max_b = max_b
+
+        self._data_mask = (
+            dataset.brainmask
+            if dataset.brainmask is not None
+            else np.ones(dataset.dataobj.shape[:3], dtype=bool)
+        )
+
+        # By default, set S0 to the 98% percentile of the DWI data within mask
+        self._S0 = np.full(
+            self._data_mask.sum(),
+            np.round(np.percentile(dataset.dataobj[self._data_mask, ...], 98)),
+        )
+
+        # If b=0 is present and not to be ignored, update brain mask and set
+        if not kwargs.pop("ignore_bzero", False) and dataset.bzero is not None:
+            self._data_mask[dataset.bzero < S0_EPSILON] = False
+            self._S0 = dataset.bzero[self._data_mask]
 
         super().__init__(dataset, **kwargs)
 
@@ -151,7 +177,6 @@ class BaseDWIModel(BaseModel):
         if index is None:
             return None
 
-        brainmask = self._dataset.brainmask
         gradient = self._dataset.gradients[:, index]
 
         if "dipy" in getattr(self, "_model_class", ""):
@@ -159,18 +184,13 @@ class BaseDWIModel(BaseModel):
                 gradient[np.newaxis, -1], gradient[np.newaxis, :-1]
             )
 
-        S0 = self._dataset.bzero
-        if S0 is not None:
-            S0 = S0[brainmask, ...] if brainmask is not None else S0.reshape(-1)
-
         if n_models == 1:
             predicted, _ = _exec_predict(
-                self._models[0], **(kwargs | {"gtab": gradient, "S0": S0})
+                self._models[0], **(kwargs | {"gtab": gradient, "S0": self._S0})
             )
         else:
-            S0 = np.array_split(S0, n_models) if S0 is not None else np.full(n_models, None)
-
             predicted = [None] * n_models
+            S0 = np.array_split(self._S0, n_models)
 
             # Parallelize process with joblib
             with Parallel(n_jobs=n_models) as executor:
@@ -187,12 +207,8 @@ class BaseDWIModel(BaseModel):
 
             predicted = np.hstack(predicted)
 
-        if brainmask is not None:
-            retval = np.zeros_like(brainmask, dtype="float32")
-            retval[brainmask, ...] = predicted
-        else:
-            retval = predicted.reshape(self._dataset.dataobj.shape[:-1])
-
+        retval = np.zeros_like(self._data_mask, dtype=self._dataset.dataobj.dtype)
+        retval[self._data_mask, ...] = predicted
         return retval
 
 

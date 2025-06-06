@@ -67,6 +67,11 @@ def main(argv=None) -> None:
         **extra_kwargs,
     )
 
+    model_kwargs = {}
+
+    if args.ignore_b0:
+        model_kwargs["ignore_bzero"] = True
+
     prev_model: Estimator | None = None
     for _model in args.models:
         single_fit = _model.lower().startswith("single")
@@ -74,6 +79,7 @@ def main(argv=None) -> None:
             _model.lower().replace("single", ""),
             prev=prev_model,
             single_fit=single_fit,
+            model_kwargs=model_kwargs,
         )
         prev_model = estimator
 

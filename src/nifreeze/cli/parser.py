@@ -143,6 +143,12 @@ def build_parser() -> ArgumentParser:
         help="A NIfTI file containing the b-zero reference",
     )
 
+    g_dmri.add_argument(
+        "--ignore-b0",
+        action="store_true",
+        help="Ignore the low-b reference and use the robust signal maximum",
+    )
+
     g_pet = parser.add_argument_group("Options for PET inputs")
     g_pet.add_argument(
         "--timing-file",
