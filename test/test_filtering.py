@@ -66,7 +66,7 @@ def test_dwi_select_shells(setup_random_gtab_data, index, expect_exception, expe
         assert np.all(shell_mask == expected_output)
 
 
-@pytest.mark.random_uniform_4d_data((32, 32, 32, 5), 0.0, 2.0)
+@pytest.mark.random_uniform_ndim_data((32, 32, 32, 5), 0.0, 2.0)
 @pytest.mark.parametrize(
     "use_mask, center, inplace",
     [
@@ -74,8 +74,8 @@ def test_dwi_select_shells(setup_random_gtab_data, index, expect_exception, expe
         (True, 1, False),
     ],
 )
-def test_grand_mean_normalization(setup_random_uniform_4d_data, use_mask, center, inplace):
-    data = setup_random_uniform_4d_data
+def test_grand_mean_normalization(setup_random_uniform_ndim_data, use_mask, center, inplace):
+    data = setup_random_uniform_ndim_data
 
     mask = None
     # Mask the last volume for testing purposes
@@ -104,7 +104,7 @@ def test_grand_mean_normalization(setup_random_uniform_4d_data, use_mask, center
     )
 
 
-@pytest.mark.random_uniform_4d_data((32, 32, 32, 5), 0.0, 2.0)
+@pytest.mark.random_uniform_ndim_data((32, 32, 32, 5), 0.0, 2.0)
 @pytest.mark.parametrize(
     "use_mask, p_min, p_max, inplace",
     [
@@ -113,9 +113,9 @@ def test_grand_mean_normalization(setup_random_uniform_4d_data, use_mask, center
     ],
 )
 def test_robust_minmax_normalization(
-    setup_random_uniform_4d_data, use_mask, p_min, p_max, inplace
+    setup_random_uniform_ndim_data, use_mask, p_min, p_max, inplace
 ):
-    data = setup_random_uniform_4d_data
+    data = setup_random_uniform_ndim_data
 
     mask = None
     # Mask the last volume for testing purposes
