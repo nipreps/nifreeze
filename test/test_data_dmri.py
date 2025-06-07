@@ -30,33 +30,7 @@ from nifreeze.data import load
 from nifreeze.data.dmri import DWI, find_shelling_scheme, from_nii
 
 
-def _create_dwi_random_dataobj(request, bvals, bvecs):
-    rng = request.node.rng
-
-    n_gradients = np.count_nonzero(bvals)
-    b0s = len(bvals) - n_gradients
-    volumes = n_gradients + b0s
-    b0_thres = 50
-
-    vol_size = (34, 36, 24)
-
-    dwi_dataobj = rng.random((*vol_size, volumes), dtype="float32")
-    affine = np.eye(4, dtype="float32")
-    brainmask_dataobj = rng.random(vol_size, dtype="float32")
-    b0_dataobj = rng.random(vol_size, dtype="float32")
-    gradients = np.vstack([bvecs, bvals[np.newaxis, :]], dtype="float32")
-
-    return (
-        dwi_dataobj,
-        affine,
-        brainmask_dataobj,
-        b0_dataobj,
-        gradients,
-        b0_thres,
-    )
-
-
-def _create_dwi_random_data(
+def _dwi_data_to_nifti(
     dwi_dataobj,
     affine,
     brainmask_dataobj,
@@ -148,7 +122,7 @@ def test_equality_operator(tmp_path, setup_random_dwi_data):
         b0_thres,
     ) = setup_random_dwi_data
 
-    dwi, brainmask, b0 = _create_dwi_random_data(
+    dwi, brainmask, b0 = _dwi_data_to_nifti(
         dwi_dataobj,
         affine,
         brainmask_dataobj,
