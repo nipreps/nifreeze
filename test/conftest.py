@@ -187,15 +187,25 @@ def setup_random_uniform_4d_data(request):
 def _generate_random_choices(request, values, count):
     rng = request.node.rng
 
+    values = set(values)
+
     num_elements = len(values)
 
-    # Randomly distribute N among the given values
-    partitions = rng.multinomial(count, np.ones(num_elements) / num_elements)
+    if count < num_elements:
+        raise ValueError(
+            f"Count must be at least the number of unique values to guarantee inclusion\nProvided: {count} and {values}."
+        )
 
-    # Create a list of selected values
-    selected_values = [
-        val for val, count in zip(values, partitions, strict=True) for _ in range(count)
-    ]
+    # Start by assigning one of each value
+    selected_values = list(values)
+
+    # Distribute remaining count: randomly distribute N among the values
+    remaining = count - num_elements
+    partitions = rng.multinomial(remaining, np.ones(num_elements) / num_elements)
+
+    # Add the remaining values according to the partitions
+    for val, extra_count in zip(values, partitions, strict=True):
+        selected_values.extend([val] * extra_count)
 
     return sorted(selected_values)
 
