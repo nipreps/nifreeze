@@ -80,7 +80,10 @@ def _to_nifti(
     if clip:
         from nifreeze.data.filtering import advanced_clip
 
-        data = advanced_clip(data)
+        result = advanced_clip(data, inplace=False)
+        if result is not None:
+            data = result
+
     nii = nb.Nifti1Image(
         data,
         affine,

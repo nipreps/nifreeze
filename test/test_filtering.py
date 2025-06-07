@@ -25,13 +25,72 @@ import copy
 
 import numpy as np
 import pytest
+from scipy.ndimage import median_filter
+from skimage.morphology import ball
 
 from nifreeze.data.filtering import (
     BVAL_ATOL,
+    advanced_clip,
     dwi_select_shells,
     grand_mean_normalization,
     robust_minmax_normalization,
 )
+
+
+@pytest.mark.random_uniform_ndim_data((32, 32, 32), 0.0, 2.0)
+@pytest.mark.parametrize(
+    "p_min, p_max, nonnegative, dtype, invert, inplace",
+    [
+        (35, 99.98, True, np.float32, False, False),
+        (35, 99.98, True, np.float32, False, True),
+        (30, 99.96, False, np.uint8, True, True),
+    ],
+)
+def test_advanced_clip(
+    setup_random_uniform_ndim_data, p_min, p_max, nonnegative, dtype, invert, inplace
+):
+    data = setup_random_uniform_ndim_data
+
+    expected_output = data.copy()
+
+    # Calculate stats on denoised version to avoid outlier bias
+    denoised = median_filter(data, footprint=ball(3))
+
+    a_min = np.percentile(
+        np.asarray([denoised[denoised >= 0] if nonnegative else denoised]), p_min
+    )
+    a_max = np.percentile(
+        np.asarray([denoised[denoised >= 0] if nonnegative else denoised]), p_max
+    )
+
+    # Clip and scale data
+    expected_output = np.clip(data, a_min=a_min, a_max=a_max, out=expected_output)
+    expected_output -= expected_output.min()
+    expected_output /= expected_output.max()
+
+    if invert:
+        np.subtract(1.0, expected_output, out=expected_output)
+
+    if dtype in ("uint8", "int16"):
+        np.round(255 * expected_output, out=expected_output).astype(dtype)
+
+    clipped_data = advanced_clip(
+        data,
+        p_min=p_min,
+        p_max=p_max,
+        dtype=dtype,
+        nonnegative=nonnegative,
+        invert=invert,
+        inplace=inplace,
+    )
+
+    assert (clipped_data is None) if inplace else isinstance(clipped_data, np.ndarray)
+    assert not np.shares_memory(clipped_data, data) if not inplace else True
+    assert (
+        np.allclose(data, expected_output, atol=1e-6)
+        if inplace
+        else np.allclose(clipped_data, expected_output, atol=1e-6)
+    )
 
 
 @pytest.mark.random_gtab_data(5, (1000, 2000, 3000), 1)
