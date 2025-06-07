@@ -43,7 +43,8 @@ def advanced_clip(
     nonnegative: bool = True,
     dtype: str | np.dtype = DEFAULT_DTYPE,
     invert: bool = False,
-) -> np.ndarray:
+    inplace: bool = False,
+) -> np.ndarray | None:
     """
     Clips outliers from an n-dimensional array and scales/casts to a specified data type.
 
@@ -70,13 +71,25 @@ def advanced_clip(
         and "int16".
     invert : :obj:`bool`, optional
         If ``True``, inverts the intensity values after scaling (1.0 - ``data``).
+    inplace : :obj:`bool`, optional
+        If ``False``, the normalization is performed on the original data.
 
     Returns
     -------
-    :obj:`~numpy.ndarray`
-        The clipped and scaled data array with the specified data type.
+    :obj:`~numpy.ndarray` or None
+        The clipped and scaled data array with the specified data type or
+        ``None`` if ``inplace`` is ``True``.
 
     """
+
+    if not inplace:
+        data = data.copy()
+
+    # Cast to float32 before modifying in-place: clipping a float array and
+    # writing the result in-place to an integer array is disallowed by NumPy due
+    # to risk of data loss
+    if not inplace or not np.issubdtype(data.dtype, np.floating):
+        data = data.astype(np.float32, copy=not inplace)
 
     # Calculate stats on denoised version to avoid outlier bias
     denoised = median_filter(data, footprint=ball(3))
@@ -89,15 +102,18 @@ def advanced_clip(
     )
 
     # Clip and scale data
-    data = np.clip(data, a_min=a_min, a_max=a_max)
+    np.clip(data, a_min=a_min, a_max=a_max, out=data)
     data -= data.min()
     data /= data.max()
 
     if invert:
-        data = 1.0 - data
+        np.subtract(1.0, data, out=data)
 
     if dtype in ("uint8", "int16"):
-        data = np.round(255 * data).astype(dtype)
+        np.round(255 * data, out=data).astype(dtype)
+
+    if inplace:
+        return None
 
     return data
 
