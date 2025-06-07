@@ -221,6 +221,7 @@ env = "PYTHONHASHSEED=0"
 markers = [
     "random_gtab_data: Custom marker for random gtab data tests",
     "random_dwi_data: Custom marker for random dwi data tests",
+    "random_uniform_4d_data: Custom marker for random 4d data tests",
 ]
 filterwarnings = [
   "ignore::DeprecationWarning",
