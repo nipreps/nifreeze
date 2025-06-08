@@ -221,16 +221,6 @@ class DWI(BaseDataset[np.ndarray | None]):
             Decimal places to use when serializing b-vectors.
 
         """
-        if not insert_b0:
-            # Parent's to_nifti to handle the primary NIfTI export.
-            super().to_nifti(filename)
-        else:
-            # Assume bzero is never None
-            data = np.concatenate((self.bzero[..., np.newaxis], self.dataobj), axis=-1)
-            nii = nb.Nifti1Image(data, self.affine, self.datahdr)
-            if self.datahdr is None:
-                nii.header.set_xyzt_units("mm")
-            nii.to_filename(filename)
 
         # Convert filename to a Path object.
         out_root = Path(filename).absolute()
@@ -242,11 +232,25 @@ class DWI(BaseDataset[np.ndarray | None]):
         bvecs_file = out_root.with_suffix(".bvec")
         bvals_file = out_root.with_suffix(".bval")
 
-        # If inserting a b0 volume is requested, add the corresponding null
-        # gradient value to the bval/bvec pair
         bvals = self.bvals
         bvecs = self.bvecs
-        if insert_b0:
+
+        if self.bzero is None or not insert_b0:
+            if insert_b0:
+                warn("Ignoring ``insert_b0`` argument as the data object's bzero field is unset")
+
+            # Parent's to_nifti to handle the primary NIfTI export.
+            super().to_nifti(filename)
+        else:
+            data = np.concatenate((self.bzero[..., np.newaxis], self.dataobj), axis=-1)
+            nii = nb.Nifti1Image(data, self.affine, self.datahdr)
+            if self.datahdr is None:
+                nii.header.set_xyzt_units("mm")
+
+            nii.to_filename(filename)
+
+            # If inserting a b0 volume is requested, add the corresponding null
+            # gradient value to the bval/bvec pair
             bvals = np.concatenate((np.zeros(1), bvals))
             bvecs = np.concatenate((np.zeros(3)[:, np.newaxis], bvecs), axis=-1)
 
