@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.model.dmri - nifreeze 25.0.0.dev309 documentation</title>
+        <title>nifreeze.model.dmri - nifreeze 25.0.0.dev313 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev309 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev313 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev309</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev313</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev309</span>
+  <span class="sidebar-brand-text">25.0.0.dev313</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -329,11 +329,8 @@
 <span class="kn">from</span> <span class="nn">dipy.core.gradients</span> <span class="kn">import</span> <span class="n">gradient_table_from_bvals_bvecs</span>
 <span class="kn">from</span> <span class="nn">joblib</span> <span class="kn">import</span> <span class="n">Parallel</span><span class="p">,</span> <span class="n">delayed</span>
 
-<span class="kn">from</span> <span class="nn">nifreeze.data.dmri</span> <span class="kn">import</span> <span class="p">(</span>
-    <span class="n">DEFAULT_CLIP_PERCENTILE</span><span class="p">,</span>
-    <span class="n">DTI_MIN_ORIENTATIONS</span><span class="p">,</span>
-    <span class="n">DWI</span><span class="p">,</span>
-<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">nifreeze.data.dmri</span> <span class="kn">import</span> <span class="n">DTI_MIN_ORIENTATIONS</span><span class="p">,</span> <span class="n">DWI</span>
+<span class="kn">from</span> <span class="nn">nifreeze.data.filtering</span> <span class="kn">import</span> <span class="n">BVAL_ATOL</span><span class="p">,</span> <span class="n">dwi_select_shells</span><span class="p">,</span> <span class="n">grand_mean_normalization</span>
 <span class="kn">from</span> <span class="nn">nifreeze.model.base</span> <span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ExpectationModel</span>
 
 <span class="n">S0_EPSILON</span> <span class="o">=</span> <span class="mf">1e-6</span>
@@ -525,14 +522,14 @@
 <span class="k">class</span> <span class="nc">AverageDWIModel</span><span class="p">(</span><span class="n">ExpectationModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A trivial model that returns an average DWI volume.&quot;&quot;&quot;</span>
 
-    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;_th_low&quot;</span><span class="p">,</span> <span class="s2">&quot;_th_high&quot;</span><span class="p">,</span> <span class="s2">&quot;_detrend&quot;</span><span class="p">)</span>
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;_atol_low&quot;</span><span class="p">,</span> <span class="s2">&quot;_atol_high&quot;</span><span class="p">,</span> <span class="s2">&quot;_detrend&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">dataset</span><span class="p">:</span> <span class="n">DWI</span><span class="p">,</span>
         <span class="n">stat</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;median&quot;</span><span class="p">,</span>
-        <span class="n">th_low</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">100.0</span><span class="p">,</span>
-        <span class="n">th_high</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">100.0</span><span class="p">,</span>
+        <span class="n">atol_low</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">BVAL_ATOL</span><span class="p">,</span>
+        <span class="n">atol_high</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">BVAL_ATOL</span><span class="p">,</span>
         <span class="n">detrend</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">):</span>
@@ -545,10 +542,10 @@
 <span class="sd">            Reference to a DWI object.</span>
 <span class="sd">        stat : :obj:`str`, optional</span>
 <span class="sd">            Whether the summary statistic to apply is ``&quot;mean&quot;`` or ``&quot;median&quot;``.</span>
-<span class="sd">        th_low : :obj:`float`, optional</span>
+<span class="sd">        atol_low : :obj:`float`, optional</span>
 <span class="sd">            A lower bound for the b-value corresponding to the diffusion weighted images</span>
 <span class="sd">            that will be averaged.</span>
-<span class="sd">        th_high : :obj:`float`, optional</span>
+<span class="sd">        atol_low : :obj:`float`, optional</span>
 <span class="sd">            An upper bound for the b-value corresponding to the diffusion weighted images</span>
 <span class="sd">            that will be averaged.</span>
 <span class="sd">        detrend : :obj:`bool`, optional</span>
@@ -559,8 +556,8 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="n">stat</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_th_low</span> <span class="o">=</span> <span class="n">th_low</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_th_high</span> <span class="o">=</span> <span class="n">th_high</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_atol_low</span> <span class="o">=</span> <span class="n">atol_low</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_atol_high</span> <span class="o">=</span> <span class="n">atol_high</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_detrend</span> <span class="o">=</span> <span class="n">detrend</span>
 
 <div class="viewcode-block" id="AverageDWIModel.fit_predict">
@@ -571,31 +568,22 @@
         <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Model </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> does not allow locking.&quot;</span><span class="p">)</span>
 
-        <span class="n">bvalues</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">gradients</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">bcenter</span> <span class="o">=</span> <span class="n">bvalues</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
-
-        <span class="n">shellmask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
-
-        <span class="c1"># Keep only bvalues within the range defined by th_high and th_low</span>
-        <span class="n">shellmask</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="n">shellmask</span><span class="p">[</span><span class="n">bvalues</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">bcenter</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_th_high</span><span class="p">)]</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="n">shellmask</span><span class="p">[</span><span class="n">bvalues</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">bcenter</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_th_low</span><span class="p">)]</span> <span class="o">=</span> <span class="kc">False</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">shellmask</span><span class="o">.</span><span class="n">sum</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Shell corresponding to index </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2"> (b=</span><span class="si">{</span><span class="n">bcenter</span><span class="si">}</span><span class="s2">) is empty.&quot;</span><span class="p">)</span>
+        <span class="n">shellmask</span> <span class="o">=</span> <span class="n">dwi_select_shells</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">gradients</span><span class="p">,</span>
+            <span class="n">index</span><span class="p">,</span>
+            <span class="n">atol_low</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_atol_low</span><span class="p">,</span>
+            <span class="n">atol_high</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_atol_high</span><span class="p">,</span>
+        <span class="p">)</span>
 
         <span class="n">shelldata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">dataobj</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">shellmask</span><span class="p">]</span>
 
         <span class="c1"># Regress out global signal differences</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_detrend</span><span class="p">:</span>
-            <span class="n">centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">shelldata</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
-            <span class="n">reference</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">centers</span> <span class="o">&gt;=</span> <span class="mf">1.0</span><span class="p">],</span> <span class="n">DEFAULT_CLIP_PERCENTILE</span><span class="p">)</span>
-            <span class="n">centers</span><span class="p">[</span><span class="n">centers</span> <span class="o">&lt;</span> <span class="mf">1.0</span><span class="p">]</span> <span class="o">=</span> <span class="n">reference</span>
-            <span class="n">drift</span> <span class="o">=</span> <span class="n">reference</span> <span class="o">/</span> <span class="n">centers</span>
-            <span class="n">shelldata</span> <span class="o">=</span> <span class="n">shelldata</span> <span class="o">*</span> <span class="n">drift</span>
+            <span class="n">shelldata</span> <span class="o">=</span> <span class="n">grand_mean_normalization</span><span class="p">(</span><span class="n">shelldata</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 
         <span class="c1"># Select the summary statistic</span>
         <span class="n">avg_func</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stat</span> <span class="o">==</span> <span class="s2">&quot;median&quot;</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span>
+
         <span class="c1"># Calculate the average</span>
         <span class="k">return</span> <span class="n">avg_func</span><span class="p">(</span><span class="n">shelldata</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span></div>
 </div>
@@ -669,7 +657,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=b00149e4"></script>
+</div><script src="../../../_static/documentation_options.js?v=64dda4dc"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>
