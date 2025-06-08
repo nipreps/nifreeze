@@ -32,13 +32,16 @@ import pytest
 
 from nifreeze.data import NFDH5_EXT, BaseDataset, load
 
+DEFAULT_RANDOM_DATASET_SHAPE = (32, 32, 32, 5)
+DEFAULT_RANDOM_DATASET_SIZE = int(np.prod(DEFAULT_RANDOM_DATASET_SHAPE[:3]))
+
 
 @pytest.fixture
-def random_dataset(request) -> BaseDataset:
+def random_dataset(request, size=DEFAULT_RANDOM_DATASET_SHAPE) -> BaseDataset:
     """Create a BaseDataset with random data for testing."""
 
     rng = request.node.rng
-    data = rng.random((32, 32, 32, 5)).astype(np.float32)
+    data = rng.random(size).astype(np.float32)
     affine = np.eye(4, dtype=np.float32)
     return BaseDataset(dataobj=data, affine=affine)
 
@@ -47,8 +50,10 @@ def test_base_dataset_init(random_dataset: BaseDataset):
     """Test that the BaseDataset can be initialized with random data."""
     assert random_dataset.dataobj is not None
     assert random_dataset.affine is not None
-    assert random_dataset.dataobj.shape == (32, 32, 32, 5)
+    assert random_dataset.dataobj.shape == DEFAULT_RANDOM_DATASET_SHAPE
     assert random_dataset.affine.shape == (4, 4)
+    assert random_dataset.size3d == DEFAULT_RANDOM_DATASET_SIZE
+    assert random_dataset.shape3d == DEFAULT_RANDOM_DATASET_SHAPE[:3]
 
 
 def test_len(random_dataset: BaseDataset):

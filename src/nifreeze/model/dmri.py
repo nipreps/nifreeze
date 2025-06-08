@@ -22,6 +22,7 @@
 #
 
 from importlib import import_module
+from typing import Any
 
 import numpy as np
 from dipy.core.gradients import gradient_table_from_bvals_bvecs
@@ -38,9 +39,8 @@ S0_EPSILON = 1e-6
 B_MIN = 50
 
 
-def _exec_fit(model, data, chunk=None):
-    retval = model.fit(data)
-    return retval, chunk
+def _exec_fit(model, data, chunk=None, **kwargs):
+    return model.fit(data, **kwargs), chunk
 
 
 def _exec_predict(model, chunk=None, **kwargs):
@@ -104,7 +104,7 @@ class BaseDWIModel(BaseModel):
 
         super().__init__(dataset, **kwargs)
 
-    def _fit(self, index: int | None = None, n_jobs=None, **kwargs):
+    def _fit(self, index: int | None = None, n_jobs: int | None = None, **kwargs):
         """Fit the model chunk-by-chunk asynchronously"""
 
         n_jobs = n_jobs or 1
@@ -136,9 +136,18 @@ class BaseDWIModel(BaseModel):
                 class_name,
             )(gtab, **kwargs)
 
+        fit_kwargs: dict[str, Any] = {}  # Add here keyword arguments
+
+        is_dki = model_str == "dipy.reconst.dki.DiffusionKurtosisModel"
+
         # One single CPU - linear execution (full model)
-        if n_jobs == 1:
-            _modelfit, _ = _exec_fit(model, data)
+        # DKI model does not allow parallelization as implemented here
+        if n_jobs == 1 or is_dki:
+            _modelfit, _ = _exec_fit(model, data, **fit_kwargs)
+            self._models = [_modelfit]
+            return 1
+        elif is_dki:
+            _modelfit = model.multi_fit(data, **fit_kwargs)
             self._models = [_modelfit]
             return 1
 
@@ -150,7 +159,8 @@ class BaseDWIModel(BaseModel):
         # Parallelize process with joblib
         with Parallel(n_jobs=n_jobs) as executor:
             results = executor(
-                delayed(_exec_fit)(model, dchunk, i) for i, dchunk in enumerate(data_chunks)
+                delayed(_exec_fit)(model, dchunk, i, **fit_kwargs)
+                for i, dchunk in enumerate(data_chunks)
             )
         for submodel, rindex in results:
             self._models[rindex] = submodel
@@ -168,6 +178,7 @@ class BaseDWIModel(BaseModel):
 
         """
 
+        kwargs.pop("omp_nthreads", None)  # Drop omp_nthreads
         n_models = self._fit(
             index,
             n_jobs=kwargs.pop("n_jobs"),
