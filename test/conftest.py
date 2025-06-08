@@ -168,17 +168,16 @@ def random_number_generator(request):
     request.node.rng = np.random.default_rng(1234)
 
 
-def _generate_random_uniform_nd_data(request, size, a, b):
+def _generate_random_uniform_nd_data(request, size, a=0.0, b=1.0):
     rng = request.node.rng
     data = rng.random(size=size).astype(np.float32)
     return (b - a) * data + a
 
 
-def _generate_random_uniform_spatial_data(request, size, a=0.0, b=1.0):
-    rng = request.node.rng
-    data = rng.random(size=size).astype(np.float32)
+def _generate_random_uniform_spatial_data(request, size, a, b):
+    data = _generate_random_uniform_nd_data(request, size, a, b)
     affine = np.eye(4, dtype="float32")
-    return (b - a) * data + a, affine
+    return data, affine
 
 
 @pytest.fixture(autouse=True)
@@ -283,7 +282,9 @@ def setup_random_dwi_data(request, setup_random_gtab_data):
     b0s = len(bvals) - n_gradients
     volumes = n_gradients + b0s
 
-    dwi_dataobj, affine = _generate_random_uniform_spatial_data(request, (*vol_size, volumes))
+    dwi_dataobj, affine = _generate_random_uniform_spatial_data(
+        request, (*vol_size, volumes), 0.0, 1.0
+    )
     brainmask_dataobj = rng.random(vol_size, dtype="float32")
     b0_dataobj = rng.random(vol_size, dtype="float32")
     gradients = np.vstack([bvecs, bvals[np.newaxis, :]], dtype="float32")
