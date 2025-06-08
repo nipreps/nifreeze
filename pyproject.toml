@@ -221,7 +221,7 @@ env = "PYTHONHASHSEED=0"
 markers = [
     "random_gtab_data: Custom marker for random gtab data tests",
     "random_dwi_data: Custom marker for random dwi data tests",
-    "random_uniform_4d_data: Custom marker for random 4d data tests",
+    "random_uniform_ndim_data: Custom marker for random multi-dimensional data tests",
     "random_uniform_spatial_data: Custom marker for random spatial data tests",
 ]
 filterwarnings = [

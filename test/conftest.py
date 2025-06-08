@@ -195,9 +195,9 @@ def setup_random_uniform_spatial_data(request):
 
 
 @pytest.fixture(autouse=True)
-def setup_random_uniform_4d_data(request):
+def setup_random_uniform_ndim_data(request):
     """Automatically generate random data for tests."""
-    marker = request.node.get_closest_marker("random_uniform_4d_data")
+    marker = request.node.get_closest_marker("random_uniform_ndim_data")
 
     size = (32, 32, 32, 5)
     a = 0.0
