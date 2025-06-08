@@ -38,7 +38,7 @@ BVAL_ATOL = 100.0
 
 def advanced_clip(
     data: np.ndarray,
-    p_min: float = 35,
+    p_min: float = 35.0,
     p_max: float = 99.98,
     nonnegative: bool = True,
     dtype: str | np.dtype = DEFAULT_DTYPE,
