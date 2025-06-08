@@ -27,6 +27,7 @@ from __future__ import annotations
 from os import cpu_count
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from timeit import default_timer as timer
 from typing import TypeVar
 
 from tqdm import tqdm
@@ -42,6 +43,7 @@ from nifreeze.utils import iterators
 
 DatasetT = TypeVar("DatasetT", bound=BaseDataset)
 
+DEFAULT_CHUNK_SIZE: int = int(1e6)
 FIT_MSG = "Fit&predict"
 REG_MSG = "Realign"
 
@@ -109,6 +111,10 @@ class Estimator:
                 dataset = result  # type: ignore[assignment]
 
         n_jobs = kwargs.pop("n_jobs", None) or min(cpu_count() or 1, 8)
+        n_threads = kwargs.pop("omp_nthreads", None) or ((cpu_count() or 2) - 1)
+
+        num_voxels = dataset.brainmask.sum() if dataset.brainmask is not None else dataset.size3d
+        chunk_size = DEFAULT_CHUNK_SIZE * (n_threads or 1)
 
         # Prepare iterator
         iterfunc = getattr(iterators, f"{self._strategy}_iterator")
@@ -116,6 +122,13 @@ class Estimator:
 
         # Initialize model
         if isinstance(self._model, str):
+            if self._model.endswith("dti"):
+                self._model_kwargs["step"] = chunk_size
+
+            # Example: change model parameters only for DKI
+            # if self._model.endswith("dki"):
+            #     self._model_kwargs["fit_model"] = "CWLS"
+
             # Factory creates the appropriate model and pipes arguments
             model = ModelFactory.init(
                 model=self._model,
@@ -125,10 +138,25 @@ class Estimator:
         else:
             model = self._model
 
-        if self._single_fit:
-            model.fit_predict(None, n_jobs=n_jobs)
+        # Prepare fit/predict keyword arguments
+        fit_pred_kwargs = {
+            "n_jobs": n_jobs,
+            "omp_nthreads": n_threads,
+        }
+        if model.__class__.__name__ == "DTIModel":
+            fit_pred_kwargs["step"] = chunk_size
 
-        kwargs["num_threads"] = kwargs.pop("omp_nthreads", None) or kwargs.pop("num_threads", None)
+        print(f"Dataset size: {num_voxels}x{len(dataset)}.")
+        print(f"Parallel execution: {fit_pred_kwargs}.")
+        print(f"Model: {model}.")
+
+        if self._single_fit:
+            print("Fitting 'single' model started ...")
+            start = timer()
+            model.fit_predict(None, **fit_pred_kwargs)
+            print(f"Fitting 'single' model finished, elapsed {timer() - start}s.")
+
+        kwargs["num_threads"] = n_threads
         kwargs = self._align_kwargs | kwargs
 
         dataset_length = len(dataset)
@@ -151,15 +179,14 @@ class Estimator:
                     pbar.set_description_str(f"{FIT_MSG: <16} vol. <{i}>")
 
                     # fit the model
-                    test_set = dataset[i]
                     predicted = model.fit_predict(  # type: ignore[union-attr]
                         i,
-                        n_jobs=n_jobs,
+                        **fit_pred_kwargs,
                     )
 
                     # prepare data for running ANTs
                     predicted_path, volume_path, init_path = _prepare_registration_data(
-                        test_set[0],
+                        dataset[i][0],  # Access the target volume
                         predicted,
                         dataset.affine,
                         i,

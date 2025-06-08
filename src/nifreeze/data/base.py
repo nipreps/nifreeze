@@ -127,6 +127,16 @@ class BaseDataset(Generic[Unpack[Ts]]):
         affine = self.motion_affines[idx] if self.motion_affines is not None else None
         return self.dataobj[..., idx], affine, *self._getextra(idx)
 
+    @property
+    def shape3d(self):
+        """Get the shape of the 3D volume."""
+        return self.dataobj.shape[:3]
+
+    @property
+    def size3d(self):
+        """Get the number of voxels in the 3D volume."""
+        return np.prod(self.dataobj.shape[:3])
+
     @classmethod
     def from_filename(cls, filename: Path | str) -> Self:
         """

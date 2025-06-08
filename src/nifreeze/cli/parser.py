@@ -91,6 +91,8 @@ def build_parser() -> ArgumentParser:
     )
     parser.add_argument(
         "--nthreads",
+        "--omp-nthreads",
+        "--ncpus",
         action="store",
         type=int,
         default=None,
