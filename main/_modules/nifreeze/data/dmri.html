@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.data.dmri - nifreeze 25.0.0.dev319 documentation</title>
+        <title>nifreeze.data.dmri - nifreeze 25.0.0.dev324 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev319 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev324 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev319</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev324</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev319</span>
+  <span class="sidebar-brand-text">25.0.0.dev324</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -518,29 +518,21 @@
         <span class="n">bvecs_dec_places</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Write a NIfTI file to disk.</span>
+<span class="sd">        Export the dMRI object to disk (NIfTI, b-vecs, &amp; b-vals files).</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        filename : :obj:`os.pathlike`</span>
 <span class="sd">            The output NIfTI file path.</span>
 <span class="sd">        insert_b0 : :obj:`bool`, optional</span>
-<span class="sd">            Insert a :math:`b=0` at the front of the output NIfTI.</span>
+<span class="sd">            Insert a :math:`b=0` at the front of the output NIfTI and add the corresponding</span>
+<span class="sd">            null gradient value to the output bval/bvec files.</span>
 <span class="sd">        bvals_dec_places : :obj:`int`, optional</span>
 <span class="sd">            Decimal places to use when serializing b-values.</span>
 <span class="sd">        bvecs_dec_places : :obj:`int`, optional</span>
 <span class="sd">            Decimal places to use when serializing b-vectors.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">insert_b0</span><span class="p">:</span>
-            <span class="c1"># Parent&#39;s to_nifti to handle the primary NIfTI export.</span>
-            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_nifti</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">bzero</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
-            <span class="n">nii</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">datahdr</span><span class="p">)</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">datahdr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">nii</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">set_xyzt_units</span><span class="p">(</span><span class="s2">&quot;mm&quot;</span><span class="p">)</span>
-            <span class="n">nii</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
 
         <span class="c1"># Convert filename to a Path object.</span>
         <span class="n">out_root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span><span class="o">.</span><span class="n">absolute</span><span class="p">()</span>
@@ -552,10 +544,32 @@
         <span class="n">bvecs_file</span> <span class="o">=</span> <span class="n">out_root</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.bvec&quot;</span><span class="p">)</span>
         <span class="n">bvals_file</span> <span class="o">=</span> <span class="n">out_root</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.bval&quot;</span><span class="p">)</span>
 
+        <span class="n">bvals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bvals</span>
+        <span class="n">bvecs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bvecs</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bzero</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">insert_b0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">insert_b0</span><span class="p">:</span>
+                <span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Ignoring ``insert_b0`` argument as the data object&#39;s bzero field is unset&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Parent&#39;s to_nifti to handle the primary NIfTI export.</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_nifti</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">bzero</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">nii</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">datahdr</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">datahdr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">nii</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">set_xyzt_units</span><span class="p">(</span><span class="s2">&quot;mm&quot;</span><span class="p">)</span>
+
+            <span class="n">nii</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+
+            <span class="c1"># If inserting a b0 volume is requested, add the corresponding null</span>
+            <span class="c1"># gradient value to the bval/bvec pair</span>
+            <span class="n">bvals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">bvals</span><span class="p">))</span>
+            <span class="n">bvecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="n">bvecs</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
         <span class="c1"># Save bvecs and bvals to text files</span>
         <span class="c1"># Each row of bvecs is one direction (3 rows, N columns).</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">bvecs_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bvecs</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;%.</span><span class="si">{</span><span class="n">bvecs_dec_places</span><span class="si">}</span><span class="s2">f&quot;</span><span class="p">)</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">bvals_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bvals</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">fmt</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;%.</span><span class="si">{</span><span class="n">bvals_dec_places</span><span class="si">}</span><span class="s2">f&quot;</span><span class="p">)</span></div>
+        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">bvecs_file</span><span class="p">,</span> <span class="n">bvecs</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;%.</span><span class="si">{</span><span class="n">bvecs_dec_places</span><span class="si">}</span><span class="s2">f&quot;</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">bvals_file</span><span class="p">,</span> <span class="n">bvals</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">fmt</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;%.</span><span class="si">{</span><span class="n">bvals_dec_places</span><span class="si">}</span><span class="s2">f&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="DWI.shells">
@@ -843,7 +857,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=d4ce99a0"></script>
+</div><script src="../../../_static/documentation_options.js?v=020444dd"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>
