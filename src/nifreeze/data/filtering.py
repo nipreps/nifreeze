@@ -72,7 +72,7 @@ def advanced_clip(
     invert : :obj:`bool`, optional
         If ``True``, inverts the intensity values after scaling (1.0 - ``data``).
     inplace : :obj:`bool`, optional
-        If ``False``, the normalization is performed on the original data.
+        If ``True``, the normalization is performed on the original data.
 
     Returns
     -------
