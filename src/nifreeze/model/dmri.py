@@ -27,11 +27,8 @@ import numpy as np
 from dipy.core.gradients import gradient_table_from_bvals_bvecs
 from joblib import Parallel, delayed
 
-from nifreeze.data.dmri import (
-    DEFAULT_CLIP_PERCENTILE,
-    DTI_MIN_ORIENTATIONS,
-    DWI,
-)
+from nifreeze.data.dmri import DTI_MIN_ORIENTATIONS, DWI
+from nifreeze.data.filtering import BVAL_ATOL, dwi_select_shells, grand_mean_normalization
 from nifreeze.model.base import BaseModel, ExpectationModel
 
 S0_EPSILON = 1e-6
@@ -215,14 +212,14 @@ class BaseDWIModel(BaseModel):
 class AverageDWIModel(ExpectationModel):
     """A trivial model that returns an average DWI volume."""
 
-    __slots__ = ("_th_low", "_th_high", "_detrend")
+    __slots__ = ("_atol_low", "_atol_high", "_detrend")
 
     def __init__(
         self,
         dataset: DWI,
         stat: str = "median",
-        th_low: float = 100.0,
-        th_high: float = 100.0,
+        atol_low: float = BVAL_ATOL,
+        atol_high: float = BVAL_ATOL,
         detrend: bool = False,
         **kwargs,
     ):
@@ -235,10 +232,10 @@ class AverageDWIModel(ExpectationModel):
             Reference to a DWI object.
         stat : :obj:`str`, optional
             Whether the summary statistic to apply is ``"mean"`` or ``"median"``.
-        th_low : :obj:`float`, optional
+        atol_low : :obj:`float`, optional
             A lower bound for the b-value corresponding to the diffusion weighted images
             that will be averaged.
-        th_high : :obj:`float`, optional
+        atol_low : :obj:`float`, optional
             An upper bound for the b-value corresponding to the diffusion weighted images
             that will be averaged.
         detrend : :obj:`bool`, optional
@@ -249,8 +246,8 @@ class AverageDWIModel(ExpectationModel):
         """
         super().__init__(dataset, stat=stat, **kwargs)
 
-        self._th_low = th_low
-        self._th_high = th_high
+        self._atol_low = atol_low
+        self._atol_high = atol_high
         self._detrend = detrend
 
     def fit_predict(self, index: int | None = None, *_, **kwargs):
@@ -259,31 +256,22 @@ class AverageDWIModel(ExpectationModel):
         if index is None:
             raise RuntimeError(f"Model {self.__class__.__name__} does not allow locking.")
 
-        bvalues = self._dataset.gradients[:, -1]
-        bcenter = bvalues[index]
-
-        shellmask = np.ones(len(self._dataset), dtype=bool)
-
-        # Keep only bvalues within the range defined by th_high and th_low
-        shellmask[index] = False
-        shellmask[bvalues > (bcenter + self._th_high)] = False
-        shellmask[bvalues < (bcenter - self._th_low)] = False
-
-        if not shellmask.sum():
-            raise RuntimeError(f"Shell corresponding to index {index} (b={bcenter}) is empty.")
+        shellmask = dwi_select_shells(
+            self._dataset.gradients,
+            index,
+            atol_low=self._atol_low,
+            atol_high=self._atol_high,
+        )
 
         shelldata = self._dataset.dataobj[..., shellmask]
 
         # Regress out global signal differences
         if self._detrend:
-            centers = np.median(shelldata, axis=(0, 1, 2))
-            reference = np.percentile(centers[centers >= 1.0], DEFAULT_CLIP_PERCENTILE)
-            centers[centers < 1.0] = reference
-            drift = reference / centers
-            shelldata = shelldata * drift
+            shelldata = grand_mean_normalization(shelldata, mask=None)
 
         # Select the summary statistic
         avg_func = np.median if self._stat == "median" else np.mean
+
         # Calculate the average
         return avg_func(shelldata, axis=-1)
 
