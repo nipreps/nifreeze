@@ -203,29 +203,21 @@ class DWI(BaseDataset[np.ndarray | None]):
         bvecs_dec_places: int = 6,
     ) -> None:
         """
-        Write a NIfTI file to disk.
+        Export the dMRI object to disk (NIfTI, b-vecs, & b-vals files).
 
         Parameters
         ----------
         filename : :obj:`os.pathlike`
             The output NIfTI file path.
         insert_b0 : :obj:`bool`, optional
-            Insert a :math:`b=0` at the front of the output NIfTI.
+            Insert a :math:`b=0` at the front of the output NIfTI and add the corresponding
+            null gradient value to the output bval/bvec files.
         bvals_dec_places : :obj:`int`, optional
             Decimal places to use when serializing b-values.
         bvecs_dec_places : :obj:`int`, optional
             Decimal places to use when serializing b-vectors.
 
         """
-        if not insert_b0:
-            # Parent's to_nifti to handle the primary NIfTI export.
-            super().to_nifti(filename)
-        else:
-            data = np.concatenate((self.bzero[..., np.newaxis], self.dataobj), axis=-1)
-            nii = nb.Nifti1Image(data, self.affine, self.datahdr)
-            if self.datahdr is None:
-                nii.header.set_xyzt_units("mm")
-            nii.to_filename(filename)
 
         # Convert filename to a Path object.
         out_root = Path(filename).absolute()
@@ -237,10 +229,32 @@ class DWI(BaseDataset[np.ndarray | None]):
         bvecs_file = out_root.with_suffix(".bvec")
         bvals_file = out_root.with_suffix(".bval")
 
+        bvals = self.bvals
+        bvecs = self.bvecs
+
+        if self.bzero is None or not insert_b0:
+            if insert_b0:
+                warn("Ignoring ``insert_b0`` argument as the data object's bzero field is unset")
+
+            # Parent's to_nifti to handle the primary NIfTI export.
+            super().to_nifti(filename)
+        else:
+            data = np.concatenate((self.bzero[..., np.newaxis], self.dataobj), axis=-1)
+            nii = nb.Nifti1Image(data, self.affine, self.datahdr)
+            if self.datahdr is None:
+                nii.header.set_xyzt_units("mm")
+
+            nii.to_filename(filename)
+
+            # If inserting a b0 volume is requested, add the corresponding null
+            # gradient value to the bval/bvec pair
+            bvals = np.concatenate((np.zeros(1), bvals))
+            bvecs = np.concatenate((np.zeros(3)[:, np.newaxis], bvecs), axis=-1)
+
         # Save bvecs and bvals to text files
         # Each row of bvecs is one direction (3 rows, N columns).
-        np.savetxt(bvecs_file, self.bvecs, fmt=f"%.{bvecs_dec_places}f")
-        np.savetxt(bvals_file, self.bvals[np.newaxis, :], fmt=f"%.{bvals_dec_places}f")
+        np.savetxt(bvecs_file, bvecs, fmt=f"%.{bvecs_dec_places}f")
+        np.savetxt(bvals_file, bvals[np.newaxis, :], fmt=f"%.{bvals_dec_places}f")
 
     def shells(
         self,
