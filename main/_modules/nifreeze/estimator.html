@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.estimator - nifreeze 25.0.0.dev313 documentation</title>
+        <title>nifreeze.estimator - nifreeze 25.0.0.dev315 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">nifreeze 25.0.0.dev313 documentation</div></a>
+      <a href="../../index.html"><div class="brand">nifreeze 25.0.0.dev315 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev313</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev315</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev313</span>
+  <span class="sidebar-brand-text">25.0.0.dev315</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -329,6 +329,7 @@
 <span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">cpu_count</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span> <span class="nn">tempfile</span> <span class="kn">import</span> <span class="n">TemporaryDirectory</span>
+<span class="kn">from</span> <span class="nn">timeit</span> <span class="kn">import</span> <span class="n">default_timer</span> <span class="k">as</span> <span class="n">timer</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TypeVar</span>
 
 <span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
@@ -344,6 +345,7 @@
 
 <span class="n">DatasetT</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;DatasetT&quot;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="n">BaseDataset</span><span class="p">)</span>
 
+<span class="n">DEFAULT_CHUNK_SIZE</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">1e6</span><span class="p">)</span>
 <span class="n">FIT_MSG</span> <span class="o">=</span> <span class="s2">&quot;Fit&amp;predict&quot;</span>
 <span class="n">REG_MSG</span> <span class="o">=</span> <span class="s2">&quot;Realign&quot;</span>
 
@@ -421,6 +423,10 @@
                 <span class="n">dataset</span> <span class="o">=</span> <span class="n">result</span>  <span class="c1"># type: ignore[assignment]</span>
 
         <span class="n">n_jobs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;n_jobs&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">min</span><span class="p">(</span><span class="n">cpu_count</span><span class="p">()</span> <span class="ow">or</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+        <span class="n">n_threads</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;omp_nthreads&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">((</span><span class="n">cpu_count</span><span class="p">()</span> <span class="ow">or</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">num_voxels</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">brainmask</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="n">brainmask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">dataset</span><span class="o">.</span><span class="n">size3d</span>
+        <span class="n">chunk_size</span> <span class="o">=</span> <span class="n">DEFAULT_CHUNK_SIZE</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_threads</span> <span class="ow">or</span> <span class="mi">1</span><span class="p">)</span>
 
         <span class="c1"># Prepare iterator</span>
         <span class="n">iterfunc</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">iterators</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_strategy</span><span class="si">}</span><span class="s2">_iterator&quot;</span><span class="p">)</span>
@@ -428,6 +434,13 @@
 
         <span class="c1"># Initialize model</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;dti&quot;</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_model_kwargs</span><span class="p">[</span><span class="s2">&quot;step&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">chunk_size</span>
+
+            <span class="c1"># Example: change model parameters only for DKI</span>
+            <span class="c1"># if self._model.endswith(&quot;dki&quot;):</span>
+            <span class="c1">#     self._model_kwargs[&quot;fit_model&quot;] = &quot;CWLS&quot;</span>
+
             <span class="c1"># Factory creates the appropriate model and pipes arguments</span>
             <span class="n">model</span> <span class="o">=</span> <span class="n">ModelFactory</span><span class="o">.</span><span class="n">init</span><span class="p">(</span>
                 <span class="n">model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">,</span>
@@ -437,10 +450,25 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_single_fit</span><span class="p">:</span>
-            <span class="n">model</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">)</span>
+        <span class="c1"># Prepare fit/predict keyword arguments</span>
+        <span class="n">fit_pred_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;n_jobs&quot;</span><span class="p">:</span> <span class="n">n_jobs</span><span class="p">,</span>
+            <span class="s2">&quot;omp_nthreads&quot;</span><span class="p">:</span> <span class="n">n_threads</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;DTIModel&quot;</span><span class="p">:</span>
+            <span class="n">fit_pred_kwargs</span><span class="p">[</span><span class="s2">&quot;step&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">chunk_size</span>
 
-        <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;num_threads&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;omp_nthreads&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;num_threads&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Dataset size: </span><span class="si">{</span><span class="n">num_voxels</span><span class="si">}</span><span class="s2">x</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Parallel execution: </span><span class="si">{</span><span class="n">fit_pred_kwargs</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Model: </span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_single_fit</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Fitting &#39;single&#39; model started ...&quot;</span><span class="p">)</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="n">timer</span><span class="p">()</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_pred_kwargs</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Fitting &#39;single&#39; model finished, elapsed </span><span class="si">{</span><span class="n">timer</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start</span><span class="si">}</span><span class="s2">s.&quot;</span><span class="p">)</span>
+
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;num_threads&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">n_threads</span>
         <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_align_kwargs</span> <span class="o">|</span> <span class="n">kwargs</span>
 
         <span class="n">dataset_length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
@@ -463,15 +491,14 @@
                     <span class="n">pbar</span><span class="o">.</span><span class="n">set_description_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">FIT_MSG</span><span class="si">:</span><span class="s2"> &lt;16</span><span class="si">}</span><span class="s2"> vol. &lt;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&gt;&quot;</span><span class="p">)</span>
 
                     <span class="c1"># fit the model</span>
-                    <span class="n">test_set</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
                     <span class="n">predicted</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span>  <span class="c1"># type: ignore[union-attr]</span>
                         <span class="n">i</span><span class="p">,</span>
-                        <span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">,</span>
+                        <span class="o">**</span><span class="n">fit_pred_kwargs</span><span class="p">,</span>
                     <span class="p">)</span>
 
                     <span class="c1"># prepare data for running ANTs</span>
                     <span class="n">predicted_path</span><span class="p">,</span> <span class="n">volume_path</span><span class="p">,</span> <span class="n">init_path</span> <span class="o">=</span> <span class="n">_prepare_registration_data</span><span class="p">(</span>
-                        <span class="n">test_set</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">dataset</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>  <span class="c1"># Access the target volume</span>
                         <span class="n">predicted</span><span class="p">,</span>
                         <span class="n">dataset</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span>
                         <span class="n">i</span><span class="p">,</span>
@@ -531,7 +558,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=64dda4dc"></script>
+</div><script src="../../_static/documentation_options.js?v=0b2cb008"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>
