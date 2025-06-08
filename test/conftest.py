@@ -168,6 +168,33 @@ def random_number_generator(request):
     request.node.rng = np.random.default_rng(1234)
 
 
+def _generate_random_uniform_nd_data(request, size, a, b):
+    rng = request.node.rng
+    data = rng.random(size=size).astype(np.float32)
+    return (b - a) * data + a
+
+
+def _generate_random_uniform_spatial_data(request, size, a=0.0, b=1.0):
+    rng = request.node.rng
+    data = rng.random(size=size).astype(np.float32)
+    affine = np.eye(4, dtype="float32")
+    return (b - a) * data + a, affine
+
+
+@pytest.fixture(autouse=True)
+def setup_random_uniform_spatial_data(request):
+    """Automatically generate random spatial data for tests."""
+    marker = request.node.get_closest_marker("random_uniform_spatial_data")
+
+    size = (32, 32, 32, 5)
+    a = 0.0
+    b = 1.0
+    if marker:
+        size, a, b = marker.args
+
+    return _generate_random_uniform_spatial_data(request, size, a, b)
+
+
 @pytest.fixture(autouse=True)
 def setup_random_uniform_4d_data(request):
     """Automatically generate random data for tests."""
@@ -179,9 +206,7 @@ def setup_random_uniform_4d_data(request):
     if marker:
         size, a, b = marker.args
 
-    rng = request.node.rng
-    data = rng.random(size=size).astype(np.float32)
-    return (b - a) * data + a
+    return _generate_random_uniform_nd_data(request, size, a, b)
 
 
 def _generate_random_choices(request, values, count):
@@ -258,8 +283,7 @@ def setup_random_dwi_data(request, setup_random_gtab_data):
     b0s = len(bvals) - n_gradients
     volumes = n_gradients + b0s
 
-    dwi_dataobj = rng.random((*vol_size, volumes), dtype="float32")
-    affine = np.eye(4, dtype="float32")
+    dwi_dataobj, affine = _generate_random_uniform_spatial_data(request, (*vol_size, volumes))
     brainmask_dataobj = rng.random(vol_size, dtype="float32")
     b0_dataobj = rng.random(vol_size, dtype="float32")
     gradients = np.vstack([bvecs, bvals[np.newaxis, :]], dtype="float32")

@@ -36,13 +36,17 @@ DEFAULT_RANDOM_DATASET_SHAPE = (32, 32, 32, 5)
 DEFAULT_RANDOM_DATASET_SIZE = int(np.prod(DEFAULT_RANDOM_DATASET_SHAPE[:3]))
 
 
+@pytest.mark.parametrize(
+    "setup_random_uniform_spatial_data",
+    [
+        (DEFAULT_RANDOM_DATASET_SHAPE, 0.0, 1.0),
+    ],
+)
 @pytest.fixture
-def random_dataset(request, size=DEFAULT_RANDOM_DATASET_SHAPE) -> BaseDataset:
+def random_dataset(setup_random_uniform_spatial_data) -> BaseDataset:
     """Create a BaseDataset with random data for testing."""
 
-    rng = request.node.rng
-    data = rng.random(size).astype(np.float32)
-    affine = np.eye(4, dtype=np.float32)
+    data, affine = setup_random_uniform_spatial_data
     return BaseDataset(dataobj=data, affine=affine)
 
 

@@ -152,7 +152,9 @@ def test_identify_spikes(request):
     fd = rng.normal(0, 5, n_samples)
     threshold = 2.0
 
-    expected_indices = np.asarray([143, 248, 275, 285, 314, 406, 408, 444])
+    expected_indices = np.asarray(
+        [82, 83, 160, 179, 208, 219, 229, 233, 383, 389, 402, 421, 423, 439, 444]
+    )
     expected_mask = np.zeros(n_samples, dtype=bool)
     expected_mask[expected_indices] = True
 
