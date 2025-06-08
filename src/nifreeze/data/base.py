@@ -97,6 +97,16 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
         return self.dataobj.shape[-1]
 
+    @property
+    def shape3d(self):
+        """Get the shape of the 3D volume."""
+        return self.dataobj.shape[:3]
+
+    @property
+    def size3d(self):
+        """Get the number of voxels in the 3D volume."""
+        return np.prod(self.dataobj.shape[:3])
+
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[Unpack[Ts]]:
         return ()  # type: ignore[return-value]
 
