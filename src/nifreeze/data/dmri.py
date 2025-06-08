@@ -203,10 +203,7 @@ class DWI(BaseDataset[np.ndarray | None]):
         bvecs_dec_places: int = 6,
     ) -> None:
         """
-        Write a NIfTI file to disk.
-
-        This method assumes that the ``bzero`` attribute of `~nifreeze.data.dmri.DWI`
-        is not ``None``.
+        Export the dMRI object to disk (NIfTI, b-vecs, & b-vals files).
 
         Parameters
         ----------
