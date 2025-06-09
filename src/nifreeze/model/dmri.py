@@ -308,6 +308,17 @@ class DKIModel(BaseDWIModel):
     _model_class = "dipy.reconst.dki.DiffusionKurtosisModel"
 
 
+class GQIModel(BaseDWIModel):
+    """A wrapper of :obj:`dipy.reconst.gqi.GeneralizedQSamplingModel`."""
+
+    _modelargs = (
+        "method",
+        "sampling_length",
+        "normalize_peaks",
+    )
+    _model_class = "dipy.reconst.gqi.GeneralizedQSamplingModel"
+
+
 class GPModel(BaseDWIModel):
     """A wrapper of :obj:`~nifreeze.model.dipy.GaussianProcessModel`."""
 
