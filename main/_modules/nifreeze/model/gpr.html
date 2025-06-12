@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.model.gpr - nifreeze 25.0.0.dev330 documentation</title>
+        <title>nifreeze.model.gpr - nifreeze 25.0.0.dev332 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev330 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev332 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev330</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev332</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev330</span>
+  <span class="sidebar-brand-text">25.0.0.dev332</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -265,6 +265,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../../changes.html">What’s new?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../bibliography.html">References</a></li>
 </ul>
 
 </div>
@@ -384,7 +385,7 @@
 <span class="sd">    optimization using cross-validation and such.</span>
 
 <span class="sd">    In principle, Scikit-Learn&#39;s implementation normalizes the training data</span>
-<span class="sd">    as in [Andersson15]_ (see</span>
+<span class="sd">    as in :footcite:p:`andersson_non-parametric_2015` (see</span>
 <span class="sd">    `FSL&#39;s source code &lt;https://git.fmrib.ox.ac.uk/fsl/eddy/-/blob/2480dda293d4cec83014454db3a193b87921f6b0/DiffusionGP.cpp#L218&gt;`__).</span>
 <span class="sd">    From their paper (p. 167, end of first column):</span>
 
@@ -398,7 +399,7 @@
 <span class="sd">    selection through gradient-descent with analytical gradient calculations</span>
 <span class="sd">    would not work (the derivative of the kernel w.r.t. ``alpha`` is zero).</span>
 
-<span class="sd">    This might have been overlooked in [Andersson15]_, or else they actually did</span>
+<span class="sd">    This might have been overlooked in :footcite:p:`andersson_non-parametric_2015` or else they actually did</span>
 <span class="sd">    not use analytical gradient-descent:</span>
 
 <span class="sd">        *A note on optimisation*</span>
@@ -418,7 +419,7 @@
 
 <span class="sd">    **Multi-shell regression (TODO).**</span>
 <span class="sd">    For multi-shell modeling, the kernel :math:`k(\textbf{x}, \textbf{x&#39;})`</span>
-<span class="sd">    is updated following Eq. (14) in [Andersson15]_.</span>
+<span class="sd">    is updated following Eq. (14) in :footcite:p:`andersson_non-parametric_2015`.</span>
 
 <span class="sd">    .. math::</span>
 <span class="sd">        k(\textbf{x}, \textbf{x&#39;}) = C_{\theta}(\mathbf{g}, \mathbf{g&#39;}; a) C_{b}(|b - b&#39;|; \ell)</span>
@@ -434,7 +435,7 @@
 <span class="sd">    shells; and :math:`{a, \ell}` some hyperparameters.</span>
 
 <span class="sd">    The full GP regression kernel :math:`\mathbf{K}` is then updated for a 2-shell case as</span>
-<span class="sd">    follows (Eq. (16) in [Andersson15]_):</span>
+<span class="sd">    follows (Eq. (16) in :footcite:p:`andersson_non-parametric_2015`):</span>
 
 <span class="sd">    .. math::</span>
 <span class="sd">        \begin{equation}</span>
@@ -452,9 +453,7 @@
 
 <span class="sd">    References</span>
 <span class="sd">    ----------</span>
-<span class="sd">    .. [Andersson15] J. L. R. Andersson. et al., An integrated approach to</span>
-<span class="sd">        correction for off-resonance effects and subject movement in diffusion MR</span>
-<span class="sd">        imaging, NeuroImage 125 (2016) 1063-11078</span>
+<span class="sd">    .. footbibliography::</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -807,7 +806,7 @@
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Compute the exponential covariance for given distances and scale parameter.</span>
 
-<span class="sd">    Implements :math:`C_{\theta}`, following Eq. (9) in [Andersson15]_:</span>
+<span class="sd">    Implements :math:`C_{\theta}`, following Eq. (9) in :footcite:p:`andersson_non-parametric_2015`:</span>
 
 <span class="sd">    .. math::</span>
 <span class="sd">        \begin{equation}</span>
@@ -831,6 +830,10 @@
 <span class="sd">    :obj:`~numpy.ndarray`</span>
 <span class="sd">        Exponential covariance values for the input distances.</span>
 
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. footbibliography::</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">theta</span> <span class="o">/</span> <span class="n">a</span><span class="p">)</span></div>
 
@@ -842,7 +845,7 @@
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Compute the spherical covariance for given distances and scale parameter.</span>
 
-<span class="sd">    Implements :math:`C_{\theta}`, following Eq. (10) in [Andersson15]_:</span>
+<span class="sd">    Implements :math:`C_{\theta}`, following Eq. (10) in :footcite:p:`andersson_non-parametric_2015`:</span>
 
 <span class="sd">    .. math::</span>
 <span class="sd">        \begin{equation}</span>
@@ -870,6 +873,10 @@
 <span class="sd">    :obj:`~numpy.ndarray`</span>
 <span class="sd">        Spherical covariance values for the input distances.</span>
 
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. footbibliography::</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">theta</span> <span class="o">&lt;=</span> <span class="n">a</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="mf">1.5</span> <span class="o">*</span> <span class="n">theta</span> <span class="o">/</span> <span class="n">a</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">theta</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">a</span><span class="o">**</span><span class="mi">3</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">)</span></div>
 
@@ -885,7 +892,7 @@
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Compute pairwise angles across diffusion gradient encoding directions.</span>
 
-<span class="sd">    Following [Andersson15]_, it computes the smallest of the angles between</span>
+<span class="sd">    Following :footcite:p:`andersson_non-parametric_2015`:, it computes the smallest of the angles between</span>
 <span class="sd">    each pair if ``closest_polarity`` is ``True``, i.e.,</span>
 
 <span class="sd">    .. math::</span>
@@ -910,6 +917,10 @@
 <span class="sd">    -------</span>
 <span class="sd">    :obj:`~numpy.ndarray`</span>
 <span class="sd">        Pairwise angles across diffusion gradient encoding directions.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. footbibliography::</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
@@ -963,7 +974,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=9aba8e3e"></script>
+</div><script src="../../../_static/documentation_options.js?v=093a804d"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>
