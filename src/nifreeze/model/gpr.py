@@ -80,7 +80,7 @@ class DiffusionGPR(GaussianProcessRegressor):
     optimization using cross-validation and such.
 
     In principle, Scikit-Learn's implementation normalizes the training data
-    as in [Andersson15]_ (see
+    as in :footcite:p:`andersson_non-parametric_2015` (see
     `FSL's source code <https://git.fmrib.ox.ac.uk/fsl/eddy/-/blob/2480dda293d4cec83014454db3a193b87921f6b0/DiffusionGP.cpp#L218>`__).
     From their paper (p. 167, end of first column):
 
@@ -94,7 +94,7 @@ class DiffusionGPR(GaussianProcessRegressor):
     selection through gradient-descent with analytical gradient calculations
     would not work (the derivative of the kernel w.r.t. ``alpha`` is zero).
 
-    This might have been overlooked in [Andersson15]_, or else they actually did
+    This might have been overlooked in :footcite:p:`andersson_non-parametric_2015` or else they actually did
     not use analytical gradient-descent:
 
         *A note on optimisation*
@@ -114,7 +114,7 @@ class DiffusionGPR(GaussianProcessRegressor):
 
     **Multi-shell regression (TODO).**
     For multi-shell modeling, the kernel :math:`k(\textbf{x}, \textbf{x'})`
-    is updated following Eq. (14) in [Andersson15]_.
+    is updated following Eq. (14) in :footcite:p:`andersson_non-parametric_2015`.
 
     .. math::
         k(\textbf{x}, \textbf{x'}) = C_{\theta}(\mathbf{g}, \mathbf{g'}; a) C_{b}(|b - b'|; \ell)
@@ -130,7 +130,7 @@ class DiffusionGPR(GaussianProcessRegressor):
     shells; and :math:`{a, \ell}` some hyperparameters.
 
     The full GP regression kernel :math:`\mathbf{K}` is then updated for a 2-shell case as
-    follows (Eq. (16) in [Andersson15]_):
+    follows (Eq. (16) in :footcite:p:`andersson_non-parametric_2015`):
 
     .. math::
         \begin{equation}
@@ -148,9 +148,7 @@ class DiffusionGPR(GaussianProcessRegressor):
 
     References
     ----------
-    .. [Andersson15] J. L. R. Andersson. et al., An integrated approach to
-        correction for off-resonance effects and subject movement in diffusion MR
-        imaging, NeuroImage 125 (2016) 1063-11078
+    .. footbibliography::
 
     """
 
@@ -476,7 +474,7 @@ def exponential_covariance(theta: np.ndarray, a: float) -> np.ndarray:
     r"""
     Compute the exponential covariance for given distances and scale parameter.
 
-    Implements :math:`C_{\theta}`, following Eq. (9) in [Andersson15]_:
+    Implements :math:`C_{\theta}`, following Eq. (9) in :footcite:p:`andersson_non-parametric_2015`:
 
     .. math::
         \begin{equation}
@@ -500,6 +498,10 @@ def exponential_covariance(theta: np.ndarray, a: float) -> np.ndarray:
     :obj:`~numpy.ndarray`
         Exponential covariance values for the input distances.
 
+    References
+    ----------
+    .. footbibliography::
+
     """
     return np.exp(-theta / a)
 
@@ -508,7 +510,7 @@ def spherical_covariance(theta: np.ndarray, a: float) -> np.ndarray:
     r"""
     Compute the spherical covariance for given distances and scale parameter.
 
-    Implements :math:`C_{\theta}`, following Eq. (10) in [Andersson15]_:
+    Implements :math:`C_{\theta}`, following Eq. (10) in :footcite:p:`andersson_non-parametric_2015`:
 
     .. math::
         \begin{equation}
@@ -536,6 +538,10 @@ def spherical_covariance(theta: np.ndarray, a: float) -> np.ndarray:
     :obj:`~numpy.ndarray`
         Spherical covariance values for the input distances.
 
+    References
+    ----------
+    .. footbibliography::
+
     """
     return np.where(theta <= a, 1 - 1.5 * theta / a + 0.5 * (theta**3) / (a**3), 0.0)
 
@@ -548,7 +554,7 @@ def compute_pairwise_angles(
 ) -> np.ndarray:
     r"""Compute pairwise angles across diffusion gradient encoding directions.
 
-    Following [Andersson15]_, it computes the smallest of the angles between
+    Following :footcite:p:`andersson_non-parametric_2015`:, it computes the smallest of the angles between
     each pair if ``closest_polarity`` is ``True``, i.e.,
 
     .. math::
@@ -573,6 +579,10 @@ def compute_pairwise_angles(
     -------
     :obj:`~numpy.ndarray`
         Pairwise angles across diffusion gradient encoding directions.
+
+    References
+    ----------
+    .. footbibliography::
 
     Examples
     --------

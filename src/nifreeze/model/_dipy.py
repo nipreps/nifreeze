@@ -101,7 +101,10 @@ class GaussianProcessModel(ReconstModel):
         *args,
         **kwargs,
     ) -> None:
-        """A GP-based DWI model [Andersson15]_.
+        """A GP-based DWI model.
+
+        Implements a GP-based model :footcite:p:`andersson_non-parametric_2015`
+        to reconstruct DWI data employing a given DWI fitting model.
 
         Parameters
         ----------
@@ -118,11 +121,7 @@ class GaussianProcessModel(ReconstModel):
 
         References
         ----------
-        .. [Andersson15] Jesper L.R. Andersson and Stamatios N. Sotiropoulos.
-           Non-parametric representation and prediction of single- and multi-shell
-           diffusion-weighted MRI data using Gaussian processes. NeuroImage, 122:166-176, 2015.
-           doi:\
-           `10.1016/j.neuroimage.2015.07.067 <https://doi.org/10.1016/j.neuroimage.2015.07.067>`__.
+        .. footbibliography::
 
         """
 

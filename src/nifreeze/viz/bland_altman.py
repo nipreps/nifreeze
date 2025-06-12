@@ -49,8 +49,8 @@ def plot_bland_altman(
 ) -> plt.Figure:
     """Create a Bland-Altman plot.
 
-    Create a Bland-Altman plot [Bland86]_ and highlight ``size`` lower and upper
-    extremes along the X coordinates.
+    Create a Bland-Altman plot :footcite:p:`bland_statistical_1986` and
+    highlight ``size`` lower and upper extremes along the X coordinates.
 
     Parameters
     ----------
@@ -75,9 +75,7 @@ def plot_bland_altman(
 
     References
     ----------
-    .. [Bland86] J. Martin Bland and Douglas G. Altman, Statistical methods for
-       assessing agreement between two methods of clinical measurement, The
-       Lancet 327(8476) (1986) 307-310
+    .. footbibliography::
 
     """
 

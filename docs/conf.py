@@ -40,6 +40,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinxcontrib.apidoc",
     "sphinxarg.ext",
+    "sphinxcontrib.bibtex",
 ]
 
 autodoc_mock_imports = [
@@ -144,6 +145,10 @@ html_css_files = [
 #
 # html_sidebars = {}
 
+# Sphinx extension for BibTeX style citations.
+# https://github.com/mcmtroffaes/sphinxcontrib-bibtex
+bibtex_bibfiles = ["references.bib"]
+# bibtex_default_style = 'plain'
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
