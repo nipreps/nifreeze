@@ -44,11 +44,11 @@ def get_affine_matrix(translation: tuple, rotation: tuple, voxel_sizes: tuple):
 
     Parameters
     ----------
-    translation : :obj:`~tuple`
+    translation : :obj:`tuple`
         Translation values in mm.
-    rotation : :obj:`~tuple`
+    rotation : :obj:`tuple`
         Rotation values in degrees.
-    voxel_sizes : :obj:`~tuple`
+    voxel_sizes : :obj:`tuple`
         Voxel sizes in mm.
 
     Returns
