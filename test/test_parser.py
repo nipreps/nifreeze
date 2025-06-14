@@ -54,35 +54,35 @@ def test_normalize_model_name(model_name, normalized_name):
 
 
 @pytest.mark.parametrize(
-    ("args", "code"),
+    ("argv", "code"),
     [
         ([], 2),
     ],
 )
-def test_parser_errors(args, code):
+def test_parser_errors(argv, code):
     """Check behavior of the parser."""
     with pytest.raises(SystemExit) as error:
-        _build_parser().parse_args(args)
+        _build_parser().parse_args(argv)
 
     assert error.value.code == code
 
 
 @pytest.mark.parametrize(
-    "args",
+    "argv",
     [
         MIN_ARGS,
     ],
 )
-def test_parser_valid(tmp_path, args):
+def test_parser_valid(tmp_path, argv):
     """Check valid arguments."""
     datapath = tmp_path / "data"
     datapath.mkdir(exist_ok=True)
-    args[0] = str(datapath)
+    argv[0] = str(datapath)
 
-    opts = _build_parser().parse_args(args)
+    args = _build_parser().parse_args(argv)
 
-    assert opts.input_file == datapath
-    assert opts.models == ["trivial"]
+    assert args.input_file == datapath
+    assert args.models == ["trivial"]
 
 
 @pytest.mark.parametrize(
