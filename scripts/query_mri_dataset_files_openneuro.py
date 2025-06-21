@@ -345,6 +345,10 @@ def main() -> None:
 
     _configure_logging(args.out_dirname)
 
+    logging.info(
+        "Script called with arguments:\n" + "\n".join(f"  {k}: {v}" for k, v in vars(args).items())
+    )
+
     sep = "\t"
     start = time.time()
 

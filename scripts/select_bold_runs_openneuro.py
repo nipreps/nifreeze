@@ -270,6 +270,10 @@ def main() -> None:
 
     _configure_logging(args.out_fname.parent)
 
+    logging.info(
+        "Script called with arguments:\n" + "\n".join(f"  {k}: {v}" for k, v in vars(args).items())
+    )
+
     start = time.time()
 
     # Consider only files that have the "ds\d{6}\.tsv" pattern (e.g.

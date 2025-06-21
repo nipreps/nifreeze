@@ -241,6 +241,10 @@ def main() -> None:
 
     _configure_logging(args.out_fname.parent)
 
+    logging.info(
+        "Script called with arguments:\n" + "\n".join(f"  {k}: {v}" for k, v in vars(args).items())
+    )
+
     start = time.time()
 
     # Precompute all cursors
