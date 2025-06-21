@@ -20,9 +20,10 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""Query OpenNeuro MRI dataset files using the dataset IDs read from the input
-file. Any dataset having one of {"bold", "fmri", "mri"} in the 'modality' field
-is considered as an fMRI dataset. For each queried dataset, the list of files is
+"""Query OpenNeuro human MRI dataset files using the dataset IDs read from the
+input file. Only those datasets having 'human` in the species field are kept.
+Any dataset having one of {'bold', 'fmri', 'mri'} in the 'modality' field is
+considered as an fMRI dataset. For each queried dataset, the list of files is
 stored to a TSV file, along with the 'id', 'filename', 'size', 'directory',
 'annexed', 'key', 'urls', and 'fullpath' features.
 """
@@ -42,15 +43,62 @@ OPENNEURO_GRAPHQL_URL = "https://openneuro.org/crn/graphql"
 HEADERS = {"Content-Type": "application/json"}
 
 MODALITIES = "modalities"
+SPECIES = "species"
 TAG = "tag"
 
+HUMAN_SPECIES = {"human"}
 FMRI_MODALITIES = {"bold", "fmri", "mri"}
 
 
-def filter_nonrelevant_datasets(df: pd.DataFrame) -> pd.DataFrame:
+def filter_nonhuman_datasets(df: pd.DataFrame) -> pd.Series:
+    """Filter non-human data records.
+
+    Filters datasets whose 'species' field does not contain one of
+    `HUMAN_SPECIES`.
+
+    Parameters
+    ----------
+    df : :obj:`~pd.DataFrame`
+        Dataset records.
+
+    Returns
+    -------
+    `~pd.Series`
+        Mask of human datasets.
+    """
+
+    return df[SPECIES].str.lower().isin(HUMAN_SPECIES)
+
+
+def filter_nonmri_datasets(df: pd.DataFrame) -> pd.Series:
     """Filter non-MRI data records.
 
-    Modalities has to contain one of :obj:`FMRI_MODALITIES`.
+    Filters datasets whose 'modalities' field does not contain one of
+    `FMRI_MODALITIES`.
+
+    Parameters
+    ----------
+    df : :obj:`~pd.DataFrame`
+        Dataset records.
+
+    Returns
+    -------
+    `~pd.Series`
+        Mask of MRI datasets.
+    """
+
+    return df[MODALITIES].apply(
+        lambda x: any(item.lower() in FMRI_MODALITIES for item in ast.literal_eval(x))
+        if isinstance(x, str) and x.startswith("[")
+        else False
+    )
+
+
+def filter_nonrelevant_datasets(df: pd.DataFrame) -> pd.DataFrame:
+    """Filter non-human and non-MRI data records.
+
+    The 'species' field has to contain 'human' and the 'modalities' field has to
+    contain one of :obj:`FMRI_MODALITIES`.
 
     Parameters
     ----------
@@ -60,16 +108,13 @@ def filter_nonrelevant_datasets(df: pd.DataFrame) -> pd.DataFrame:
     Returns
     -------
     `~pd.DataFrame`
-        MRI dataset records.
+        Human MRI dataset records.
     """
 
-    return df[
-        df[MODALITIES].apply(
-            lambda x: any(mod in FMRI_MODALITIES for mod in ast.literal_eval(x))
-            if isinstance(x, str) and x.startswith("[")
-            else False
-        )
-    ]
+    species_mask = filter_nonhuman_datasets(df)
+    modality_mask = filter_nonmri_datasets(df)
+
+    return df[species_mask & modality_mask]
 
 
 def query_snapshot_files(dataset_id: str, snapshot_tag: str, tree: str | None = None) -> list:
@@ -287,7 +332,7 @@ def main() -> None:
     # from being stripped
     _df = pd.read_csv(args.dataset_fname, sep=sep, dtype={TAG: str})
 
-    # Filter datasets: rely on the "modality" property
+    # Filter nonrelevant datasets
     df = filter_nonrelevant_datasets(_df)
 
     mri_datasets_fname = Path.joinpath(
