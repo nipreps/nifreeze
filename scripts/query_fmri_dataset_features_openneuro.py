@@ -202,7 +202,7 @@ def write_dataset_file_lists(file_dict: dict, dirname: Path) -> None:
     Parameters
     ----------
     file_dict: :obj:`dict`
-        A mapping from dataset ID (or name) to a list of file metadata dicts.
+        A mapping from dataset ID to a list of file metadata dicts.
     dirname : :obj:`Path`
         Directory where TSV files will be written.
     """
