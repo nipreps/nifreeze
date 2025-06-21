@@ -219,21 +219,21 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "seed", type=int, help="Random seed. Use the format 'YYYYMMDD' for a date."
     )
-    parser.add_argument("--total_runs", type=int, default=TOTAL_RUNS, help="Number of total runs")
+    parser.add_argument("--total-runs", type=int, default=TOTAL_RUNS, help="Number of total runs")
     parser.add_argument(
-        "--contr_fraction",
+        "--contr-fraction",
         type=float,
         default=CONTR_FRACTION,
         help="Allowed contribution fraction for runs per dataset over the total runs",
     )
     parser.add_argument(
-        "--min_timepoints",
+        "--min-timepoints",
         type=int,
         default=MIN_TIMEPOINTS,
         help="Minimum number of BOLD timepoints per dataset",
     )
     parser.add_argument(
-        "--max_timepoints",
+        "--max-timepoints",
         type=int,
         default=MAX_TIMEPOINTS,
         help="Maximum number BOLD timepoints per dataset",
