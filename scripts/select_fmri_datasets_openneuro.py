@@ -29,6 +29,7 @@ of features computed from the BOLD data files:
 """
 
 import argparse
+import logging
 import re
 import time
 from pathlib import Path
@@ -210,6 +211,23 @@ def identify_relevant_runs(
     return df.head(total_runs).sort_values(by=[DATASETID])
 
 
+def _configure_logging(out_dirname: Path) -> None:
+    # Clear existing handlers
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[
+            logging.FileHandler(f"{out_dirname}/{Path(__file__).stem}.log"),
+            logging.StreamHandler(),
+        ],
+    )
+
+
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter
@@ -250,6 +268,8 @@ def main() -> None:
     parser = _build_arg_parser()
     args = _parse_args(parser)
 
+    _configure_logging(args.out_fname.parent)
+
     start = time.time()
 
     # Consider only files that have the "ds\d{6}\.tsv" pattern (e.g.
@@ -271,6 +291,8 @@ def main() -> None:
         ignore_index=True,
     )
 
+    logging.info(f"Analyzing {len(df)} runs...")
+
     df_rel_runs = identify_relevant_runs(
         df,
         args.contr_fraction,
@@ -283,7 +305,9 @@ def main() -> None:
     end = time.time()
     duration = end - start
 
-    print(f"Identified {len(df_rel_runs)} runs in {duration:.2f} seconds.")
+    logging.info(
+        f"Identified {len(df_rel_runs)}/{len(df)} relevant runs in {duration:.2f} seconds."
+    )
 
     df_rel_runs.fillna("NA", inplace=True)
     df_rel_runs.to_csv(args.out_fname, sep="\t", index=False)

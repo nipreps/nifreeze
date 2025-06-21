@@ -29,6 +29,7 @@ import argparse
 import ast
 import gzip
 import io
+import logging
 import os
 import re
 import time
@@ -138,7 +139,7 @@ def compute_bold_features(bold_files: dict, max_workers: int = 8) -> dict:
                 rec_vols[VOLS] = n_vols
                 results[dataset_id].append(rec_vols)
             except Exception as e:
-                print(f"Error processing {dataset_id}: {e}")
+                logging.info(f"Error processing {dataset_id}: {e}")
 
     return results
 
@@ -218,6 +219,23 @@ def write_dataset_file_lists(file_dict: dict, dirname: Path) -> None:
         df.to_csv(tsv_path, sep="\t", index=False)
 
 
+def _configure_logging(out_dirname: Path) -> None:
+    # Clear existing handlers
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[
+            logging.FileHandler(f"{out_dirname}/{Path(__file__).stem}.log"),
+            logging.StreamHandler(),
+        ],
+    )
+
+
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter
@@ -236,6 +254,8 @@ def main() -> None:
     parser = _build_arg_parser()
     args = _parse_args(parser)
 
+    _configure_logging(args.out_dirname)
+
     start = time.time()
 
     # Consider only files that have the "ds\d{6}\.tsv" pattern (e.g.
@@ -246,16 +266,22 @@ def main() -> None:
         if entry.is_file() and re.fullmatch(r"ds\d{6}\.tsv", entry.name)
     }
 
+    logging.info(f"Characterizing {len(datasets)} datasets...")
+
     # Cap at 32 to prevent overcommitting in high-core systems
     max_workers = min(32, os.cpu_count() or 1)
     bold_files = identify_bold_files(datasets, max_workers=max_workers)
+
+    logging.info(f"Found {sum([len(item) for item in bold_files.values()])} BOLD runs.")
 
     fmri_bold_vols = compute_bold_features(bold_files)
 
     end = time.time()
     duration = end - start
 
-    print(f"Analyzed {len(fmri_bold_vols)} datasets in {duration:.2f} seconds.")
+    logging.info(
+        f"Characterized {sum([len(item) for item in bold_files.values()])} BOLD runs in {duration:.2f} seconds."
+    )
 
     write_dataset_file_lists(fmri_bold_vols, args.out_dirname)
 

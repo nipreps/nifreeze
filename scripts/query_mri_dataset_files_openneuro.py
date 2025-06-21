@@ -30,6 +30,7 @@ stored to a TSV file, along with the 'id', 'filename', 'size', 'directory',
 
 import argparse
 import ast
+import logging
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -114,6 +115,9 @@ def filter_nonrelevant_datasets(df: pd.DataFrame) -> pd.DataFrame:
     species_mask = filter_nonhuman_datasets(df)
     modality_mask = filter_nonmri_datasets(df)
 
+    logging.info(f"Found {sum(~species_mask)}/{len(df)} non-human datasets.")
+    logging.info(f"Found {sum(~modality_mask)}/{len(df)} non-MRI datasets.")
+
     return df[species_mask & modality_mask]
 
 
@@ -192,7 +196,7 @@ def query_snapshot_tree(
     try:
         files = query_snapshot_files(dataset_id, snapshot_tag, tree)
     except requests.HTTPError as e:
-        print(f"Error querying {dataset_id}:{snapshot_tag} at tree {tree}: {e}")
+        logging.info(f"Error querying {dataset_id}:{snapshot_tag} at tree {tree}: {e}")
         return []
 
     for f in files:
@@ -247,7 +251,7 @@ def query_dataset_files(ds):
         files = query_snapshot_tree(ds_id, snapshot_tag)
         return ds_id, files
     except Exception as e:
-        print(f"Failed to process {ds_id}: {e}")
+        logging.info(f"Failed to process {ds_id}: {e}")
         return ds_id, []
 
 
@@ -304,6 +308,23 @@ def write_dataset_file_lists(file_dict: dict, dirname: Path) -> None:
         df.to_csv(tsv_path, sep="\t", index=False)
 
 
+def _configure_logging(out_dirname: Path) -> None:
+    # Clear existing handlers
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[
+            logging.FileHandler(f"{out_dirname}/{Path(__file__).stem}.log"),
+            logging.StreamHandler(),
+        ],
+    )
+
+
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter
@@ -322,6 +343,8 @@ def main() -> None:
     parser = _build_arg_parser()
     args = _parse_args(parser)
 
+    _configure_logging(args.out_dirname)
+
     sep = "\t"
     start = time.time()
 
@@ -329,8 +352,12 @@ def main() -> None:
     # from being stripped
     _df = pd.read_csv(args.dataset_fname, sep=sep, dtype={TAG: str})
 
+    logging.info(f"Querying {len(_df)} datasets...")
+
     # Filter nonrelevant datasets
     df = filter_nonrelevant_datasets(_df)
+
+    logging.info(f"Filtered {len(_df) - len(df)}/{len(_df)} non-human, non-MRI datasets.")
 
     mri_datasets_fname = Path.joinpath(
         args.out_dirname,
@@ -345,7 +372,7 @@ def main() -> None:
     end = time.time()
     duration = end - start
 
-    print(f"Queried {len(datasets_files)} datasets in {duration:.2f} seconds.")
+    logging.info(f"Queried {len(datasets_files)} datasets in {duration:.2f} seconds.")
 
     # Serialize
     write_dataset_file_lists(datasets_files, args.out_dirname)

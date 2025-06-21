@@ -26,6 +26,7 @@ available datasets are stored to a TSV file.
 """
 
 import argparse
+import logging
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -204,6 +205,23 @@ def edges_to_dataframe(edges: list) -> pd.DataFrame:
     return df.fillna("NA").sort_values("id")
 
 
+def _configure_logging(out_dirname: Path) -> None:
+    # Clear existing handlers
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[
+            logging.FileHandler(f"{out_dirname}/{Path(__file__).stem}.log"),
+            logging.StreamHandler(),
+        ],
+    )
+
+
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter
@@ -221,6 +239,8 @@ def main() -> None:
     parser = _build_arg_parser()
     args = _parse_args(parser)
 
+    _configure_logging(args.out_fname.parent)
+
     start = time.time()
 
     # Precompute all cursors
@@ -234,7 +254,7 @@ def main() -> None:
     end = time.time()
     duration = end - start
 
-    print(f"Queried {len(edges)} datasets in {duration:.2f} seconds.")
+    logging.info(f"Found {len(edges)} datasets in {duration:.2f} seconds.")
 
     # Serialize
     df = edges_to_dataframe(edges)
