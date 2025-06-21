@@ -256,17 +256,6 @@ def main() -> None:
 
     write_dataset_file_lists(fmri_bold_vols, args.out_dirname)
 
-    # ToDo
-    # Next script: select based on features computed
-
-    # Criterion 1:
-    # If the number of runs for a given dataset exceeds a percentage of the
-    # target number of runs, pick only a fraction: first 200, randomly or what?
-    # contrib_thr = int(INDIVIDUAL_DS_CONTR * TOTAL_RUNS)
-
-    # Criterion 2:
-    # if n_vols and MIN_TIMEPOINTS <= n_vols <= MAX_TIMEPOINTS:
-
 
 if __name__ == "__main__":
     main()
