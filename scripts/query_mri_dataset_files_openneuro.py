@@ -29,6 +29,7 @@ stored to a TSV file, along with the 'id', 'filename', 'size', 'directory',
 
 import argparse
 import ast
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -295,7 +296,9 @@ def main() -> None:
     )
     df.to_csv(mri_datasets_fname, sep=sep, index=False)
 
-    datasets_files = query_datasets(df)
+    # Cap at 32 to prevent overcommitting in high-core systems
+    max_workers = min(32, os.cpu_count() or 1)
+    datasets_files = query_datasets(df, max_workers=max_workers)
 
     end = time.time()
     duration = end - start

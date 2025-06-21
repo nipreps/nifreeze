@@ -29,6 +29,7 @@ import argparse
 import ast
 import gzip
 import io
+import os
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -245,7 +246,9 @@ def main() -> None:
         if entry.is_file() and re.fullmatch(r"ds\d{6}\.tsv", entry.name)
     }
 
-    bold_files = identify_bold_files(datasets)
+    # Cap at 32 to prevent overcommitting in high-core systems
+    max_workers = min(32, os.cpu_count() or 1)
+    bold_files = identify_bold_files(datasets, max_workers=max_workers)
 
     fmri_bold_vols = compute_bold_features(bold_files)
 

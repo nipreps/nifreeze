@@ -26,6 +26,7 @@ available datasets are stored to a TSV file.
 """
 
 import argparse
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -226,7 +227,9 @@ def main() -> None:
     cursors = get_cursors()
 
     # Fetch all pages in parallel
-    edges = fetch_pages(cursors)
+    # Cap at 32 to prevent overcommitting in high-core systems
+    max_workers = min(32, os.cpu_count() or 1)
+    edges = fetch_pages(cursors, max_workers=max_workers)
 
     end = time.time()
     duration = end - start
