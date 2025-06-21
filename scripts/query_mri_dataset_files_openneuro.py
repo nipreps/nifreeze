@@ -240,9 +240,6 @@ def query_dataset_files(ds):
     ds_id = ds["id"]
     snapshot_tag = ds["tag"]
 
-    # ToDo
-    # Check len(tasks) > 1 ??
-
     if not snapshot_tag or snapshot_tag == "NA":
         return ds_id, []
 
