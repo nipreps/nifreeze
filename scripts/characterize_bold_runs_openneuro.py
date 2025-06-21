@@ -20,9 +20,9 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""Extract fMRI BOLD file features from the BOLD data files contained in the
-records of each dataset in the input directory. The features computed include
-the number of time points of the volume.
+"""Characterize the BOLD data files contained in the records of each dataset in
+the input directory. The features computed include the number of volumes (time
+points) of each BOLD run.
 """
 
 import argparse
@@ -43,9 +43,6 @@ import requests
 from botocore import UNSIGNED  # type: ignore
 from botocore.config import Config  # type: ignore
 from tqdm import tqdm
-
-OPENNEURO_GRAPHQL_URL = "https://openneuro.org/crn/graphql"
-HEADERS = {"Content-Type": "application/json"}
 
 BUCKET = "openneuro.org"
 NBYTES = 512
