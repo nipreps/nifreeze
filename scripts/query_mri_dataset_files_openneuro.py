@@ -349,6 +349,8 @@ def main() -> None:
         "Script called with arguments:\n" + "\n".join(f"  {k}: {v}" for k, v in vars(args).items())
     )
 
+    logging.info(f"Querying {OPENNEURO_GRAPHQL_URL}...")
+
     sep = "\t"
     start = time.time()
 
