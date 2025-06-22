@@ -123,7 +123,7 @@ def filter_nonrelevant_datasets(df: pd.DataFrame) -> pd.DataFrame:
 
 def post_with_retry(
     url: str, headers: dict, payload: dict, retries: int = 5, backoff: float = 1.5
-):
+) -> requests.Response | None:
     """Post an HTTP request with retrying.
 
     If the request is unsuccessful, retry ``retries`` times after an exponential
@@ -166,6 +166,8 @@ def post_with_retry(
             logging.info(f"Request failed for {url}: {e}")
             return None
 
+    return None
+
 
 def query_snapshot_files(dataset_id: str, snapshot_tag: str, tree: str | None = None) -> list:
     """Query the list of files at a specific level of a dataset snapshot.
@@ -182,7 +184,7 @@ def query_snapshot_files(dataset_id: str, snapshot_tag: str, tree: str | None = 
 
     Returns
     -------
-    :obj:`list` or None
+    :obj:`list`
         Each dict represents a file or directory with fields 'id', 'filename',
         'size', 'directory', 'annexed', 'key', and 'urls'.
     """
@@ -207,7 +209,7 @@ def query_snapshot_files(dataset_id: str, snapshot_tag: str, tree: str | None = 
     response = post_with_retry(
         OPENNEURO_GRAPHQL_URL, HEADERS, {"query": query, "variables": variables}
     )
-    return response.json()["data"]["snapshot"]["files"] if response is not None else None
+    return response.json()["data"]["snapshot"]["files"] if response is not None else []
 
 
 def query_snapshot_tree(
@@ -256,7 +258,7 @@ def query_snapshot_tree(
     return all_files
 
 
-def query_dataset_files(ds):
+def query_dataset_files(ds: pd.Series) -> tuple:
     """Retrieve all files for a given OpenNeuro dataset snapshot.
 
     This function takes a dataset metadata dictionary (typically a row from a
@@ -268,8 +270,8 @@ def query_dataset_files(ds):
     ----------
     ds : :obj:`~pd.Series`
         A data series containing at least the keys:
-            - 'id': Dataset ID (e.g., "ds000001")
-            - 'tag': Snapshot tag (e.g., "1.0.0")
+          - 'id': Dataset ID (e.g., 'ds000001')
+          - 'tag': Snapshot tag (e.g., '1.0.0')
 
     Returns
     -------
@@ -280,7 +282,7 @@ def query_dataset_files(ds):
 
     Notes
     -----
-    - If 'tag' is missing or marked as "NA", no files are returned.
+    - If 'tag' is missing or marked as ``NA``, no files are returned.
     - Errors during querying are caught and logged, returning an empty file list.
     """
 
@@ -298,7 +300,7 @@ def query_dataset_files(ds):
         return ds_id, []
 
 
-def query_datasets(df, max_workers=8):
+def query_datasets(df: pd.DataFrame, max_workers: int = 8) -> dict:
     """Perform file queries over a DataFrame of datasets.
 
     Parameters
