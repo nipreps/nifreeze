@@ -126,12 +126,6 @@ def compute_bold_features(bold_files: dict, max_workers: int = 8) -> dict:
         Dataset records with BOLD features.
     """
 
-    # for dataset_id, df in bold_files.items():
-    #     # n_vols = get_nii_timepoints_s3(str(Path(dataset_id) / Path(df.iloc[0]["fullpath"])))
-    #     url_list = ast.literal_eval(df.iloc[0]["urls"])
-    #     url = url_list[0]
-    #     n_vols = get_nii_timepoints(url)
-
     results: dict[str, list[pd.Series]] = {dataset_id: [] for dataset_id in bold_files}
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
