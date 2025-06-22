@@ -121,6 +121,50 @@ def filter_nonrelevant_datasets(df: pd.DataFrame) -> pd.DataFrame:
     return df[species_mask & modality_mask]
 
 
+def post_with_retry(url: str, headers: dict, payload: dict, retries: int = 5, backoff: float = 1.5):
+    """Post an HTTP request with retrying.
+
+    If the request is unsuccessful, retry ``retries`` times after an exponential
+    wait time computed as :math:`backoff^attempt`.
+
+    Parameters
+    ----------
+    url : :obj:`str`
+        URL to post to.
+    headers : :obj:`dict`
+        HTTP headers.
+    payload : :obj:`dict`
+        HTTP payload.
+    retries : :obj:`int`, optional
+        Number of retry attempts.
+    backoff : :obj:`float`, optional
+        Retry delay.
+
+    Returns
+    -------
+    :obj:`requests.Response` or None
+        Request response. ``None`` if attempts failed.
+    """
+
+    for attempt in range(retries):
+        try:
+            response = requests.post(url, headers=headers, json=payload)
+            response.raise_for_status()
+            return response
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code if e.response is not None else None
+            if status == 502 and attempt < retries - 1:
+                wait = backoff ** attempt
+                logging.info(f"502 Bad Gateway, retrying in {wait:.1f}s...")
+                time.sleep(wait)
+            else:
+                logging.info(f"HTTPError for {url}: {e}")
+                return None
+        except requests.exceptions.RequestException as e:
+            logging.info(f"Request failed for {url}: {e}")
+            return None
+
+
 def query_snapshot_files(dataset_id: str, snapshot_tag: str, tree: str | None = None) -> list:
     """Query the list of files at a specific level of a dataset snapshot.
 
@@ -136,7 +180,7 @@ def query_snapshot_files(dataset_id: str, snapshot_tag: str, tree: str | None = 
 
     Returns
     -------
-    :obj:`list`
+    :obj:`list` or None
         Each dict represents a file or directory with fields 'id', 'filename',
         'size', 'directory', 'annexed', 'key', and 'urls'.
     """
@@ -158,13 +202,12 @@ def query_snapshot_files(dataset_id: str, snapshot_tag: str, tree: str | None = 
     """
 
     variables = {"datasetId": dataset_id, "tag": snapshot_tag, "tree": tree}
-    response = requests.post(
+    response = post_with_retry(
         OPENNEURO_GRAPHQL_URL,
-        headers=HEADERS,
-        json={"query": query, "variables": variables},
+        HEADERS,
+        {"query": query, "variables": variables}
     )
-    response.raise_for_status()
-    return response.json()["data"]["snapshot"]["files"]
+    return response.json()["data"]["snapshot"]["files"] if response is not None else None
 
 
 def query_snapshot_tree(
@@ -278,8 +321,8 @@ def query_datasets(df, max_workers=8):
         }
 
         for future in tqdm(as_completed(futures), total=len(futures), desc="Processing datasets"):
-            ds_id, files = future.result()
-            results[ds_id] = files
+            if (result := future.result()) is not None and result[1]:
+                results[result[0]] = result[1]
 
     return results
 
