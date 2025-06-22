@@ -294,7 +294,7 @@ def query_dataset_files(ds):
         files = query_snapshot_tree(ds_id, snapshot_tag)
         return ds_id, files
     except Exception as e:
-        logging.info(f"Failed to process {ds_id}: {e}")
+        logging.info(f"Failed to process {ds_id}:{snapshot_tag}: {e}")
         return ds_id, []
 
 
