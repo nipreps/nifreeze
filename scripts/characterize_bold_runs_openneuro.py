@@ -136,7 +136,7 @@ def compute_bold_features(bold_files: dict, max_workers: int = 8) -> dict:
                 rec_vols[VOLS] = n_vols
                 results[dataset_id].append(rec_vols)
             except Exception as e:
-                logging.info(f"Error processing {dataset_id}: {e}")
+                logging.info(f"Error processing {dataset_id}:{rec['fullpath']}: {e}")
 
     return results
 
