@@ -224,8 +224,8 @@ def write_dataset_file_lists(file_dict: dict, dirname: Path) -> None:
 
         df = pd.DataFrame(file_list)
         df.fillna("NA", inplace=True)
-        tsv_path = Path.joinpath(dirname, f"{dataset_id}.tsv")
-        df.to_csv(tsv_path, sep="\t", index=False)
+        fname = Path.joinpath(dirname, f"{dataset_id}.tsv")
+        df.to_csv(fname, sep="\t", index=False)
 
 
 def _configure_logging(out_dirname: Path) -> None:
