@@ -26,7 +26,6 @@ points) of each BOLD run.
 """
 
 import argparse
-import ast
 import gzip
 import io
 import logging
@@ -132,7 +131,11 @@ def compute_bold_features(bold_files: dict, max_workers: int = 8) -> dict:
         futures = {}
         for dataset_id, df in bold_files.items():
             for _, rec in df.iterrows():
-                futures[executor.submit(get_nii_timepoints_s3, str(Path(dataset_id) / Path(df.iloc[0]["fullpath"])))] = (dataset_id, rec)
+                futures[
+                    executor.submit(
+                        get_nii_timepoints_s3, str(Path(dataset_id) / Path(df.iloc[0]["fullpath"]))
+                    )
+                ] = (dataset_id, rec)
 
         for future in tqdm(
             as_completed(futures), total=len(futures), desc="Computing BOLD timepoint counts"

@@ -121,7 +121,9 @@ def filter_nonrelevant_datasets(df: pd.DataFrame) -> pd.DataFrame:
     return df[species_mask & modality_mask]
 
 
-def post_with_retry(url: str, headers: dict, payload: dict, retries: int = 5, backoff: float = 1.5):
+def post_with_retry(
+    url: str, headers: dict, payload: dict, retries: int = 5, backoff: float = 1.5
+):
     """Post an HTTP request with retrying.
 
     If the request is unsuccessful, retry ``retries`` times after an exponential
@@ -154,7 +156,7 @@ def post_with_retry(url: str, headers: dict, payload: dict, retries: int = 5, ba
         except requests.exceptions.HTTPError as e:
             status = e.response.status_code if e.response is not None else None
             if status == 502 and attempt < retries - 1:
-                wait = backoff ** attempt
+                wait = backoff**attempt
                 logging.info(f"502 Bad Gateway, retrying in {wait:.1f}s...")
                 time.sleep(wait)
             else:
@@ -203,9 +205,7 @@ def query_snapshot_files(dataset_id: str, snapshot_tag: str, tree: str | None = 
 
     variables = {"datasetId": dataset_id, "tag": snapshot_tag, "tree": tree}
     response = post_with_retry(
-        OPENNEURO_GRAPHQL_URL,
-        HEADERS,
-        {"query": query, "variables": variables}
+        OPENNEURO_GRAPHQL_URL, HEADERS, {"query": query, "variables": variables}
     )
     return response.json()["data"]["snapshot"]["files"] if response is not None else None
 
