@@ -43,7 +43,9 @@ from tqdm import tqdm
 OPENNEURO_GRAPHQL_URL = "https://openneuro.org/crn/graphql"
 HEADERS = {"Content-Type": "application/json"}
 
+DATASETID = "datasetid"
 DIRECTORY = "directory"
+FILENAME = "filename"
 FULLPATH = "fullpath"
 ID = "id"
 MODALITIES = "modalities"
@@ -212,7 +214,19 @@ def query_snapshot_files(dataset_id: str, snapshot_tag: str, tree: str | None = 
     response = post_with_retry(
         OPENNEURO_GRAPHQL_URL, HEADERS, {"query": query, "variables": variables}
     )
-    return response.json()["data"]["snapshot"]["files"] if response is not None else []
+
+    # Ensure that the JSON response object contains all required keys
+    if response is None:
+        return []
+
+    json_response = response.json()
+    snapshot = json_response.get("data", {}).get("snapshot")
+
+    if snapshot is None:
+        logging.warning(f"No snapshot returned for {dataset_id}:{snapshot_tag}")
+        return []
+
+    return snapshot.get("files", []) or []
 
 
 def query_snapshot_tree(
@@ -248,7 +262,7 @@ def query_snapshot_tree(
         return []
 
     for f in files:
-        current_path = f"{parent_path}/{f['filename']}".lstrip("/")
+        current_path = f"{parent_path}/{f[FILENAME]}".lstrip("/")
         if f[DIRECTORY]:
             sub_files = query_snapshot_tree(
                 dataset_id, snapshot_tag, f[ID], parent_path=current_path
@@ -261,7 +275,7 @@ def query_snapshot_tree(
     return all_files
 
 
-def query_dataset_files(ds: pd.Series) -> tuple:
+def query_dataset_files(dataset_id: str, snapshot_tag: str) -> list:
     """Retrieve all files for a given OpenNeuro dataset snapshot.
 
     This function takes a dataset metadata dictionary (typically a row from a
@@ -271,39 +285,36 @@ def query_dataset_files(ds: pd.Series) -> tuple:
 
     Parameters
     ----------
-    ds : :obj:`~pd.Series`
-        A data series containing at least the keys:
-          - 'id': Dataset ID (e.g., 'ds000001')
-          - 'tag': Snapshot tag (e.g., '1.0.0')
+    dataset_id : :obj:`str`
+        Dataset ID (e.g., 'ds000001').
+    snapshot_tag : :obj:`str`
+        Snapshot tag (e.g., '1.0.0').
 
     Returns
     -------
-    obj:`tuple`
-        A `str` with the dataset ID and a :obj:`list` with the metadata
-        dictionaries, each including the fields 'id', 'filename', 'size',
-        'directory', 'annexed', 'key', 'urls', and 'fullpath'.
+    :obj:`list`
+        List of files containing their the metadata dictionaries, each including
+        the fields 'id', 'filename', 'size', 'directory', 'annexed', 'key',
+        'urls', and 'fullpath'.
 
     Notes
     -----
     - If 'tag' is missing or marked as ``NA``, no files are returned.
-    - Errors during querying are caught and logged, returning an empty file list.
+    - Errors during querying are caught and logged, returning an empty list.
     """
 
-    ds_id = ds[ID]
-    snapshot_tag = ds[TAG]
-
     if not snapshot_tag or snapshot_tag == "NA":
-        return ds_id, []
+        return []
 
     try:
-        files = query_snapshot_tree(ds_id, snapshot_tag)
-        return ds_id, files
+        files = query_snapshot_tree(dataset_id, snapshot_tag)
+        return files
     except Exception as e:
-        logging.info(f"Failed to process {ds_id}:{snapshot_tag}: {e}")
-        return ds_id, []
+        logging.info(f"Failed to process {dataset_id}:{snapshot_tag}: {e}")
+        return []
 
 
-def query_datasets(df: pd.DataFrame, max_workers: int = 8) -> dict:
+def query_datasets(df: pd.DataFrame, max_workers: int = 8) -> tuple:
     """Perform file queries over a DataFrame of datasets.
 
     Parameters
@@ -315,21 +326,28 @@ def query_datasets(df: pd.DataFrame, max_workers: int = 8) -> dict:
 
     Returns
     -------
-    results : :obj:`dict`
+    success_results : :obj:`dict`
         Mapping from dataset ID to list of file metadata dictionaries.
+    failure_results : :obj:`list`
+        Dictionaries of failed dataset ID and snapshot tags.
     """
 
-    results = {}
+    success_results = {}
+    failure_results = []
+
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(query_dataset_files, row): row[ID] for _, row in df.iterrows()
+            executor.submit(query_dataset_files, row[ID], row[TAG]): (row[ID], row[TAG]) for _, row in df.iterrows()
         }
 
         for future in tqdm(as_completed(futures), total=len(futures), desc="Processing datasets"):
-            if (result := future.result()) is not None and result[1]:
-                results[result[0]] = result[1]
+            dataset_id, snapshot_tag = futures[future]
+            if future.exception() or not (result := future.result()):
+                failure_results.append({DATASETID: dataset_id, TAG: snapshot_tag})
+            else:
+                success_results[dataset_id] = [{DATASETID: dataset_id, TAG: snapshot_tag} | file for file in result]
 
-    return results
+    return success_results, failure_results
 
 
 def write_dataset_file_lists(file_dict: dict, dirname: Path) -> None:
@@ -340,7 +358,7 @@ def write_dataset_file_lists(file_dict: dict, dirname: Path) -> None:
 
     Parameters
     ----------
-    file_dict: :obj:`dict`
+    file_dict : :obj:`dict`
         A mapping from dataset ID to a list of file metadata dicts.
     dirname : :obj:`Path`
         Directory where TSV files will be written.
@@ -354,6 +372,21 @@ def write_dataset_file_lists(file_dict: dict, dirname: Path) -> None:
         df.fillna("NA", inplace=True)
         tsv_path = Path.joinpath(dirname, f"{dataset_id}.tsv")
         df.to_csv(tsv_path, sep="\t", index=False)
+
+
+def write_dataset_tags(dataset_tags: list, fname: Path) -> None:
+    """Write dataset tag dictionaries to a TSV file.
+
+    Parameters
+    ----------
+    dataset_tags : :obj:`list`
+        Dictionaries of dataset ID and snapshot tags.
+    fname : :obj:`Path`
+        Filename.
+    """
+
+    df = pd.DataFrame(dataset_tags)
+    df.to_csv(fname, sep="\t", index=False)
 
 
 def _configure_logging(out_dirname: Path) -> None:
@@ -421,15 +454,19 @@ def main() -> None:
 
     # Cap at 32 to prevent overcommitting in high-core systems
     max_workers = min(32, os.cpu_count() or 1)
-    datasets_files = query_datasets(df, max_workers=max_workers)
+    success_results, failed_results = query_datasets(df, max_workers=max_workers)
 
     end = time.time()
     duration = end - start
 
-    logging.info(f"Queried {len(datasets_files)} datasets in {duration:.2f} seconds.")
+    logging.info(f"Queried {len(success_results) + len(failed_results)} datasets in {duration:.2f} seconds.")
+    logging.info(f"{len(success_results)} queries succeeded.")
+    logging.info(f"{len(failed_results)} queries failed.")
 
     # Serialize
-    write_dataset_file_lists(datasets_files, args.out_dirname)
+    write_dataset_file_lists(success_results, args.out_dirname)
+    failed_datasets_info_fname = Path.joinpath(args.out_dirname, "failed_dataset_tag_queries.tsv")
+    write_dataset_tags(failed_results, failed_datasets_info_fname)
 
 
 if __name__ == "__main__":
