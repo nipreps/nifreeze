@@ -47,6 +47,7 @@ BUCKET = "openneuro.org"
 NBYTES = 512
 BYTE_RANGE = f"bytes=0-{NBYTES}"
 
+FULLPATH = "fullpath"
 VOLS = "vols"
 
 s3 = boto3.client("s3", config=Config(signature_version=UNSIGNED))
@@ -133,7 +134,7 @@ def compute_bold_features(bold_files: dict, max_workers: int = 8) -> dict:
             for _, rec in df.iterrows():
                 futures[
                     executor.submit(
-                        get_nii_timepoints_s3, str(Path(dataset_id) / Path(df.iloc[0]["fullpath"]))
+                        get_nii_timepoints_s3, str(Path(dataset_id) / Path(df.iloc[0][FULLPATH]))
                     )
                 ] = (dataset_id, rec)
 
@@ -147,7 +148,7 @@ def compute_bold_features(bold_files: dict, max_workers: int = 8) -> dict:
                 rec_vols[VOLS] = n_vols
                 results[dataset_id].append(rec_vols)
             except Exception as e:
-                logging.info(f"Error processing {dataset_id}:{rec['fullpath']}: {e}")
+                logging.info(f"Error processing {dataset_id}:{rec[FULLPATH]}: {e}")
 
     return results
 

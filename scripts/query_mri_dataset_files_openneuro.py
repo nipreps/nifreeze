@@ -43,6 +43,9 @@ from tqdm import tqdm
 OPENNEURO_GRAPHQL_URL = "https://openneuro.org/crn/graphql"
 HEADERS = {"Content-Type": "application/json"}
 
+DIRECTORY = "directory"
+FULLPATH = "fullpath"
+ID = "id"
 MODALITIES = "modalities"
 SPECIES = "species"
 TAG = "tag"
@@ -246,13 +249,13 @@ def query_snapshot_tree(
 
     for f in files:
         current_path = f"{parent_path}/{f['filename']}".lstrip("/")
-        if f["directory"]:
+        if f[DIRECTORY]:
             sub_files = query_snapshot_tree(
-                dataset_id, snapshot_tag, f["id"], parent_path=current_path
+                dataset_id, snapshot_tag, f[ID], parent_path=current_path
             )
             all_files.extend(sub_files)
         else:
-            f["fullpath"] = current_path
+            f[FULLPATH] = current_path
             all_files.append(f)
 
     return all_files
@@ -286,8 +289,8 @@ def query_dataset_files(ds: pd.Series) -> tuple:
     - Errors during querying are caught and logged, returning an empty file list.
     """
 
-    ds_id = ds["id"]
-    snapshot_tag = ds["tag"]
+    ds_id = ds[ID]
+    snapshot_tag = ds[TAG]
 
     if not snapshot_tag or snapshot_tag == "NA":
         return ds_id, []
@@ -319,7 +322,7 @@ def query_datasets(df: pd.DataFrame, max_workers: int = 8) -> dict:
     results = {}
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(query_dataset_files, row): row["id"] for _, row in df.iterrows()
+            executor.submit(query_dataset_files, row): row[ID] for _, row in df.iterrows()
         }
 
         for future in tqdm(as_completed(futures), total=len(futures), desc="Processing datasets"):
