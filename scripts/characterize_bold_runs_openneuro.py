@@ -47,6 +47,7 @@ BUCKET = "openneuro.org"
 NBYTES = 512
 BYTE_RANGE = f"bytes=0-{NBYTES}"
 
+DATASETID = "datasetid"
 FULLPATH = "fullpath"
 VOLS = "vols"
 
@@ -108,7 +109,7 @@ def get_nii_timepoints(url):
         return header["dim"][4]
 
 
-def compute_bold_features(bold_files: dict, max_workers: int = 8) -> dict:
+def compute_bold_features(bold_files: dict, max_workers: int = 8) -> tuple:
     """Compute BOLD run features.
 
     Computes the number of timepoints for all BOLD runs in each dataset.
@@ -122,11 +123,14 @@ def compute_bold_features(bold_files: dict, max_workers: int = 8) -> dict:
 
     Returns
     -------
-    :obj:`~dict`
+    success_results : :obj:`~dict`
         Dataset records with BOLD features.
+    failure_results : :obj:`list`
+        Dictionaries of failed dataset ID and file paths.
     """
 
-    results: dict[str, list[pd.Series]] = {dataset_id: [] for dataset_id in bold_files}
+    success_results: dict[str, list[pd.Series]] = {dataset_id: [] for dataset_id in bold_files}
+    failure_results = []
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {}
@@ -146,11 +150,12 @@ def compute_bold_features(bold_files: dict, max_workers: int = 8) -> dict:
                 n_vols = future.result()
                 rec_vols = rec.copy()
                 rec_vols[VOLS] = n_vols
-                results[dataset_id].append(rec_vols)
+                failure_results[dataset_id].append(rec_vols)
             except Exception as e:
                 logging.info(f"Error processing {dataset_id}:{rec[FULLPATH]}: {e}")
+                failure_results.append({DATASETID: dataset_id, FULLPATH: rec[FULLPATH]})
 
-    return results
+    return success_results, failure_results
 
 
 def filter_nonbold_records(fname: str) -> pd.DataFrame:
@@ -228,6 +233,21 @@ def write_dataset_file_lists(file_dict: dict, dirname: Path) -> None:
         df.to_csv(fname, sep="\t", index=False)
 
 
+def write_dataset_paths(dataset_paths: list, fname: Path) -> None:
+    """Write dataset tag dictionaries to a TSV file.
+
+    Parameters
+    ----------
+    dataset_paths : :obj:`list`
+        Dictionaries of dataset ID and snapshot tags.
+    fname : :obj:`Path`
+        Filename.
+    """
+
+    df = pd.DataFrame(dataset_paths)
+    df.to_csv(fname, sep="\t", index=False)
+
+
 def _configure_logging(out_dirname: Path) -> None:
     # Clear existing handlers
     for handler in logging.root.handlers[:]:
@@ -287,7 +307,7 @@ def main() -> None:
 
     logging.info(f"Found {sum([len(item) for item in bold_files.values()])} BOLD runs.")
 
-    fmri_bold_vols = compute_bold_features(bold_files)
+    success_results, failed_results = compute_bold_features(bold_files)
 
     end = time.time()
     duration = end - start
@@ -295,8 +315,12 @@ def main() -> None:
     logging.info(
         f"Characterized {sum([len(item) for item in bold_files.values()])} BOLD runs in {duration:.2f} seconds."
     )
+    logging.info(f"{len(success_results)} analyses succeeded.")
+    logging.info(f"{len(failed_results)} analyses failed.")
 
-    write_dataset_file_lists(fmri_bold_vols, args.out_dirname)
+    write_dataset_file_lists(success_results, args.out_dirname)
+    failed_files_info_fname = Path.joinpath(args.out_dirname, "failed_dataset_tag_queries.tsv")
+    write_dataset_paths(failed_results, failed_files_info_fname)
 
 
 if __name__ == "__main__":
