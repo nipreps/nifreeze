@@ -54,6 +54,23 @@ s3 = boto3.client("s3", config=Config(signature_version=UNSIGNED))
 
 
 def get_nii_timepoints_s3(filename):
+    """Compute the number of timepoints of the provided OpenNeuro NIfTI file.
+
+    Computes the number of timepoints as the size along the last dimension from
+    the header of the response bitstream without actually downloading the entire
+    contents if the server supports Range requests.
+
+    Parameters
+    ----------
+    filename : :obj:`str`
+        NIfTI filename (e.g. 'ds000149/sub-01/func/sub-01_task-picturemanualresponse_run-01_bold.nii.gz')
+
+    Returns
+    -------
+    :obj:`int:
+        Number of timepoints.
+    """
+
     response = s3.get_object(Bucket=BUCKET, Key=filename, Range=BYTE_RANGE)
     data = response["Body"].read()
 
@@ -121,10 +138,7 @@ def compute_bold_features(bold_files: dict, max_workers: int = 8) -> dict:
         futures = {}
         for dataset_id, df in bold_files.items():
             for _, rec in df.iterrows():
-                url = ast.literal_eval(rec["urls"])
-                assert len(url) == 1
-                url = url[0]
-                futures[executor.submit(get_nii_timepoints, url)] = (dataset_id, rec)
+                futures[executor.submit(get_nii_timepoints_s3, str(Path(dataset_id) / Path(df.iloc[0]["fullpath"])))] = (dataset_id, rec)
 
         for future in tqdm(
             as_completed(futures), total=len(futures), desc="Computing BOLD timepoint counts"
