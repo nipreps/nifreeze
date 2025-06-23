@@ -33,7 +33,7 @@ import ast
 import logging
 import os
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
 from pathlib import Path
 
 import pandas as pd
@@ -155,7 +155,7 @@ def post_with_retry(
 
     for attempt in range(retries):
         try:
-            response = requests.post(url, headers=headers, json=payload)
+            response = requests.post(url, headers=headers, json=payload, timeout=20)
             response.raise_for_status()
             return response
         except requests.exceptions.HTTPError as e:
@@ -167,7 +167,13 @@ def post_with_retry(
             else:
                 logging.info(f"HTTPError for {url}: {e}")
                 return None
+        except requests.exceptions.SSLError as e:
+                logging.info(f"SSLError for {url}: {e}")
+                return None
         except requests.exceptions.RequestException as e:
+            logging.info(f"RequestException for {url}: {e}")
+            return None
+        except requests.exceptions as e:
             logging.info(f"Request failed for {url}: {e}")
             return None
 
@@ -304,6 +310,7 @@ def query_dataset_files(dataset_id: str, snapshot_tag: str) -> list:
     """
 
     if not snapshot_tag or snapshot_tag == "NA":
+        logging.info(f"Snapshot empty for {dataset_id}")
         return []
 
     try:
@@ -342,10 +349,16 @@ def query_datasets(df: pd.DataFrame, max_workers: int = 8) -> tuple:
 
         for future in tqdm(as_completed(futures), total=len(futures), desc="Processing datasets"):
             dataset_id, snapshot_tag = futures[future]
-            if future.exception() or not (result := future.result()):
-                failure_results.append({DATASETID: dataset_id, TAG: snapshot_tag})
-            else:
+            try:
+                result = future.result(timeout=20)
                 success_results[dataset_id] = [{DATASETID: dataset_id, TAG: snapshot_tag} | file for file in result]
+            except TimeoutError:
+                logging.info(f"Timeout for {dataset_id}:{snapshot_tag}")
+                failure_results.append({DATASETID: dataset_id, TAG: snapshot_tag})
+            except Exception as e:
+                logging.info(
+                    f"Failed to process {dataset_id}:{snapshot_tag}: {e}")
+                failure_results.append({DATASETID: dataset_id, TAG: snapshot_tag})
 
     return success_results, failure_results
 
