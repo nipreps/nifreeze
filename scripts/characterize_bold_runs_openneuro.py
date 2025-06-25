@@ -150,7 +150,7 @@ def compute_bold_features(bold_files: dict, max_workers: int = 8) -> tuple:
                 n_vols = future.result()
                 rec_vols = rec.copy()
                 rec_vols[VOLS] = n_vols
-                failure_results[dataset_id].append(rec_vols)
+                success_results[dataset_id].append(rec_vols)
             except Exception as e:
                 logging.info(f"Error processing {dataset_id}:{rec[FULLPATH]}: {e}")
                 failure_results.append({DATASETID: dataset_id, FULLPATH: rec[FULLPATH]})
