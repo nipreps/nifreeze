@@ -326,7 +326,7 @@ def main() -> None:
     logging.info(
         f"Characterized {sum([len(item) for item in bold_files.values()])} BOLD runs in {duration:.2f} seconds."
     )
-    logging.info(f"{len(success_results)} analyses succeeded.")
+    logging.info(f"{sum(len(v) for v in success_results.values())} analyses succeeded.")
     logging.info(f"{len(failed_results)} analyses failed.")
 
     write_dataset_file_lists(success_results, args.out_dirname, sep)
