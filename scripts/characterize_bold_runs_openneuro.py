@@ -155,10 +155,11 @@ def compute_bold_features(bold_files: dict, max_workers: int = 8) -> tuple:
                 logging.info(f"Error processing {dataset_id}:{rec[FULLPATH]}: {e}")
                 failure_results.append({DATASETID: dataset_id, FULLPATH: rec[FULLPATH]})
 
+    # Sort results before returning
     return success_results, failure_results
 
 
-def filter_nonbold_records(fname: str) -> pd.DataFrame:
+def filter_nonbold_records(fname: str, sep: str) -> pd.DataFrame:
     """Keep records where 'filename' matches BOLD naming.
 
     Keeps records where 'filename' ends with '_bold.nii.gz'.
@@ -167,6 +168,8 @@ def filter_nonbold_records(fname: str) -> pd.DataFrame:
     ----------
     fname : :obj:`str`
         Filename.
+    sep : :obj:`str`
+        Separator.
 
     Returns
     -------
@@ -174,11 +177,11 @@ def filter_nonbold_records(fname: str) -> pd.DataFrame:
         BOLD file records.
     """
 
-    df = pd.read_csv(fname, sep="\t")
+    df = pd.read_csv(fname, sep=sep)
     return df[df["filename"].apply(lambda fn: bool(re.search(r"_bold\.nii\.gz$", fn)))]
 
 
-def identify_bold_files(datasets: dict, max_workers: int = 8) -> dict:
+def identify_bold_files(datasets: dict, sep: str, max_workers: int = 8) -> dict:
     """Identify dataset BOLD files.
 
     For each dataset, keeps records where 'filename' ends with '_bold.nii.gz'.
@@ -187,6 +190,8 @@ def identify_bold_files(datasets: dict, max_workers: int = 8) -> dict:
     ----------
     datasets : :obj:`dict`
         Dataset file information.
+    sep : :obj:`str`
+        Separator.
     max_workers : :obj:`int`, optional
         Maximum number of parallel threads to use.
 
@@ -198,7 +203,7 @@ def identify_bold_files(datasets: dict, max_workers: int = 8) -> dict:
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(filter_nonbold_records, val): key for key, val in datasets.items()
+            executor.submit(filter_nonbold_records, val, sep): key for key, val in datasets.items()
         }
 
         results = {}
@@ -209,7 +214,7 @@ def identify_bold_files(datasets: dict, max_workers: int = 8) -> dict:
     return dict(sorted(results.items()))
 
 
-def write_dataset_file_lists(file_dict: dict, dirname: Path) -> None:
+def write_dataset_file_lists(file_dict: dict, dirname: Path, sep: str) -> None:
     """Write each dataset's list of files to a TSV file.
 
     Writes each file list as a TSV named <dataset_id>.tsv, and uses dict keys as
@@ -221,6 +226,8 @@ def write_dataset_file_lists(file_dict: dict, dirname: Path) -> None:
         A mapping from dataset ID to a list of file metadata dicts.
     dirname : :obj:`Path`
         Directory where TSV files will be written.
+    sep : :obj:`str`
+        Separator.
     """
 
     for dataset_id, file_list in file_dict.items():
@@ -230,10 +237,10 @@ def write_dataset_file_lists(file_dict: dict, dirname: Path) -> None:
         df = pd.DataFrame(file_list)
         df.fillna("NA", inplace=True)
         fname = Path.joinpath(dirname, f"{dataset_id}.tsv")
-        df.to_csv(fname, sep="\t", index=False)
+        df.to_csv(fname, sep=sep, index=False)
 
 
-def write_dataset_paths(dataset_paths: list, fname: Path) -> None:
+def write_dataset_paths(dataset_paths: list, fname: Path, sep: str) -> None:
     """Write dataset tag dictionaries to a TSV file.
 
     Parameters
@@ -242,10 +249,12 @@ def write_dataset_paths(dataset_paths: list, fname: Path) -> None:
         Dictionaries of dataset ID and snapshot tags.
     fname : :obj:`Path`
         Filename.
+    sep : :obj:`str`
+        Separator.
     """
 
     df = pd.DataFrame(dataset_paths)
-    df.to_csv(fname, sep="\t", index=False)
+    df.to_csv(fname, sep=sep, index=False)
 
 
 def _configure_logging(out_dirname: Path) -> None:
@@ -289,6 +298,8 @@ def main() -> None:
         "Script called with arguments:\n" + "\n".join(f"  {k}: {v}" for k, v in vars(args).items())
     )
 
+    sep = "\t"
+
     start = time.time()
 
     # Consider only files that have the "ds\d{6}\.tsv" pattern (e.g.
@@ -303,7 +314,7 @@ def main() -> None:
 
     # Cap at 32 to prevent overcommitting in high-core systems
     max_workers = min(32, os.cpu_count() or 1)
-    bold_files = identify_bold_files(datasets, max_workers=max_workers)
+    bold_files = identify_bold_files(datasets, sep, max_workers=max_workers)
 
     logging.info(f"Found {sum([len(item) for item in bold_files.values()])} BOLD runs.")
 
@@ -318,9 +329,9 @@ def main() -> None:
     logging.info(f"{len(success_results)} analyses succeeded.")
     logging.info(f"{len(failed_results)} analyses failed.")
 
-    write_dataset_file_lists(success_results, args.out_dirname)
+    write_dataset_file_lists(success_results, args.out_dirname, sep)
     failed_files_info_fname = Path.joinpath(args.out_dirname, "failed_dataset_tag_queries.tsv")
-    write_dataset_paths(failed_results, failed_files_info_fname)
+    write_dataset_paths(failed_results, failed_files_info_fname, sep)
 
 
 if __name__ == "__main__":

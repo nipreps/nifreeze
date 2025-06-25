@@ -363,7 +363,7 @@ def query_datasets(df: pd.DataFrame, max_workers: int = 8) -> tuple:
     return success_results, failure_results
 
 
-def write_dataset_file_lists(file_dict: dict, dirname: Path) -> None:
+def write_dataset_file_lists(file_dict: dict, dirname: Path, sep: str) -> None:
     """Write each dataset's list of files to a TSV file.
 
     Writes each file list as a TSV named <dataset_id>.tsv, and uses dict keys as
@@ -375,6 +375,8 @@ def write_dataset_file_lists(file_dict: dict, dirname: Path) -> None:
         A mapping from dataset ID to a list of file metadata dicts.
     dirname : :obj:`Path`
         Directory where TSV files will be written.
+    sep : :obj:`str`
+        Separator.
     """
 
     for dataset_id, file_list in file_dict.items():
@@ -384,10 +386,10 @@ def write_dataset_file_lists(file_dict: dict, dirname: Path) -> None:
         df = pd.DataFrame(file_list)
         df.fillna("NA", inplace=True)
         tsv_path = Path.joinpath(dirname, f"{dataset_id}.tsv")
-        df.to_csv(tsv_path, sep="\t", index=False)
+        df.to_csv(tsv_path, sep=sep, index=False)
 
 
-def write_dataset_tags(dataset_tags: list, fname: Path) -> None:
+def write_dataset_tags(dataset_tags: list, fname: Path, sep: str) -> None:
     """Write dataset tag dictionaries to a TSV file.
 
     Parameters
@@ -396,10 +398,12 @@ def write_dataset_tags(dataset_tags: list, fname: Path) -> None:
         Dictionaries of dataset ID and snapshot tags.
     fname : :obj:`Path`
         Filename.
+    sep : :obj:`str`
+        Separator.
     """
 
     df = pd.DataFrame(dataset_tags)
-    df.to_csv(fname, sep="\t", index=False)
+    df.to_csv(fname, sep=sep, index=False)
 
 
 def _configure_logging(out_dirname: Path) -> None:
@@ -446,6 +450,7 @@ def main() -> None:
     logging.info(f"Querying {OPENNEURO_GRAPHQL_URL}...")
 
     sep = "\t"
+
     start = time.time()
 
     # Ensure that the tag column is read as a string to prevent leading zeros
@@ -477,9 +482,9 @@ def main() -> None:
     logging.info(f"{len(failed_results)} queries failed.")
 
     # Serialize
-    write_dataset_file_lists(success_results, args.out_dirname)
+    write_dataset_file_lists(success_results, args.out_dirname, sep)
     failed_datasets_info_fname = Path.joinpath(args.out_dirname, "failed_dataset_tag_queries.tsv")
-    write_dataset_tags(failed_results, failed_datasets_info_fname)
+    write_dataset_tags(failed_results, failed_datasets_info_fname, sep)
 
 
 if __name__ == "__main__":

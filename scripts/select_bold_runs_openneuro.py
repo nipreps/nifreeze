@@ -274,6 +274,8 @@ def main() -> None:
         "Script called with arguments:\n" + "\n".join(f"  {k}: {v}" for k, v in vars(args).items())
     )
 
+    sep = "\t"
+
     start = time.time()
 
     # Consider only files that have the "ds\d{6}\.tsv" pattern (e.g.
@@ -290,7 +292,7 @@ def main() -> None:
         [
             df.assign(**{DATASETID: k})[[DATASETID] + df.columns.tolist()]
             for k, f in datasets.items()
-            for df in [pd.read_csv(f, sep="\t")]
+            for df in [pd.read_csv(f, sep=sep)]
         ],
         ignore_index=True,
     )
@@ -314,7 +316,7 @@ def main() -> None:
     )
 
     df_rel_runs.fillna("NA", inplace=True)
-    df_rel_runs.to_csv(args.out_fname, sep="\t", index=False)
+    df_rel_runs.to_csv(args.out_fname, sep=sep, index=False)
 
 
 if __name__ == "__main__":
