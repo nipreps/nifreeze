@@ -156,7 +156,9 @@ def compute_bold_features(bold_files: dict, max_workers: int = 8) -> tuple:
                 failure_results.append({DATASETID: dataset_id, FULLPATH: rec[FULLPATH]})
 
     # Sort results before returning
-    return success_results, failure_results
+    return {
+        k: sorted(v, key=lambda s: s[FULLPATH]) for k, v in sorted(success_results.items())
+    }, sorted(failure_results, key=lambda x: (x[DATASETID], x[FULLPATH]))
 
 
 def filter_nonbold_records(fname: str, sep: str) -> pd.DataFrame:

@@ -49,6 +49,7 @@ TOTAL_RUNS = 4000
 """Number of total runs."""
 
 DATASETID = "datasetid"
+FILENAME = "filename"
 VOLS = "vols"
 
 
@@ -208,7 +209,7 @@ def identify_relevant_runs(
     contrib_thr = int(contr_fraction * total_runs)
     df = filter_runs(df, contrib_thr, min_timepoints, max_timepoints, seed)
 
-    return df.head(total_runs).sort_values(by=[DATASETID])
+    return df.head(total_runs).sort_values(by=[DATASETID, FILENAME])
 
 
 def _configure_logging(out_dirname: Path) -> None:
