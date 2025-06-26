@@ -123,10 +123,9 @@ def compute_bold_features(bold_files: dict, max_workers: int = 8) -> tuple:
 
     Returns
     -------
-    success_results : :obj:`~dict`
-        Dataset records with BOLD features.
-    failure_results : :obj:`list`
-        Dictionaries of failed dataset ID and file paths.
+    :obj:`tuple`
+        A dictionary of dataset records with the computed BOLD features, and a
+        list of failed dataset ID and file paths.
     """
 
     success_results: dict[str, list[pd.Series]] = {dataset_id: [] for dataset_id in bold_files}

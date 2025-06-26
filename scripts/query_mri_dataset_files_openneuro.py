@@ -333,10 +333,9 @@ def query_datasets(df: pd.DataFrame, max_workers: int = 8) -> tuple:
 
     Returns
     -------
-    success_results : :obj:`dict`
-        Mapping from dataset ID to list of file metadata dictionaries.
-    failure_results : :obj:`list`
-        Dictionaries of failed dataset ID and snapshot tags.
+    :obj:`tuple`
+        A mapping from dataset ID to list of file metadata dictionaries, and a
+        list of failed dataset ID and snapshot tags.
     """
 
     success_results = {}
