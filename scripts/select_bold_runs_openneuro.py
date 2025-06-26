@@ -287,16 +287,8 @@ def main() -> None:
         if entry.is_file() and re.fullmatch(r"ds\d{6}\.tsv", entry.name)
     }
 
-    # Read all feature data and concatenate them into a dataframe prepending the
-    # dataset id
-    df = pd.concat(
-        [
-            df.assign(**{DATASETID: k})[[DATASETID] + df.columns.tolist()]
-            for k, f in datasets.items()
-            for df in [pd.read_csv(f, sep=sep)]
-        ],
-        ignore_index=True,
-    )
+    # Read all feature data and concatenate them into a dataframe
+    df = pd.concat([pd.read_csv(val, sep=sep) for val in datasets.values()], ignore_index=True)
 
     logging.info(f"Analyzing {len(df)} runs...")
 
