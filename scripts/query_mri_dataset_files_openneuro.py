@@ -310,7 +310,7 @@ def query_dataset_files(dataset_id: str, snapshot_tag: str) -> list:
     """
 
     if not snapshot_tag or snapshot_tag == "NA":
-        logging.info(f"Snapshot empty for {dataset_id}")
+        logging.warning(f"Snapshot empty for {dataset_id}")
         return []
 
     try:

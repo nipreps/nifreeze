@@ -151,7 +151,7 @@ def compute_bold_features(bold_files: dict, max_workers: int = 8) -> tuple:
                 rec_vols[VOLS] = n_vols
                 success_results[dataset_id].append(rec_vols)
             except Exception as e:
-                logging.info(f"Error processing {dataset_id}:{rec[FULLPATH]}: {e}")
+                logging.warning(f"Failed to process {dataset_id}:{rec[FULLPATH]}: {e}")
                 failure_results.append({DATASETID: dataset_id, FULLPATH: rec[FULLPATH]})
 
     # Sort results before returning
