@@ -359,7 +359,10 @@ def query_datasets(df: pd.DataFrame, max_workers: int = 8) -> tuple:
                     f"Failed to process {dataset_id}:{snapshot_tag}: {e}")
                 failure_results.append({DATASETID: dataset_id, TAG: snapshot_tag})
 
-    return success_results, failure_results
+    # Sort results before returning
+    return {
+        k: sorted(v, key=lambda s: s[FULLPATH]) for k, v in sorted(success_results.items())
+    }, sorted(failure_results, key=lambda x: (x[DATASETID], x[FULLPATH]))
 
 
 def write_dataset_file_lists(file_dict: dict, dirname: Path, sep: str) -> None:
