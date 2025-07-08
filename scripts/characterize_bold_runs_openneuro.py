@@ -20,9 +20,19 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""Characterize the BOLD data files contained in the records of each dataset in
+"""
+Script to identify BOLD files for our RR within OpenNeuro datasets.
+
+Characterizes the BOLD data files contained in the records of each dataset in
 the input directory. The features computed include the number of volumes (time
 points) of each BOLD run.
+
+Example
+-------
+  $ characterize_bold_runs_openneuro.py \
+     dataset_files \
+     dataset_features
+
 """
 
 import argparse

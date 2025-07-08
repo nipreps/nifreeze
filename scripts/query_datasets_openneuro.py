@@ -20,9 +20,16 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""Query existing dataset information from OpenNeuro. The 'id', 'name',
-'species', 'tag', 'dataset_doi', 'modalities', and 'tasks' features of the
-available datasets are stored to a TSV file.
+"""
+Query existing dataset information from OpenNeuro.
+
+The 'id', 'name', 'species', 'tag', 'dataset_doi', 'modalities', and 'tasks' features of the
+available datasets are stored in a TSV file.
+
+Example
+-------
+  $ query_datasets_openneuro.py \
+     openneuro_datasets.tsv
 """
 
 import argparse

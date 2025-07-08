@@ -20,12 +20,26 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""Select relevant fMRI BOLD runs based on a set of requirements applied to set
-of features computed from the BOLD data files:
+"""
+Select relevant fMRI BOLD runs based on a set of requirements.
+
+Requirements:
   - Criterion 1: no single dataset shall contribute more than a fraction of the
     total number of runs.
   - Criterion 2: each BOLD run shall have between a minimum and maximum
     number of timepoints (inclusive).
+
+Example
+-------
+  $ select_bold_runs_openneuro.py \
+     dataset_features \
+     selected_openneuro_datasets.tsv \
+     1234 \
+     --total-runs 4000 \
+     --contr-fraction 0.05 \
+     --min-timepoints 300 \
+     --max-timepoints 1200
+
 """
 
 import argparse

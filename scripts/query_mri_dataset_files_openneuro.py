@@ -20,12 +20,22 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""Query OpenNeuro human (f)MRI dataset files using the dataset IDs read from
-the input file. Only those datasets having 'human' in the species field are
-kept. Any dataset having one of {'bold', 'fmri', 'mri'} in the 'modality' field
-is considered as an fMRI dataset. For each queried dataset, the list of files is
-stored to a TSV file, along with the 'id', 'filename', 'size', 'directory',
+"""
+Query OpenNeuro for human (f)MRI datasets' files using IDs read from the input file.
+
+Only those datasets having 'human' in the species field are kept.
+Any dataset having one of {'bold', 'fmri', 'mri'} in the 'modality' field
+is considered an fMRI dataset. For each queried dataset, the list of files is
+stored in a TSV file, along with the 'id', 'filename', 'size', 'directory',
 'annexed', 'key', 'urls', and 'fullpath' features.
+
+Examples
+--------
+  $ query_mri_dataset_files_openneuro.py \
+     openneuro_datasets.tsv \
+     dataset_files
+
+
 """
 
 import argparse
