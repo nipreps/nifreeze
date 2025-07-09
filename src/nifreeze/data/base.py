@@ -24,7 +24,6 @@
 
 from __future__ import annotations
 
-from collections import namedtuple
 from pathlib import Path
 from tempfile import mkdtemp
 from typing import Any, Generic
@@ -34,7 +33,6 @@ import h5py
 import nibabel as nb
 import numpy as np
 from nibabel.spatialimages import SpatialHeader
-from nitransforms.linear import Affine
 from typing_extensions import Self, TypeVarTuple, Unpack
 
 Ts = TypeVarTuple("Ts")
@@ -162,7 +160,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
         """Get the filepath of the HDF5 file."""
         return self._filepath
 
-    def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
+    def set_transform(self, index: int, affine: np.ndarray) -> None:
         """
         Set an affine transform for a particular index and update the data object.
 
@@ -172,36 +170,13 @@ class BaseDataset(Generic[Unpack[Ts]]):
             The volume index to transform.
         affine : :obj:`numpy.ndarray`
             The 4x4 affine matrix to be applied.
-        order : :obj:`int`, optional
-            The order of the spline interpolation.
 
         """
-        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
-        reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
-
-        xform = Affine(matrix=affine, reference=reference)
-
-        if not Path(self._filepath).exists():
-            self.to_filename(self._filepath)
-
-        # read original DWI data & b-vector
-        with h5py.File(self._filepath, "r") as in_file:
-            root = in_file["/0"]
-            dataframe = np.asanyarray(root["dataobj"][..., index])
-
-        datamoving = nb.Nifti1Image(dataframe, self.affine, None)
-
-        # resample and update orientation at index
-        self.dataobj[..., index] = np.asanyarray(
-            xform.apply(datamoving, order=order).dataobj,
-            dtype=self.dataobj.dtype,
-        )
-
         # if head motion affines are to be used, initialized to identities
         if self.motion_affines is None:
-            self.motion_affines = np.repeat(np.zeros((4, 4))[None, ...], len(self), axis=0)
+            self.motion_affines = np.repeat(np.eye(4)[None, ...], len(self), axis=0)
 
-        self.motion_affines[index] = xform.matrix
+        self.motion_affines[index] = affine
 
     def to_filename(
         self, filename: Path | str, compression: str | None = None, compression_opts: Any = None
@@ -253,6 +228,24 @@ class BaseDataset(Generic[Unpack[Ts]]):
             The output NIfTI file path.
 
         """
+
+        # TODO: Resample if motion_affines is not None
+        # if not Path(self._filepath).exists():
+        #     self.to_filename(self._filepath)
+
+        # # read original DWI data & b-vector
+        # with h5py.File(self._filepath, "r") as in_file:
+        #     root = in_file["/0"]
+        #     dataframe = np.asanyarray(root["dataobj"][..., index])
+
+        # datamoving = nb.Nifti1Image(dataframe, self.affine, None)
+
+        # # resample and update orientation at index
+        # self.dataobj[..., index] = np.asanyarray(
+        #     xform.apply(datamoving, order=order).dataobj,
+        #     dtype=self.dataobj.dtype,
+        # )
+
         nii = nb.Nifti1Image(self.dataobj, self.affine, self.datahdr)
         if self.datahdr is None:
             nii.header.set_xyzt_units("mm")

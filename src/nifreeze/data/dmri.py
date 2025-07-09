@@ -24,7 +24,6 @@
 
 from __future__ import annotations
 
-from collections import namedtuple
 from pathlib import Path
 from typing import Any
 from warnings import warn
@@ -35,7 +34,6 @@ import nibabel as nb
 import numpy as np
 import numpy.typing as npt
 from nibabel.spatialimages import SpatialImage
-from nitransforms.linear import Affine
 from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr
@@ -172,41 +170,6 @@ class DWI(BaseDataset[np.ndarray | None]):
         ]
         return list(zip(bval_estimated, indices, strict=True))
 
-    def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
-        """
-        Set an affine transform for a particular index and update the data object.
-
-        The new affine is set as in :obj:`~nifreeze.data.base.BaseDataset.set_transform`,
-        and, in addition, the corresponding gradient vector is rotated.
-
-        Parameters
-        ----------
-        index : :obj:`int`
-            The volume index to transform.
-        affine : :obj:`numpy.ndarray`
-            The 4x4 affine matrix to be applied.
-        order : :obj:`int`, optional
-            The order of the spline interpolation.
-
-        """
-        if not Path(self._filepath).exists():
-            self.to_filename(self._filepath)
-
-        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
-        reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
-
-        xform = Affine(matrix=affine, reference=reference)
-        bvec = self.bvecs[:, index]
-
-        # invert transform transform b-vector and origin
-        r_bvec = (~xform).map([bvec, (0.0, 0.0, 0.0)])
-        # Reset b-vector's origin
-        new_bvec = r_bvec[1] - r_bvec[0]
-        # Normalize and update
-        self.gradients[:-1, index] = new_bvec / np.linalg.norm(new_bvec)
-
-        super().set_transform(index, affine, order)
-
     def to_filename(
         self,
         filename: Path | str,
@@ -269,6 +232,20 @@ class DWI(BaseDataset[np.ndarray | None]):
 
         bvals = self.bvals
         bvecs = self.bvecs
+
+        # TODO Rotate bvectors if self.motion_affines is not None
+        # ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
+        # reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
+
+        # xform = Affine(matrix=affine, reference=reference)
+        # bvec = self.bvecs[:, index]
+
+        # # invert transform transform b-vector and origin
+        # r_bvec = (~xform).map([bvec, (0.0, 0.0, 0.0)])
+        # # Reset b-vector's origin
+        # new_bvec = r_bvec[1] - r_bvec[0]
+        # # Normalize and update
+        # self.bvecs[:, index] = new_bvec / np.linalg.norm(new_bvec)
 
         if self.bzero is None or not insert_b0:
             if insert_b0:

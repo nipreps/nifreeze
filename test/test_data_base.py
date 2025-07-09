@@ -92,7 +92,7 @@ def test_set_transform(random_dataset: BaseDataset):
     data_before = np.copy(random_dataset.dataobj[..., idx])
     # Identity transform
     affine = np.eye(4)
-    random_dataset.set_transform(idx, affine, order=1)
+    random_dataset.set_transform(idx, affine)
 
     # Data shouldn't have changed (since transform is identity).
     volume0, aff0 = random_dataset[idx]  # type: ignore[misc]  # PY310
