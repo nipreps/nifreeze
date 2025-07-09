@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.data.dmri - nifreeze 25.0.0.dev336 documentation</title>
+        <title>nifreeze.data.dmri - nifreeze 25.0.0.dev339 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev336 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev339 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev336</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev339</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev336</span>
+  <span class="sidebar-brand-text">25.0.0.dev339</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -442,6 +442,47 @@
     <span class="k">def</span> <span class="nf">bvecs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
 
+<div class="viewcode-block" id="DWI.get_shells">
+<a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI.get_shells">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_shells</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">num_bins</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_NUM_BINS</span><span class="p">,</span>
+        <span class="n">multishell_nonempty_bin_count_thr</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_MULTISHELL_BIN_COUNT_THR</span><span class="p">,</span>
+        <span class="n">bval_cap</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_HIGHB_THRESHOLD</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the shell data according to the b-value groups.</span>
+
+<span class="sd">        Bin the shell data according to the b-value groups found by</span>
+<span class="sd">        :obj:`~nifreeze.data.dmri.find_shelling_scheme`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        num_bins : :obj:`int`, optional</span>
+<span class="sd">            Number of bins.</span>
+<span class="sd">        multishell_nonempty_bin_count_thr : :obj:`int`, optional</span>
+<span class="sd">            Bin count to consider a multi-shell scheme.</span>
+<span class="sd">        bval_cap : :obj:`int`, optional</span>
+<span class="sd">            Maximum b-value to be considered in a multi-shell scheme.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :obj:`list`</span>
+<span class="sd">            Tuples of binned b-values and corresponding data/gradients indices.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">_</span><span class="p">,</span> <span class="n">bval_groups</span><span class="p">,</span> <span class="n">bval_estimated</span> <span class="o">=</span> <span class="n">find_shelling_scheme</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+            <span class="n">num_bins</span><span class="o">=</span><span class="n">num_bins</span><span class="p">,</span>
+            <span class="n">multishell_nonempty_bin_count_thr</span><span class="o">=</span><span class="n">multishell_nonempty_bin_count_thr</span><span class="p">,</span>
+            <span class="n">bval_cap</span><span class="o">=</span><span class="n">bval_cap</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">bvals</span><span class="p">)))</span> <span class="k">for</span> <span class="n">bvals</span> <span class="ow">in</span> <span class="n">bval_groups</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">bval_estimated</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span></div>
+
+
 <div class="viewcode-block" id="DWI.set_transform">
 <a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI.set_transform">[docs]</a>
     <span class="k">def</span> <span class="nf">set_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -475,7 +516,7 @@
         <span class="c1"># Reset b-vector&#39;s origin</span>
         <span class="n">new_bvec</span> <span class="o">=</span> <span class="n">r_bvec</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">r_bvec</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="c1"># Normalize and update</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">bvecs</span><span class="p">[:,</span> <span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_bvec</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">new_bvec</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_bvec</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">new_bvec</span><span class="p">)</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">set_transform</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="n">order</span><span class="p">)</span></div>
 
@@ -550,7 +591,10 @@
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bzero</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">insert_b0</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">insert_b0</span><span class="p">:</span>
-                <span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Ignoring ``insert_b0`` argument as the data object&#39;s bzero field is unset&quot;</span><span class="p">)</span>
+                <span class="n">warn</span><span class="p">(</span>
+                    <span class="s2">&quot;Ignoring ``insert_b0`` argument as the data object&#39;s bzero field is unset&quot;</span><span class="p">,</span>
+                    <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                <span class="p">)</span>
 
             <span class="c1"># Parent&#39;s to_nifti to handle the primary NIfTI export.</span>
             <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_nifti</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
@@ -571,45 +615,6 @@
         <span class="c1"># Each row of bvecs is one direction (3 rows, N columns).</span>
         <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">bvecs_file</span><span class="p">,</span> <span class="n">bvecs</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;%.</span><span class="si">{</span><span class="n">bvecs_dec_places</span><span class="si">}</span><span class="s2">f&quot;</span><span class="p">)</span>
         <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">bvals_file</span><span class="p">,</span> <span class="n">bvals</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">fmt</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;%.</span><span class="si">{</span><span class="n">bvals_dec_places</span><span class="si">}</span><span class="s2">f&quot;</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="DWI.shells">
-<a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI.shells">[docs]</a>
-    <span class="k">def</span> <span class="nf">shells</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">num_bins</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_NUM_BINS</span><span class="p">,</span>
-        <span class="n">multishell_nonempty_bin_count_thr</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_MULTISHELL_BIN_COUNT_THR</span><span class="p">,</span>
-        <span class="n">bval_cap</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_HIGHB_THRESHOLD</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the shell data according to the b-value groups.</span>
-
-<span class="sd">        Bin the shell data according to the b-value groups found by `~find_shelling_scheme`.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        num_bins : :obj:`int`, optional</span>
-<span class="sd">            Number of bins.</span>
-<span class="sd">        multishell_nonempty_bin_count_thr : :obj:`int`, optional</span>
-<span class="sd">            Bin count to consider a multi-shell scheme.</span>
-<span class="sd">        bval_cap : :obj:`int`, optional</span>
-<span class="sd">            Maximum b-value to be considered in a multi-shell scheme.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        :obj:`list`</span>
-<span class="sd">            Tuples of binned b-values and corresponding shell data.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="n">_</span><span class="p">,</span> <span class="n">bval_groups</span><span class="p">,</span> <span class="n">bval_estimated</span> <span class="o">=</span> <span class="n">find_shelling_scheme</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
-            <span class="n">num_bins</span><span class="o">=</span><span class="n">num_bins</span><span class="p">,</span>
-            <span class="n">multishell_nonempty_bin_count_thr</span><span class="o">=</span><span class="n">multishell_nonempty_bin_count_thr</span><span class="p">,</span>
-            <span class="n">bval_cap</span><span class="o">=</span><span class="n">bval_cap</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="n">indices</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">bvals</span><span class="p">)))</span> <span class="k">for</span> <span class="n">bvals</span> <span class="ow">in</span> <span class="n">bval_groups</span>
-        <span class="p">]</span>
-        <span class="k">return</span> <span class="p">[(</span><span class="n">bval_estimated</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="o">*</span><span class="bp">self</span><span class="p">[</span><span class="n">indices</span><span class="p">])</span> <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">indices</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">indices</span><span class="p">)]</span></div>
 </div>
 
 
@@ -858,7 +863,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=f54b9aea"></script>
+</div><script src="../../../_static/documentation_options.js?v=1d513928"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>
