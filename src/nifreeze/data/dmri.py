@@ -170,7 +170,7 @@ class DWI(BaseDataset[np.ndarray | None]):
         indices = [
             np.hstack(np.where(np.isin(self.gradients[-1, ...], bvals))) for bvals in bval_groups
         ]
-        return list(zip(bval_estimated, indices, strict=False))
+        return list(zip(bval_estimated, indices, strict=True))
 
     def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
         """
