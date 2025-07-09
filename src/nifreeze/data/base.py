@@ -24,6 +24,7 @@
 
 from __future__ import annotations
 
+from collections import namedtuple
 from pathlib import Path
 from tempfile import mkdtemp
 from typing import Any, Generic
@@ -33,6 +34,7 @@ import h5py
 import nibabel as nb
 import numpy as np
 from nibabel.spatialimages import SpatialHeader
+from nitransforms.linear import Affine
 from typing_extensions import Self, TypeVarTuple, Unpack
 
 Ts = TypeVarTuple("Ts")
@@ -218,35 +220,41 @@ class BaseDataset(Generic[Unpack[Ts]]):
                         compression_opts=compression_opts,
                     )
 
-    def to_nifti(self, filename: Path | str) -> None:
+    def to_nifti(self, filename: Path | str, order: int = 3) -> None:
         """
         Write a NIfTI file to disk.
+
+        Volumes are resampled to the reference affine if motion affines have
+        been set, otherwise the original data are written.
 
         Parameters
         ----------
         filename : :obj:`os.pathlike`
             The output NIfTI file path.
+        order : :obj:`int`, optional
+            The interpolation order to use when resampling the data.
+            Defaults to 3 (cubic interpolation).
 
         """
+        if self.motion_affines is not None:  # resampling is needed
+            ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
+            reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
 
-        # TODO: Resample if motion_affines is not None
-        # if not Path(self._filepath).exists():
-        #     self.to_filename(self._filepath)
+            resampled = np.empty_like(self.dataobj, dtype=self.dataobj.dtype)
+            for i in range(len(self)):
+                dataframe, affine = self[i]
+                xform = Affine(matrix=affine, reference=reference)
 
-        # # read original DWI data & b-vector
-        # with h5py.File(self._filepath, "r") as in_file:
-        #     root = in_file["/0"]
-        #     dataframe = np.asanyarray(root["dataobj"][..., index])
+                datamoving = nb.Nifti1Image(dataframe, self.affine, self.datahdr)
+                # resample at index
+                resampled[..., i] = np.asanyarray(
+                    xform.apply(datamoving, order=order).dataobj,
+                    dtype=self.dataobj.dtype,
+                )
+        else:
+            resampled = self.dataobj
 
-        # datamoving = nb.Nifti1Image(dataframe, self.affine, None)
-
-        # # resample and update orientation at index
-        # self.dataobj[..., index] = np.asanyarray(
-        #     xform.apply(datamoving, order=order).dataobj,
-        #     dtype=self.dataobj.dtype,
-        # )
-
-        nii = nb.Nifti1Image(self.dataobj, self.affine, self.datahdr)
+        nii = nb.Nifti1Image(resampled, self.affine, self.datahdr)
         if self.datahdr is None:
             nii.header.set_xyzt_units("mm")
         nii.to_filename(filename)
