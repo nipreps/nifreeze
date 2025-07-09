@@ -41,6 +41,8 @@ Ts = TypeVarTuple("Ts")
 
 NFDH5_EXT = ".h5"
 
+ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
+
 
 def _data_repr(value: np.ndarray | None) -> str:
     if value is None:
@@ -237,15 +239,14 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
         """
         if self.motion_affines is not None:  # resampling is needed
-            ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
             reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
 
             resampled = np.empty_like(self.dataobj, dtype=self.dataobj.dtype)
             for i in range(len(self)):
-                dataframe, affine = self[i]
-                xform = Affine(matrix=affine, reference=reference)
+                frame = self[i]
+                xform = Affine(matrix=frame[1], reference=reference)
 
-                datamoving = nb.Nifti1Image(dataframe, self.affine, self.datahdr)
+                datamoving = nb.Nifti1Image(frame[0], self.affine, self.datahdr)
                 # resample at index
                 resampled[..., i] = np.asanyarray(
                     xform.apply(datamoving, order=order).dataobj,
