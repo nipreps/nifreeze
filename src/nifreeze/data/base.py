@@ -222,7 +222,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
                         compression_opts=compression_opts,
                     )
 
-    def to_nifti(self, filename: Path | str, order: int = 3) -> None:
+    def to_nifti(self, filename: Path | str, order: int = 3) -> nb.Nifti1Image:
         """
         Write a NIfTI file to disk.
 
@@ -259,3 +259,4 @@ class BaseDataset(Generic[Unpack[Ts]]):
         if self.datahdr is None:
             nii.header.set_xyzt_units("mm")
         nii.to_filename(filename)
+        return nii
