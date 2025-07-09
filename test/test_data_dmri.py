@@ -238,13 +238,17 @@ def test_shells(setup_random_dwi_data):
     ]
     expected_gradients = [dwi_obj.gradients[..., idx] for idx in indices]
 
-    shell_data = dwi_obj.shells(num_bins=num_bins)
-    obtained_bval_est, obtained_dwi_data, obtained_motion_affines, obtained_gradients = zip(
-        *shell_data, strict=True
+    obtained_bval_est, obtained_indices = zip(*dwi_obj.get_shells(num_bins=num_bins), strict=True)
+
+    obtained_dwi_data, obtained_motion_affines, obtained_gradients = zip(
+        *[dwi_obj[indices] for indices in obtained_indices],
+        strict=True,
     )
 
-    assert len(shell_data) == num_bins
+    assert len(obtained_bval_est) == num_bins
     assert list(obtained_bval_est) == expected_bval_est
+
+    assert [i.tolist() for i in obtained_indices] == [i.tolist() for i in indices]
     assert all(
         np.allclose(arr1, arr2)
         for arr1, arr2 in zip(list(obtained_dwi_data), expected_dwi_data, strict=True)

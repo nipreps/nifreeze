@@ -134,6 +134,44 @@ class DWI(BaseDataset[np.ndarray | None]):
     def bvecs(self):
         return self.gradients[:-1, ...]
 
+    def get_shells(
+        self,
+        num_bins: int = DEFAULT_NUM_BINS,
+        multishell_nonempty_bin_count_thr: int = DEFAULT_MULTISHELL_BIN_COUNT_THR,
+        bval_cap: int = DEFAULT_HIGHB_THRESHOLD,
+    ) -> list:
+        """Get the shell data according to the b-value groups.
+
+        Bin the shell data according to the b-value groups found by
+        :obj:`~nifreeze.data.dmri.find_shelling_scheme`.
+
+        Parameters
+        ----------
+        num_bins : :obj:`int`, optional
+            Number of bins.
+        multishell_nonempty_bin_count_thr : :obj:`int`, optional
+            Bin count to consider a multi-shell scheme.
+        bval_cap : :obj:`int`, optional
+            Maximum b-value to be considered in a multi-shell scheme.
+
+        Returns
+        -------
+        :obj:`list`
+            Tuples of binned b-values and corresponding data/gradients indices.
+
+        """
+
+        _, bval_groups, bval_estimated = find_shelling_scheme(
+            self.gradients[-1, ...],
+            num_bins=num_bins,
+            multishell_nonempty_bin_count_thr=multishell_nonempty_bin_count_thr,
+            bval_cap=bval_cap,
+        )
+        indices = [
+            np.hstack(np.where(np.isin(self.gradients[-1, ...], bvals))) for bvals in bval_groups
+        ]
+        return list(zip(bval_estimated, indices, strict=True))
+
     def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
         """
         Set an affine transform for a particular index and update the data object.
@@ -165,7 +203,7 @@ class DWI(BaseDataset[np.ndarray | None]):
         # Reset b-vector's origin
         new_bvec = r_bvec[1] - r_bvec[0]
         # Normalize and update
-        self.bvecs[:, index] = new_bvec / np.linalg.norm(new_bvec)
+        self.gradients[:-1, index] = new_bvec / np.linalg.norm(new_bvec)
 
         super().set_transform(index, affine, order)
 
@@ -234,7 +272,10 @@ class DWI(BaseDataset[np.ndarray | None]):
 
         if self.bzero is None or not insert_b0:
             if insert_b0:
-                warn("Ignoring ``insert_b0`` argument as the data object's bzero field is unset")
+                warn(
+                    "Ignoring ``insert_b0`` argument as the data object's bzero field is unset",
+                    stacklevel=2,
+                )
 
             # Parent's to_nifti to handle the primary NIfTI export.
             super().to_nifti(filename)
@@ -255,42 +296,6 @@ class DWI(BaseDataset[np.ndarray | None]):
         # Each row of bvecs is one direction (3 rows, N columns).
         np.savetxt(bvecs_file, bvecs, fmt=f"%.{bvecs_dec_places}f")
         np.savetxt(bvals_file, bvals[np.newaxis, :], fmt=f"%.{bvals_dec_places}f")
-
-    def shells(
-        self,
-        num_bins: int = DEFAULT_NUM_BINS,
-        multishell_nonempty_bin_count_thr: int = DEFAULT_MULTISHELL_BIN_COUNT_THR,
-        bval_cap: int = DEFAULT_HIGHB_THRESHOLD,
-    ) -> list:
-        """Get the shell data according to the b-value groups.
-
-        Bin the shell data according to the b-value groups found by `~find_shelling_scheme`.
-
-        Parameters
-        ----------
-        num_bins : :obj:`int`, optional
-            Number of bins.
-        multishell_nonempty_bin_count_thr : :obj:`int`, optional
-            Bin count to consider a multi-shell scheme.
-        bval_cap : :obj:`int`, optional
-            Maximum b-value to be considered in a multi-shell scheme.
-
-        Returns
-        -------
-        :obj:`list`
-            Tuples of binned b-values and corresponding shell data.
-        """
-
-        _, bval_groups, bval_estimated = find_shelling_scheme(
-            self.gradients[-1, ...],
-            num_bins=num_bins,
-            multishell_nonempty_bin_count_thr=multishell_nonempty_bin_count_thr,
-            bval_cap=bval_cap,
-        )
-        indices = [
-            np.hstack(np.where(np.isin(self.gradients[-1, ...], bvals))) for bvals in bval_groups
-        ]
-        return [(bval_estimated[idx], *self[indices]) for idx, indices in enumerate(indices)]
 
 
 def from_nii(
