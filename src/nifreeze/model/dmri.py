@@ -123,7 +123,7 @@ class BaseDWIModel(BaseModel):
 
         # DIPY models (or one with a fully-compliant interface)
         model_str = getattr(self, "_model_class", "")
-        if "dipy" in model_str:
+        if "dipy" in model_str or "GeneralizedQSamplingModel" in model_str:
             gtab = gradient_table_from_bvals_bvecs(gtab[-1, :], gtab[:-1, :].T)
 
         if model_str:
@@ -187,7 +187,8 @@ class BaseDWIModel(BaseModel):
 
         gradient = self._dataset.gradients[:, index]
 
-        if "dipy" in getattr(self, "_model_class", ""):
+        model_str = getattr(self, "_model_class", "")
+        if "dipy" in model_str or "GeneralizedQSamplingModel" in model_str:
             gradient = gradient_table_from_bvals_bvecs(
                 gradient[np.newaxis, -1], gradient[np.newaxis, :-1]
             )
@@ -316,7 +317,7 @@ class GQIModel(BaseDWIModel):
         "sampling_length",
         "normalize_peaks",
     )
-    _model_class = "dipy.reconst.gqi.GeneralizedQSamplingModel"
+    _model_class = "nifreeze.model.gqi.GeneralizedQSamplingModel"
 
 
 class GPModel(BaseDWIModel):
