@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.cli.parser - nifreeze 25.0.0.dev339 documentation</title>
+        <title>nifreeze.cli.parser - nifreeze 25.0.0.dev344 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev339 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev344 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev339</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev344</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev339</span>
+  <span class="sidebar-brand-text">25.0.0.dev344</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -325,7 +325,7 @@
 <span class="c1">#</span>
 <span class="sd">&quot;&quot;&quot;Parser module.&quot;&quot;&quot;</span>
 
-<span class="kn">from</span> <span class="nn">argparse</span> <span class="kn">import</span> <span class="n">ArgumentDefaultsHelpFormatter</span><span class="p">,</span> <span class="n">ArgumentParser</span>
+<span class="kn">from</span> <span class="nn">argparse</span> <span class="kn">import</span> <span class="n">ArgumentDefaultsHelpFormatter</span><span class="p">,</span> <span class="n">ArgumentParser</span><span class="p">,</span> <span class="n">Namespace</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">import</span> <span class="nn">yaml</span>
@@ -350,9 +350,7 @@
     <span class="k">return</span> <span class="n">config</span>
 
 
-<div class="viewcode-block" id="build_parser">
-<a class="viewcode-back" href="../../../api/nifreeze.cli.parser.html#nifreeze.cli.parser.build_parser">[docs]</a>
-<span class="k">def</span> <span class="nf">build_parser</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">ArgumentParser</span><span class="p">:</span>
+<span class="k">def</span> <span class="nf">_build_parser</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">ArgumentParser</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Build parser object.</span>
 
@@ -468,7 +466,106 @@
         <span class="p">),</span>
     <span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">parser</span></div>
+    <span class="k">return</span> <span class="n">parser</span>
+
+
+<span class="k">def</span> <span class="nf">_determine_single_fit_mode</span><span class="p">(</span><span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Determine if a model is to be run in *single-fit mode*.</span>
+<span class="sd">    If a model is requested to be run in *single-fit mode*, it will be run only</span>
+<span class="sd">    once in all the data available.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    model_name : :obj:`str</span>
+<span class="sd">        Model name.</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    :obj:`bool`</span>
+<span class="sd">        ``True`` if the model is to be run in *single-fit mode*, ``False``</span>
+<span class="sd">        otherwise.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="n">model_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;single&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_normalize_model_name</span><span class="p">(</span><span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize a model name.</span>
+<span class="sd">    Normalize a model name by converting it to all lowercase and stripping the</span>
+<span class="sd">    ``single`` prefix if present.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    model_name : :obj:`str`</span>
+<span class="sd">        Model name.</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    :obj:`str`</span>
+<span class="sd">        Normalized model name.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="n">model_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;single&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="parse_args">
+<a class="viewcode-back" href="../../../api/nifreeze.cli.parser.html#nifreeze.cli.parser.parse_args">[docs]</a>
+<span class="k">def</span> <span class="nf">parse_args</span><span class="p">(</span><span class="n">argv</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Namespace</span><span class="p">,</span> <span class="nb">dict</span><span class="p">,</span> <span class="nb">dict</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse the command line arguments and return a curated arguments.</span>
+
+<span class="sd">    Performs further checks to ensure that necessary data is provided for the</span>
+<span class="sd">    estimation process.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    argv : list</span>
+<span class="sd">        Arguments.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    args : :obj:`Namespace`</span>
+<span class="sd">        Populated namespace.</span>
+<span class="sd">    extra_kwargs : :obj:`dict`</span>
+<span class="sd">        Extra keyword arguments passed to the dataset.</span>
+<span class="sd">    estimator_kwargs : :obj:`dict`</span>
+<span class="sd">        Extra keyword arguments passed to the estimator.</span>
+<span class="sd">    model_kwargs : :obj:`dict`</span>
+<span class="sd">        Extra keyword arguments passed to the model.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">_build_parser</span><span class="p">()</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+
+    <span class="n">extra_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">gradient_file</span><span class="p">:</span>
+        <span class="n">nfiles</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">gradient_file</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">nfiles</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">extra_kwargs</span><span class="p">[</span><span class="s2">&quot;gradients_file&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">gradient_file</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">nfiles</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">extra_kwargs</span><span class="p">[</span><span class="s2">&quot;bvec_file&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">gradient_file</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">extra_kwargs</span><span class="p">[</span><span class="s2">&quot;bval_file&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">gradient_file</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">parser</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;--gradient-file must be one or two files&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">b0_file</span><span class="p">:</span>
+        <span class="n">extra_kwargs</span><span class="p">[</span><span class="s2">&quot;b0_file&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">b0_file</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">timing_file</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Cannot load PET timing information&quot;</span><span class="p">)</span>
+
+    <span class="n">model_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">ignore_b0</span><span class="p">:</span>
+        <span class="n">model_kwargs</span><span class="p">[</span><span class="s2">&quot;ignore_bzero&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="n">estimator_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">_model</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">models</span><span class="p">):</span>
+        <span class="n">single_fit</span> <span class="o">=</span> <span class="n">_determine_single_fit_mode</span><span class="p">(</span><span class="n">_model</span><span class="p">)</span>
+        <span class="n">model_name</span> <span class="o">=</span> <span class="n">_normalize_model_name</span><span class="p">(</span><span class="n">_model</span><span class="p">)</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">model_name</span>
+        <span class="n">estimator_kwargs</span><span class="p">[</span><span class="n">model_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;single_fit&quot;</span><span class="p">:</span> <span class="n">single_fit</span><span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">args</span><span class="p">,</span> <span class="n">extra_kwargs</span><span class="p">,</span> <span class="n">estimator_kwargs</span><span class="p">,</span> <span class="n">model_kwargs</span></div>
 
 </pre></div>
         </article>
@@ -502,7 +599,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=1d513928"></script>
+</div><script src="../../../_static/documentation_options.js?v=83d5a304"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>
