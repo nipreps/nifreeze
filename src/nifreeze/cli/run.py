@@ -24,7 +24,7 @@
 
 from pathlib import Path
 
-from nifreeze.cli.parser import build_parser
+from nifreeze.cli.parser import parse_args
 from nifreeze.data import BaseDataset, load
 from nifreeze.estimator import Estimator
 
@@ -38,27 +38,8 @@ def main(argv=None) -> None:
     None
 
     """
-    parser = build_parser()
-    args = parser.parse_args(argv)
 
-    extra_kwargs = {}
-
-    if args.gradient_file:
-        nfiles = len(args.gradient_file)
-
-        if nfiles == 1:
-            extra_kwargs["gradients_file"] = args.gradient_file[0]
-        elif nfiles == 2:
-            extra_kwargs["bvec_file"] = args.gradient_file[0]
-            extra_kwargs["bval_file"] = args.gradient_file[1]
-        else:
-            parser.error("--gradient-file must be one or two files")
-
-    if args.b0_file:
-        extra_kwargs["b0_file"] = args.b0_file
-
-    if args.timing_file:
-        raise NotImplementedError("Cannot load PET timing information")
+    args, extra_kwargs, estimator_kwargs, model_kwargs = parse_args(argv)
 
     # Open the data with the given file path
     dataset: BaseDataset = load(
@@ -67,16 +48,11 @@ def main(argv=None) -> None:
         **extra_kwargs,
     )
 
-    model_kwargs = {}
-
-    if args.ignore_b0:
-        model_kwargs["ignore_bzero"] = True
-
     prev_model: Estimator | None = None
     for _model in args.models:
-        single_fit = _model.lower().startswith("single")
+        single_fit = estimator_kwargs[_model]["single_fit"]
         estimator: Estimator = Estimator(
-            _model.lower().replace("single", ""),
+            _model,
             prev=prev_model,
             single_fit=single_fit,
             model_kwargs=model_kwargs,
@@ -92,12 +68,14 @@ def main(argv=None) -> None:
     )
 
     # Set the output filename to be the same as the input filename
-    output_filename: str = Path(args.input_file).name
+    output_filename = Path(Path(args.input_file).name).stem + ".nii.gz"
     output_path: Path = Path(args.output_dir) / output_filename
 
     # Save the DWI dataset to the output path
     if args.write_hdf5:
-        dataset.to_filename(output_path)
+        output_h5_filename = Path(Path(args.input_file).name).stem + ".h5"
+        output_h5_path: Path = Path(args.output_dir) / output_h5_filename
+        dataset.to_filename(output_h5_path)
 
     dataset.to_nifti(output_path)
 
