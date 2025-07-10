@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.utils.ndimage - nifreeze 25.0.0.dev351 documentation</title>
+        <title>nifreeze.utils.ndimage - nifreeze 25.0.0.dev363 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev351 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev363 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev351</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev363</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev351</span>
+  <span class="sidebar-brand-text">25.0.0.dev363</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -326,10 +326,12 @@
 
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">typing</span>
+<span class="kn">from</span> <span class="nn">warnings</span> <span class="kn">import</span> <span class="n">warn</span>
 
 <span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nb</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
-<span class="n">ImgT</span> <span class="o">=</span> <span class="n">typing</span><span class="o">.</span><span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;ImgT&quot;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="n">nb</span><span class="o">.</span><span class="n">filebasedimages</span><span class="o">.</span><span class="n">FileBasedImage</span><span class="p">)</span>
+<span class="n">ImgT</span> <span class="o">=</span> <span class="n">typing</span><span class="o">.</span><span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;ImgT&quot;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="n">nb</span><span class="o">.</span><span class="n">spatialimages</span><span class="o">.</span><span class="n">SpatialImage</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="load_api">
@@ -339,6 +341,60 @@
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">api</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> does not implement </span><span class="si">{</span><span class="n">api</span><span class="si">}</span><span class="s2"> interface&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">img</span></div>
+
+
+
+<div class="viewcode-block" id="get_data">
+<a class="viewcode-back" href="../../../api/nifreeze.utils.ndimage.html#nifreeze.utils.ndimage.get_data">[docs]</a>
+<span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="n">img</span><span class="p">:</span> <span class="n">ImgT</span><span class="p">,</span> <span class="n">dtype</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extracts the data array from a nibabel image, handling data type and scaling.</span>
+
+<span class="sd">    This function retrieves the data from a nibabel image object, optionally</span>
+<span class="sd">    casting it to a specified data type.</span>
+<span class="sd">    If the requested dtype is a floating point type, the function ensures</span>
+<span class="sd">    that the data is loaded as floats, applying any scaling factors if present.</span>
+<span class="sd">    Otherwise, it attempts to return the raw data array, avoiding</span>
+<span class="sd">    unnecessary type conversion or scaling when possible.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    img : :obj:`~nibabel.spatialimages.SpatialImage`</span>
+<span class="sd">        A nibabel image object from which to extract the data.</span>
+<span class="sd">    dtype : :obj:`~numpy.dtype` or :obj:`str`, optional</span>
+<span class="sd">        Desired data type for the output array.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    :obj:`~numpy.ndarray`</span>
+<span class="sd">        The image data as a NumPy array, with type and scaling as specified.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Warning: np.dtype(None) returns np.float64</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="ow">not</span> <span class="p">(</span><span class="n">is_float</span> <span class="o">:=</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">))</span>
+        <span class="ow">and</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;Non-float dtypes are ignored and the original data type is preserved.&quot;</span>
+            <span class="s2">&quot; Please cast data explicitly.&quot;</span><span class="p">,</span>
+            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">header</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">header</span>
+
+    <span class="k">def</span> <span class="nf">_no_slope_inter</span><span class="p">():</span>
+        <span class="k">return</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="c1"># OE: Typechecking whines about header not having get_slope_inter</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_float</span> <span class="ow">and</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">header</span><span class="p">,</span> <span class="s2">&quot;get_slope_inter&quot;</span><span class="p">,</span> <span class="n">_no_slope_inter</span><span class="p">)()</span> <span class="ow">in</span> <span class="p">(</span>
+        <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">dataobj</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">header</span><span class="o">.</span><span class="n">get_data_dtype</span><span class="p">())</span>
+
+    <span class="k">return</span> <span class="n">img</span><span class="o">.</span><span class="n">get_fdata</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span> <span class="k">if</span> <span class="n">is_float</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span></div>
 
 </pre></div>
         </article>
@@ -372,7 +428,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=bf13edfe"></script>
+</div><script src="../../../_static/documentation_options.js?v=81c39341"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>

@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.data.dmri - nifreeze 25.0.0.dev351 documentation</title>
+        <title>nifreeze.data.dmri - nifreeze 25.0.0.dev363 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev351 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev363 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev351</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev363</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev351</span>
+  <span class="sidebar-brand-text">25.0.0.dev363</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -327,7 +327,6 @@
 
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
 <span class="kn">from</span> <span class="nn">warnings</span> <span class="kn">import</span> <span class="n">warn</span>
@@ -338,11 +337,10 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">numpy.typing</span> <span class="k">as</span> <span class="nn">npt</span>
 <span class="kn">from</span> <span class="nn">nibabel.spatialimages</span> <span class="kn">import</span> <span class="n">SpatialImage</span>
-<span class="kn">from</span> <span class="nn">nitransforms.linear</span> <span class="kn">import</span> <span class="n">Affine</span>
 <span class="kn">from</span> <span class="nn">typing_extensions</span> <span class="kn">import</span> <span class="n">Self</span>
 
 <span class="kn">from</span> <span class="nn">nifreeze.data.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span><span class="p">,</span> <span class="n">_cmp</span><span class="p">,</span> <span class="n">_data_repr</span>
-<span class="kn">from</span> <span class="nn">nifreeze.utils.ndimage</span> <span class="kn">import</span> <span class="n">load_api</span>
+<span class="kn">from</span> <span class="nn">nifreeze.utils.ndimage</span> <span class="kn">import</span> <span class="n">get_data</span><span class="p">,</span> <span class="n">load_api</span>
 
 <span class="n">DEFAULT_CLIP_PERCENTILE</span> <span class="o">=</span> <span class="mi">75</span>
 <span class="sd">&quot;&quot;&quot;Upper percentile threshold for intensity clipping.&quot;&quot;&quot;</span>
@@ -483,44 +481,6 @@
         <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">bval_estimated</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span></div>
 
 
-<div class="viewcode-block" id="DWI.set_transform">
-<a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI.set_transform">[docs]</a>
-    <span class="k">def</span> <span class="nf">set_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Set an affine transform for a particular index and update the data object.</span>
-
-<span class="sd">        The new affine is set as in :obj:`~nifreeze.data.base.BaseDataset.set_transform`,</span>
-<span class="sd">        and, in addition, the corresponding gradient vector is rotated.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        index : :obj:`int`</span>
-<span class="sd">            The volume index to transform.</span>
-<span class="sd">        affine : :obj:`numpy.ndarray`</span>
-<span class="sd">            The 4x4 affine matrix to be applied.</span>
-<span class="sd">        order : :obj:`int`, optional</span>
-<span class="sd">            The order of the spline interpolation.</span>
-
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span><span class="p">)</span>
-
-        <span class="n">ImageGrid</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;ImageGrid&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="s2">&quot;affine&quot;</span><span class="p">))</span>
-        <span class="n">reference</span> <span class="o">=</span> <span class="n">ImageGrid</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="n">affine</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">)</span>
-
-        <span class="n">xform</span> <span class="o">=</span> <span class="n">Affine</span><span class="p">(</span><span class="n">matrix</span><span class="o">=</span><span class="n">affine</span><span class="p">,</span> <span class="n">reference</span><span class="o">=</span><span class="n">reference</span><span class="p">)</span>
-        <span class="n">bvec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bvecs</span><span class="p">[:,</span> <span class="n">index</span><span class="p">]</span>
-
-        <span class="c1"># invert transform transform b-vector and origin</span>
-        <span class="n">r_bvec</span> <span class="o">=</span> <span class="p">(</span><span class="o">~</span><span class="n">xform</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">([</span><span class="n">bvec</span><span class="p">,</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)])</span>
-        <span class="c1"># Reset b-vector&#39;s origin</span>
-        <span class="n">new_bvec</span> <span class="o">=</span> <span class="n">r_bvec</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">r_bvec</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="c1"># Normalize and update</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_bvec</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">new_bvec</span><span class="p">)</span>
-
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">set_transform</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="n">order</span><span class="p">)</span></div>
-
-
 <div class="viewcode-block" id="DWI.to_filename">
 <a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI.to_filename">[docs]</a>
     <span class="k">def</span> <span class="nf">to_filename</span><span class="p">(</span>
@@ -554,11 +514,12 @@
 <a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI.to_nifti">[docs]</a>
     <span class="k">def</span> <span class="nf">to_nifti</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
         <span class="n">insert_b0</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">bvals_dec_places</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
         <span class="n">bvecs_dec_places</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Export the dMRI object to disk (NIfTI, b-vecs, &amp; b-vals files).</span>
 
@@ -576,45 +537,59 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="c1"># Convert filename to a Path object.</span>
-        <span class="n">out_root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span><span class="o">.</span><span class="n">absolute</span><span class="p">()</span>
-
-        <span class="c1"># Get the base stem for writing .bvec / .bval.</span>
-        <span class="n">out_root</span> <span class="o">=</span> <span class="n">out_root</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="n">out_root</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_root</span><span class="o">.</span><span class="n">suffixes</span><span class="p">),</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-
-        <span class="c1"># Construct sidecar file paths.</span>
-        <span class="n">bvecs_file</span> <span class="o">=</span> <span class="n">out_root</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.bvec&quot;</span><span class="p">)</span>
-        <span class="n">bvals_file</span> <span class="o">=</span> <span class="n">out_root</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.bval&quot;</span><span class="p">)</span>
-
+        <span class="n">no_bzero</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bzero</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">insert_b0</span>
         <span class="n">bvals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bvals</span>
-        <span class="n">bvecs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bvecs</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bzero</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">insert_b0</span><span class="p">:</span>
+        <span class="c1"># Rotate b-vectors if self.motion_affines is not None</span>
+        <span class="n">bvecs</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">transform_fsl_bvec</span><span class="p">(</span><span class="n">bvec</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">bvec</span><span class="p">,</span> <span class="n">affine</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">motion_affines</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="p">]</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">T</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">motion_affines</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">bvecs</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Parent&#39;s to_nifti to handle the primary NIfTI export.</span>
+        <span class="n">nii</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_nifti</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="n">filename</span> <span class="k">if</span> <span class="n">no_bzero</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">no_bzero</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">insert_b0</span><span class="p">:</span>
                 <span class="n">warn</span><span class="p">(</span>
                     <span class="s2">&quot;Ignoring ``insert_b0`` argument as the data object&#39;s bzero field is unset&quot;</span><span class="p">,</span>
                     <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
                 <span class="p">)</span>
-
-            <span class="c1"># Parent&#39;s to_nifti to handle the primary NIfTI export.</span>
-            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_nifti</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">bzero</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
-            <span class="n">nii</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">datahdr</span><span class="p">)</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">datahdr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">nii</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">set_xyzt_units</span><span class="p">(</span><span class="s2">&quot;mm&quot;</span><span class="p">)</span>
+            <span class="n">nii</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">nii</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">nii</span><span class="o">.</span><span class="n">header</span><span class="p">)</span>
 
-            <span class="n">nii</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">nii</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
 
             <span class="c1"># If inserting a b0 volume is requested, add the corresponding null</span>
             <span class="c1"># gradient value to the bval/bvec pair</span>
             <span class="n">bvals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">bvals</span><span class="p">))</span>
             <span class="n">bvecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="n">bvecs</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
 
-        <span class="c1"># Save bvecs and bvals to text files</span>
-        <span class="c1"># Each row of bvecs is one direction (3 rows, N columns).</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">bvecs_file</span><span class="p">,</span> <span class="n">bvecs</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;%.</span><span class="si">{</span><span class="n">bvecs_dec_places</span><span class="si">}</span><span class="s2">f&quot;</span><span class="p">)</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">bvals_file</span><span class="p">,</span> <span class="n">bvals</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">fmt</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;%.</span><span class="si">{</span><span class="n">bvals_dec_places</span><span class="si">}</span><span class="s2">f&quot;</span><span class="p">)</span></div>
+        <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Convert filename to a Path object.</span>
+            <span class="n">out_root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span><span class="o">.</span><span class="n">absolute</span><span class="p">()</span>
+
+            <span class="c1"># Get the base stem for writing .bvec / .bval.</span>
+            <span class="n">out_root</span> <span class="o">=</span> <span class="n">out_root</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="n">out_root</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_root</span><span class="o">.</span><span class="n">suffixes</span><span class="p">),</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Construct sidecar file paths.</span>
+            <span class="n">bvecs_file</span> <span class="o">=</span> <span class="n">out_root</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.bvec&quot;</span><span class="p">)</span>
+            <span class="n">bvals_file</span> <span class="o">=</span> <span class="n">out_root</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.bval&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Save bvecs and bvals to text files</span>
+            <span class="c1"># Each row of bvecs is one direction (3 rows, N columns).</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">bvecs_file</span><span class="p">,</span> <span class="n">bvecs</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;%.</span><span class="si">{</span><span class="n">bvecs_dec_places</span><span class="si">}</span><span class="s2">f&quot;</span><span class="p">)</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">bvals_file</span><span class="p">,</span> <span class="n">bvals</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">fmt</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;%.</span><span class="si">{</span><span class="n">bvals_dec_places</span><span class="si">}</span><span class="s2">f&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">nii</span></div>
 </div>
 
 
@@ -681,8 +656,7 @@
 
     <span class="c1"># 1) Load a NIfTI</span>
     <span class="n">img</span> <span class="o">=</span> <span class="n">load_api</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">SpatialImage</span><span class="p">)</span>
-    <span class="n">fulldata</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">get_fdata</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-    <span class="n">affine</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">affine</span>
+    <span class="n">fulldata</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
 
     <span class="c1"># 2) Determine the gradients array from either gradients_file or bvec/bval</span>
     <span class="k">if</span> <span class="n">gradients_file</span><span class="p">:</span>
@@ -709,12 +683,12 @@
 
     <span class="c1"># 3) Create the DWI instance. We&#39;ll filter out volumes where b-value &gt; b0_thres</span>
     <span class="c1">#    as &quot;DW volumes&quot; if the user wants to store only the high-b volumes here</span>
-    <span class="n">gradmsk</span> <span class="o">=</span> <span class="n">grad</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">b0_thres</span> <span class="k">if</span> <span class="n">grad</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span> <span class="k">else</span> <span class="n">grad</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">b0_thres</span>
+    <span class="n">gradmsk</span> <span class="o">=</span> <span class="p">(</span><span class="n">grad</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">grad</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span> <span class="k">else</span> <span class="n">grad</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">&gt;</span> <span class="n">b0_thres</span>
 
     <span class="c1"># The shape checking is somewhat flexible: (4, N) or (N, 4)</span>
     <span class="n">dwi_obj</span> <span class="o">=</span> <span class="n">DWI</span><span class="p">(</span>
         <span class="n">dataobj</span><span class="o">=</span><span class="n">fulldata</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">gradmsk</span><span class="p">],</span>
-        <span class="n">affine</span><span class="o">=</span><span class="n">affine</span><span class="p">,</span>
+        <span class="n">affine</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span>
         <span class="c1"># We&#39;ll assign the filtered gradients below.</span>
     <span class="p">)</span>
 
@@ -811,26 +785,42 @@
 
 
 
-<span class="k">def</span> <span class="nf">_rasb2dipy</span><span class="p">(</span><span class="n">gradient</span><span class="p">):</span>
-    <span class="kn">import</span> <span class="nn">warnings</span>
+<div class="viewcode-block" id="transform_fsl_bvec">
+<a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.transform_fsl_bvec">[docs]</a>
+<span class="k">def</span> <span class="nf">transform_fsl_bvec</span><span class="p">(</span>
+    <span class="n">b_ijk</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">xfm</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">imaffine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">invert</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Transform a b-vector from the original space to the new space defined by the affine.</span>
 
-    <span class="n">gradient</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">gradient</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">gradient</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">gradient</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Missing gradient information.&quot;</span><span class="p">)</span>
-        <span class="n">gradient</span> <span class="o">=</span> <span class="n">gradient</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    b_ijk : :obj:`~numpy.ndarray`</span>
+<span class="sd">        The b-vector in FSL/DIPY conventions (i.e., voxel coordinates).</span>
+<span class="sd">    xfm : :obj:`~numpy.ndarray`</span>
+<span class="sd">        The affine transformation to apply.</span>
+<span class="sd">        Please note that this is the inverse of the head-motion-correction affine,</span>
+<span class="sd">        which maps coordinates from the realigned space to the moved (scan) space.</span>
+<span class="sd">        In this case, we want to move the b-vector from the moved (scan) space into</span>
+<span class="sd">        the realigned space.</span>
+<span class="sd">    imaffine : :obj:`~numpy.ndarray`</span>
+<span class="sd">        The image&#39;s affine, to convert.</span>
+<span class="sd">    invert : :obj:`bool`, optional</span>
+<span class="sd">        If ``True``, the transformation will be inverted.</span>
 
-    <span class="k">if</span> <span class="n">gradient</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span>
-        <span class="n">gradient</span> <span class="o">=</span> <span class="n">gradient</span><span class="o">.</span><span class="n">T</span>
-    <span class="k">elif</span> <span class="n">gradient</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: make sure gradient information is not transposed!&quot;</span><span class="p">)</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    :obj:`~numpy.ndarray`</span>
+<span class="sd">        The transformed b-vector in voxel coordinates (FSL/DIPY).</span>
 
-    <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
-        <span class="kn">from</span> <span class="nn">dipy.core.gradients</span> <span class="kn">import</span> <span class="n">gradient_table</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">xfm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">xfm</span><span class="p">)</span> <span class="k">if</span> <span class="n">invert</span> <span class="k">else</span> <span class="n">xfm</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
-        <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">UserWarning</span><span class="p">)</span>
-        <span class="n">retval</span> <span class="o">=</span> <span class="n">gradient_table</span><span class="p">(</span><span class="n">gradient</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="p">:],</span> <span class="n">bvecs</span><span class="o">=</span><span class="n">gradient</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">retval</span>
+    <span class="c1"># Go from world coordinates (xfm) to voxel coordinates</span>
+    <span class="n">ijk2ijk_xfm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">imaffine</span><span class="p">)</span> <span class="o">@</span> <span class="n">xfm</span> <span class="o">@</span> <span class="n">imaffine</span>
+
+    <span class="k">return</span> <span class="n">ijk2ijk_xfm</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">@</span> <span class="n">b_ijk</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span></div>
+
 </pre></div>
         </article>
       </div>
@@ -863,7 +853,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=bf13edfe"></script>
+</div><script src="../../../_static/documentation_options.js?v=81c39341"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>
