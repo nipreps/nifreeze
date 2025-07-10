@@ -23,6 +23,7 @@
 
 import os
 import typing
+from warnings import warn
 
 import nibabel as nb
 import numpy as np
@@ -38,10 +39,40 @@ def load_api(path: str | os.PathLike[str], api: type[ImgT]) -> ImgT:
 
 
 def get_data(img: ImgT, dtype: np.dtype | str | None = None) -> np.ndarray:
-    """Get the data from a nibabel image."""
+    """
+    Extracts the data array from a nibabel image, handling data type and scaling.
 
-    # Check if dtype is set and if it is a float type
-    is_float = dtype is not None and np.issubdtype(np.dtype(dtype), np.floating)
+    This function retrieves the data from a nibabel image object, optionally
+    casting it to a specified data type.
+    If the requested dtype is a floating point type, the function ensures
+    that the data is loaded as floats, applying any scaling factors if present.
+    Otherwise, it attempts to return the raw data array, avoiding
+    unnecessary type conversion or scaling when possible.
+
+    Parameters
+    ----------
+    img : :obj:`~nibabel.spatialimages.SpatialImage`
+        A nibabel image object from which to extract the data.
+    dtype : :obj:`~numpy.dtype` or :obj:`str`, optional
+        Desired data type for the output array.
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        The image data as a NumPy array, with type and scaling as specified.
+
+    """
+
+    # Warning: np.dtype(None) returns np.float64
+    if (
+        not (is_float := dtype is not None and np.issubdtype(np.dtype(dtype), np.floating))
+        and dtype is not None
+    ):
+        warn(
+            "Non-float dtypes are ignored and the original data type is preserved."
+            " Please cast data explicitly.",
+            stacklevel=2,
+        )
 
     header = img.header
 

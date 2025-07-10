@@ -487,12 +487,8 @@ def transform_fsl_bvec(
 
     """
     xfm = np.linalg.inv(xfm) if invert else xfm.copy()
-    # Remove translation from the affine
-    xfm[:3, 3] = 0
+
+    # Go from world coordinates (xfm) to voxel coordinates
     ijk2ijk_xfm = np.linalg.inv(imaffine) @ xfm @ imaffine
 
-    # Convert the b-vector to homogeneous coordinates
-    _b_ijk = np.ones(4, dtype=b_ijk.dtype)
-    _b_ijk[:3] = b_ijk[:3]
-
-    return (ijk2ijk_xfm @ _b_ijk)[:3]
+    return ijk2ijk_xfm[:3, :3] @ b_ijk[:3]

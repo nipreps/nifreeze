@@ -31,6 +31,7 @@ import numpy as np
 import pytest
 
 from nifreeze.data import NFDH5_EXT, BaseDataset, load
+from nifreeze.utils.ndimage import get_data
 
 DEFAULT_RANDOM_DATASET_SHAPE = (32, 32, 32, 5)
 DEFAULT_RANDOM_DATASET_SIZE = int(np.prod(DEFAULT_RANDOM_DATASET_SHAPE[:3]))
@@ -160,3 +161,31 @@ def test_load_nifti(random_dataset: BaseDataset):
         ds2 = load(nifti_file)
         assert ds2.dataobj.shape == (32, 32, 32, 5)
         assert np.allclose(random_dataset.dataobj, ds2.dataobj)
+
+
+def test_get_data(random_dataset: BaseDataset):
+    """Test the get_data function."""
+    # Get data without specifying dtype
+
+    hdr = nb.Nifti1Header()
+    hdr.set_data_dtype(np.int16)
+    hdr.set_slope_inter(None, None)  # No scaling
+    img = nb.Nifti1Image(random_dataset.dataobj.astype(np.int16), random_dataset.affine, hdr)
+
+    data_int16 = get_data(img)
+    assert data_int16.dtype == np.int16
+
+    # Check a warning is issued for non-float dtype
+    with pytest.warns(UserWarning, match="Non-float dtypes are ignored"):
+        data_non_float = get_data(img, dtype="int32")
+        assert data_non_float.dtype == np.int16
+
+    data_float32 = get_data(img, dtype="float32")
+    assert data_float32.dtype == np.float32
+
+    data_float64 = get_data(img, dtype="float64")
+    assert data_float64.dtype == np.float64
+
+    img.header.set_slope_inter(2.0, 0.5)  # Set scaling
+    data_scaled = get_data(img)
+    assert data_scaled.dtype == np.float32

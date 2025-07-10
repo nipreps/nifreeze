@@ -231,7 +231,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
         Parameters
         ----------
-        filename : :obj:`os.pathlike` (optional)
+        filename : :obj:`os.pathlike`, optional
             The output NIfTI file path.
         order : :obj:`int`, optional
             The interpolation order to use when resampling the data.
