@@ -34,10 +34,9 @@ import nibabel as nb
 import numpy as np
 import numpy.typing as npt
 from nibabel.spatialimages import SpatialImage
-from nitransforms.linear import Affine
 from typing_extensions import Self
 
-from nifreeze.data.base import BaseDataset, ImageGrid, _cmp, _data_repr
+from nifreeze.data.base import BaseDataset, _cmp, _data_repr
 from nifreeze.utils.ndimage import get_data, load_api
 
 DEFAULT_CLIP_PERCENTILE = 75
@@ -222,25 +221,20 @@ class DWI(BaseDataset[np.ndarray | None]):
 
         """
 
+        no_bzero = self.bzero is None or not insert_b0
         bvals = self.bvals
-        bvecs = self.bvecs
 
         # Rotate b-vectors if self.motion_affines is not None
-        if self.motion_affines is not None:
-            reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
-
-            for index, affine in enumerate(self.motion_affines):
-                xform = Affine(matrix=affine, reference=reference)
-                bvec = bvecs[:, index]
-
-                # transform b-vector and origin using inverse
-                r_bvec = (~xform).map([bvec, (0.0, 0.0, 0.0)])
-                # Rebase b-vector's origin
-                new_bvec = r_bvec[1] - r_bvec[0]
-                # Normalize and update
-                bvecs[:, index] = new_bvec / np.linalg.norm(new_bvec)
-
-        no_bzero = self.bzero is None or not insert_b0
+        bvecs = (
+            np.array(
+                [
+                    transform_fsl_bvec(bvec, affine, self.affine, invert=True)
+                    for bvec, affine in zip(self.gradients.T, self.motion_affines, strict=True)
+                ]
+            ).T
+            if self.motion_affines is not None
+            else self.bvecs
+        )
 
         # Parent's to_nifti to handle the primary NIfTI export.
         nii = super().to_nifti(filename=filename if no_bzero else None, order=order)
@@ -465,3 +459,40 @@ def find_shelling_scheme(
         scheme = "DSI"
 
     return scheme, bval_groups, bval_estimated
+
+
+def transform_fsl_bvec(
+    b_ijk: np.ndarray, xfm: np.ndarray, imaffine: np.ndarray, invert: bool = False
+) -> np.ndarray:
+    """
+    Transform a b-vector from the original space to the new space defined by the affine.
+
+    Parameters
+    ----------
+    b_ijk : :obj:`~numpy.ndarray`
+        The b-vector in FSL/DIPY conventions (i.e., voxel coordinates).
+    xfm : :obj:`~numpy.ndarray`
+        The affine transformation to apply.
+        Please note that this is the inverse of the head-motion-correction affine,
+        which maps coordinates from the realigned space to the moved (scan) space.
+        In this case, we want to move the b-vector from the moved (scan) space into
+        the realigned space.
+    imaffine : :obj:`~numpy.ndarray`
+        The image's affine, to convert.
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        The transformed b-vector in voxel coordinates (FSL/DIPY).
+
+    """
+    xfm = np.linalg.inv(xfm) if invert else xfm.copy()
+    # Remove translation from the affine
+    xfm[:3, 3] = 0
+    ijk2ijk_xfm = np.linalg.inv(imaffine) @ xfm @ imaffine
+
+    # Convert the b-vector to homogeneous coordinates
+    _b_ijk = np.ones(4, dtype=b_ijk.dtype)
+    _b_ijk[:3] = b_ijk[:3]
+
+    return (ijk2ijk_xfm @ _b_ijk)[:3]
