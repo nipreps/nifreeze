@@ -20,6 +20,7 @@ defaults:
 env:
   FORCE_COLOR: true
   TEST_DATA_HOME: /home/runner/nifreeze-tests/
+  DIPY_HOME: /home/runner/nifreeze-tests/dipy
   ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS: 4
   ANTSPATH: /usr/share/miniconda/bin/
   NIFREEZE_WERRORS: 1
@@ -44,20 +45,21 @@ jobs:
           SHA=$( git ls-remote $TEST_DATA_REPO HEAD | cut -f 1 )
           echo SHA=$SHA >> $GITHUB_OUTPUT
           echo SHA7=${SHA:0:7} >> $GITHUB_OUTPUT
-      - name: Check for data-v1-${{ steps.test-head.outputs.SHA }}
+      - name: Check for data-v2-${{ steps.test-head.outputs.SHA }}
         uses: actions/cache@v4
         id: test-data
         with:
           path: /home/runner/nifreeze-tests/
-          key: data-v1-${{ steps.test-head.outputs.SHA }}
+          key: data-v2-${{ steps.test-head.outputs.SHA }}
           lookup-only: true
-      - name: Create data-v1-${{ steps.test-head.outputs.SHA }}
+      - name: Create data-v2-${{ steps.test-head.outputs.SHA }}
         uses: actions/cache@v4
         if: steps.test-data.outputs.cache-hit != 'true'
         with:
           path: /home/runner/nifreeze-tests/
-          key: data-v1-${{ steps.test-head.outputs.SHA }}
+          key: data-v2-${{ steps.test-head.outputs.SHA }}
           restore-keys: |
+            data-v2
             data-v1
             data-v0
       - name: Install the latest version of uv
@@ -80,6 +82,13 @@ jobs:
             datalad update --merge -r .
             datalad get -r -J4 *
           fi
+      - name: Install DIPY and fetch stanford_hardi dataset
+        if: steps.test-data.outputs.cache-hit != 'true'
+        run: |
+          echo "from dipy.data import fetch_stanford_hardi; fetch_stanford_hardi()" > fetch.py
+          uv tool install dipy
+          uv add --script fetch.py dipy
+          uv run fetch.py
 
   stable:
     # Unit tests only on Linux/Python 3.12
@@ -113,7 +122,7 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: /home/runner/nifreeze-tests/
-          key: data-v1-${{ needs.cache-test-data.outputs.SHA }}
+          key: data-v2-${{ needs.cache-test-data.outputs.SHA }}
       - name: Install TeX Live
         run: |
           sudo apt-get update

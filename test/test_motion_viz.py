@@ -21,14 +21,11 @@
 #     https://www.nipreps.org/community/licensing/
 #
 
-from contextlib import suppress
-from pathlib import Path
-from time import sleep
 
 import numpy as np
 import pandas as pd
 import pytest
-from dipy.data import fetch_stanford_hardi, read_stanford_hardi
+from dipy.data import read_stanford_hardi
 from dipy.segment.mask import median_otsu
 from scipy.ndimage import affine_transform, binary_dilation
 from skimage.morphology import ball
@@ -40,27 +37,6 @@ from nifreeze.viz.motion_viz import (
     plot_motion_overlay,
     plot_volumewise_motion,
 )
-
-# Folders are atomic operations in NFS, therefore, creating folders is a good
-# way to implement rudimentary semaphores/locks.
-# OE: we are running into race conditions for the way dipy downloads data.
-# The delayed creation of the "stanford_hardi" directory makes this test
-# for data existence very flaky.
-# Replacing with a pure lock based on directory creation.
-dipy_datapath = Path.home() / ".dipy"
-dipy_datapath.mkdir(exist_ok=True)
-with suppress(FileExistsError):
-    (dipy_datapath / ".lock-stanford_hardi").mkdir(parents=True)
-    fetch_stanford_hardi()  # Execute only iff the lock folder doesn't exist
-
-MAX_CHECKS = 20
-try_num = 1
-while not (dipy_datapath / "stanford_hardi").exists():
-    sleep(5 * try_num)
-    try_num += 1
-
-    if try_num > MAX_CHECKS:
-        raise RuntimeError("Error downloading DIPY's stanford_hardi dataset")
 
 img, _ = read_stanford_hardi()
 img_data = img.get_fdata()
