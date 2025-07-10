@@ -479,6 +479,8 @@ def transform_fsl_bvec(
         the realigned space.
     imaffine : :obj:`~numpy.ndarray`
         The image's affine, to convert.
+    invert : :obj:`bool`, optional
+        If ``True``, the transformation will be inverted.
 
     Returns
     -------
