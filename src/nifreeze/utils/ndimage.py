@@ -25,8 +25,9 @@ import os
 import typing
 
 import nibabel as nb
+import numpy as np
 
-ImgT = typing.TypeVar("ImgT", bound=nb.filebasedimages.FileBasedImage)
+ImgT = typing.TypeVar("ImgT", bound=nb.spatialimages.SpatialImage)
 
 
 def load_api(path: str | os.PathLike[str], api: type[ImgT]) -> ImgT:
@@ -34,3 +35,24 @@ def load_api(path: str | os.PathLike[str], api: type[ImgT]) -> ImgT:
     if not isinstance(img, api):
         raise TypeError(f"File {path} does not implement {api} interface")
     return img
+
+
+def get_data(img: ImgT, dtype: np.dtype | str | None = None) -> np.ndarray:
+    """Get the data from a nibabel image."""
+
+    # Check if dtype is set and if it is a float type
+    is_float = dtype is not None and np.issubdtype(np.dtype(dtype), np.floating)
+
+    header = img.header
+
+    def _no_slope_inter():
+        return (None, None)
+
+    # OE: Typechecking whines about header not having get_slope_inter
+    if not is_float and getattr(header, "get_slope_inter", _no_slope_inter)() in (
+        (None, None),
+        (1.0, 0.0),
+    ):
+        return np.asanyarray(img.dataobj, dtype=header.get_data_dtype())
+
+    return img.get_fdata(dtype=dtype if is_float else np.float32)

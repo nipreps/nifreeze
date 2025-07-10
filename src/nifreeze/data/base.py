@@ -222,7 +222,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
                         compression_opts=compression_opts,
                     )
 
-    def to_nifti(self, filename: Path | str, order: int = 3) -> nb.Nifti1Image:
+    def to_nifti(self, filename: Path | str | None = None, order: int = 3) -> nb.Nifti1Image:
         """
         Write a NIfTI file to disk.
 
@@ -231,13 +231,14 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
         Parameters
         ----------
-        filename : :obj:`os.pathlike`
+        filename : :obj:`os.pathlike` (optional)
             The output NIfTI file path.
         order : :obj:`int`, optional
             The interpolation order to use when resampling the data.
             Defaults to 3 (cubic interpolation).
 
         """
+
         if self.motion_affines is not None:  # resampling is needed
             reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
 
@@ -255,8 +256,15 @@ class BaseDataset(Generic[Unpack[Ts]]):
         else:
             resampled = self.dataobj
 
-        nii = nb.Nifti1Image(resampled, self.affine, self.datahdr)
         if self.datahdr is None:
-            nii.header.set_xyzt_units("mm")
-        nii.to_filename(filename)
+            hdr = nb.Nifti1Header()
+            hdr.set_xyzt_units("mm")
+            hdr.set_data_dtype(self.dataobj.dtype)
+        else:
+            hdr = self.datahdr.copy()
+
+        nii = nb.Nifti1Image(resampled, self.affine, hdr)
+        if filename is not None:
+            nii.to_filename(filename)
+
         return nii
