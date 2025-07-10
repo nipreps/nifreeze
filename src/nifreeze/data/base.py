@@ -41,6 +41,8 @@ Ts = TypeVarTuple("Ts")
 
 NFDH5_EXT = ".h5"
 
+ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
+
 
 def _data_repr(value: np.ndarray | None) -> str:
     if value is None:
@@ -162,7 +164,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
         """Get the filepath of the HDF5 file."""
         return self._filepath
 
-    def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
+    def set_transform(self, index: int, affine: np.ndarray) -> None:
         """
         Set an affine transform for a particular index and update the data object.
 
@@ -172,36 +174,13 @@ class BaseDataset(Generic[Unpack[Ts]]):
             The volume index to transform.
         affine : :obj:`numpy.ndarray`
             The 4x4 affine matrix to be applied.
-        order : :obj:`int`, optional
-            The order of the spline interpolation.
 
         """
-        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
-        reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
-
-        xform = Affine(matrix=affine, reference=reference)
-
-        if not Path(self._filepath).exists():
-            self.to_filename(self._filepath)
-
-        # read original DWI data & b-vector
-        with h5py.File(self._filepath, "r") as in_file:
-            root = in_file["/0"]
-            dataframe = np.asanyarray(root["dataobj"][..., index])
-
-        datamoving = nb.Nifti1Image(dataframe, self.affine, None)
-
-        # resample and update orientation at index
-        self.dataobj[..., index] = np.asanyarray(
-            xform.apply(datamoving, order=order).dataobj,
-            dtype=self.dataobj.dtype,
-        )
-
         # if head motion affines are to be used, initialized to identities
         if self.motion_affines is None:
-            self.motion_affines = np.repeat(np.zeros((4, 4))[None, ...], len(self), axis=0)
+            self.motion_affines = np.repeat(np.eye(4)[None, ...], len(self), axis=0)
 
-        self.motion_affines[index] = xform.matrix
+        self.motion_affines[index] = affine
 
     def to_filename(
         self, filename: Path | str, compression: str | None = None, compression_opts: Any = None
@@ -243,17 +222,49 @@ class BaseDataset(Generic[Unpack[Ts]]):
                         compression_opts=compression_opts,
                     )
 
-    def to_nifti(self, filename: Path | str) -> None:
+    def to_nifti(self, filename: Path | str | None = None, order: int = 3) -> nb.Nifti1Image:
         """
         Write a NIfTI file to disk.
 
+        Volumes are resampled to the reference affine if motion affines have
+        been set, otherwise the original data are written.
+
         Parameters
         ----------
-        filename : :obj:`os.pathlike`
+        filename : :obj:`os.pathlike`, optional
             The output NIfTI file path.
+        order : :obj:`int`, optional
+            The interpolation order to use when resampling the data.
+            Defaults to 3 (cubic interpolation).
 
         """
-        nii = nb.Nifti1Image(self.dataobj, self.affine, self.datahdr)
+
+        if self.motion_affines is not None:  # resampling is needed
+            reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
+
+            resampled = np.empty_like(self.dataobj, dtype=self.dataobj.dtype)
+            for i in range(len(self)):
+                frame = self[i]
+                xform = Affine(matrix=frame[1], reference=reference)
+
+                datamoving = nb.Nifti1Image(frame[0], self.affine, self.datahdr)
+                # resample at index
+                resampled[..., i] = np.asanyarray(
+                    xform.apply(datamoving, order=order).dataobj,
+                    dtype=self.dataobj.dtype,
+                )
+        else:
+            resampled = self.dataobj
+
         if self.datahdr is None:
-            nii.header.set_xyzt_units("mm")
-        nii.to_filename(filename)
+            hdr = nb.Nifti1Header()
+            hdr.set_xyzt_units("mm")
+            hdr.set_data_dtype(self.dataobj.dtype)
+        else:
+            hdr = self.datahdr.copy()
+
+        nii = nb.Nifti1Image(resampled, self.affine, hdr)
+        if filename is not None:
+            nii.to_filename(filename)
+
+        return nii
