@@ -465,25 +465,3 @@ def find_shelling_scheme(
         scheme = "DSI"
 
     return scheme, bval_groups, bval_estimated
-
-
-def _rasb2dipy(gradient):
-    import warnings
-
-    gradient = np.asanyarray(gradient)
-    if gradient.ndim == 1:
-        if gradient.size != 4:
-            raise ValueError("Missing gradient information.")
-        gradient = gradient[..., np.newaxis]
-
-    if gradient.shape[0] != 4:
-        gradient = gradient.T
-    elif gradient.shape == (4, 4):
-        print("Warning: make sure gradient information is not transposed!")
-
-    with warnings.catch_warnings():
-        from dipy.core.gradients import gradient_table
-
-        warnings.filterwarnings("ignore", category=UserWarning)
-        retval = gradient_table(gradient[3, :], bvecs=gradient[:3, :].T)
-    return retval
