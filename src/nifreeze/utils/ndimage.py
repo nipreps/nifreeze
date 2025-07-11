@@ -63,11 +63,9 @@ def get_data(img: ImgT, dtype: np.dtype | str | None = None) -> np.ndarray:
 
     """
 
+    is_float = dtype is not None and np.issubdtype(np.dtype(dtype), np.floating)
     # Warning: np.dtype(None) returns np.float64
-    if (
-        not (is_float := dtype is not None and np.issubdtype(np.dtype(dtype), np.floating))
-        and dtype is not None
-    ):
+    if not is_float and dtype is not None:
         warn(
             "Non-float dtypes are ignored and the original data type is preserved."
             " Please cast data explicitly.",
@@ -77,9 +75,9 @@ def get_data(img: ImgT, dtype: np.dtype | str | None = None) -> np.ndarray:
     header = img.header
 
     def _no_slope_inter():
-        return (None, None)
+        return None, None
 
-    # OE: Typechecking whines about header not having get_slope_inter
+    # Typechecking whines about header not having get_slope_inter
     if not is_float and getattr(header, "get_slope_inter", _no_slope_inter)() in (
         (None, None),
         (1.0, 0.0),
