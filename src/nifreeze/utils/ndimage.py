@@ -77,7 +77,7 @@ def get_data(img: ImgT, dtype: np.dtype | str | None = None) -> np.ndarray:
     def _no_slope_inter():
         return None, None
 
-    # OE: Typechecking whines about header not having get_slope_inter
+    # Typechecking whines about header not having get_slope_inter
     if not is_float and getattr(header, "get_slope_inter", _no_slope_inter)() in (
         (None, None),
         (1.0, 0.0),
