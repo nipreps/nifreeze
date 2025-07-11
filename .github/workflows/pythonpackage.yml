@@ -19,7 +19,6 @@ jobs:
     strategy:
       matrix:
         python-version: ${{ github.event_name == 'schedule' && fromJson('["3.10", "3.11", "3.12", "3.13"]') || fromJson('["3.12"]') }}
-
     steps:
     - uses: actions/checkout@v4
       with:
