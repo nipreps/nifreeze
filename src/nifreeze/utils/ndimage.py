@@ -63,11 +63,9 @@ def get_data(img: ImgT, dtype: np.dtype | str | None = None) -> np.ndarray:
 
     """
 
+    is_float = dtype is not None and np.issubdtype(np.dtype(dtype), np.floating)
     # Warning: np.dtype(None) returns np.float64
-    if (
-        not (is_float := dtype is not None and np.issubdtype(np.dtype(dtype), np.floating))
-        and dtype is not None
-    ):
+    if not is_float and dtype is not None:
         warn(
             "Non-float dtypes are ignored and the original data type is preserved."
             " Please cast data explicitly.",
