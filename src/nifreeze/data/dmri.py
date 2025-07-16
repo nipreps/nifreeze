@@ -199,6 +199,7 @@ class DWI(BaseDataset[np.ndarray | None]):
     def to_nifti(
         self,
         filename: Path | str | None = None,
+        write_hmxfms: bool = False,
         order: int = 3,
         insert_b0: bool = False,
         bvals_dec_places: int = 2,
@@ -211,6 +212,12 @@ class DWI(BaseDataset[np.ndarray | None]):
         ----------
         filename : :obj:`os.pathlike`
             The output NIfTI file path.
+        write_hmxfms : :obj:`bool`, optional
+            If ``True``, the head motion affines will be written out to filesystem
+            with BIDS' X5 format.
+        order : :obj:`int`, optional
+            The interpolation order to use when resampling the data.
+            Defaults to 3 (cubic interpolation).
         insert_b0 : :obj:`bool`, optional
             Insert a :math:`b=0` at the front of the output NIfTI and add the corresponding
             null gradient value to the output bval/bvec files.
@@ -237,7 +244,11 @@ class DWI(BaseDataset[np.ndarray | None]):
         )
 
         # Parent's to_nifti to handle the primary NIfTI export.
-        nii = super().to_nifti(filename=filename if no_bzero else None, order=order)
+        nii = super().to_nifti(
+            filename=filename if no_bzero else None,
+            write_hmxfms=write_hmxfms,
+            order=order,
+        )
 
         if no_bzero:
             if insert_b0:

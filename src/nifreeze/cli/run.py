@@ -77,7 +77,7 @@ def main(argv=None) -> None:
         output_h5_path: Path = Path(args.output_dir) / output_h5_filename
         dataset.to_filename(output_h5_path)
 
-    dataset.to_nifti(output_path)
+    dataset.to_nifti(output_path, write_hmxfms=True)
 
 
 if __name__ == "__main__":
