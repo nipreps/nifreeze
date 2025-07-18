@@ -1,8 +1,8 @@
-import numpy as np
 import nitransforms as nt
+import numpy as np
 
 from nifreeze.data.pet import PET
-from nifreeze.estimator import PETMotionEstimator, _run_registration
+from nifreeze.estimator import PETMotionEstimator
 
 
 def _create_dataset():

@@ -1,8 +1,9 @@
-import numpy as np
 import types
+
+import numpy as np
+
 from nifreeze.data.pet import PET
 from nifreeze.estimator import PETMotionEstimator
-import pytest
 
 
 def _pet_dataset(n_frames=3):
