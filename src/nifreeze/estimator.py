@@ -28,18 +28,20 @@ from importlib.resources import files
 from os import cpu_count
 from pathlib import Path
 
-from tempfile import NamedTemporaryFile, TemporaryDirectory
+from tempfile import TemporaryDirectory
 from timeit import default_timer as timer
 from typing import TypeVar
 
-import nibabel as nib
+import nibabel as nb
 import nitransforms as nt
 import numpy as np
 from tqdm import tqdm
 from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset
+from nifreeze.data.pet import PET
 from nifreeze.model.base import BaseModel, ModelFactory
+from nifreeze.model.pet import PETModel
 from nifreeze.registration.ants import (
     Registration,
     _prepare_registration_data,
@@ -228,16 +230,12 @@ class PETMotionEstimator:
         self.align_kwargs = align_kwargs or {}
         self.strategy = strategy
 
-    def run(self, pet_dataset, omp_nthreads=None, n_jobs=None, seed=None, debug_dir=None):
+    def run(self, pet_dataset, omp_nthreads=None, n_jobs=None, seed=None):
         n_frames = len(pet_dataset)
         frame_indices = np.arange(n_frames)
 
         if omp_nthreads:
             self.align_kwargs["num_threads"] = omp_nthreads
-
-        if debug_dir:
-            debug_dir = Path(debug_dir)
-            debug_dir.mkdir(parents=True, exist_ok=True)
 
         affine_matrices = []
 
@@ -275,13 +273,13 @@ class PETMotionEstimator:
                 # Predict the reference volume at the test frame's timepoint
                 predicted = model.fit_predict(test_time)
 
-                fixed_image_path = debug_dir / f"fixed_frame_{idx:03d}.nii.gz"
-                moving_image_path = debug_dir / f"moving_frame_{idx:03d}.nii.gz"
+                fixed_image_path = tmp_path / f"fixed_frame_{idx:03d}.nii.gz"
+                moving_image_path = tmp_path / f"moving_frame_{idx:03d}.nii.gz"
 
-                fixed_img = nib.Nifti1Image(predicted, pet_dataset.affine)
-                moving_img = nib.Nifti1Image(test_data, pet_dataset.affine)
+                fixed_img = nb.Nifti1Image(predicted, pet_dataset.affine)
+                moving_img = nb.Nifti1Image(test_data, pet_dataset.affine)
 
-                moving_img = nib.as_closest_canonical(moving_img, enforce_diag=True)
+                moving_img = nb.as_closest_canonical(moving_img, enforce_diag=True)
 
                 fixed_img.to_filename(fixed_image_path)
                 moving_img.to_filename(moving_image_path)
@@ -299,10 +297,6 @@ class PETMotionEstimator:
                     **self.align_kwargs,
                 )
 
-                # Save ANTs command line for debugging
-                cmd_path = debug_dir / f"ants_cmd_{idx:03d}.sh"
-                cmd_path.write_text(registration.cmdline)
-
                 try:
                     result = registration.run(cwd=str(tmp_path))
                     if result.outputs.forward_transforms:
@@ -313,15 +307,6 @@ class PETMotionEstimator:
                             reference=str(fixed_image_path), moving=str(moving_image_path)
                         )
                         affine_matrices.append(matrix)
-
-                        if (
-                            debug_dir
-                            and hasattr(result.outputs, "warped_image")
-                            and result.outputs.warped_image
-                        ):
-                            Path(result.outputs.warped_image).rename(
-                                debug_dir / f"corrected_frame_{idx:03d}.nii.gz"
-                            )
                     else:
                         affine_matrices.append(np.eye(4))
                         print(f"No transforms produced for index {idx}")
