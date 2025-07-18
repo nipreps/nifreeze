@@ -12,7 +12,13 @@ def _pet_dataset(n_frames=3):
     affine = np.eye(4, dtype=np.float32)
     mask = np.ones((2, 2, 2), dtype=bool)
     midframe = np.arange(n_frames, dtype=np.float32) + 1
-    return PET(dataobj=data, affine=affine, brainmask=mask, midframe=midframe, total_duration=float(n_frames + 1))
+    return PET(
+        dataobj=data,
+        affine=affine,
+        brainmask=mask,
+        midframe=midframe,
+        total_duration=float(n_frames + 1),
+    )
 
 
 def test_lofo_split_shapes(tmp_path):
@@ -43,18 +49,22 @@ def test_pet_motion_estimator_run(monkeypatch):
     class DummyModel:
         def __init__(self, dataset, timepoints, xlim):
             self.dataset = dataset
+
         def fit_predict(self, index):
             if index is None:
                 return None
             return np.zeros(ds.shape3d, dtype=np.float32)
-    monkeypatch.setattr('nifreeze.estimator.PETModel', DummyModel)
+
+    monkeypatch.setattr("nifreeze.estimator.PETModel", DummyModel)
 
     class DummyRegistration:
         def __init__(self, *args, **kwargs):
             pass
+
         def run(self, cwd=None):
             return types.SimpleNamespace(outputs=types.SimpleNamespace(forward_transforms=[]))
-    monkeypatch.setattr('nifreeze.estimator.Registration', DummyRegistration)
+
+    monkeypatch.setattr("nifreeze.estimator.Registration", DummyRegistration)
 
     estimator = PETMotionEstimator(None)
     affines = estimator.run(ds)
