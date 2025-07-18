@@ -30,7 +30,7 @@ from pathlib import Path
 
 import attrs
 import h5py
-import nibabel as nib
+import nibabel as nb
 import numpy as np
 from nibabel.spatialimages import SpatialImage
 from nitransforms.linear import Affine
@@ -133,7 +133,7 @@ class PET(BaseDataset[np.ndarray | None]):
             root = in_file["/0"]
             dframe = np.asanyarray(root["dataobj"][..., index])
 
-        dmoving = nib.Nifti1Image(dframe, self.affine, None)
+        dmoving = nb.Nifti1Image(dframe, self.affine, None)
 
         # resample and update orientation at index
         self.dataobj[..., index] = np.asanyarray(
@@ -173,7 +173,7 @@ class PET(BaseDataset[np.ndarray | None]):
 
     def to_nifti(self, filename, *_):
         """Write a NIfTI 1.0 file to disk."""
-        nii = nib.Nifti1Image(self.dataobj, self.affine, None)
+        nii = nb.Nifti1Image(self.dataobj, self.affine, None)
         nii.header.set_xyzt_units("mm")
         nii.to_filename(filename)
 
@@ -191,7 +191,7 @@ class PET(BaseDataset[np.ndarray | None]):
         if filename.name.endswith(".h5"):
             return PET.from_filename(filename)
 
-        img = nib.load(filename)
+        img = nb.load(filename)
         retval = PET(
             dataobj=img.get_fdata(dtype="float32"),
             affine=img.affine,
@@ -211,7 +211,7 @@ class PET(BaseDataset[np.ndarray | None]):
         assert len(retval.midframe) == retval.dataobj.shape[-1]
 
         if brainmask_file:
-            mask = nib.load(brainmask_file)
+            mask = nb.load(brainmask_file)
             retval.brainmask = np.asanyarray(mask.dataobj)
 
         return retval

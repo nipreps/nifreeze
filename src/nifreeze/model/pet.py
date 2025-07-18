@@ -24,7 +24,7 @@
 
 from os import cpu_count
 
-import nibabel as nib
+import nibabel as nb
 import numpy as np
 from joblib import Parallel, delayed
 from nibabel.processing import smooth_image
@@ -124,7 +124,7 @@ class PETModel(BaseModel):
 
         if self._smooth_fwhm > 0:
             smoothed_img = smooth_image(
-                nib.Nifti1Image(data, self._dataset.affine), self._smooth_fwhm
+                nb.Nifti1Image(data, self._dataset.affine), self._smooth_fwhm
             )
             data = smoothed_img.get_fdata()
 
