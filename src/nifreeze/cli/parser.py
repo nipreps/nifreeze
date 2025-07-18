@@ -22,7 +22,7 @@
 #
 """Parser module."""
 
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, Namespace
 from pathlib import Path
 
 import yaml
@@ -47,7 +47,7 @@ def _parse_yaml_config(file_path: str) -> dict:
     return config
 
 
-def build_parser() -> ArgumentParser:
+def _build_parser() -> ArgumentParser:
     """
     Build parser object.
 
@@ -164,3 +164,100 @@ def build_parser() -> ArgumentParser:
     )
 
     return parser
+
+
+def _determine_single_fit_mode(model_name: str) -> bool:
+    """Determine if a model is to be run in *single-fit mode*.
+    If a model is requested to be run in *single-fit mode*, it will be run only
+    once in all the data available.
+    Parameters
+    ----------
+    model_name : :obj:`str
+        Model name.
+    Returns
+    -------
+    :obj:`bool`
+        ``True`` if the model is to be run in *single-fit mode*, ``False``
+        otherwise.
+    """
+
+    return model_name.lower().startswith("single")
+
+
+def _normalize_model_name(model_name: str) -> str:
+    """Normalize a model name.
+    Normalize a model name by converting it to all lowercase and stripping the
+    ``single`` prefix if present.
+    Parameters
+    ----------
+    model_name : :obj:`str`
+        Model name.
+    Returns
+    -------
+    :obj:`str`
+        Normalized model name.
+    """
+
+    return model_name.lower().replace("single", "")
+
+
+def parse_args(argv: list) -> tuple[Namespace, dict, dict, dict]:
+    """Parse the command line arguments and return a curated arguments.
+
+    Performs further checks to ensure that necessary data is provided for the
+    estimation process.
+
+    Parameters
+    ----------
+    argv : list
+        Arguments.
+
+    Returns
+    -------
+    args : :obj:`Namespace`
+        Populated namespace.
+    extra_kwargs : :obj:`dict`
+        Extra keyword arguments passed to the dataset.
+    estimator_kwargs : :obj:`dict`
+        Extra keyword arguments passed to the estimator.
+    model_kwargs : :obj:`dict`
+        Extra keyword arguments passed to the model.
+
+    """
+
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+
+    extra_kwargs = {}
+
+    if args.gradient_file:
+        nfiles = len(args.gradient_file)
+
+        if nfiles == 1:
+            extra_kwargs["gradients_file"] = args.gradient_file[0]
+        elif nfiles == 2:
+            extra_kwargs["bvec_file"] = args.gradient_file[0]
+            extra_kwargs["bval_file"] = args.gradient_file[1]
+        else:
+            parser.error("--gradient-file must be one or two files")
+
+    if args.b0_file:
+        extra_kwargs["b0_file"] = args.b0_file
+
+    if args.timing_file:
+        raise NotImplementedError("Cannot load PET timing information")
+
+    model_kwargs = {}
+
+    if args.ignore_b0:
+        model_kwargs["ignore_bzero"] = True
+
+    estimator_kwargs = {}
+
+    for idx, _model in enumerate(args.models):
+        single_fit = _determine_single_fit_mode(_model)
+        model_name = _normalize_model_name(_model)
+        args.models[idx] = model_name
+        estimator_kwargs[model_name] = {"single_fit": single_fit}
+
+    return args, extra_kwargs, estimator_kwargs, model_kwargs

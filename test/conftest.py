@@ -285,7 +285,7 @@ def setup_random_dwi_data(request, setup_random_gtab_data):
     dwi_dataobj, affine = _generate_random_uniform_spatial_data(
         request, (*vol_size, volumes), 0.0, 1.0
     )
-    brainmask_dataobj = rng.random(vol_size, dtype="float32")
+    brainmask_dataobj = rng.choice([True, False], size=vol_size).astype(np.uint8)
     b0_dataobj = rng.random(vol_size, dtype="float32")
     gradients = np.vstack([bvecs, bvals[np.newaxis, :]], dtype="float32")
 

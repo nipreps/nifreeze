@@ -28,18 +28,21 @@ from collections import namedtuple
 from pathlib import Path
 from tempfile import mkdtemp
 from typing import Any, Generic
+from warnings import warn
 
 import attrs
 import h5py
 import nibabel as nb
 import numpy as np
 from nibabel.spatialimages import SpatialHeader
-from nitransforms.linear import Affine
+from nitransforms.linear import LinearTransformsMapping
 from typing_extensions import Self, TypeVarTuple, Unpack
 
 Ts = TypeVarTuple("Ts")
 
 NFDH5_EXT = ".h5"
+
+ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
 
 
 def _data_repr(value: np.ndarray | None) -> str:
@@ -162,7 +165,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
         """Get the filepath of the HDF5 file."""
         return self._filepath
 
-    def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
+    def set_transform(self, index: int, affine: np.ndarray) -> None:
         """
         Set an affine transform for a particular index and update the data object.
 
@@ -172,36 +175,13 @@ class BaseDataset(Generic[Unpack[Ts]]):
             The volume index to transform.
         affine : :obj:`numpy.ndarray`
             The 4x4 affine matrix to be applied.
-        order : :obj:`int`, optional
-            The order of the spline interpolation.
 
         """
-        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
-        reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
-
-        xform = Affine(matrix=affine, reference=reference)
-
-        if not Path(self._filepath).exists():
-            self.to_filename(self._filepath)
-
-        # read original DWI data & b-vector
-        with h5py.File(self._filepath, "r") as in_file:
-            root = in_file["/0"]
-            dataframe = np.asanyarray(root["dataobj"][..., index])
-
-        datamoving = nb.Nifti1Image(dataframe, self.affine, None)
-
-        # resample and update orientation at index
-        self.dataobj[..., index] = np.asanyarray(
-            xform.apply(datamoving, order=order).dataobj,
-            dtype=self.dataobj.dtype,
-        )
-
         # if head motion affines are to be used, initialized to identities
         if self.motion_affines is None:
-            self.motion_affines = np.repeat(np.zeros((4, 4))[None, ...], len(self), axis=0)
+            self.motion_affines = np.repeat(np.eye(4)[None, ...], len(self), axis=0)
 
-        self.motion_affines[index] = xform.matrix
+        self.motion_affines[index] = affine
 
     def to_filename(
         self, filename: Path | str, compression: str | None = None, compression_opts: Any = None
@@ -243,17 +223,76 @@ class BaseDataset(Generic[Unpack[Ts]]):
                         compression_opts=compression_opts,
                     )
 
-    def to_nifti(self, filename: Path | str) -> None:
+    def to_nifti(
+        self,
+        filename: Path | str | None = None,
+        write_hmxfms: bool = False,
+        order: int = 3,
+    ) -> nb.Nifti1Image:
         """
         Write a NIfTI file to disk.
 
+        Volumes are resampled to the reference affine if motion affines have
+        been set, otherwise the original data are written.
+
         Parameters
         ----------
-        filename : :obj:`os.pathlike`
+        filename : :obj:`os.pathlike`, optional
             The output NIfTI file path.
+        write_hmxfms : :obj:`bool`, optional
+            If ``True``, the head motion affines will be written out to filesystem
+            with BIDS' X5 format.
+        order : :obj:`int`, optional
+            The interpolation order to use when resampling the data.
+            Defaults to 3 (cubic interpolation).
 
         """
-        nii = nb.Nifti1Image(self.dataobj, self.affine, self.datahdr)
+
+        if filename is None and write_hmxfms:
+            warn("write_hmxfms is set to True, but no filename was provided.", stacklevel=2)
+            write_hmxfms = False
+
+        if self.motion_affines is not None:  # resampling is needed
+            reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
+            resampled = np.empty_like(self.dataobj, dtype=self.dataobj.dtype)
+            xforms = LinearTransformsMapping(self.motion_affines, reference=reference)
+
+            # This loop could be replaced by nitransforms.resampling.apply() when
+            # it is fixed (bug should only affect datasets with less than 9 orientations)
+            for i, xform in enumerate(xforms):
+                frame = self[i]
+                datamoving = nb.Nifti1Image(frame[0], self.affine, self.datahdr)
+                # resample at index
+                resampled[..., i] = np.asanyarray(
+                    xform.apply(datamoving, order=order).dataobj,
+                    dtype=self.dataobj.dtype,
+                )
+
+                if filename is not None and write_hmxfms:
+                    # Prepare filename and write out
+                    out_root = Path(filename).absolute()
+                    out_root = out_root.parent / out_root.name.replace(
+                        "".join(out_root.suffixes), ""
+                    )
+                    xform.to_filename(out_root.with_suffix(".x5"))
+        else:
+            resampled = self.dataobj
+
+            if write_hmxfms:
+                warn(
+                    "write_hmxfms is set to True, but no motion affines were found. Skipping.",
+                    stacklevel=2,
+                )
+
         if self.datahdr is None:
-            nii.header.set_xyzt_units("mm")
-        nii.to_filename(filename)
+            hdr = nb.Nifti1Header()
+            hdr.set_xyzt_units("mm")
+            hdr.set_data_dtype(self.dataobj.dtype)
+        else:
+            hdr = self.datahdr.copy()
+
+        nii = nb.Nifti1Image(resampled, self.affine, hdr)
+        if filename is not None:
+            nii.to_filename(filename)
+
+        return nii

@@ -29,7 +29,7 @@ import numpy as np
 import pytest
 
 from nifreeze.data import load
-from nifreeze.data.dmri import DWI, find_shelling_scheme, from_nii
+from nifreeze.data.dmri import DWI, find_shelling_scheme, from_nii, transform_fsl_bvec
 
 
 def _dwi_data_to_nifti(
@@ -77,12 +77,22 @@ def test_main(datadir):
 
 
 @pytest.mark.parametrize("insert_b0", (False, True))
-def test_load(datadir, tmp_path, insert_b0):
+@pytest.mark.parametrize("rotate_bvecs", (False, True))
+def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
     dwi_h5 = DWI.from_filename(datadir / "dwi.h5")
     dwi_nifti_path = tmp_path / "dwi.nii.gz"
     gradients_path = tmp_path / "dwi.tsv"
 
+    dwi_h5.motion_affines = (
+        # Only translations so bvecs should not change
+        [nb.affines.from_matvec(np.eye(3), (10, -5, -20))] * len(dwi_h5) if rotate_bvecs else None
+    )
+
     dwi_h5.to_nifti(dwi_nifti_path, insert_b0=insert_b0)
+
+    nifti_data = nb.load(dwi_nifti_path).get_fdata()
+    if insert_b0:
+        nifti_data = nifti_data[..., 1:]
 
     with pytest.raises(RuntimeError):
         from_nii(dwi_nifti_path)
@@ -99,12 +109,29 @@ def test_load(datadir, tmp_path, insert_b0):
         bval_file=bvals_path,
     )
 
-    assert np.allclose(dwi_h5.dataobj, dwi_from_nifti1.dataobj)
+    if not rotate_bvecs:  # If we set motion_affines, data WILL change
+        nifti_data_diff = (~np.isclose(dwi_h5.dataobj, nifti_data, atol=1e-4)).sum()
+        assert np.allclose(dwi_h5.dataobj, nifti_data, atol=1e-4), (
+            f"``to_nifti()`` changed data contents ({nifti_data_diff} differences found)."
+        )
+        nifti_dwi_diff = (~np.isclose(dwi_h5.dataobj, dwi_from_nifti1.dataobj, atol=1e-4)).sum()
+        assert np.allclose(dwi_h5.dataobj, dwi_from_nifti1.dataobj, atol=1e-4), (
+            f"Data objects do not match ({nifti_dwi_diff} differences found)."
+        )
+
     if insert_b0:
         assert np.allclose(dwi_h5.bzero, dwi_from_nifti1.bzero)
-    assert np.allclose(dwi_h5.gradients, dwi_from_nifti1.gradients, atol=1e-6)
-    assert np.allclose(dwi_h5.bvals, dwi_from_nifti1.bvals, atol=1e-6)
-    assert np.allclose(dwi_h5.bvecs, dwi_from_nifti1.bvecs, atol=1e-6)
+
+    assert np.allclose(dwi_h5.bvals, dwi_from_nifti1.bvals, atol=1e-3)
+
+    bvec_diffs = np.where(
+        (~np.isclose(dwi_h5.bvecs, dwi_from_nifti1.bvecs, atol=1e-3)).sum(0).astype(bool)
+    )[0].tolist()
+
+    assert not bvec_diffs, "\n".join(
+        [f"{dwi_h5.bvecs[:, i]} vs {dwi_from_nifti1.bvecs[:, i]}" for i in bvec_diffs]
+    )
+    assert np.allclose(dwi_h5.gradients.T, dwi_from_nifti1.gradients.T, atol=1e-3)
 
     grad_table = dwi_h5.gradients
     if insert_b0:
@@ -114,9 +141,11 @@ def test_load(datadir, tmp_path, insert_b0):
     # Try loading NIfTI + gradients table
     dwi_from_nifti2 = from_nii(dwi_nifti_path, gradients_file=gradients_path)
 
-    assert np.allclose(dwi_h5.dataobj, dwi_from_nifti2.dataobj)
+    if not rotate_bvecs:  # If we set motion_affines, data WILL change
+        assert np.allclose(dwi_h5.dataobj, dwi_from_nifti2.dataobj)
     if insert_b0:
         assert np.allclose(dwi_h5.bzero, dwi_from_nifti2.bzero)
+
     assert np.allclose(dwi_h5.gradients, dwi_from_nifti2.gradients)
     assert np.allclose(dwi_h5.bvals, dwi_from_nifti2.bvals, atol=1e-6)
     assert np.allclose(dwi_h5.bvecs, dwi_from_nifti2.bvecs, atol=1e-6)
@@ -139,7 +168,9 @@ def test_load(datadir, tmp_path, insert_b0):
         b0_file=b0_file,
     )
 
-    assert np.allclose(dwi_h5.dataobj, dwi_from_nifti3.dataobj)
+    if not rotate_bvecs:  # If we set motion_affines, data WILL change
+        assert np.allclose(dwi_h5.dataobj, dwi_from_nifti3.dataobj)
+
     assert np.allclose(dwi_h5.bzero, dwi_from_nifti3.bzero)
     assert np.allclose(dwi_h5.gradients, dwi_from_nifti3.gradients, atol=1e-6)
     assert np.allclose(dwi_h5.bvals, dwi_from_nifti3.bvals, atol=1e-6)
@@ -148,7 +179,9 @@ def test_load(datadir, tmp_path, insert_b0):
     # Try loading NIfTI + gradients table
     dwi_from_nifti4 = from_nii(dwi_nifti_path, gradients_file=gradients_path, b0_file=b0_file)
 
-    assert np.allclose(dwi_h5.dataobj, dwi_from_nifti4.dataobj)
+    if not rotate_bvecs:  # If we set motion_affines, data WILL change
+        assert np.allclose(dwi_h5.dataobj, dwi_from_nifti4.dataobj)
+
     assert np.allclose(dwi_h5.bzero, dwi_from_nifti4.bzero)
     assert np.allclose(dwi_h5.gradients, dwi_from_nifti4.gradients)
     assert np.allclose(dwi_h5.bvals, dwi_from_nifti4.bvals, atol=1e-6)
@@ -238,13 +271,17 @@ def test_shells(setup_random_dwi_data):
     ]
     expected_gradients = [dwi_obj.gradients[..., idx] for idx in indices]
 
-    shell_data = dwi_obj.shells(num_bins=num_bins)
-    obtained_bval_est, obtained_dwi_data, obtained_motion_affines, obtained_gradients = zip(
-        *shell_data, strict=True
+    obtained_bval_est, obtained_indices = zip(*dwi_obj.get_shells(num_bins=num_bins), strict=True)
+
+    obtained_dwi_data, obtained_motion_affines, obtained_gradients = zip(
+        *[dwi_obj[indices] for indices in obtained_indices],
+        strict=True,
     )
 
-    assert len(shell_data) == num_bins
+    assert len(obtained_bval_est) == num_bins
     assert list(obtained_bval_est) == expected_bval_est
+
+    assert [i.tolist() for i in obtained_indices] == [i.tolist() for i in indices]
     assert all(
         np.allclose(arr1, arr2)
         for arr1, arr2 in zip(list(obtained_dwi_data), expected_dwi_data, strict=True)
@@ -868,3 +905,46 @@ def test_find_shelling_scheme_files(
         for obt_arr, exp_arr in zip(obt_bval_groups, exp_bval_groups, strict=True)
     )
     assert np.allclose(obt_bval_estimated, exp_bval_estimated)
+
+
+@pytest.mark.parametrize(
+    "b_ijk",
+    [
+        np.array([1.0, 0.0, 0.0]),
+        np.array([0.0, 1.0, 0.0]),
+        np.array([0.0, 0.0, 1.0]),
+    ],
+)
+@pytest.mark.parametrize("zooms", [(1.0, 1.0, 1.0), (2.0, 2.0, 2.0), (1.0, 2.0, 3.0)])
+@pytest.mark.parametrize(
+    "flips", [(1, 1, 1), (-1, 1, 1), (1, -1, 1), (1, 1, -1), (-1, -1, 1), (-1, -1, -1)]
+)
+@pytest.mark.parametrize("axis_order", [(0, 1, 2), (2, 0, 1), (1, 2, 0)])
+@pytest.mark.parametrize("origin", [(0.0, 0.0, 0.0), (-10.0, -10.0, -10.0)])
+@pytest.mark.parametrize(
+    "angles", [(0.0, 0.0, 0.0), (0.1, 0.0, 0.0), (0.0, 0.1, 0.0), (0.0, 0.0, 0.1)]
+)
+def test_transform_fsl_bvec(b_ijk, zooms, flips, axis_order, origin, angles):
+    """Test the rotation of FSL b-vectors."""
+
+    angles = dict(zip(("x", "y", "z"), angles, strict=False))
+    affine = nb.affines.from_matvec(np.diag(zooms * np.array(flips)), origin)
+
+    # Reorder first 3 columns of affine according to axis_order
+    affine = affine[:, list(axis_order) + [3]]
+
+    rotation_matrix = nb.eulerangles.euler2mat(**angles)
+
+    # Ground truth
+    rotated_b_ijk = rotation_matrix @ b_ijk
+
+    # Rotation matrix in voxel space to scanner space
+    rotation_ras = (
+        affine @ nb.affines.from_matvec(rotation_matrix, (0, 0, 0)) @ np.linalg.inv(affine)
+    )
+    test_b_ijk = transform_fsl_bvec(b_ijk, rotation_ras, affine)
+
+    assert np.allclose(test_b_ijk, rotated_b_ijk, atol=1e-6), (
+        f"Expected {rotated_b_ijk}, got {test_b_ijk} for b_ijk={b_ijk}, "
+        f"zooms={zooms}, origin={origin}, angles={angles}"
+    )

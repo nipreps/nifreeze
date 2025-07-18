@@ -24,7 +24,6 @@
 
 from __future__ import annotations
 
-from collections import namedtuple
 from pathlib import Path
 from typing import Any
 from warnings import warn
@@ -35,11 +34,10 @@ import nibabel as nb
 import numpy as np
 import numpy.typing as npt
 from nibabel.spatialimages import SpatialImage
-from nitransforms.linear import Affine
 from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr
-from nifreeze.utils.ndimage import load_api
+from nifreeze.utils.ndimage import get_data, load_api
 
 DEFAULT_CLIP_PERCENTILE = 75
 """Upper percentile threshold for intensity clipping."""
@@ -134,40 +132,43 @@ class DWI(BaseDataset[np.ndarray | None]):
     def bvecs(self):
         return self.gradients[:-1, ...]
 
-    def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
-        """
-        Set an affine transform for a particular index and update the data object.
+    def get_shells(
+        self,
+        num_bins: int = DEFAULT_NUM_BINS,
+        multishell_nonempty_bin_count_thr: int = DEFAULT_MULTISHELL_BIN_COUNT_THR,
+        bval_cap: int = DEFAULT_HIGHB_THRESHOLD,
+    ) -> list:
+        """Get the shell data according to the b-value groups.
 
-        The new affine is set as in :obj:`~nifreeze.data.base.BaseDataset.set_transform`,
-        and, in addition, the corresponding gradient vector is rotated.
+        Bin the shell data according to the b-value groups found by
+        :obj:`~nifreeze.data.dmri.find_shelling_scheme`.
 
         Parameters
         ----------
-        index : :obj:`int`
-            The volume index to transform.
-        affine : :obj:`numpy.ndarray`
-            The 4x4 affine matrix to be applied.
-        order : :obj:`int`, optional
-            The order of the spline interpolation.
+        num_bins : :obj:`int`, optional
+            Number of bins.
+        multishell_nonempty_bin_count_thr : :obj:`int`, optional
+            Bin count to consider a multi-shell scheme.
+        bval_cap : :obj:`int`, optional
+            Maximum b-value to be considered in a multi-shell scheme.
+
+        Returns
+        -------
+        :obj:`list`
+            Tuples of binned b-values and corresponding data/gradients indices.
 
         """
-        if not Path(self._filepath).exists():
-            self.to_filename(self._filepath)
 
-        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
-        reference = ImageGrid(shape=self.dataobj.shape[:3], affine=self.affine)
-
-        xform = Affine(matrix=affine, reference=reference)
-        bvec = self.bvecs[:, index]
-
-        # invert transform transform b-vector and origin
-        r_bvec = (~xform).map([bvec, (0.0, 0.0, 0.0)])
-        # Reset b-vector's origin
-        new_bvec = r_bvec[1] - r_bvec[0]
-        # Normalize and update
-        self.bvecs[:, index] = new_bvec / np.linalg.norm(new_bvec)
-
-        super().set_transform(index, affine, order)
+        _, bval_groups, bval_estimated = find_shelling_scheme(
+            self.gradients[-1, ...],
+            num_bins=num_bins,
+            multishell_nonempty_bin_count_thr=multishell_nonempty_bin_count_thr,
+            bval_cap=bval_cap,
+        )
+        indices = [
+            np.hstack(np.where(np.isin(self.gradients[-1, ...], bvals))) for bvals in bval_groups
+        ]
+        return list(zip(bval_estimated, indices, strict=True))
 
     def to_filename(
         self,
@@ -197,11 +198,13 @@ class DWI(BaseDataset[np.ndarray | None]):
 
     def to_nifti(
         self,
-        filename: Path | str,
+        filename: Path | str | None = None,
+        write_hmxfms: bool = False,
+        order: int = 3,
         insert_b0: bool = False,
         bvals_dec_places: int = 2,
         bvecs_dec_places: int = 6,
-    ) -> None:
+    ) -> nb.Nifti1Image:
         """
         Export the dMRI object to disk (NIfTI, b-vecs, & b-vals files).
 
@@ -209,6 +212,12 @@ class DWI(BaseDataset[np.ndarray | None]):
         ----------
         filename : :obj:`os.pathlike`
             The output NIfTI file path.
+        write_hmxfms : :obj:`bool`, optional
+            If ``True``, the head motion affines will be written out to filesystem
+            with BIDS' X5 format.
+        order : :obj:`int`, optional
+            The interpolation order to use when resampling the data.
+            Defaults to 3 (cubic interpolation).
         insert_b0 : :obj:`bool`, optional
             Insert a :math:`b=0` at the front of the output NIfTI and add the corresponding
             null gradient value to the output bval/bvec files.
@@ -219,78 +228,63 @@ class DWI(BaseDataset[np.ndarray | None]):
 
         """
 
-        # Convert filename to a Path object.
-        out_root = Path(filename).absolute()
-
-        # Get the base stem for writing .bvec / .bval.
-        out_root = out_root.parent / out_root.name.replace("".join(out_root.suffixes), "")
-
-        # Construct sidecar file paths.
-        bvecs_file = out_root.with_suffix(".bvec")
-        bvals_file = out_root.with_suffix(".bval")
-
+        no_bzero = self.bzero is None or not insert_b0
         bvals = self.bvals
-        bvecs = self.bvecs
 
-        if self.bzero is None or not insert_b0:
+        # Rotate b-vectors if self.motion_affines is not None
+        bvecs = (
+            np.array(
+                [
+                    transform_fsl_bvec(bvec, affine, self.affine, invert=True)
+                    for bvec, affine in zip(self.gradients.T, self.motion_affines, strict=True)
+                ]
+            ).T
+            if self.motion_affines is not None
+            else self.bvecs
+        )
+
+        # Parent's to_nifti to handle the primary NIfTI export.
+        nii = super().to_nifti(
+            filename=filename if no_bzero else None,
+            write_hmxfms=write_hmxfms,
+            order=order,
+        )
+
+        if no_bzero:
             if insert_b0:
-                warn("Ignoring ``insert_b0`` argument as the data object's bzero field is unset")
-
-            # Parent's to_nifti to handle the primary NIfTI export.
-            super().to_nifti(filename)
+                warn(
+                    "Ignoring ``insert_b0`` argument as the data object's bzero field is unset",
+                    stacklevel=2,
+                )
         else:
             data = np.concatenate((self.bzero[..., np.newaxis], self.dataobj), axis=-1)
-            nii = nb.Nifti1Image(data, self.affine, self.datahdr)
-            if self.datahdr is None:
-                nii.header.set_xyzt_units("mm")
+            nii = nb.Nifti1Image(data, nii.affine, nii.header)
 
-            nii.to_filename(filename)
+            if filename is not None:
+                nii.to_filename(filename)
 
             # If inserting a b0 volume is requested, add the corresponding null
             # gradient value to the bval/bvec pair
             bvals = np.concatenate((np.zeros(1), bvals))
             bvecs = np.concatenate((np.zeros(3)[:, np.newaxis], bvecs), axis=-1)
 
-        # Save bvecs and bvals to text files
-        # Each row of bvecs is one direction (3 rows, N columns).
-        np.savetxt(bvecs_file, bvecs, fmt=f"%.{bvecs_dec_places}f")
-        np.savetxt(bvals_file, bvals[np.newaxis, :], fmt=f"%.{bvals_dec_places}f")
+        if filename is not None:
+            # Convert filename to a Path object.
+            out_root = Path(filename).absolute()
 
-    def shells(
-        self,
-        num_bins: int = DEFAULT_NUM_BINS,
-        multishell_nonempty_bin_count_thr: int = DEFAULT_MULTISHELL_BIN_COUNT_THR,
-        bval_cap: int = DEFAULT_HIGHB_THRESHOLD,
-    ) -> list:
-        """Get the shell data according to the b-value groups.
+            # Get the base stem for writing .bvec / .bval.
+            out_root = out_root.parent / out_root.name.replace("".join(out_root.suffixes), "")
 
-        Bin the shell data according to the b-value groups found by `~find_shelling_scheme`.
+            # Construct sidecar file paths.
+            bvecs_file = out_root.with_suffix(".bvec")
+            bvals_file = out_root.with_suffix(".bval")
 
-        Parameters
-        ----------
-        num_bins : :obj:`int`, optional
-            Number of bins.
-        multishell_nonempty_bin_count_thr : :obj:`int`, optional
-            Bin count to consider a multi-shell scheme.
-        bval_cap : :obj:`int`, optional
-            Maximum b-value to be considered in a multi-shell scheme.
+            # Save bvecs and bvals to text files
+            # Each row of bvecs is one direction (3 rows, N columns).
+            np.savetxt(bvecs_file, bvecs, fmt=f"%.{bvecs_dec_places}f")
+            np.savetxt(bvals_file, bvals[np.newaxis, :], fmt=f"%.{bvals_dec_places}f")
 
-        Returns
-        -------
-        :obj:`list`
-            Tuples of binned b-values and corresponding shell data.
-        """
-
-        _, bval_groups, bval_estimated = find_shelling_scheme(
-            self.gradients[-1, ...],
-            num_bins=num_bins,
-            multishell_nonempty_bin_count_thr=multishell_nonempty_bin_count_thr,
-            bval_cap=bval_cap,
-        )
-        indices = [
-            np.hstack(np.where(np.isin(self.gradients[-1, ...], bvals))) for bvals in bval_groups
-        ]
-        return [(bval_estimated[idx], *self[indices]) for idx, indices in enumerate(indices)]
+        return nii
 
 
 def from_nii(
@@ -353,8 +347,7 @@ def from_nii(
 
     # 1) Load a NIfTI
     img = load_api(filename, SpatialImage)
-    fulldata = img.get_fdata(dtype=np.float32)
-    affine = img.affine
+    fulldata = get_data(img)
 
     # 2) Determine the gradients array from either gradients_file or bvec/bval
     if gradients_file:
@@ -381,12 +374,12 @@ def from_nii(
 
     # 3) Create the DWI instance. We'll filter out volumes where b-value > b0_thres
     #    as "DW volumes" if the user wants to store only the high-b volumes here
-    gradmsk = grad[-1] > b0_thres if grad.shape[0] == 4 else grad[:, -1] > b0_thres
+    gradmsk = (grad[-1] if grad.shape[0] == 4 else grad[:, -1]) > b0_thres
 
     # The shape checking is somewhat flexible: (4, N) or (N, 4)
     dwi_obj = DWI(
         dataobj=fulldata[..., gradmsk],
-        affine=affine,
+        affine=img.affine,
         # We'll assign the filtered gradients below.
     )
 
@@ -479,23 +472,36 @@ def find_shelling_scheme(
     return scheme, bval_groups, bval_estimated
 
 
-def _rasb2dipy(gradient):
-    import warnings
+def transform_fsl_bvec(
+    b_ijk: np.ndarray, xfm: np.ndarray, imaffine: np.ndarray, invert: bool = False
+) -> np.ndarray:
+    """
+    Transform a b-vector from the original space to the new space defined by the affine.
 
-    gradient = np.asanyarray(gradient)
-    if gradient.ndim == 1:
-        if gradient.size != 4:
-            raise ValueError("Missing gradient information.")
-        gradient = gradient[..., np.newaxis]
+    Parameters
+    ----------
+    b_ijk : :obj:`~numpy.ndarray`
+        The b-vector in FSL/DIPY conventions (i.e., voxel coordinates).
+    xfm : :obj:`~numpy.ndarray`
+        The affine transformation to apply.
+        Please note that this is the inverse of the head-motion-correction affine,
+        which maps coordinates from the realigned space to the moved (scan) space.
+        In this case, we want to move the b-vector from the moved (scan) space into
+        the realigned space.
+    imaffine : :obj:`~numpy.ndarray`
+        The image's affine, to convert.
+    invert : :obj:`bool`, optional
+        If ``True``, the transformation will be inverted.
 
-    if gradient.shape[0] != 4:
-        gradient = gradient.T
-    elif gradient.shape == (4, 4):
-        print("Warning: make sure gradient information is not transposed!")
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        The transformed b-vector in voxel coordinates (FSL/DIPY).
 
-    with warnings.catch_warnings():
-        from dipy.core.gradients import gradient_table
+    """
+    xfm = np.linalg.inv(xfm) if invert else xfm.copy()
 
-        warnings.filterwarnings("ignore", category=UserWarning)
-        retval = gradient_table(gradient[3, :], bvecs=gradient[:3, :].T)
-    return retval
+    # Go from world coordinates (xfm) to voxel coordinates
+    ijk2ijk_xfm = np.linalg.inv(imaffine) @ xfm @ imaffine
+
+    return ijk2ijk_xfm[:3, :3] @ b_ijk[:3]
