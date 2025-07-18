@@ -24,18 +24,25 @@
 
 from __future__ import annotations
 
+from importlib.resources import files
 from os import cpu_count
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from timeit import default_timer as timer
 from typing import TypeVar
 
+import nibabel as nb
+import nitransforms as nt
+import numpy as np
 from tqdm import tqdm
 from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset
+from nifreeze.data.pet import PET
 from nifreeze.model.base import BaseModel, ModelFactory
+from nifreeze.model.pet import PETModel
 from nifreeze.registration.ants import (
+    Registration,
     _prepare_registration_data,
     _run_registration,
 )
@@ -212,3 +219,96 @@ class Estimator:
                     pbar.update()
 
         return self
+
+
+class PETMotionEstimator:
+    """Estimates motion within PET imaging data aligned with generic Estimator workflow."""
+
+    def __init__(self, align_kwargs=None, strategy="lofo"):
+        self.align_kwargs = align_kwargs or {}
+        self.strategy = strategy
+
+    def run(self, pet_dataset, omp_nthreads=None):
+        n_frames = len(pet_dataset)
+        frame_indices = np.arange(n_frames)
+
+        if omp_nthreads:
+            self.align_kwargs["num_threads"] = omp_nthreads
+
+        affine_matrices = []
+
+        with TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+
+            for idx in tqdm(frame_indices, desc="Estimating PET motion"):
+                (train_data, train_times), (test_data, test_time) = pet_dataset.lofo_split(idx)
+
+                if train_times is None:
+                    raise ValueError(
+                        f"train_times is None at index {idx}, check midframe initialization."
+                    )
+
+                # Build a temporary dataset excluding the test frame
+                train_dataset = PET(
+                    dataobj=train_data,
+                    affine=pet_dataset.affine,
+                    brainmask=pet_dataset.brainmask,
+                    midframe=train_times,
+                    total_duration=pet_dataset.total_duration,
+                )
+
+                # Instantiate PETModel explicitly
+                model = PETModel(
+                    dataset=train_dataset,
+                    timepoints=train_times,
+                    xlim=pet_dataset.total_duration,
+                )
+
+                # Fit the model once on the training dataset
+                model.fit_predict(None)
+
+                # Predict the reference volume at the test frame's timepoint
+                predicted = model.fit_predict(test_time)
+
+                fixed_image_path = tmp_path / f"fixed_frame_{idx:03d}.nii.gz"
+                moving_image_path = tmp_path / f"moving_frame_{idx:03d}.nii.gz"
+
+                fixed_img = nb.Nifti1Image(predicted, pet_dataset.affine)
+                moving_img = nb.Nifti1Image(test_data, pet_dataset.affine)
+
+                moving_img = nb.as_closest_canonical(moving_img, enforce_diag=True)
+
+                fixed_img.to_filename(fixed_image_path)
+                moving_img.to_filename(moving_image_path)
+
+                registration_config = files("nifreeze.registration.config").joinpath(
+                    "pet-to-pet_level1.json"
+                )
+
+                registration = Registration(
+                    from_file=registration_config,
+                    fixed_image=str(fixed_image_path),
+                    moving_image=str(moving_image_path),
+                    output_warped_image=True,
+                    output_transform_prefix=f"ants_{idx:03d}",
+                    **self.align_kwargs,
+                )
+
+                try:
+                    result = registration.run(cwd=str(tmp_path))
+                    if result.outputs.forward_transforms:
+                        transform = nt.io.itk.ITKLinearTransform.from_filename(
+                            result.outputs.forward_transforms[0]
+                        )
+                        matrix = transform.to_ras(
+                            reference=str(fixed_image_path), moving=str(moving_image_path)
+                        )
+                        affine_matrices.append(matrix)
+                    else:
+                        affine_matrices.append(np.eye(4))
+                        print(f"No transforms produced for index {idx}")
+                except Exception as e:
+                    affine_matrices.append(np.eye(4))
+                    print(f"Failed to process frame {idx} due to {e}")
+
+        return affine_matrices
