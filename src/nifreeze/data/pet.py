@@ -185,14 +185,15 @@ class PET(BaseDataset[np.ndarray | None]):
             data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}
         return cls(**data)
 
-    def load(filename, json_file, brainmask_file=None):
+    @classmethod
+    def load(cls, filename, json_file, brainmask_file=None):
         """Load PET data."""
         filename = Path(filename)
         if filename.name.endswith(".h5"):
-            return PET.from_filename(filename)
+            return cls.from_filename(filename)
 
         img = nb.load(filename)
-        retval = PET(
+        retval = cls(
             dataobj=img.get_fdata(dtype="float32"),
             affine=img.affine,
         )
