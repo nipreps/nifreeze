@@ -45,7 +45,6 @@ class PETModel(BaseModel):
         "_x",
         "_xlim",
         "_order",
-        "_coeff",
         "_n_ctrl",
         "_datashape",
         "_mask",
@@ -102,7 +101,6 @@ class PETModel(BaseModel):
         # B-Spline knots
         self._t = np.arange(-3, float(self._n_ctrl) + 4, dtype="float32")
 
-        self._coeff = None
         self._datashape = None
         self._mask = None
 
@@ -163,7 +161,7 @@ class PETModel(BaseModel):
         A = BSpline.design_matrix(x, self._t, k=self._order)
 
         # A is 1 (num. timepoints) x C (num. coeff)
-        # self._coeff is V (num. voxels) x K - 4
+        # self._locked_fit is V (num. voxels) x K - 4
         predicted = np.squeeze(A @ self._locked_fit.T)
 
         brainmask = self._dataset.brainmask
