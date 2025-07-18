@@ -265,7 +265,6 @@ class PETMotionEstimator:
                     timepoints=train_times,
                     xlim=pet_dataset.total_duration,
                 )
-                model.fit(train_data)
 
                 # Fit the model once on the training dataset
                 model.fit_predict(None)
