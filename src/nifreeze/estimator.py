@@ -252,14 +252,28 @@ class PETMotionEstimator:
                         f"train_times is None at index {idx}, check midframe initialization."
                     )
 
+                # Build a temporary dataset excluding the test frame
+                train_dataset = PET(
+                    dataobj=train_data,
+                    affine=pet_dataset.affine,
+                    brainmask=pet_dataset.brainmask,
+                    midframe=train_times,
+                    total_duration=pet_dataset.total_duration,
+                )
+
                 # Instantiate PETModel explicitly
                 model = PETModel(
-                    dataset=pet_dataset, timepoints=train_times, xlim=pet_dataset.total_duration
+                    dataset=train_dataset,
+                    timepoints=train_times,
+                    xlim=pet_dataset.total_duration,
                 )
                 model.fit(train_data)
 
+                # Fit the model once on the training dataset
+                model.fit_predict(None)
+
                 # Predict the reference volume at the test frame's timepoint
-                predicted = model.predict(test_time)
+                predicted = model.fit_predict(test_time)
 
                 fixed_image_path = debug_dir / f"fixed_frame_{idx:03d}.nii.gz"
                 moving_image_path = debug_dir / f"moving_frame_{idx:03d}.nii.gz"
