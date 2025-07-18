@@ -55,6 +55,7 @@ class PETModel(BaseModel):
 
     def __init__(
         self,
+        dataset,
         timepoints=None,
         xlim=None,
         n_ctrl=None,
@@ -79,7 +80,7 @@ class PETModel(BaseModel):
             model.
 
         """
-        super().__init__(**kwargs)
+        super().__init__(dataset, **kwargs)
 
         if timepoints is None or xlim is None:
             raise TypeError("timepoints must be provided in initialization")
@@ -107,7 +108,7 @@ class PETModel(BaseModel):
 
     @property
     def is_fitted(self):
-        return self._coeff is not None
+        return self._locked_fit is not None
 
     def _fit(self, index: int | None = None, n_jobs=None, **kwargs):
         """Fit the model."""
@@ -124,7 +125,9 @@ class PETModel(BaseModel):
         brainmask = self._dataset.brainmask
 
         if self._smooth_fwhm > 0:
-            smoothed_img = smooth_image(nib.Nifti1Image(data, affine), self._smooth_fwhm)
+            smoothed_img = smooth_image(
+                nib.Nifti1Image(data, self._dataset.affine), self._smooth_fwhm
+            )
             data = smoothed_img.get_fdata()
 
         if self._thresh_pct > 0:
