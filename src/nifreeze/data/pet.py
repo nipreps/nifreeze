@@ -142,10 +142,10 @@ class PET(BaseDataset[np.ndarray | None]):
         )
 
         # update transform
-        if self.em_affines is None:
-            self.em_affines = [None] * len(self)
+        if self.motion_affines is None:
+            self.motion_affines = [None] * len(self)
 
-        self.em_affines[index] = xform
+        self.motion_affines[index] = xform
 
     def to_filename(self, filename, compression=None, compression_opts=None):
         """Write an HDF5 file to disk."""
