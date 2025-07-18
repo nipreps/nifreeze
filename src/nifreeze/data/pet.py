@@ -255,6 +255,8 @@ def from_nii(
         If ``frame_time`` is not provided (BIDS requires it).
 
     """
+    if frame_time is None:
+        raise RuntimeError("frame_time must be provided")
     if motion_file:
         raise NotImplementedError
 
