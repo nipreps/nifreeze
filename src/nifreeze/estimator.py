@@ -224,12 +224,11 @@ class Estimator:
 class PETMotionEstimator:
     """Estimates motion within PET imaging data aligned with generic Estimator workflow."""
 
-    def __init__(self, model, align_kwargs=None, strategy="lofo"):
-        self.model = model
+    def __init__(self, align_kwargs=None, strategy="lofo"):
         self.align_kwargs = align_kwargs or {}
         self.strategy = strategy
 
-    def run(self, pet_dataset, omp_nthreads=None, n_jobs=None, seed=None):
+    def run(self, pet_dataset, omp_nthreads=None):
         n_frames = len(pet_dataset)
         frame_indices = np.arange(n_frames)
 
