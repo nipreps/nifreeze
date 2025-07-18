@@ -3,7 +3,6 @@
 DEST_DIR=$1
 
 # Define variables
-LIST_URL="https://gin.g-node.org/nipreps-data/tests-nifreeze/raw/master"
 LIST_URL="gin.g-node.org/jhlegarreta/tests-nifreeze/raw/AddPETData"
 
 FOLDER="pet_data"
