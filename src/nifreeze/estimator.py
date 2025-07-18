@@ -27,7 +27,6 @@ from __future__ import annotations
 from importlib.resources import files
 from os import cpu_count
 from pathlib import Path
-
 from tempfile import TemporaryDirectory
 from timeit import default_timer as timer
 from typing import TypeVar

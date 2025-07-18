@@ -1,5 +1,5 @@
-import numpy as np
 import nibabel as nb
+import numpy as np
 import pytest
 
 from nifreeze.data.pet import from_nii

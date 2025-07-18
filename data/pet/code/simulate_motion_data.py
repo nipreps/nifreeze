@@ -1,11 +1,12 @@
 import os
 import shutil
-import json
-import numpy as np
+
 import nibabel as nib
+import numpy as np
+import pandas as pd
 from scipy.ndimage import affine_transform
 from scipy.spatial.transform import Rotation as R
-import pandas as pd
+
 
 def simulate_pet_motion(base_dir, orig_sub='sub-01', num_subjects=1, session='ses-baseline'):
     """
@@ -62,7 +63,7 @@ def simulate_pet_motion(base_dir, orig_sub='sub-01', num_subjects=1, session='se
                 mode='constant',
                 cval=0
             )
-        
+
         framewise_displacement = [0] + [np.linalg.norm(affines[i][:3, 3] - affines[i - 1][:3, 3]) for i in range(1, n_frames)]
 
         new_sub_pet_dir = os.path.join(base_dir, new_sub, session, 'pet')
