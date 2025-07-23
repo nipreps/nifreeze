@@ -4,11 +4,11 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
 
-    <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>nifreeze.estimator - nifreeze 25.0.0.dev380 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=354aac6f" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=302659d7" />
+    <!-- Generated with Sphinx 7.4.7 and Furo 2025.07.19 -->
+        <title>nifreeze.estimator - nifreeze 25.0.0.dev381 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=acfd86a5" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=25af2a20" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/version-switch.css?v=45d66e8a" />
     
     
@@ -16,20 +16,20 @@
 
 <style>
   body {
-    --color-code-background: #f8f8f8;
-  --color-code-foreground: black;
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
   
   }
   @media not print {
     body[data-theme="dark"] {
-      --color-code-background: #202020;
-  --color-code-foreground: #d0d0d0;
+      --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
   
     }
     @media (prefers-color-scheme: dark) {
       body:not([data-theme="light"]) {
-        --color-code-background: #202020;
-  --color-code-foreground: #d0d0d0;
+        --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
   
       }
     }
@@ -166,7 +166,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">nifreeze 25.0.0.dev380 documentation</div></a>
+      <a href="../../index.html"><div class="brand">nifreeze 25.0.0.dev381 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -189,14 +189,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev380</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev381</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev380</span>
+  <span class="sidebar-brand-text">25.0.0.dev381</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -328,18 +328,25 @@
 
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">from</span> <span class="nn">importlib.resources</span> <span class="kn">import</span> <span class="n">files</span>
 <span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">cpu_count</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span> <span class="nn">tempfile</span> <span class="kn">import</span> <span class="n">TemporaryDirectory</span>
 <span class="kn">from</span> <span class="nn">timeit</span> <span class="kn">import</span> <span class="n">default_timer</span> <span class="k">as</span> <span class="n">timer</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TypeVar</span>
 
+<span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nb</span>
+<span class="kn">import</span> <span class="nn">nitransforms</span> <span class="k">as</span> <span class="nn">nt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
 <span class="kn">from</span> <span class="nn">typing_extensions</span> <span class="kn">import</span> <span class="n">Self</span>
 
 <span class="kn">from</span> <span class="nn">nifreeze.data.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span>
+<span class="kn">from</span> <span class="nn">nifreeze.data.pet</span> <span class="kn">import</span> <span class="n">PET</span>
 <span class="kn">from</span> <span class="nn">nifreeze.model.base</span> <span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ModelFactory</span>
+<span class="kn">from</span> <span class="nn">nifreeze.model.pet</span> <span class="kn">import</span> <span class="n">PETModel</span>
 <span class="kn">from</span> <span class="nn">nifreeze.registration.ants</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Registration</span><span class="p">,</span>
     <span class="n">_prepare_registration_data</span><span class="p">,</span>
     <span class="n">_run_registration</span><span class="p">,</span>
 <span class="p">)</span>
@@ -528,6 +535,105 @@
         <span class="k">return</span> <span class="bp">self</span></div>
 </div>
 
+
+
+<div class="viewcode-block" id="PETMotionEstimator">
+<a class="viewcode-back" href="../../api/nifreeze.estimator.html#nifreeze.estimator.PETMotionEstimator">[docs]</a>
+<span class="k">class</span> <span class="nc">PETMotionEstimator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Estimates motion within PET imaging data aligned with generic Estimator workflow.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">align_kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">strategy</span><span class="o">=</span><span class="s2">&quot;lofo&quot;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">align_kwargs</span> <span class="o">=</span> <span class="n">align_kwargs</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">strategy</span> <span class="o">=</span> <span class="n">strategy</span>
+
+<div class="viewcode-block" id="PETMotionEstimator.run">
+<a class="viewcode-back" href="../../api/nifreeze.estimator.html#nifreeze.estimator.PETMotionEstimator.run">[docs]</a>
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pet_dataset</span><span class="p">,</span> <span class="n">omp_nthreads</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">n_frames</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">pet_dataset</span><span class="p">)</span>
+        <span class="n">frame_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_frames</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">omp_nthreads</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">align_kwargs</span><span class="p">[</span><span class="s2">&quot;num_threads&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">omp_nthreads</span>
+
+        <span class="n">affine_matrices</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">with</span> <span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp_dir</span><span class="p">:</span>
+            <span class="n">tmp_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp_dir</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">frame_indices</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Estimating PET motion&quot;</span><span class="p">):</span>
+                <span class="p">(</span><span class="n">train_data</span><span class="p">,</span> <span class="n">train_times</span><span class="p">),</span> <span class="p">(</span><span class="n">test_data</span><span class="p">,</span> <span class="n">test_time</span><span class="p">)</span> <span class="o">=</span> <span class="n">pet_dataset</span><span class="o">.</span><span class="n">lofo_split</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">train_times</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;train_times is None at index </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">, check midframe initialization.&quot;</span>
+                    <span class="p">)</span>
+
+                <span class="c1"># Build a temporary dataset excluding the test frame</span>
+                <span class="n">train_dataset</span> <span class="o">=</span> <span class="n">PET</span><span class="p">(</span>
+                    <span class="n">dataobj</span><span class="o">=</span><span class="n">train_data</span><span class="p">,</span>
+                    <span class="n">affine</span><span class="o">=</span><span class="n">pet_dataset</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span>
+                    <span class="n">brainmask</span><span class="o">=</span><span class="n">pet_dataset</span><span class="o">.</span><span class="n">brainmask</span><span class="p">,</span>
+                    <span class="n">midframe</span><span class="o">=</span><span class="n">train_times</span><span class="p">,</span>
+                    <span class="n">total_duration</span><span class="o">=</span><span class="n">pet_dataset</span><span class="o">.</span><span class="n">total_duration</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="c1"># Instantiate PETModel explicitly</span>
+                <span class="n">model</span> <span class="o">=</span> <span class="n">PETModel</span><span class="p">(</span>
+                    <span class="n">dataset</span><span class="o">=</span><span class="n">train_dataset</span><span class="p">,</span>
+                    <span class="n">timepoints</span><span class="o">=</span><span class="n">train_times</span><span class="p">,</span>
+                    <span class="n">xlim</span><span class="o">=</span><span class="n">pet_dataset</span><span class="o">.</span><span class="n">total_duration</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="c1"># Fit the model once on the training dataset</span>
+                <span class="n">model</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+
+                <span class="c1"># Predict the reference volume at the test frame&#39;s timepoint</span>
+                <span class="n">predicted</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span><span class="n">test_time</span><span class="p">)</span>
+
+                <span class="n">fixed_image_path</span> <span class="o">=</span> <span class="n">tmp_path</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;fixed_frame_</span><span class="si">{</span><span class="n">idx</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">.nii.gz&quot;</span>
+                <span class="n">moving_image_path</span> <span class="o">=</span> <span class="n">tmp_path</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;moving_frame_</span><span class="si">{</span><span class="n">idx</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">.nii.gz&quot;</span>
+
+                <span class="n">fixed_img</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">predicted</span><span class="p">,</span> <span class="n">pet_dataset</span><span class="o">.</span><span class="n">affine</span><span class="p">)</span>
+                <span class="n">moving_img</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">test_data</span><span class="p">,</span> <span class="n">pet_dataset</span><span class="o">.</span><span class="n">affine</span><span class="p">)</span>
+
+                <span class="n">moving_img</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">as_closest_canonical</span><span class="p">(</span><span class="n">moving_img</span><span class="p">,</span> <span class="n">enforce_diag</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="n">fixed_img</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">fixed_image_path</span><span class="p">)</span>
+                <span class="n">moving_img</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">moving_image_path</span><span class="p">)</span>
+
+                <span class="n">registration_config</span> <span class="o">=</span> <span class="n">files</span><span class="p">(</span><span class="s2">&quot;nifreeze.registration.config&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span>
+                    <span class="s2">&quot;pet-to-pet_level1.json&quot;</span>
+                <span class="p">)</span>
+
+                <span class="n">registration</span> <span class="o">=</span> <span class="n">Registration</span><span class="p">(</span>
+                    <span class="n">from_file</span><span class="o">=</span><span class="n">registration_config</span><span class="p">,</span>
+                    <span class="n">fixed_image</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">fixed_image_path</span><span class="p">),</span>
+                    <span class="n">moving_image</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">moving_image_path</span><span class="p">),</span>
+                    <span class="n">output_warped_image</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">output_transform_prefix</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;ants_</span><span class="si">{</span><span class="n">idx</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">align_kwargs</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="n">registration</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cwd</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">forward_transforms</span><span class="p">:</span>
+                        <span class="n">transform</span> <span class="o">=</span> <span class="n">nt</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">itk</span><span class="o">.</span><span class="n">ITKLinearTransform</span><span class="o">.</span><span class="n">from_filename</span><span class="p">(</span>
+                            <span class="n">result</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">forward_transforms</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="p">)</span>
+                        <span class="n">matrix</span> <span class="o">=</span> <span class="n">transform</span><span class="o">.</span><span class="n">to_ras</span><span class="p">(</span>
+                            <span class="n">reference</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">fixed_image_path</span><span class="p">),</span> <span class="n">moving</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">moving_image_path</span><span class="p">)</span>
+                        <span class="p">)</span>
+                        <span class="n">affine_matrices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">matrix</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">affine_matrices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">))</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No transforms produced for index </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">affine_matrices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">))</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to process frame </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2"> due to </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">affine_matrices</span></div>
+</div>
+
 </pre></div>
         </article>
       </div>
@@ -560,10 +666,10 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=a7767050"></script>
+</div><script src="../../_static/documentation_options.js?v=030ef449"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>
+    <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>
     <script src="../../_static/js/version-switch.js?v=8028bf13"></script>
     </body>
 </html>
