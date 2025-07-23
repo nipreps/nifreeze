@@ -24,8 +24,12 @@
 
 from os import cpu_count
 
+import nibabel as nb
 import numpy as np
 from joblib import Parallel, delayed
+from nibabel.processing import smooth_image
+from scipy.interpolate import BSpline
+from scipy.sparse.linalg import cg
 
 from nifreeze.model.base import BaseModel
 
@@ -36,9 +40,29 @@ DEFAULT_TIMEFRAME_MIDPOINT_TOL = 1e-2
 class PETModel(BaseModel):
     """A PET imaging realignment model based on B-Spline approximation."""
 
-    __slots__ = ("_t", "_x", "_xlim", "_order", "_n_ctrl")
+    __slots__ = (
+        "_t",
+        "_x",
+        "_xlim",
+        "_order",
+        "_n_ctrl",
+        "_datashape",
+        "_mask",
+        "_smooth_fwhm",
+        "_thresh_pct",
+    )
 
-    def __init__(self, timepoints=None, xlim=None, n_ctrl=None, order=3, **kwargs):
+    def __init__(
+        self,
+        dataset,
+        timepoints=None,
+        xlim=None,
+        n_ctrl=None,
+        order=3,
+        smooth_fwhm=10,
+        thresh_pct=20,
+        **kwargs,
+    ):
         """
         Create the B-Spline interpolating matrix.
 
@@ -55,15 +79,16 @@ class PETModel(BaseModel):
             model.
 
         """
-        super.__init__(**kwargs)
+        super().__init__(dataset, **kwargs)
 
         if timepoints is None or xlim is None:
             raise TypeError("timepoints must be provided in initialization")
 
         self._order = order
-
         self._x = np.array(timepoints, dtype="float32")
         self._xlim = xlim
+        self._smooth_fwhm = smooth_fwhm
+        self._thresh_pct = thresh_pct
 
         if self._x[0] < DEFAULT_TIMEFRAME_MIDPOINT_TOL:
             raise ValueError("First frame midpoint should not be zero or negative")
@@ -76,22 +101,36 @@ class PETModel(BaseModel):
         # B-Spline knots
         self._t = np.arange(-3, float(self._n_ctrl) + 4, dtype="float32")
 
+        self._datashape = None
+        self._mask = None
+
+    @property
+    def is_fitted(self):
+        return self._locked_fit is not None
+
     def _fit(self, index: int | None = None, n_jobs=None, **kwargs):
         """Fit the model."""
-        from scipy.interpolate import BSpline
-        from scipy.sparse.linalg import cg
 
         if self._locked_fit is not None:
             return n_jobs
 
         if index is not None:
             raise NotImplementedError("Fitting with held-out data is not supported")
-
         timepoints = kwargs.get("timepoints", None) or self._x
         x = (np.array(timepoints, dtype="float32") / self._xlim) * self._n_ctrl
 
         data = self._dataset.dataobj
         brainmask = self._dataset.brainmask
+
+        if self._smooth_fwhm > 0:
+            smoothed_img = smooth_image(
+                nb.Nifti1Image(data, self._dataset.affine), self._smooth_fwhm
+            )
+            data = smoothed_img.get_fdata()
+
+        if self._thresh_pct > 0:
+            thresh_val = np.percentile(data, self._thresh_pct)
+            data[data < thresh_val] = 0
 
         # Convert data into V (voxels) x T (timepoints)
         data = data.reshape((-1, data.shape[-1])) if brainmask is None else data[brainmask]
@@ -109,7 +148,6 @@ class PETModel(BaseModel):
 
     def fit_predict(self, index: int | None = None, **kwargs):
         """Return the corrected volume using B-spline interpolation."""
-        from scipy.interpolate import BSpline
 
         # Fit the BSpline basis on all data
         if self._locked_fit is None:
@@ -123,7 +161,7 @@ class PETModel(BaseModel):
         A = BSpline.design_matrix(x, self._t, k=self._order)
 
         # A is 1 (num. timepoints) x C (num. coeff)
-        # self._coeff is V (num. voxels) x K - 4
+        # self._locked_fit is V (num. voxels) x K - 4
         predicted = np.squeeze(A @ self._locked_fit.T)
 
         brainmask = self._dataset.brainmask
