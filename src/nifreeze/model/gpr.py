@@ -249,7 +249,7 @@ class DiffusionGPR(GaussianProcessRegressor):
                 options=options,
                 args=(self.eval_gradient,),
                 tol=self.tol,
-            )
+            )  # type: ignore[call-overload]
             return opt_res.x, opt_res.fun
 
         if callable(self.optimizer):
@@ -476,6 +476,9 @@ class SphericalKriging(Kernel):
 class MultiShellKernel(KernelOperator):
     """Composite kernel for multi-shell diffusion data."""
 
+    k1: Kernel
+    k2: Kernel
+
     def __init__(
         self,
         orientation_kernel: Kernel | None = None,
@@ -508,10 +511,13 @@ class MultiShellKernel(KernelOperator):
         eval_gradient: bool = False,
     ) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
         X_o, X_b = self._split(X)
+        Y_o: np.ndarray | None
+        Y_b: np.ndarray | None
         if Y is not None:
             Y_o, Y_b = self._split(Y)
         else:
-            Y_o = Y_b = None
+            Y_o = None
+            Y_b = None
 
         if eval_gradient:
             K1, g1 = self.k1(X_o, Y_o, eval_gradient=True)
