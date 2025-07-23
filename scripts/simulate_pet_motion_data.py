@@ -210,7 +210,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "orig_sub",
         type=str,
-        help="Original subjcct id",
+        help="Original subject id",
     )
     parser.add_argument(
         "session",
