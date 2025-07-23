@@ -158,6 +158,9 @@ module = [
   "ConfigSpace",
   "scipy.*",
   "sklearn.*",
+  "skimage.*",
+  "pandas",
+  "attrs",
 ]
 ignore_missing_imports = true
 
