@@ -73,15 +73,15 @@ def plot_framewise_displacement(
     cmap_name: str = "viridis",
     ax: Union[Axes, None] = None,
 ) -> Axes:
-    """Plot frame-wise displacement data.
+    """Plot framewise displacement data.
 
-    Plots the frame-wise displacement data corresponding to different
+    Plots the framewise displacement data corresponding to different
     realizations.
 
     Parameters
     ----------
     fd : :obj:`~pd.DataFrame`
-        Frame-wise displacement values corresponding.
+        Framewise displacement values corresponding.
     labels : :obj:`list`
         Labels for legend.
     cmap_name : str, optional
