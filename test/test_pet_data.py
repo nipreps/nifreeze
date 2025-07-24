@@ -8,9 +8,10 @@ from nitransforms.linear import Affine
 from nifreeze.data.pet import PET, from_nii
 
 
-def test_from_nii_requires_frame_time(tmp_path):
-    data = np.zeros((2, 2, 2, 2), dtype=np.float32)
-    img = nb.Nifti1Image(data, np.eye(4))
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 2), 0.0, 1.0)
+def test_from_nii_requires_frame_time(setup_random_uniform_spatial_data, tmp_path):
+    data, affine = setup_random_uniform_spatial_data
+    img = nb.Nifti1Image(data, affine)
     fname = tmp_path / "pet.nii.gz"
     img.to_filename(fname)
 
@@ -51,9 +52,9 @@ def test_pet_set_transform_updates_motion_affines():
     assert aff is dataset.motion_affines[idx]
 
 
-def test_pet_load(tmp_path):
-    data = np.zeros((2, 2, 2, 2), dtype=np.float32)
-    affine = np.eye(4)
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 2), 0.0, 1.0)
+def test_pet_load(setup_random_uniform_spatial_data, tmp_path):
+    data, affine = setup_random_uniform_spatial_data
     img = nb.Nifti1Image(data, affine)
     fname = tmp_path / "pet.nii.gz"
     img.to_filename(fname)
