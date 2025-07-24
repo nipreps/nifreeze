@@ -213,6 +213,7 @@ env = "PYTHONHASHSEED=0"
 markers = [
   "random_gtab_data: Custom marker for random gtab data tests",
   "random_dwi_data: Custom marker for random dwi data tests",
+  "random_pet_data: Custom marker for random pet data tests",
   "random_uniform_ndim_data: Custom marker for random multi-dimensional data tests",
   "random_uniform_spatial_data: Custom marker for random spatial data tests",
 ]
