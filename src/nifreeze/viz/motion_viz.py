@@ -198,7 +198,7 @@ def plot_motion_overlay(
     orientation : :obj:`str`
         Orientation. Can be one of obj:`ORIENTATIONS`.
     slice_idx : :obj:`int`
-        Slice index to be plot.
+        Slice index to plot.
     smooth : :obj:`bool`, optional
         ``True`` to smooth the motion relative difference.
     ax : :obj:`Axes`, optional
