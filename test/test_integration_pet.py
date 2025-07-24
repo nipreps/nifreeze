@@ -76,7 +76,7 @@ def test_pet_motion_estimator_run(monkeypatch):
         def fit_predict(self, index):
             if index is None:
                 return None
-            return np.zeros(ds.shape3d, dtype=np.float32)
+            return np.zeros(self.dataset.shape3d, dtype=np.float32)
 
     monkeypatch.setattr("nifreeze.estimator.PETModel", DummyModel)
 
