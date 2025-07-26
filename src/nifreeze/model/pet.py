@@ -31,6 +31,7 @@ from nibabel.processing import smooth_image
 from scipy.interpolate import BSpline
 from scipy.sparse.linalg import cg
 
+from nifreeze.data.pet import PET
 from nifreeze.model.base import BaseModel
 
 DEFAULT_TIMEFRAME_MIDPOINT_TOL = 1e-2
@@ -54,13 +55,13 @@ class PETModel(BaseModel):
 
     def __init__(
         self,
-        dataset,
-        timepoints=None,
-        xlim=None,
-        n_ctrl=None,
-        order=3,
-        smooth_fwhm=10,
-        thresh_pct=20,
+        dataset: PET,
+        timepoints: list | np.ndarray | None = None,
+        xlim: float | None = None,
+        n_ctrl: int | None = None,
+        order: int = 3,
+        smooth_fwhm: float = 10.0,
+        thresh_pct: float = 20.0,
         **kwargs,
     ):
         """
@@ -105,7 +106,7 @@ class PETModel(BaseModel):
         self._mask = None
 
     @property
-    def is_fitted(self):
+    def is_fitted(self) -> bool:
         return self._locked_fit is not None
 
     def _fit(self, index: int | None = None, n_jobs=None, **kwargs):
@@ -117,7 +118,7 @@ class PETModel(BaseModel):
         if index is not None:
             raise NotImplementedError("Fitting with held-out data is not supported")
         timepoints = kwargs.get("timepoints", None) or self._x
-        x = (np.array(timepoints, dtype="float32") / self._xlim) * self._n_ctrl
+        x = np.asarray((np.array(timepoints, dtype="float32") / self._xlim) * self._n_ctrl)
 
         data = self._dataset.dataobj
         brainmask = self._dataset.brainmask
@@ -146,7 +147,7 @@ class PETModel(BaseModel):
 
         self._locked_fit = np.array([r[0] for r in results])
 
-    def fit_predict(self, index: int | None = None, **kwargs):
+    def fit_predict(self, index, **kwargs):
         """Return the corrected volume using B-spline interpolation."""
 
         # Fit the BSpline basis on all data
