@@ -17,4 +17,8 @@ Check your installation with the following command line ::
 
 External Dependencies
 ---------------------
-*nifreeze* requires DIPY_, and ANTs_.
+*nifreeze* requires ANTs_, which is leveraged through the Nipype_ Python
+interface for registration purposes. An installation guide can be found
+at [this location]. Note that its install location needs to be added to the ``PATH`` ::
+
+   $ export PATH=$ANTSPATH:$PATH
