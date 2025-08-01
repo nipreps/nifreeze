@@ -116,7 +116,7 @@ class PET(BaseDataset[np.ndarray | None]):
         test_data = pet_frame
         test_timing = timing_frame if self.midframe is not None else None
 
-        return ((train_data, train_timings), (test_data, test_timing))
+        return (train_data, train_timings), (test_data, test_timing)
 
     def set_transform(self, index, affine, order=3):
         """Set an affine, and update data object and gradients."""
