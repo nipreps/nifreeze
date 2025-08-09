@@ -181,7 +181,7 @@ class Estimator:
                 ).to_filename(bmask_path)
 
             with tqdm(total=dataset_length, unit="vols.") as pbar:
-                # run a original-to-synthetic affine registration
+                # run an original-to-synthetic affine registration
                 for i in index_iter:
                     pbar.set_description_str(f"{FIT_MSG: <16} vol. <{i}>")
 
