@@ -173,8 +173,6 @@ class Estimator:
 
             bmask_path = None
             if dataset.brainmask is not None:
-                import nibabel as nb
-
                 bmask_path = ptmp_dir / "brainmask.nii.gz"
                 nb.Nifti1Image(
                     dataset.brainmask.astype("uint8"), dataset.affine, None
