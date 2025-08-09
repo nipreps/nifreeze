@@ -40,7 +40,7 @@ from typing_extensions import Self
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.pet import PET
 from nifreeze.model.base import BaseModel, ModelFactory
-from nifreeze.model.pet import PETModel
+from nifreeze.model.pet import BSplinePETModel
 from nifreeze.registration.ants import (
     Registration,
     _prepare_registration_data,
@@ -234,7 +234,7 @@ class PETMotionEstimator:
 
     def run(self, pet_dataset: PET, omp_nthreads: int | None = None) -> list:
         n_frames = len(pet_dataset)
-        frame_indices = np.arange(n_frames)
+        frame_indices = np.arange(n_frames).astype(int)
 
         if omp_nthreads:
             self.align_kwargs["num_threads"] = omp_nthreads
@@ -261,18 +261,14 @@ class PETMotionEstimator:
                     total_duration=pet_dataset.total_duration,
                 )
 
-                # Instantiate PETModel explicitly
-                model = PETModel(
-                    dataset=train_dataset,
-                    timepoints=train_times,
-                    xlim=pet_dataset.total_duration,
-                )
+                # Instantiate the PET model explicitly
+                model = BSplinePETModel(dataset=train_dataset)
 
                 # Fit the model once on the training dataset
                 model.fit_predict(None)
 
                 # Predict the reference volume at the test frame's timepoint
-                predicted = model.fit_predict(test_time)
+                predicted = model.fit_predict(idx)
 
                 fixed_image_path = tmp_path / f"fixed_frame_{idx:03d}.nii.gz"
                 moving_image_path = tmp_path / f"moving_frame_{idx:03d}.nii.gz"
