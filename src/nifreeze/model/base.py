@@ -67,11 +67,18 @@ class ModelFactory:
 
             return AverageDWIModel(kwargs.pop("dataset"), **kwargs)
 
-        if model.lower() in ("gqi", "dti", "dki", "pet"):
+        if model.lower() in ("gqi", "dti", "dki"):
             from importlib import import_module
 
             dmrimod = import_module("nifreeze.model.dmri")
             Model = getattr(dmrimod, f"{model.upper()}Model")
+            return Model(kwargs.pop("dataset"), **kwargs)
+
+        if model.lower() == "pet":
+            from importlib import import_module
+
+            petmod = import_module("nifreeze.model.pet")
+            Model = getattr(petmod, f"{model.upper()}Model")
             return Model(kwargs.pop("dataset"), **kwargs)
 
         raise NotImplementedError(f"Unsupported model <{model}>.")
