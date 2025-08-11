@@ -84,7 +84,7 @@ def plot_framewise_displacement(
         Framewise displacement values corresponding.
     labels : :obj:`list`
         Labels for legend.
-    cmap_name : str, optional
+    cmap_name : :obj:`str`, optional
         Colormap name.
     ax : :obj:`Axes`, optional
         Figure axes.
