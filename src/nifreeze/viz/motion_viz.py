@@ -81,10 +81,10 @@ def plot_framewise_displacement(
     Parameters
     ----------
     fd : :obj:`~pd.DataFrame`
-        Framewise displacement values corresponding.
+        Framewise displacement values.
     labels : :obj:`list`
         Labels for legend.
-    cmap_name : str, optional
+    cmap_name : :obj:`str`, optional
         Colormap name.
     ax : :obj:`Axes`, optional
         Figure axes.
