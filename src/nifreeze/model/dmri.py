@@ -67,7 +67,7 @@ class BaseDWIModel(BaseModel):
 
         """
 
-        # Duck typing, instead of explicitly test for DWI type
+        # Duck typing, instead of explicitly testing for DWI type
         if not hasattr(dataset, "bzero"):
             raise TypeError("Dataset MUST be a DWI object.")
 
