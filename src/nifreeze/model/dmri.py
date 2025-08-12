@@ -32,6 +32,9 @@ from nifreeze.data.dmri import DEFAULT_LOWB_THRESHOLD, DEFAULT_MIN_S0, DTI_MIN_O
 from nifreeze.data.filtering import BVAL_ATOL, dwi_select_shells, grand_mean_normalization
 from nifreeze.model.base import BaseModel, ExpectationModel
 
+DEFAULT_S0_CLIP_PERCENTILE = 98
+"""Upper percentile threshold for non-diffusion-weighted signal estimation."""
+
 
 def _exec_fit(model, data, chunk=None, **kwargs):
     return model.fit(data, **kwargs), chunk
@@ -85,10 +88,12 @@ class BaseDWIModel(BaseModel):
             else np.ones(dataset.dataobj.shape[:3], dtype=bool)
         )
 
-        # By default, set S0 to the 98% percentile of the DWI data within mask
+        # By default, set S0 to the q-th percentile of the DWI data within mask
         self._S0 = np.full(
             self._data_mask.sum(),
-            np.round(np.percentile(dataset.dataobj[self._data_mask, ...], 98)),
+            np.round(
+                np.percentile(dataset.dataobj[self._data_mask, ...], DEFAULT_S0_CLIP_PERCENTILE)
+            ),
         )
 
         # If b=0 is present and not to be ignored, update brain mask and set
