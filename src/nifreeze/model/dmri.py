@@ -53,12 +53,12 @@ class BaseDWIModel(BaseModel):
         "_data_mask": "A mask for the voxels that will be fitted and predicted",
         "_S0": "The S0 (b=0 reference signal) that will be fed into DIPY models",
         "_model_class": "Defining a model class, DIPY models are instantiated automagically",
-        "_modelargs": "Arguments acceptable by the underlying DIPY-like model.",
+        "_modelargs": "Arguments acceptable by the underlying DIPY-like model",
         "_models": "List with one or more (if parallel execution) model instances",
     }
 
     def __init__(self, dataset: DWI, max_b: float | int | None = None, **kwargs):
-        r"""Initialization.
+        """Initialization.
 
         Parameters
         ----------
@@ -67,7 +67,7 @@ class BaseDWIModel(BaseModel):
 
         """
 
-        # Duck typing, instead of explicitly test for DWI type
+        # Duck typing, instead of explicitly testing for DWI type
         if not hasattr(dataset, "bzero"):
             raise TypeError("Dataset MUST be a DWI object.")
 
