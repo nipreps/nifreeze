@@ -29,16 +29,6 @@ from nifreeze.data.splitting import lovo_split
 
 
 def test_lovo_split(request, datadir):
-    """
-    Test the lovo_split function.
-
-    Parameters:
-    - datadir: The directory containing the test data.
-
-    Returns:
-    None
-
-    """
     data = DWI.from_filename(datadir / "dwi.h5")
 
     # Set zeros in dataobj and gradients of the dwi object
