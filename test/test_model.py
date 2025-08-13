@@ -100,26 +100,26 @@ def test_average_model():
     data *= gtab[:, -1]
     dataset = DWI(dataobj=data, gradients=gtab, brainmask=mask)
 
-    tmodel_mean = model.AverageDWIModel(dataset, stat="mean")
-    tmodel_mean_full = model.AverageDWIModel(dataset, stat="mean", atol_low=2000, atol_high=2000)
-    tmodel_median = model.AverageDWIModel(dataset)
+    avgmodel_mean = model.AverageDWIModel(dataset, stat="mean")
+    avgmodel_mean_full = model.AverageDWIModel(dataset, stat="mean", atol_low=2000, atol_high=2000)
+    avgmodel_median = model.AverageDWIModel(dataset)
 
     # Verify that average cannot be calculated in shells with one single value
     with pytest.raises(RuntimeError):
-        tmodel_mean.fit_predict(2)
+        avgmodel_mean.fit_predict(2)
 
-    assert np.allclose(tmodel_mean.fit_predict(3), 1000)
-    assert np.allclose(tmodel_median.fit_predict(3), 1000)
+    assert np.allclose(avgmodel_mean.fit_predict(3), 1000)
+    assert np.allclose(avgmodel_median.fit_predict(3), 1000)
 
     grads = list(gtab[:, -1])
     del grads[1]
-    assert np.allclose(tmodel_mean_full.fit_predict(1), np.mean(grads))
+    assert np.allclose(avgmodel_mean_full.fit_predict(1), np.mean(grads))
 
-    tmodel_mean_2000 = model.AverageDWIModel(dataset, stat="mean", atol_low=1100)
-    tmodel_median_2000 = model.AverageDWIModel(dataset, atol_low=1100)
+    avgmodel_mean_2000 = model.AverageDWIModel(dataset, stat="mean", atol_low=1100)
+    avgmodel_median_2000 = model.AverageDWIModel(dataset, atol_low=1100)
 
-    assert np.allclose(tmodel_mean_2000.fit_predict(9), gtab[3:-1, -1].mean())
-    assert np.allclose(tmodel_median_2000.fit_predict(9), 1000)
+    assert np.allclose(avgmodel_mean_2000.fit_predict(9), gtab[3:-1, -1].mean())
+    assert np.allclose(avgmodel_median_2000.fit_predict(9), 1000)
 
 
 @pytest.mark.parametrize(
