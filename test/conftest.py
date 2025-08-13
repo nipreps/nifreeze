@@ -29,6 +29,7 @@ import nibabel as nb
 import nitransforms as nt
 import numpy as np
 import pytest
+from dipy.core.geometry import normalized_vector
 from dipy.io.gradients import read_bvals_bvecs
 
 from nifreeze.data.dmri import DWI
@@ -251,7 +252,9 @@ def setup_random_gtab_data(request):
     bvals_shells = _generate_random_choices(request, shells, n_gradients)
 
     bvals = np.hstack([b0s * [0], bvals_shells])
-    bvecs = np.hstack([np.zeros((3, b0s)), rng.random((3, n_gradients))])
+    bvecs = np.hstack(
+        [np.zeros((3, b0s)), normalized_vector(rng.random((3, n_gradients)), axis=0)]
+    )
 
     return bvals, bvecs
 

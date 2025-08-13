@@ -157,6 +157,31 @@ def test_gp_model(evals, S0, snr, hsph_dirs, bval_shell):
     assert prediction.shape == (2,)
 
 
+@pytest.mark.random_dwi_data(50, (14, 16, 8), True)
+def test_dti_model(setup_random_dwi_data):
+    (
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj,
+        b0_dataobj,
+        gradients,
+        _,
+    ) = setup_random_dwi_data
+
+    dataset = DWI(
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        bzero=b0_dataobj,
+        gradients=gradients,
+    )
+
+    dtimodel = model.DTIModel(dataset)
+    predicted = dtimodel.fit_predict(4)
+
+    assert predicted.shape == dwi_dataobj.shape[:-1]
+
+
 def test_factory(datadir):
     """Check that the two different initialisations result in the same models"""
 

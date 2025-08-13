@@ -178,7 +178,7 @@ class BaseDWIModel(BaseModel):
         kwargs.pop("omp_nthreads", None)  # Drop omp_nthreads
         n_models = self._fit(
             index,
-            n_jobs=kwargs.pop("n_jobs"),
+            n_jobs=kwargs.pop("n_jobs", None),
             **kwargs,
         )
 
