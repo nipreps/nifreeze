@@ -108,7 +108,7 @@ class PETModel(BaseModel):
     def is_fitted(self):
         return self._locked_fit is not None
 
-    def _fit(self, index: int | None = None, n_jobs=None, **kwargs):
+    def _fit(self, index: int | None = None, n_jobs=None, **kwargs) -> int:
         """Fit the model."""
 
         if self._locked_fit is not None:
@@ -145,6 +145,8 @@ class PETModel(BaseModel):
             results = executor(delayed(cg)(ATdotA, AT @ v) for v in data)
 
         self._locked_fit = np.array([r[0] for r in results])
+
+        return n_jobs
 
     def fit_predict(self, index: int | None = None, **kwargs):
         """Return the corrected volume using B-spline interpolation."""
