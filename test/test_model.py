@@ -35,6 +35,16 @@ from nifreeze.model.base import mask_absence_warn_msg
 from nifreeze.testing import simulations as _sim
 
 
+def test_base_model():
+    from nifreeze.model.base import BaseModel
+
+    with pytest.raises(
+        TypeError,
+        match="Can't instantiate abstract class BaseModel without an implementation for abstract method 'fit_predict'",
+    ):
+        BaseModel(None)
+
+
 @pytest.mark.parametrize("use_mask", (False, True))
 def test_trivial_model(request, use_mask):
     """Check the implementation of the trivial B0 model."""
