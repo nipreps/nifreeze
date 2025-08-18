@@ -22,7 +22,7 @@
 #
 
 from importlib import import_module
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 from dipy.core.gradients import gradient_table_from_bvals_bvecs
@@ -101,7 +101,7 @@ class BaseDWIModel(BaseModel):
 
         super().__init__(dataset, **kwargs)
 
-    def _fit(self, index: int | None = None, n_jobs: int | None = None, **kwargs):
+    def _fit(self, index: int | None = None, n_jobs: int | None = None, **kwargs) -> int:
         """Fit the model chunk-by-chunk asynchronously"""
 
         n_jobs = n_jobs or 1
@@ -164,7 +164,7 @@ class BaseDWIModel(BaseModel):
 
         return n_jobs
 
-    def fit_predict(self, index: int | None = None, **kwargs):
+    def fit_predict(self, index: int | None = None, **kwargs) -> Union[np.ndarray, None]:
         """
         Predict asynchronously chunk-by-chunk the diffusion signal.
 
@@ -262,7 +262,7 @@ class AverageDWIModel(ExpectationModel):
         self._atol_high = atol_high
         self._detrend = detrend
 
-    def fit_predict(self, index: int | None = None, *_, **kwargs):
+    def fit_predict(self, index: int | None = None, *_, **kwargs) -> np.ndarray:
         """Return the average map."""
 
         if index is None:
