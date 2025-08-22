@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 from collections import namedtuple
 from pathlib import Path
+from typing import Any, Tuple
 
 import attrs
 import h5py
@@ -34,6 +35,7 @@ import nibabel as nb
 import numpy as np
 from nibabel.spatialimages import SpatialImage
 from nitransforms.linear import Affine
+from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr
 from nifreeze.utils.ndimage import load_api
@@ -79,7 +81,9 @@ class PET(BaseDataset[np.ndarray | None]):
         """
         return super().__getitem__(idx)
 
-    def lofo_split(self, index):
+    def lofo_split(
+        self, index: int
+    ) -> Tuple[Tuple[np.ndarray, np.ndarray | None], Tuple[np.ndarray, np.ndarray | None]]:
         """
         Leave-one-frame-out (LOFO) for PET data.
 
@@ -118,11 +122,10 @@ class PET(BaseDataset[np.ndarray | None]):
 
         return (train_data, train_timings), (test_data, test_timing)
 
-    def set_transform(self, index, affine, order=3):
+    def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
         """Set an affine, and update data object and gradients."""
-        reference = namedtuple("ImageGrid", ("shape", "affine"))(
-            shape=self.dataobj.shape[:3], affine=self.affine
-        )
+        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
+        reference = ImageGrid(self.dataobj.shape[:3], self.affine)
         xform = Affine(matrix=affine, reference=reference)
 
         if not Path(self._filepath).exists():
@@ -147,7 +150,9 @@ class PET(BaseDataset[np.ndarray | None]):
 
         self.motion_affines[index] = xform
 
-    def to_filename(self, filename, compression=None, compression_opts=None):
+    def to_filename(
+        self, filename: Path | str, compression: str | None = None, compression_opts: Any = None
+    ) -> None:
         """Write an HDF5 file to disk."""
         filename = Path(filename)
         if not filename.name.endswith(".h5"):
@@ -178,7 +183,7 @@ class PET(BaseDataset[np.ndarray | None]):
         nii.to_filename(filename)
 
     @classmethod
-    def from_filename(cls, filename):
+    def from_filename(cls, filename: Path | str) -> Self:
         """Read an HDF5 file from disk."""
         with h5py.File(filename, "r") as in_file:
             root = in_file["/0"]
@@ -186,13 +191,15 @@ class PET(BaseDataset[np.ndarray | None]):
         return cls(**data)
 
     @classmethod
-    def load(cls, filename, json_file, brainmask_file=None):
+    def load(
+        cls, filename: Path | str, json_file: Path | str, brainmask_file: Path | str | None = None
+    ) -> Self:
         """Load PET data."""
         filename = Path(filename)
         if filename.name.endswith(".h5"):
             return cls.from_filename(filename)
 
-        img = nb.load(filename)
+        img = load_api(filename, SpatialImage)
         retval = cls(
             dataobj=img.get_fdata(dtype="float32"),
             affine=img.affine,
@@ -212,7 +219,7 @@ class PET(BaseDataset[np.ndarray | None]):
         assert len(retval.midframe) == retval.dataobj.shape[-1]
 
         if brainmask_file:
-            mask = nb.load(brainmask_file)
+            mask = load_api(brainmask_file, SpatialImage)
             retval.brainmask = np.asanyarray(mask.dataobj)
 
         return retval
