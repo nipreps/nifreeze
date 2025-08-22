@@ -32,10 +32,14 @@ processes.
 from __future__ import annotations
 
 from itertools import product
+from typing import Tuple
 
 import nibabel as nb
 import nitransforms as nt
 import numpy as np
+
+RADIUS = 50.0
+"""Typical radius (in mm) of a sphere mimicking the size of a typical human brain."""
 
 
 def displacements_within_mask(
@@ -79,11 +83,11 @@ def displacements_within_mask(
     return np.linalg.norm(diffs, axis=-1)
 
 
-def displacement_framewise(
+def compute_fd_from_transform(
     img: nb.spatialimages.SpatialImage,
     test_xfm: nt.base.BaseTransform,
-    radius: float = 50.0,
-):
+    radius: float = RADIUS,
+) -> float:
     """
     Compute the framewise displacement (FD) for a given transformation.
 
@@ -95,7 +99,6 @@ def displacement_framewise(
         The transformation to test. Applied to coordinates around the image center.
     radius : :obj:`float`, optional
         The radius (in mm) of the spherical neighborhood around the center of the image.
-        Default is 50.0 mm.
 
     Returns
     -------
@@ -112,3 +115,61 @@ def displacement_framewise(
     fd_coords = np.array(list(product(*((radius, -radius),) * 3))) + center_xyz
     # Compute the average displacement from the test transformation
     return np.mean(np.linalg.norm(test_xfm.map(fd_coords) - fd_coords, axis=-1))
+
+
+def compute_fd_from_motion(motion_parameters: np.ndarray, radius: float = RADIUS) -> np.ndarray:
+    """Compute framewise displacement (FD) from motion parameters.
+
+    Each row in the motion parameters represents one frame, and columns
+    represent each coordinate axis ``x``, `y``, and ``z``. Translation
+    parameters are followed by rotation parameters column-wise.
+
+    Parameters
+    ----------
+    motion_parameters : :obj:`numpy.ndarray`
+        Motion parameters.
+    radius : :obj:`float`, optional
+        Radius (in mm) of a sphere mimicking the size of a typical human brain.
+
+    Returns
+    -------
+    :obj:`numpy.ndarray`
+        The framewise displacement (FD) as the sum of absolute differences
+        between consecutive frames.
+    """
+
+    translations = motion_parameters[:, :3]
+    rotations_deg = motion_parameters[:, 3:]
+    rotations_rad = np.deg2rad(rotations_deg)
+
+    # Compute differences between consecutive frames
+    d_translations = np.vstack([np.zeros((1, 3)), np.diff(translations, axis=0)])
+    d_rotations = np.vstack([np.zeros((1, 3)), np.diff(rotations_rad, axis=0)])
+
+    # Convert rotations from radians to displacement on a sphere
+    rotation_displacement = d_rotations * radius
+
+    # Compute FD as sum of absolute differences
+    return np.sum(np.abs(d_translations) + np.abs(rotation_displacement), axis=1)
+
+
+def extract_motion_parameters(affine: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Extract translation (mm) and rotation (degrees) parameters from an affine matrix.
+
+    Parameters
+    ----------
+    affine : :obj:`~numpy.ndarray`
+        The affine transformation matrix.
+
+    Returns
+    -------
+    :obj:`tuple`
+        Extracted translation and rotation parameters.
+    """
+
+    translation = affine[:3, 3]
+    rotation_rad = np.arctan2(
+        [affine[2, 1], affine[0, 2], affine[1, 0]], [affine[2, 2], affine[0, 0], affine[1, 1]]
+    )
+    rotation_deg = np.rad2deg(rotation_rad)
+    return *translation, *rotation_deg
