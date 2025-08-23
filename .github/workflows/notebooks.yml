@@ -1,6 +1,14 @@
 name: Run notebooks
 
 on:
+  push:
+    branches:
+      - main
+      - maint/*
+  pull_request:
+    branches:
+      - main
+      - maint/*
   schedule:
     - cron: '0 0 * * 1'  # Every Monday at 00:00 UTC
   # Allow job to be triggered manually from GitHub interface
@@ -33,6 +41,20 @@ jobs:
         python-version: ['3.12']
 
     steps:
+      - name: Free up disk space
+        run: |
+          echo "Disk space before cleanup:"
+          df -h
+
+          # Remove big pre-installed packages
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/lib/android
+          sudo apt-get clean
+
+          echo "Disk space after cleanup:"
+          df -h
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -41,16 +63,50 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Check for nvcc and set CUDA flag
-        id: detect-cuda
+      - name: Check for nvcc and install CUDA if missing
+        id: cuda
         run: |
-          if command -v nvcc &> /dev/null; then
-            echo "nvcc found: CUDA is available"
+          if command -v nvcc > /dev/null; then
+            echo "✅ nvcc is already installed"
             echo "HAS_CUDA=true" >> $GITHUB_ENV
           else
-            echo "nvcc not found: CUDA is not available"
+            echo "❌ nvcc not found, installing CUDA..."
+
+            UBUNTU_VERSION=$(lsb_release -rs)
+            UBUNTU_CODENAME="ubuntu${UBUNTU_VERSION//./}"
+
+            echo "Detected Ubuntu version: $UBUNTU_CODENAME"
+
+            # Add NVIDIA APT repository
+            wget https://developer.download.nvidia.com/compute/cuda/repos/${UBUNTU_CODENAME}/x86_64/cuda-${UBUNTU_CODENAME}.pin
+            sudo mv cuda-${UBUNTU_CODENAME}.pin /etc/apt/preferences.d/cuda-repository-pin-600
+            sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/${UBUNTU_CODENAME}/x86_64/3bf863cc.pub
+            sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/${UBUNTU_CODENAME}/x86_64/ /"
+            sudo apt-get update
+
+            # Automatically get latest available cuda-toolkit version
+            TOOLKIT=$(apt-cache search ^cuda-toolkit-[0-9]+-[0-9]+$ | awk '{print $1}' | sort -V | tail -n1)
+            if [ -z "$TOOLKIT" ]; then
+              echo "❌ No CUDA toolkit version found in repository."
+              exit 1
+            fi
+
+            echo "Installing CUDA toolkit: $TOOLKIT"
+            sudo apt-get install -y $TOOLKIT
+
+            echo "/usr/local/cuda/bin" >> $GITHUB_PATH
+            echo "HAS_CUDA=true" >> $GITHUB_ENV
+          fi
+
+      - name: Confirm CUDA version
+        run: |
+          if [ "$HAS_CUDA" = "true" ]; then
+            nvcc --version
+          else
+            echo "CUDA not available"
             echo "HAS_CUDA=false" >> $GITHUB_ENV
           fi
+          echo $HAS_CUDA
 
       - name: Install AFNI
         run: |
@@ -112,4 +168,24 @@ jobs:
           pip install tox
 
       - name: Run notebooks with tox
-        run: tox -e notebooks
+        # run: tox -e notebooks
+        run: |
+          pip install nbconvert jupyter
+          pip install nbval
+          pip install nibabel
+          pip install mriqc_learn
+          pip install nipreps-synthstrip
+          pip install dipy
+          pip install joblib
+          pip install "nipype>=1.5.1,<2.0"
+          pip install "nitransforms>=22.0.0,<24"
+          pip install numpy
+          pip install nest-asyncio
+          pip install scikit_learn
+          pip install scipy
+          pip install .
+          # jupyter nbconvert --to notebook --execute ${{ github.workspace }}/docs/notebooks/bold_realignment.ipynb \
+          #   --output executed_bold_realignment.ipynb
+          # jupyter nbconvert --to python ${{ github.workspace }}/docs/notebooks/bold_realignment.ipnb
+          python ${{ github.workspace }}/docs/notebooks/bold_realignment.py
+          # pytest -s --nbval ${{ github.workspace }}/docs/notebooks/bold_realignment.ipynb
