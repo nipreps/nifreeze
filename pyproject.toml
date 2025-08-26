@@ -180,7 +180,6 @@ exclude = [
   "build",
   "dist",
 ]
-extend-exclude = ["docs/notebooks/PET_example.ipynb"]
 
 [tool.ruff.lint]
 select = [
