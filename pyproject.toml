@@ -58,17 +58,13 @@ doc = [
     "sphinx-argparse",
     "sphinxcontrib-bibtex",
 ]
-
 dev = [
     "ruff",
     "pre-commit",
     "pre-commit-hooks",
 ]
-
 plotting = ["nilearn"]
-
 resmon = ["psutil >=5.4"]
-
 test = [
     "coverage",
     "ipykernel",
@@ -87,7 +83,6 @@ types = [
   "types-tqdm",
   "pytest",
 ]
-
 notebooks = [
     "jupyter",
     "nbclient",
@@ -95,14 +90,12 @@ notebooks = [
     "mriqc_learn",
     "nipreps-synthstrip",
 ]
-
 antsopt = [
     "ConfigSpace",
     "nipreps",
     "scikit-image",
     "smac",
 ]
-
 benchmark = [
     "asv",
     "pyperf",
@@ -130,9 +123,8 @@ exclude = [".git_archival.txt"]  # No longer needed in sdist
 [tool.hatch.build.targets.wheel]
 packages = ["src/nifreeze"]
 # exclude = [
-#     "nifreeze/tests/data",  # Large test data directory
+#   "nifreeze/tests/data",  # Large test data directory
 # ]
-
 
 [tool.hatch.version]
 validate-bump = true
@@ -141,7 +133,6 @@ source = "vcs"
 [tool.hatch.version.raw-options]
 version_scheme = "nipreps-calver"
 local_scheme = "no-local-version"
-
 
 [tool.hatch.build.hooks.vcs]
 version-file = "src/nifreeze/_version.py"
@@ -232,7 +223,6 @@ filterwarnings = [
   # scikit-learn
   "ignore:The optimal value found for dimension.*:sklearn.exceptions.ConvergenceWarning",
 ]
-
 
 [tool.coverage.run]
 branch = true
