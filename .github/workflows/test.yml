@@ -51,14 +51,14 @@ jobs:
         uses: actions/cache@v4
         id: test-data
         with:
-          path: /home/runner/nifreeze-tests/
+          path: ${{ env.TEST_DATA_HOME }}
           key: data-v2-${{ steps.test-head.outputs.SHA }}
           lookup-only: true
       - name: Create data-v2-${{ steps.test-head.outputs.SHA }}
         uses: actions/cache@v4
         if: steps.test-data.outputs.cache-hit != 'true'
         with:
-          path: /home/runner/nifreeze-tests/
+          path: ${{ env.TEST_DATA_HOME }}
           key: data-v2-${{ steps.test-head.outputs.SHA }}
           restore-keys: |
             data-v2
@@ -123,7 +123,7 @@ jobs:
           antsRegistration --version
       - uses: actions/cache/restore@v4
         with:
-          path: /home/runner/nifreeze-tests/
+          path: ${{ env.TEST_DATA_HOME }}
           key: data-v2-${{ needs.cache-test-data.outputs.SHA }}
       - name: Install TeX Live
         run: |
