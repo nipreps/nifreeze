@@ -227,8 +227,8 @@ def create_random_polar_angles(size, rng):
 
 
 def create_random_diffusivity_eigenvalues(size, rng):
-    r"""Create DTI model diffusion tensor eigenvalues ($\lambda_{1},
-    \lambda_{2}, \lambda_{3}$) drawn from a uniform distribution."""
+    r"""Create DTI model diffusion tensor eigenvalues (:math:`\lambda_{1}, \lambda_{2}, \lambda_{3}`)
+    drawn from a uniform distribution."""
 
     # lambda_2 = lambda_3 following Canales-Rodriguez, NIMG 184 2019,
     # https://doi.org/10.1016/j.neuroimage.2018.08.071

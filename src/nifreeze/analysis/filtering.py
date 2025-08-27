@@ -34,9 +34,9 @@ def normalize(x: np.ndarray):
 
         z_i = \frac{x_i - \mu}{\sigma}
 
-    where $x_i$ is the framewise displacement at point $i$, $\mu$ is the mean
-    of all values, $\sigma$ is the standard deviation of the values, and $z_i$
-    is the normalized z-score.
+    where :math:`x_i` is the framewise displacement at point :math:`i`,
+    :math:`\mu` is the mean of all values, :math:`\sigma` is the standard
+    deviation of the values, and :math:`z_i` is the normalized z-score.
 
     Parameters
     ----------

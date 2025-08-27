@@ -129,7 +129,7 @@ def plot_volumewise_motion(
 ) -> np.ndarray:
     """Plot mean volume-wise motion parameters.
 
-    Plots the mean translation and rotation parameters along the ``x``, `y``,
+    Plots the mean translation and rotation parameters along the ``x``, ``y``,
     and ``z`` axes.
 
     Parameters
