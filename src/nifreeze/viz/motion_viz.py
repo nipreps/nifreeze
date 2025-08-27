@@ -139,7 +139,7 @@ def plot_volumewise_motion(
     motion_params : :obj:`~numpy.ndarray`
         Motion parameters.Motion parameters: translation and rotation. Each row
         represents one frame, and columns represent each coordinate axis ``x``,
-        `y``, and ``z``. Translation parameters are followed by rotation
+        ``y``, and ``z``. Translation parameters are followed by rotation
         parameters column-wise.
     ax : :obj:`~numpy.ndarray`, optional
         Figure axes.
