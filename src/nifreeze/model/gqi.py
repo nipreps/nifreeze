@@ -206,8 +206,8 @@ def prediction_kernel(gtab, param_lambda, sphere, method="standard"):
 
         S(\theta, b) = K_{ii}^{-1} \cdot ODF
 
-    where $K_{ii}^{-1}$, is the inverse of the GQI kernels for the direction(s) $ii$
-    given by ``gtab``.
+    where :math:`K_{ii}^{-1}`, is the inverse of the GQI kernels for the
+    direction(s) :math:`ii` given by ``gtab``.
 
     """
     # K.shape = (n_gradients, n_vertices)
