@@ -19,7 +19,7 @@ External Dependencies
 ---------------------
 *nifreeze* requires ANTs_, which is leveraged through the Nipype_ Python
 interface for registration purposes. There are
-[several ways to install ``ANTs``](https://github.com/ANTsX/ANTs?tab=readme-ov-file#installation).
+`several ways to install ANTs <https://github.com/ANTsX/ANTs?tab=readme-ov-file#installation>`__.
 Notably, the path to the installed binaries needs to be added to the ``PATH`` ::
 
    $ export PATH=/path/to/ants/bin:$PATH
