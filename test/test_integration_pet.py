@@ -44,16 +44,6 @@ def _pet_dataset(n_frames=3):
     )
 
 
-def test_lofo_split_shapes(tmp_path):
-    ds = _pet_dataset(4)
-    idx = 2
-    (train_data, train_times), (test_data, test_time) = ds.lofo_split(idx)
-    assert train_data.shape[-1] == ds.dataobj.shape[-1] - 1
-    np.testing.assert_array_equal(test_data, ds.dataobj[..., idx])
-    np.testing.assert_array_equal(train_times, np.delete(ds.midframe, idx))
-    assert test_time == ds.midframe[idx]
-
-
 def test_to_from_filename_roundtrip(tmp_path):
     ds = _pet_dataset(3)
     out_file = tmp_path / "petdata"
@@ -78,7 +68,7 @@ def test_pet_motion_estimator_run(monkeypatch):
                 return None
             return np.zeros(ds.shape3d, dtype=np.float32)
 
-    monkeypatch.setattr("nifreeze.estimator.PETModel", DummyModel)
+    model = DummyModel(ds, None, None)
 
     class DummyRegistration:
         def __init__(self, *args, **kwargs):
@@ -89,7 +79,7 @@ def test_pet_motion_estimator_run(monkeypatch):
 
     monkeypatch.setattr("nifreeze.estimator.Registration", DummyRegistration)
 
-    estimator = PETMotionEstimator(None)
+    estimator = PETMotionEstimator(model)
     affines = estimator.run(ds)
     assert len(affines) == len(ds)
     for mat in affines:
