@@ -17,9 +17,9 @@ Please, do not commit manually to ``gh-pages``.
 
 To build the documentation locally, you first need to make sure that ``setuptools_scm[toml] >= 6.2`` is installed in your environment and then::
 
-  $ cd <nifreeze-repository>/
-  $ python -m setuptools_scm  # This will generate ``src/nifreeze/_version.py``
-  $ make -C docs/ html
+  cd <nifreeze-repository>/
+  python -m setuptools_scm  # This will generate ``src/nifreeze/_version.py``
+  make -C docs/ html
 
 Library API (application program interface)
 -------------------------------------------
