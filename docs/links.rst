@@ -1,4 +1,5 @@
 .. _Nipype: http://nipype.readthedocs.io/en/latest/
+.. _NiReports: https://nireports.readthedocs.io/en/latest/
 .. _BIDS: http://bids.neuroimaging.io
 .. _Installation: installation.html
 .. _workflows: workflows.html
