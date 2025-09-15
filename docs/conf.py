@@ -65,16 +65,7 @@ autodoc_mock_imports = [
     "transforms3d",
 ]
 
-# Accept custom section names to be parsed for numpy-style docstrings
-# of parameters.
 napoleon_use_param = False
-napoleon_custom_sections = [
-    ("Inputs", "Parameters"),
-    ("Outputs", "Parameters"),
-    ("Attributes", "Parameters"),
-    ("Mandatory Inputs", "Parameters"),
-    ("Optional Inputs", "Parameters"),
-]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
