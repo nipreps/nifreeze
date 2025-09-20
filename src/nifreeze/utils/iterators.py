@@ -118,9 +118,47 @@ def random_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
     return (x for x in index_order)
 
 
+def _value_iterator(values: list, ascending: bool, round_decimals: int = 2) -> Iterator[int]:
+    """
+    Traverse the given values in ascending or descenting order.
+
+    Parameters
+    ----------
+    values : :obj:`list`
+        List of values to traverse.
+    ascending : :obj:`bool`
+        If ``True``, traverse in ascending order; traverse in descending order
+        otherwise.
+    round_decimals : :obj:`int`, optional
+        Number of decimals to round values for sorting.
+
+    Yields
+    ------
+    :obj:`int`
+        The next index.
+
+    Examples
+    --------
+    >>> list(_value_iterator([0.0, 0.0, 1000.0, 1000.0, 700.0, 700.0, 2000.0, 2000.0, 0.0], True))
+    [0, 1, 8, 4, 5, 2, 3, 6, 7]
+    >>> list(_value_iterator([0.0, 0.0, 1000.0, 1000.0, 700.0, 700.0, 2000.0, 2000.0, 0.0], False))
+    [7, 6, 3, 2, 5, 4, 8, 1, 0]
+    >>> list(_value_iterator([-1.23, 1.06, 1.02, 1.38, -1.46, -1.12, -1.19, 1.24, 1.05], True))
+    [4, 0, 6, 5, 2, 8, 1, 7, 3]
+    >>> list(_value_iterator([-1.23, 1.06, 1.02, 1.38, -1.46, -1.12, -1.19, 1.24, 1.05], False))
+    [3, 7, 1, 8, 2, 5, 6, 0, 4]
+
+    """
+
+    indexed_vals = sorted(
+        ((round(v, round_decimals), i) for i, v in enumerate(values)), reverse=not ascending
+    )
+    return (index[1] for index in indexed_vals)
+
+
 def bvalue_iterator(*_, **kwargs) -> Iterator[int]:
     """
-    Traverse the volumes in a DWI dataset by growing b-value.
+    Traverse the volumes in a DWI dataset by increasing b-value.
 
     Parameters
     ----------
@@ -143,8 +181,39 @@ def bvalue_iterator(*_, **kwargs) -> Iterator[int]:
     bvals = kwargs.get("bvals", None)
     if bvals is None:
         raise TypeError("Keyword argument bvals is required")
-    indexed_bvals = sorted([(round(b, 2), i) for i, b in enumerate(bvals)])
-    return (index[1] for index in indexed_bvals)
+    return _value_iterator(bvals, round_decimals=2, ascending=True)
+
+
+def uptake_iterator(*_, **kwargs) -> Iterator[int]:
+    """
+    Traverse the volumes in a PET dataset by decreasing uptake value.
+
+    This function assumes that each uptake value corresponds to a single volume,
+    and that this value summarizes the uptake of the volume in a meaningful way,
+    e.g. a mean value across the entire volume.
+
+    Parameters
+    ----------
+    uptake : :obj:`list`
+        List of uptake values corresponding to all volumes of the dataset.
+        Please note that ``uptake`` is a keyword argument and MUST be provided
+        to generate the volume sequence.
+
+    Yields
+    ------
+    :obj:`int`
+        The next index.
+
+    Examples
+    --------
+    >>> list(uptake_iterator(uptake=[-1.23, 1.06, 1.02, 1.38, -1.46, -1.12, -1.19, 1.24, 1.05]))
+    [3, 7, 1, 8, 2, 5, 6, 0, 4]
+
+    """
+    uptake = kwargs.get("uptake", None)
+    if uptake is None:
+        raise TypeError("Keyword argument uptake is required")
+    return _value_iterator(uptake, round_decimals=2, ascending=False)
 
 
 def centralsym_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
