@@ -28,7 +28,7 @@ import numpy as np
 import pytest
 from nitransforms.linear import Affine
 
-from nifreeze.data.pet import PET, from_nii
+from nifreeze.data.pet import PET, _compute_uptake_statistic, from_nii
 
 
 def test_from_nii_requires_frame_time(tmp_path):
@@ -54,6 +54,16 @@ def _create_dataset():
         midframe=midframe,
         total_duration=60.0,
     )
+
+
+@pytest.mark.parametrize("stat_func", (np.sum, np.mean, np.std))
+def test_compute_uptake_statistic(stat_func):
+    rng = np.random.default_rng(12345)
+    data = rng.random((4, 4, 4, 5), dtype=np.float32)
+
+    expected = stat_func(data.reshape(-1, data.shape[-1]), axis=0)
+    obtained = _compute_uptake_statistic(data, stat_func=stat_func)
+    np.testing.assert_array_equal(obtained, expected)
 
 
 def test_pet_set_transform_updates_motion_affines():

@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 from collections import namedtuple
 from pathlib import Path
+from typing import Callable
 
 import attrs
 import h5py
@@ -49,6 +50,10 @@ class PET(BaseDataset[np.ndarray | None]):
     """A (N,) numpy array specifying the midpoint timing of each sample or frame."""
     total_duration: float | None = attrs.field(default=None, repr=True)
     """A float representing the total duration of the dataset."""
+    uptake: np.ndarray | None = attrs.field(
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp)
+    )
+    """A (N,) numpy array specifying the uptake value of each sample or frame."""
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray | None]:
         return (self.midframe[idx] if self.midframe is not None else None,)
@@ -270,6 +275,8 @@ def from_nii(
         affine=img.affine,
     )
 
+    pet_obj.uptake = _compute_uptake_statistic(data, stat_func=np.sum)
+
     # If the user supplied new values, set them
     if frame_time is not None:
         # Convert to a float32 numpy array and zero out the earliest time
@@ -298,3 +305,26 @@ def from_nii(
         pet_obj.brainmask = np.asanyarray(mask_img.dataobj, dtype=bool)
 
     return pet_obj
+
+
+def _compute_uptake_statistic(data: np.ndarray, stat_func: Callable = np.sum):
+    """Compute a statistic over all voxels for each frame on a PET sequence.
+
+    Assumes the last dimension corresponds to the number of frames in the
+    sequence.
+
+    Parameters
+    ----------
+    data : :obj:`~numpy.ndarray`
+        PET data.
+    stat_func : :obj:`Callable`, optional
+        Function to apply over voxels (e.g., :obj:`~numpy.sum`,
+        :obj:`~numpy.mean`, :obj:`~numpy.np.std`)
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        1D array of statistic values for each frame.
+    """
+
+    return stat_func(data.reshape(-1, data.shape[-1]), axis=0)
