@@ -18,10 +18,6 @@ and eddy-current-derived distortion estimation in dMRI.
    The contributor list of *eddymotion* is found under the credit file
    ``.maint/EDDYMOTION.md`` in this repository.
 
-.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4680599.svg
-   :target: https://doi.org/10.5281/zenodo.4680599
-   :alt: DOI
-
 .. image:: https://img.shields.io/badge/License-Apache_2.0-blue.svg
    :target: https://github.com/nipreps/nifreeze/blob/main/LICENSE
    :alt: License
