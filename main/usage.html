@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Running NiFreeze" href="running.html" /><link rel="prev" title="Installation" href="installation.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.07.19 -->
-        <title>How to Use - nifreeze 25.0.0.dev462 documentation</title>
+        <title>How to Use - nifreeze 25.0.0.dev466 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=25af2a20" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -167,7 +167,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 25.0.0.dev462 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 25.0.0.dev466 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -190,14 +190,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev462</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev466</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev462</span>
+  <span class="sidebar-brand-text">25.0.0.dev466</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -312,18 +312,40 @@
 <h1>How to Use<a class="headerlink" href="#how-to-use" title="Link to this heading">¶</a></h1>
 <section id="incorporating-nifreeze-into-a-python-module-or-script">
 <h2>Incorporating NiFreeze into a Python module or script<a class="headerlink" href="#incorporating-nifreeze-into-a-python-module-or-script" title="Link to this heading">¶</a></h2>
-<p>To utilize NiFreeze functionalities within your Python module or script, follow these steps:</p>
+<p>To utilize <em>NiFreeze</em> functionalities within your Python module or script, follow these steps:</p>
 <ol class="arabic">
-<li><p><strong>Import NiFreeze Components</strong>: Start by importing necessary components from the NiFreeze package:</p>
+<li><p><strong>Import NiFreeze Components</strong>: Start by importing necessary components from the <em>NiFreeze</em> package:</p>
+<p>To use <em>NiFreeze</em> you will typically need to use three main components:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Some <strong>data</strong>: allows to build a construct over your data that allows
+the <strong>model</strong> and the <strong>estimator</strong> objects to deal with the data in
+a standardized manner.</p></li>
+<li><p>A <strong>model</strong>: establishes the predictive model used to estimate the
+generate the registration target. It will typically implement the
+<code class="docutils literal notranslate"><span class="pre">fit</span></code> and <code class="docutils literal notranslate"><span class="pre">predict</span></code> methods. It is specified when instantiating the
+<strong>estimator</strong>.</p></li>
+<li><p>An <strong>estimator</strong>: orchestrates the registration target prediction.</p></li>
+</ul>
+</div></blockquote>
+<p>The same approach applies to any 4D modality data. For illustrative
+purposes, we will use some dMRI data:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import required components from the nifreeze package</span>
 <span class="kn">from</span> <span class="nn">nifreeze.data</span> <span class="kn">import</span> <span class="n">dmri</span>
 <span class="kn">from</span> <span class="nn">nifreeze.estimator</span> <span class="kn">import</span> <span class="n">Estimator</span>
 </pre></div>
 </div>
 </li>
-<li><p><strong>Load DWI Data</strong>: Load diffusion MRI (dMRI) data into a <cite>DWI</cite> object using the <cite>load</cite> function. Ensure the gradient table is provided. It should have one row per diffusion-weighted image. The first three columns represent the gradient directions, and the last column indicates the timing and strength of the gradients in units of s/mm² [ R A S+ b ]. If your data are in NIfTI file format, include a file containing the gradient information with the argument “gradients_file”:</p>
+<li><p><strong>Load 4D Data</strong>: Load your 4D data into a dataset object using the
+<code class="xref py py-func docutils literal notranslate"><span class="pre">api/nifreeze.data.load()</span></code> function.</p>
+<p>Use the appropriate parameters for the particular imaging modality (e.g.
+dMRI, fMRI, or PET) that you are using.</p>
+<p>For example, for dMRI data, ensure the gradient table is provided. It
+should have one column per diffusion-weighted image. The first three rows
+represent the gradient directions, and the last row indicates the timing
+and strength of the gradients in units of s/mm² <code class="docutils literal notranslate"><span class="pre">[</span> <span class="pre">R</span> <span class="pre">A</span> <span class="pre">S+</span> <span class="pre">b</span> <span class="pre">]</span></code>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load dMRI data into a DWI object</span>
-<span class="n">dwi_data</span> <span class="o">=</span> <span class="n">dmri</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;/path/to/your/dwi_data.nii.gz&#39;</span><span class="p">,</span> <span class="n">gradients_file</span><span class="o">=</span><span class="s1">&#39;/path/to/your/gradient_file&#39;</span><span class="p">)</span>
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">dmri</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;/path/to/your/dwi_data.nii.gz&quot;</span><span class="p">,</span> <span class="n">gradients_file</span><span class="o">=</span><span class="s2">&quot;/path/to/your/gradient_file&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 <div class="admonition note">
@@ -331,46 +353,67 @@
 <p>To run the examples and tests from this page,
 find <a class="reference external" href="https://osf.io/download/6at98/">sample data</a> on OSF.
 To load from an HDF5 file, use:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">dwi_data</span> <span class="o">=</span> <span class="n">dmri</span><span class="o">.</span><span class="n">DWI</span><span class="o">.</span><span class="n">from_filename</span><span class="p">(</span><span class="s1">&#39;/path/to/downloaded/dwi_full.h5&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">dataset</span> <span class="o">=</span> <span class="n">dmri</span><span class="o">.</span><span class="n">DWI</span><span class="o">.</span><span class="n">from_filename</span><span class="p">(</span><span class="s2">&quot;/path/to/downloaded/dwi_full.h5&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 </li>
-<li><p><strong>Instantiate an NiFreeze Estimator Object</strong>: Create an instance of the <cite>Estimator</cite> class, which encapsulates tools for estimating rigid-body head motion and distortions due to eddy currents.</p>
+<li><p><strong>Instantiate an NiFreeze Estimator Object</strong>: Create an instance of the
+<code class="xref py py-class docutils literal notranslate"><span class="pre">api/nifreeze.estimator.Estimator</span></code> class, which encapsulates tools
+for estimating rigid-body head motion and distortions due to eddy currents.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create an instance of the Estimator class</span>
-<span class="n">estimator</span> <span class="o">=</span> <span class="n">Estimator</span><span class="p">()</span>
+<span class="n">estimator</span> <span class="o">=</span> <span class="n">Estimator</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">,</span>
+    <span class="n">strategy</span><span class="o">=</span><span class="s2">&quot;random&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 </div>
+<p>The estimator takes a model that determines how the target volume will be
+estimated.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">model</span></code>: specifies the model used to generate the registration target
+for each gradient map (dMRI) or frame (dMRI, PET). For a list of
+available models, see <a class="reference internal" href="api/nifreeze.model.html"><span class="doc">nifreeze.model package</span></a>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">strategy</span></code>: strategy used to traverse the 4D sequence. The list of
+supported strategies can be found at <a class="reference internal" href="api/nifreeze.utils.iterators.html"><span class="doc">nifreeze.utils.iterators module</span></a>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">prev</span></code>: estimators can be stacked and be run sequentially.</p></li>
+</ul>
 </li>
 <li><p><strong>Fit the Models to Estimate the Affine Transformation</strong>:</p>
-<p>Use the <cite>estimate</cite> method of the <cite>Estimator</cite> object to estimate the affine transformation parameters:</p>
+<p>Use the <code class="xref py py-meth docutils literal notranslate"><span class="pre">api/nifreeze.estimator.Estimator.run()</span></code> method of the
+<code class="xref py py-class docutils literal notranslate"><span class="pre">api/nifreeze.estimator.Estimator</span></code> object to estimate the affine
+transformation parameters:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Estimate affine transformation parameters</span>
-<span class="n">estimated_affine</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">estimate</span><span class="p">(</span>
-    <span class="n">dwi_data</span><span class="p">,</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+    <span class="n">dataset</span><span class="p">,</span>
     <span class="n">align_kwargs</span><span class="o">=</span><span class="n">align_kwargs</span><span class="p">,</span>
-    <span class="n">models</span><span class="o">=</span><span class="n">models</span><span class="p">,</span>
     <span class="n">omp_nthreads</span><span class="o">=</span><span class="n">omp_nthreads</span><span class="p">,</span>
     <span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">,</span>
     <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
-<p>The <cite>estimate</cite> method employs the Leave-One-Volume-Out (LOVO) splitting technique to iteratively process DWI data volumes for each specified model. Affine transformations align the volumes, updating the <cite>DWI</cite> object with the estimated parameters. This method accepts several parameters:</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">run</span></code> method employs the Leave-One-Volume-Out (LOVO) splitting technique to iteratively process DWI data volumes for each specified model. Affine transformations align the volumes, updating the <cite>DWI</cite> object with the estimated parameters. This method accepts several parameters:</p>
 <ul class="simple">
-<li><p><cite>dwi_data</cite>: The target DWI dataset, represented by this tool’s internal type.</p></li>
-<li><p><cite>align_kwargs</cite>: Parameters to configure the image registration process.</p></li>
-<li><p><cite>models</cite>: list of diffusion models used to generate the registration target for each gradient map. For a list of available models, see <a class="reference internal" href="api/nifreeze.model.html"><span class="doc">nifreeze.model package</span></a>.</p></li>
-<li><p><cite>omp_nthreads</cite>: Maximum number of threads an individual process may use.</p></li>
-<li><p><cite>n_jobs</cite>: Number of parallel jobs.</p></li>
-<li><p><cite>seed</cite>: Seed for the random number generator (necessary for deterministic estimation).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dataset</span></code>: The target dataset, represented by this tool’s internal type.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">align_kwargs</span></code>: Parameters to configure the image registration process.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">omp_nthreads</span></code>: Maximum number of threads an individual process may use.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">n_jobs</span></code>: Number of parallel jobs.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">seed</span></code>: Seed for the random number generator (necessary for deterministic estimation).</p></li>
 </ul>
-<p>The method returns an Nx4x4 array of affine matrices encoding the estimated parameters of
-the deformations due to head motion and eddy currents.</p>
+<p>The estimated parameters encoding the deformations due to head motion and
+eddy currents are stored as an <span class="math notranslate nohighlight">\(N \times 4 \times 4\)</span> array of affine
+matrices in the dataset object after the model fitting and prediction (done
+under the hood by the estimator).</p>
 <p>Example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Example of fitting the model</span>
-<span class="n">estimated_affine</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">estimate</span><span class="p">(</span>
-    <span class="n">dwi_data</span><span class="p">,</span>
-    <span class="n">models</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;b0&quot;</span><span class="p">],</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">estimator</span> <span class="o">=</span> <span class="n">Estimator</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;b0&quot;</span><span class="p">,</span>
+    <span class="n">strategy</span><span class="o">=</span><span class="s2">&quot;random&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Example of estimating the motion parameters</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+    <span class="n">dataset</span><span class="p">,</span>
     <span class="n">omp_nthreads</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
     <span class="n">n_jobs</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
     <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
@@ -378,28 +421,37 @@ the deformations due to head motion and eddy currents.</p>
 </pre></div>
 </div>
 </li>
-<li><p><strong>Save Results</strong>: Once transformations are estimated, save the realigned DWI data in your preferred output format, either HDF5 or NIfTI:</p>
+<li><p><strong>Save Results</strong>: Once transformations are estimated, save the realigned data in your preferred output format, either HDF5 or NIfTI:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Save realigned DWI data in HDF5 format</span>
-<span class="n">output_filename</span> <span class="o">=</span> <span class="s1">&#39;/path/to/save/your/output.h5&#39;</span>
-<span class="n">dwi_data</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span>
+<span class="n">output_filename</span> <span class="o">=</span> <span class="s2">&quot;/path/to/save/your/output.h5&quot;</span>
+<span class="n">dataset</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>or as a NIfTI file:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Save realigned DWI data in NIfTI format</span>
-<span class="n">output_filename</span> <span class="o">=</span> <span class="s1">&#39;/path/to/save/your/output.nii.gz&#39;</span>
-<span class="n">dwi_data</span><span class="o">.</span><span class="n">to_nifti</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span>
+<span class="n">output_filename</span> <span class="o">=</span> <span class="s2">&quot;/path/to/save/your/output.nii.gz&quot;</span>
+<span class="n">dataset</span><span class="o">.</span><span class="n">to_nifti</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span>
 </pre></div>
 </div>
 </li>
-<li><p><strong>Plotting</strong>: Visualize data and results using built-in plotting functions of the DWI objects:</p>
+<li><p><strong>Plotting</strong>: Visualize data and results:</p>
+<p>Estimated motion results can be visualized using <a class="reference internal" href="api/nifreeze.viz.motion_viz.html"><span class="doc">nifreeze.viz.motion_viz module</span></a>
+functions. This includes visualizing framewise displacement, motion
+overlay, and volume-wise motion.</p>
+<p>Data results can be visualized using the <a class="reference external" href="https://nireports.readthedocs.io/en/latest/">NiReports</a> functions, e.g.:</p>
 <ul class="simple">
-<li><p>Use <cite>plot_mosaic</cite> to visualize one direction of the dMRI dataset.</p></li>
-<li><p>Employ <cite>plot_gradients</cite> to visualize diffusion gradients.</p></li>
+<li><p>Use <code class="xref py py-func docutils literal notranslate"><span class="pre">api/nireports.reportlets.mosaic.plot_mosaic()</span></code> to visualize one
+direction of the dMRI dataset or a frame of an fMRI or PET dataset.</p></li>
+<li><p>Employ <code class="xref py py-func docutils literal notranslate"><span class="pre">api/nireports.reportlets.modality.dwi.plot_gradients()</span></code> to
+visualize diffusion gradients.</p></li>
 </ul>
 <p>Example Usage:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Visualize DWI data at a specific index</span>
-<span class="n">dwi_data</span><span class="o">.</span><span class="n">plot_mosaic</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-<span class="c1"># Visualize gradients</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Visualize 4D data at a specific index</span>
+<span class="n">dataset</span><span class="o">.</span><span class="n">plot_mosaic</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For dMRI gradients, we can visualize diffusion gradients using:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Visualize gradients</span>
 <span class="n">dwi_data</span><span class="o">.</span><span class="n">plot_gradients</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -476,10 +528,11 @@ the deformations due to head motion and eddy currents.</p>
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=abe0e696"></script>
+</div><script src="_static/documentation_options.js?v=5791fc31"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/version-switch.js?v=8028bf13"></script>
     </body>
 </html>
