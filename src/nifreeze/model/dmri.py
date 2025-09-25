@@ -132,6 +132,8 @@ class BaseDWIModel(BaseModel):
                 import_module(module_name),
                 class_name,
             )(gtab, **kwargs)
+        else:
+            raise NotImplementedError(f"{model_str} not implemented.")
 
         fit_kwargs: dict[str, Any] = {}  # Add here keyword arguments
 
