@@ -28,12 +28,12 @@ import numpy as np
 from dipy.core.gradients import gradient_table_from_bvals_bvecs
 from joblib import Parallel, delayed
 
-from nifreeze.data.dmri import DTI_MIN_ORIENTATIONS, DWI
+from nifreeze.data.dmri import DEFAULT_LOWB_THRESHOLD, DEFAULT_MIN_S0, DTI_MIN_ORIENTATIONS, DWI
 from nifreeze.data.filtering import BVAL_ATOL, dwi_select_shells, grand_mean_normalization
 from nifreeze.model.base import BaseModel, ExpectationModel
 
-S0_EPSILON = 1e-6
-B_MIN = 50
+DEFAULT_S0_CLIP_PERCENTILE = 98
+"""Upper percentile threshold for non-diffusion-weighted signal estimation."""
 
 
 def _exec_fit(model, data, chunk=None, **kwargs):
@@ -79,7 +79,7 @@ class BaseDWIModel(BaseModel):
                 f"DWI dataset is too small ({dataset.gradients.shape[0]} directions)."
             )
 
-        if max_b is not None and max_b > B_MIN:
+        if max_b is not None and max_b > DEFAULT_LOWB_THRESHOLD:
             self._max_b = max_b
 
         self._data_mask = (
@@ -88,15 +88,17 @@ class BaseDWIModel(BaseModel):
             else np.ones(dataset.dataobj.shape[:3], dtype=bool)
         )
 
-        # By default, set S0 to the 98% percentile of the DWI data within mask
+        # By default, set S0 to the q-th percentile of the DWI data within mask
         self._S0 = np.full(
             self._data_mask.sum(),
-            np.round(np.percentile(dataset.dataobj[self._data_mask, ...], 98)),
+            np.round(
+                np.percentile(dataset.dataobj[self._data_mask, ...], DEFAULT_S0_CLIP_PERCENTILE)
+            ),
         )
 
         # If b=0 is present and not to be ignored, update brain mask and set
         if not kwargs.pop("ignore_bzero", False) and dataset.bzero is not None:
-            self._data_mask[dataset.bzero < S0_EPSILON] = False
+            self._data_mask[dataset.bzero < DEFAULT_MIN_S0] = False
             self._S0 = dataset.bzero[self._data_mask]
 
         super().__init__(dataset, **kwargs)
