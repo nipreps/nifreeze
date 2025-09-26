@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.utils.ndimage module" href="nifreeze.utils.ndimage.html"><link rel="prev" title="nifreeze.utils package" href="nifreeze.utils.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.utils.iterators module - nifreeze 25.0.0.dev482 documentation</title>
+        <title>nifreeze.utils.iterators module - nifreeze 25.0.0.dev484 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev482 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev484 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev482</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev484</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev482</span>
+  <span class="sidebar-brand-text">25.0.0.dev484</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -329,16 +329,16 @@ to generate the volume sequence.</p>
 <dd><p>Traverse the dataset starting from the center and alternatingly progressing to the sides.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <code class="docutils literal notranslate"><span class="pre">None</span></code>, optional) – Number of volumes in the dataset.
-If <code class="docutils literal notranslate"><span class="pre">None</span></code>, <code class="docutils literal notranslate"><span class="pre">size</span></code> will be inferred from the <code class="docutils literal notranslate"><span class="pre">bvals</span></code> keyword argument.</p></li>
-<li><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional (keyword argument)) – List of b-values corresponding to all orientations of the dataset.
-If <code class="docutils literal notranslate"><span class="pre">size</span></code> is provided, this argument will be ignored.
-Otherwise, <code class="docutils literal notranslate"><span class="pre">size</span></code> will be inferred from the length of <code class="docutils literal notranslate"><span class="pre">bvals</span></code>.</p></li>
-</ul>
+<dd class="field-odd"><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <code class="docutils literal notranslate"><span class="pre">None</span></code>, optional) – Number of volumes in the dataset.
+If <code class="docutils literal notranslate"><span class="pre">None</span></code>, <code class="docutils literal notranslate"><span class="pre">size</span></code> will be inferred from the <code class="docutils literal notranslate"><span class="pre">bvals</span></code> keyword argument.</p>
 </dd>
-<dt class="field-even">Yields<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
+<dt class="field-even">Other Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>) – List of b-values corresponding to all orientations of the dataset.
+If <code class="docutils literal notranslate"><span class="pre">size</span></code> is provided, this argument will be ignored.
+Otherwise, <code class="docutils literal notranslate"><span class="pre">size</span></code> will be inferred from the length of <code class="docutils literal notranslate"><span class="pre">bvals</span></code>.</p>
+</dd>
+<dt class="field-odd">Yields<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
@@ -356,16 +356,16 @@ Otherwise, <code class="docutils literal notranslate"><span class="pre">size</sp
 <dd><p>Traverse the dataset volumes in ascending order.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <code class="docutils literal notranslate"><span class="pre">None</span></code>, optional) – Number of volumes in the dataset.
-If <code class="docutils literal notranslate"><span class="pre">None</span></code>, <code class="docutils literal notranslate"><span class="pre">size</span></code> will be inferred from the <code class="docutils literal notranslate"><span class="pre">bvals</span></code> keyword argument.</p></li>
-<li><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional (keyword argument)) – List of b-values corresponding to all orientations of a DWI dataset.
-If <code class="docutils literal notranslate"><span class="pre">size</span></code> is provided, this argument will be ignored.
-Otherwise, <code class="docutils literal notranslate"><span class="pre">size</span></code> will be inferred from the length of <code class="docutils literal notranslate"><span class="pre">bvals</span></code>.</p></li>
-</ul>
+<dd class="field-odd"><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <code class="docutils literal notranslate"><span class="pre">None</span></code>, optional) – Number of volumes in the dataset.
+If <code class="docutils literal notranslate"><span class="pre">None</span></code>, <code class="docutils literal notranslate"><span class="pre">size</span></code> will be inferred from the <code class="docutils literal notranslate"><span class="pre">bvals</span></code> keyword argument.</p>
 </dd>
-<dt class="field-even">Yields<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
+<dt class="field-even">Other Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>) – List of b-values corresponding to all orientations of a DWI dataset.
+If <code class="docutils literal notranslate"><span class="pre">size</span></code> is provided, this argument will be ignored.
+Otherwise, <code class="docutils literal notranslate"><span class="pre">size</span></code> will be inferred from the length of <code class="docutils literal notranslate"><span class="pre">bvals</span></code>.</p>
+</dd>
+<dt class="field-odd">Yields<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
@@ -385,20 +385,22 @@ value. Specifically, if <code class="docutils literal notranslate"><span class="
 default seed value is used.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <code class="docutils literal notranslate"><span class="pre">None</span></code>, optional) – Number of volumes in the dataset.
-If <code class="docutils literal notranslate"><span class="pre">None</span></code>, <code class="docutils literal notranslate"><span class="pre">size</span></code> will be inferred from the <code class="docutils literal notranslate"><span class="pre">bvals</span></code> keyword argument.</p></li>
-<li><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional (keyword argument)) – List of b-values corresponding to all orientations of a DWI dataset.
+<dd class="field-odd"><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <code class="docutils literal notranslate"><span class="pre">None</span></code>, optional) – Number of volumes in the dataset.
+If <code class="docutils literal notranslate"><span class="pre">None</span></code>, <code class="docutils literal notranslate"><span class="pre">size</span></code> will be inferred from the <code class="docutils literal notranslate"><span class="pre">bvals</span></code> keyword argument.</p>
+</dd>
+<dt class="field-even">Other Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>) – List of b-values corresponding to all orientations of a DWI dataset.
 If <code class="docutils literal notranslate"><span class="pre">size</span></code> is provided, this argument will be ignored.
 Otherwise, <code class="docutils literal notranslate"><span class="pre">size</span></code> will be inferred from the length of <code class="docutils literal notranslate"><span class="pre">bvals</span></code>.</p></li>
-<li><p><strong>seed</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, or <code class="docutils literal notranslate"><span class="pre">None</span></code>, optional (keyword argument)) – If <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> or <code class="docutils literal notranslate"><span class="pre">None</span></code>, initializes the seed of Python’s random generator
+<li><p><strong>seed</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, or <code class="docutils literal notranslate"><span class="pre">None</span></code>) – If <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> or <code class="docutils literal notranslate"><span class="pre">None</span></code>, initializes the seed of Python’s random generator
 with the given value.
 If <code class="docutils literal notranslate"><span class="pre">False</span></code>, the random generator is passed <code class="docutils literal notranslate"><span class="pre">None</span></code>.
 If <code class="docutils literal notranslate"><span class="pre">True</span></code>, a default seed value is set.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Yields<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
+<dt class="field-odd">Yields<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
@@ -513,7 +515,7 @@ to generate the volume sequence.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=baad8fed"></script>
+</div><script src="../_static/documentation_options.js?v=d55c9b39"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
