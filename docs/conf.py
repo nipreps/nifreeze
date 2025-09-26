@@ -246,6 +246,7 @@ intersphinx_mapping = {
     "matplotlib": ("https://matplotlib.org/stable", None),
     "nibabel": ("https://nipy.org/nibabel/", None),
     "nipype": ("https://nipype.readthedocs.io/en/latest/", None),
+    "nireports": ("https://nireports.readthedocs.io/en/latest/", None),
     "niworkflows": ("https://www.nipreps.org/niworkflows/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "python": ("https://docs.python.org/3/", None),

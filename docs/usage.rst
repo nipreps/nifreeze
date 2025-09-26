@@ -29,7 +29,7 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
       from nifreeze.estimator import Estimator
 
 2. **Load 4D Data**: Load your 4D data into a dataset object using the
-   :func:`api/nifreeze.data.load` function.
+   :func:`~nifreeze.data.load` function.
 
    Use the appropriate parameters for the particular imaging modality (e.g.
    dMRI, fMRI, or PET) that you are using.
@@ -56,7 +56,7 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
 
 
 3. **Instantiate an NiFreeze Estimator Object**: Create an instance of the
-   :class:`api/nifreeze.estimator.Estimator` class, which encapsulates tools
+   :class:`~nifreeze.estimator.Estimator` class, which encapsulates tools
    for estimating rigid-body head motion and distortions due to eddy currents.
 
    .. code-block:: python
@@ -79,8 +79,8 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
 
 4. **Fit the Models to Estimate the Affine Transformation**:
 
-   Use the :meth:`api/nifreeze.estimator.Estimator.run` method of the
-   :class:`api/nifreeze.estimator.Estimator` object to estimate the affine
+   Use the :meth:`~nifreeze.estimator.Estimator.run` method of the
+   :class:`~nifreeze.estimator.Estimator` object to estimate the affine
    transformation parameters:
 
    .. code-block:: python
@@ -148,9 +148,9 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
 
    Data results can be visualized using the NiReports_ functions, e.g.:
 
-   - Use :func:`api/nireports.reportlets.mosaic.plot_mosaic` to visualize one
+   - Use :func:`nireports.reportlets.mosaic.plot_mosaic` to visualize one
      direction of the dMRI dataset or a frame of an fMRI or PET dataset.
-   - Employ :func:`api/nireports.reportlets.modality.dwi.plot_gradients` to
+   - Employ :func:`nireports.reportlets.modality.dwi.plot_gradients` to
      visualize diffusion gradients.
 
    Example Usage:
