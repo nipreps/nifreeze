@@ -36,7 +36,10 @@ def linear_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
     size : :obj:`int` or ``None``, optional
         Number of volumes in the dataset.
         If ``None``, ``size`` will be inferred from the ``bvals`` keyword argument.
-    bvals : :obj:`list`, optional (keyword argument)
+
+    Other Parameters
+    ----------------
+    bvals : :obj:`list`
         List of b-values corresponding to all orientations of a DWI dataset.
         If ``size`` is provided, this argument will be ignored.
         Otherwise, ``size`` will be inferred from the length of ``bvals``.
@@ -74,11 +77,14 @@ def random_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
     size : :obj:`int` or ``None``, optional
         Number of volumes in the dataset.
         If ``None``, ``size`` will be inferred from the ``bvals`` keyword argument.
-    bvals : :obj:`list`, optional (keyword argument)
+
+    Other Parameters
+    ----------------
+    bvals : :obj:`list`
         List of b-values corresponding to all orientations of a DWI dataset.
         If ``size`` is provided, this argument will be ignored.
         Otherwise, ``size`` will be inferred from the length of ``bvals``.
-    seed : :obj:`int`, :obj:`bool`, :obj:`str`, or ``None``, optional (keyword argument)
+    seed : :obj:`int`, :obj:`bool`, :obj:`str`, or ``None``
         If :obj:`int` or :obj:`str` or ``None``, initializes the seed of Python's random generator
         with the given value.
         If ``False``, the random generator is passed ``None``.
@@ -225,7 +231,10 @@ def centralsym_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
     size : :obj:`int` or ``None``, optional
         Number of volumes in the dataset.
         If ``None``, ``size`` will be inferred from the ``bvals`` keyword argument.
-    bvals : :obj:`list`, optional (keyword argument)
+
+    Other Parameters
+    ----------------
+    bvals : :obj:`list`
         List of b-values corresponding to all orientations of the dataset.
         If ``size`` is provided, this argument will be ignored.
         Otherwise, ``size`` will be inferred from the length of ``bvals``.
