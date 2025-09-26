@@ -28,27 +28,33 @@ from nifreeze.data.pet import PET
 from nifreeze.model.pet import PETModel
 
 
-def _create_dataset():
-    rng = np.random.default_rng(12345)
-    data = rng.random((4, 4, 4, 5), dtype=np.float32)
-    affine = np.eye(4, dtype=np.float32)
-    mask = np.ones((4, 4, 4), dtype=bool)
-    midframe = np.array([10, 20, 30, 40, 50], dtype=np.float32)
+@pytest.fixture
+def random_dataset(setup_random_pet_data) -> PET:
+    """Create a PET dataset with random data for testing."""
+
+    (
+        pet_dataobj,
+        affine,
+        brainmask_dataobj,
+        midframe,
+        total_duration,
+    ) = setup_random_pet_data
+
     return PET(
-        dataobj=data,
+        dataobj=pet_dataobj,
         affine=affine,
-        brainmask=mask,
+        brainmask=brainmask_dataobj,
         midframe=midframe,
-        total_duration=60.0,
+        total_duration=total_duration,
     )
 
 
-def test_petmodel_fit_predict():
-    dataset = _create_dataset()
+@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]), 60.0)
+def test_petmodel_fit_predict(random_dataset):
     model = PETModel(
-        dataset=dataset,
-        timepoints=dataset.midframe,
-        xlim=dataset.total_duration,
+        dataset=random_dataset,
+        timepoints=random_dataset.midframe,
+        xlim=random_dataset.total_duration,
         smooth_fwhm=0,
         thresh_pct=0,
     )
@@ -58,19 +64,19 @@ def test_petmodel_fit_predict():
     assert model.is_fitted
 
     # Predict at a specific timepoint
-    vol = model.fit_predict(dataset.midframe[2])
-    assert vol.shape == dataset.shape3d
-    assert vol.dtype == dataset.dataobj.dtype
+    vol = model.fit_predict(random_dataset.midframe[2])
+    assert vol.shape == random_dataset.shape3d
+    assert vol.dtype == random_dataset.dataobj.dtype
 
 
-def test_petmodel_invalid_init():
-    dataset = _create_dataset()
+@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]), 60.0)
+def test_petmodel_invalid_init(random_dataset):
     with pytest.raises(TypeError):
-        PETModel(dataset=dataset)
+        PETModel(dataset=random_dataset)
 
 
-def test_petmodel_time_check():
-    dataset = _create_dataset()
+@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]), 60.0)
+def test_petmodel_time_check(random_dataset):
     bad_times = np.array([0, 10, 20, 30, 50], dtype=np.float32)
     with pytest.raises(ValueError):
-        PETModel(dataset=dataset, timepoints=bad_times, xlim=60.0)
+        PETModel(dataset=random_dataset, timepoints=bad_times, xlim=60.0)

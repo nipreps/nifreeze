@@ -300,3 +300,31 @@ def setup_random_dwi_data(request, setup_random_gtab_data):
         gradients,
         b0_thres,
     )
+
+
+@pytest.fixture(autouse=True)
+def setup_random_pet_data(request):
+    """Automatically generate random PET data for tests."""
+    marker = request.node.get_closest_marker("random_pet_data")
+
+    n_frames = 5
+    vol_size = (4, 4, 4)
+    midframe = np.arange(n_frames, dtype=np.float32) + 1
+    total_duration = float(n_frames + 1)
+    if marker:
+        n_frames, vol_size, midframe, total_duration = marker.args
+
+    rng = request.node.rng
+
+    pet_dataobj, affine = _generate_random_uniform_spatial_data(
+        request, (*vol_size, n_frames), 0.0, 1.0
+    )
+    brainmask_dataobj = rng.choice([True, False], size=vol_size).astype(bool)
+
+    return (
+        pet_dataobj,
+        affine,
+        brainmask_dataobj,
+        midframe,
+        total_duration,
+    )
