@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Running NiFreeze" href="running.html"><link rel="prev" title="Installation" href="installation.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>How to Use - nifreeze 25.0.0.dev488 documentation</title>
+        <title>How to Use - nifreeze 25.0.0.dev492 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 25.0.0.dev488 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 25.0.0.dev492 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev488</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev492</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev488</span>
+  <span class="sidebar-brand-text">25.0.0.dev492</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -328,7 +328,7 @@ purposes, we will use some dMRI data:</p>
 </div>
 </li>
 <li><p><strong>Load 4D Data</strong>: Load your 4D data into a dataset object using the
-<code class="xref py py-func docutils literal notranslate"><span class="pre">api/nifreeze.data.load()</span></code> function.</p>
+<a class="reference internal" href="api/nifreeze.data.html#nifreeze.data.load" title="nifreeze.data.load"><code class="xref py py-func docutils literal notranslate"><span class="pre">load()</span></code></a> function.</p>
 <p>Use the appropriate parameters for the particular imaging modality (e.g.
 dMRI, fMRI, or PET) that you are using.</p>
 <p>For example, for dMRI data, ensure the gradient table is provided. It
@@ -350,7 +350,7 @@ To load from an HDF5 file, use:</p>
 </div>
 </li>
 <li><p><strong>Instantiate an NiFreeze Estimator Object</strong>: Create an instance of the
-<code class="xref py py-class docutils literal notranslate"><span class="pre">api/nifreeze.estimator.Estimator</span></code> class, which encapsulates tools
+<a class="reference internal" href="api/nifreeze.estimator.html#nifreeze.estimator.Estimator" title="nifreeze.estimator.Estimator"><code class="xref py py-class docutils literal notranslate"><span class="pre">Estimator</span></code></a> class, which encapsulates tools
 for estimating rigid-body head motion and distortions due to eddy currents.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create an instance of the Estimator class</span>
 <span class="n">estimator</span> <span class="o">=</span> <span class="n">Estimator</span><span class="p">(</span>
@@ -371,8 +371,8 @@ supported strategies can be found at <a class="reference internal" href="api/nif
 </ul>
 </li>
 <li><p><strong>Fit the Models to Estimate the Affine Transformation</strong>:</p>
-<p>Use the <code class="xref py py-meth docutils literal notranslate"><span class="pre">api/nifreeze.estimator.Estimator.run()</span></code> method of the
-<code class="xref py py-class docutils literal notranslate"><span class="pre">api/nifreeze.estimator.Estimator</span></code> object to estimate the affine
+<p>Use the <a class="reference internal" href="api/nifreeze.estimator.html#nifreeze.estimator.Estimator.run" title="nifreeze.estimator.Estimator.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code></a> method of the
+<a class="reference internal" href="api/nifreeze.estimator.html#nifreeze.estimator.Estimator" title="nifreeze.estimator.Estimator"><code class="xref py py-class docutils literal notranslate"><span class="pre">Estimator</span></code></a> object to estimate the affine
 transformation parameters:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Estimate affine transformation parameters</span>
 <span class="n">_</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
@@ -431,9 +431,9 @@ functions. This includes visualizing framewise displacement, motion
 overlay, and volume-wise motion.</p>
 <p>Data results can be visualized using the <a class="reference external" href="https://nireports.readthedocs.io/en/latest/">NiReports</a> functions, e.g.:</p>
 <ul class="simple">
-<li><p>Use <code class="xref py py-func docutils literal notranslate"><span class="pre">api/nireports.reportlets.mosaic.plot_mosaic()</span></code> to visualize one
+<li><p>Use <a class="reference external" href="https://nireports.readthedocs.io/en/latest/api/nireports.reportlets.mosaic.html#nireports.reportlets.mosaic.plot_mosaic" title="(in nireports)"><code class="xref py py-func docutils literal notranslate"><span class="pre">nireports.reportlets.mosaic.plot_mosaic()</span></code></a> to visualize one
 direction of the dMRI dataset or a frame of an fMRI or PET dataset.</p></li>
-<li><p>Employ <code class="xref py py-func docutils literal notranslate"><span class="pre">api/nireports.reportlets.modality.dwi.plot_gradients()</span></code> to
+<li><p>Employ <a class="reference external" href="https://nireports.readthedocs.io/en/latest/api/nireports.reportlets.modality.dwi.html#nireports.reportlets.modality.dwi.plot_gradients" title="(in nireports)"><code class="xref py py-func docutils literal notranslate"><span class="pre">nireports.reportlets.modality.dwi.plot_gradients()</span></code></a> to
 visualize diffusion gradients.</p></li>
 </ul>
 <p>Example Usage:</p>
@@ -519,7 +519,7 @@ visualize diffusion gradients.</p></li>
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=0abeb291"></script>
+</div><script src="_static/documentation_options.js?v=de625fa9"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
