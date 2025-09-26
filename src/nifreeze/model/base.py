@@ -22,7 +22,7 @@
 #
 """Base infrastructure for nifreeze's models."""
 
-from abc import abstractmethod
+from abc import ABC, ABCMeta, abstractmethod
 from typing import Union
 from warnings import warn
 
@@ -77,7 +77,7 @@ class ModelFactory:
         raise NotImplementedError(f"Unsupported model <{model}>.")
 
 
-class BaseModel:
+class BaseModel(ABC):
     """
     Defines the interface and default methods.
 
@@ -87,6 +87,8 @@ class BaseModel:
     and to read (see https://www.youtube.com/watch?v=3MNVP9-hglc).
 
     """
+
+    __metaclass__ = ABCMeta
 
     __slots__ = ("_dataset", "_locked_fit")
 
@@ -116,7 +118,7 @@ class BaseModel:
             If ``None``, no prediction will be executed.
 
         """
-        raise NotImplementedError("Cannot call fit_predict() on a BaseModel instance.")
+        return None
 
 
 class TrivialModel(BaseModel):
