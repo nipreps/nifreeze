@@ -334,7 +334,7 @@ def from_nii(
 
     Raises
     ------
-    RuntimeError
+    :exc:`RuntimeError`
         If no gradient information is provided (neither ``gradients_file`` nor
         ``bvec_file`` + ``bval_file``).
 
