@@ -144,15 +144,15 @@ def test_identify_bland_altman_salient_data():
     assert len(salient_data[BASalientEntity.RIGHT_MASK.value]) == len(_data1)
 
 
-def test_identify_spikes(request):
-    rng = request.node.rng
+def test_identify_spikes():
+    rng = np.random.default_rng(1234)
 
     n_samples = 450
 
     fd = rng.normal(0, 5, n_samples)
     threshold = 2.0
 
-    expected_indices = np.asarray([42, 48, 61, 80, 98, 103, 113, 143, 324, 387, 422, 436, 449])
+    expected_indices = np.asarray([5, 57, 85, 100, 127, 180, 191, 202, 335, 393, 409])
     expected_mask = np.zeros(n_samples, dtype=bool)
     expected_mask[expected_indices] = True
 
