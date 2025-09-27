@@ -211,6 +211,7 @@ addopts = "-v --doctest-modules"
 doctest_optionflags = "ALLOW_UNICODE NORMALIZE_WHITESPACE ELLIPSIS"
 env = "PYTHONHASHSEED=0"
 markers = [
+  "random_base_data: Custom marker for random base data tests",
   "random_bval_data: Custom marker for random b-val data tests",
   "random_bvec_data: Custom marker for random b-vec data tests",
   "random_gtab_data: Custom marker for random gtab data tests",

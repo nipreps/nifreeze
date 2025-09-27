@@ -29,6 +29,7 @@ import pytest
 from dipy.sims.voxel import single_tensor
 
 from nifreeze import model
+from nifreeze.data.base import BaseDataset
 from nifreeze.data.dmri import DEFAULT_MAX_S0, DEFAULT_MIN_S0, DWI
 from nifreeze.model._dipy import GaussianProcessModel
 from nifreeze.model.base import mask_absence_warn_msg
@@ -192,7 +193,86 @@ def test_dti_model(setup_random_dwi_data):
     assert predicted.shape == dwi_dataobj.shape[:-1]
 
 
-def test_factory(datadir):
+def test_factory_none_raises(setup_random_base_data):
+    dataobj, affine, brainmask, motion_affines, datahdr = setup_random_base_data
+    dataset = BaseDataset(
+        dataobj=dataobj,
+        affine=affine,
+        brainmask=brainmask,
+        motion_affines=motion_affines,
+        datahdr=datahdr,
+    )
+    with pytest.raises(RuntimeError, match="No model identifier provided."):
+        model.ModelFactory.init(None, dataset=dataset)
+
+
+@pytest.mark.parametrize(
+    "name, expected_cls",
+    [
+        ("avg", model.ExpectationModel),
+        ("average", model.ExpectationModel),
+        ("mean", model.ExpectationModel),
+    ],
+)
+def test_factory_variants(name, expected_cls, setup_random_base_data):
+    dataobj, affine, brainmask, motion_affines, datahdr = setup_random_base_data
+    dataset = BaseDataset(
+        dataobj=dataobj,
+        affine=affine,
+        brainmask=brainmask,
+        motion_affines=motion_affines,
+        datahdr=datahdr,
+    )
+    model_instance = model.ModelFactory.init(name, dataset=dataset)
+    assert isinstance(model_instance, expected_cls)
+
+
+@pytest.mark.parametrize("name", ["avgdwi", "averagedwi", "meandwi"])
+def test_factory_avgdwi_variants(monkeypatch, name, setup_random_dwi_data):
+    (
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj,
+        b0_dataobj,
+        gradients,
+        _,
+    ) = setup_random_dwi_data
+
+    dataset = DWI(
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        bzero=b0_dataobj,
+        gradients=gradients,
+    )
+
+    # Dummy class to simulate AverageDWIModel
+    class DummyAvgDWI:
+        def __init__(self, _dataset, **kwargs):
+            self._dataset = _dataset
+            self._kwargs = kwargs
+
+    # Patch import for AverageDWIModel
+    import sys
+    import types as _types
+
+    old_module = sys.modules.get("nifreeze.model.dmri")
+    dmri_module = _types.ModuleType("nifreeze.model.dmri")
+    dmri_module.AverageDWIModel = DummyAvgDWI
+    sys.modules["nifreeze.model.dmri"] = dmri_module
+
+    try:
+        model_instance = model.ModelFactory.init(name, dataset=dataset)
+        assert isinstance(model_instance, DummyAvgDWI)
+    finally:
+        # Restore previous state
+        if old_module is not None:
+            sys.modules["nifreeze.model.dmri"] = old_module
+        else:
+            del sys.modules["nifreeze.model.dmri"]
+
+
+def test_factory_initializations(datadir):
     """Check that the two different initialisations result in the same models"""
 
     # Load test data

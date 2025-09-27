@@ -293,6 +293,34 @@ def setup_random_gtab_data(request):
 
 
 @pytest.fixture(autouse=True)
+def setup_random_base_data(request):
+    """Automatically generate random BaseDataset data for tests."""
+    marker = request.node.get_closest_marker("random_base_data")
+
+    vol_size = (4, 4, 4)
+    volumes = 5
+    if marker:
+        vol_size, volumes = marker.args
+
+    rng = request.node.rng
+
+    base_dataobj, affine = _generate_random_uniform_spatial_data(
+        request, (*vol_size, volumes), 0.0, 1.0
+    )
+    brainmask_dataobj = rng.choice([True, False], size=vol_size).astype(np.uint8)
+    motion_affines = rng.random((volumes, 4, 4))
+    datahdr = None
+
+    return (
+        base_dataobj,
+        affine,
+        brainmask_dataobj,
+        motion_affines,
+        datahdr,
+    )
+
+
+@pytest.fixture(autouse=True)
 def setup_random_dwi_data(request, setup_random_gtab_data):
     """Automatically generate random DWI data for tests."""
     marker = request.node.get_closest_marker("random_dwi_data")
