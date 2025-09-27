@@ -209,9 +209,7 @@ def setup_random_uniform_ndim_data(request):
     return _generate_random_uniform_nd_data(request, size, a, b)
 
 
-def _generate_random_choices(request, values, count):
-    rng = request.node.rng
-
+def _generate_random_choices(rng, values, count):
     values = set(values)
 
     num_elements = len(values)
@@ -235,6 +233,46 @@ def _generate_random_choices(request, values, count):
     return sorted(selected_values)
 
 
+def _generate_random_bvals(rng, b0s, shells, n_gradients):
+    # Generate a random number of elements for each shell
+    bvals_shells = _generate_random_choices(rng, shells, n_gradients)
+
+    bvals = np.hstack([b0s * [0], bvals_shells])
+
+    return bvals
+
+
+def _generate_random_bvecs(rng, b0s, n_gradients):
+    return np.hstack([np.zeros((3, b0s)), normalized_vector(rng.random((3, n_gradients)), axis=0)])
+
+
+@pytest.fixture(autouse=True)
+def setup_random_bval_data(request):
+    """Automatically generate random b-val data for tests."""
+    marker = request.node.get_closest_marker("random_bval_data")
+
+    n_gradients = 10
+    shells = (1000, 2000, 3000)
+    b0s = 1
+    if marker:
+        n_gradients, shells, b0s = marker.args
+
+    rng = request.node.rng
+    return _generate_random_bvals(rng, b0s, shells, n_gradients)
+
+
+@pytest.fixture
+def setup_random_bvec_data(request, bvals, bval_tolerance):
+    """Automatically generate random b-vec data for tests."""
+    rng = request.node.rng
+
+    is_b0 = np.abs(bvals) <= bval_tolerance
+    b0s = np.sum(is_b0)
+    n_gradients = np.sum(~is_b0)
+
+    return _generate_random_bvecs(rng, b0s, n_gradients)
+
+
 @pytest.fixture(autouse=True)
 def setup_random_gtab_data(request):
     """Automatically generate random gtab data for tests."""
@@ -248,13 +286,8 @@ def setup_random_gtab_data(request):
 
     rng = request.node.rng
 
-    # Generate a random number of elements for each shell
-    bvals_shells = _generate_random_choices(request, shells, n_gradients)
-
-    bvals = np.hstack([b0s * [0], bvals_shells])
-    bvecs = np.hstack(
-        [np.zeros((3, b0s)), normalized_vector(rng.random((3, n_gradients)), axis=0)]
-    )
+    bvals = _generate_random_bvals(rng, b0s, shells, n_gradients)
+    bvecs = _generate_random_bvecs(rng, b0s, n_gradients)
 
     return bvals, bvecs
 

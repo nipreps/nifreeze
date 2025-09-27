@@ -93,16 +93,23 @@ def test_advanced_clip(
     )
 
 
-@pytest.mark.random_gtab_data(5, (1000, 2000, 3000), 1)
 @pytest.mark.parametrize(
-    "index, expect_exception, expected_output",
+    "bvals, index, expect_exception, expected_output, bval_tolerance",
     [
-        (3, False, np.asarray([False, True, True, False, False, False])),
-        (0, True, np.asarray([])),
+        (
+            np.asarray([0, 1000, 1000, 1000, 2000, 3000]),
+            3,
+            False,
+            np.asarray([False, True, True, False, False, False]),
+            50,
+        ),
+        (np.asarray([0, 1000, 1000, 1000, 2000, 3000]), 0, True, np.asarray([]), 50),
     ],
 )
-def test_dwi_select_shells(setup_random_gtab_data, index, expect_exception, expected_output):
-    bvals, bvecs = setup_random_gtab_data
+def test_dwi_select_shells(
+    setup_random_bvec_data, bvals, index, expect_exception, expected_output, bval_tolerance
+):
+    bvecs = setup_random_bvec_data
 
     gradients = np.vstack([bvecs, bvals[np.newaxis, :]], dtype="float32")
 
