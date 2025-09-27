@@ -44,8 +44,8 @@ RADIUS = 50.0
 
 def displacements_within_mask(
     mask_img: nb.spatialimages.SpatialImage,
-    test_xfm: nt.base.BaseTransform,
-    reference_xfm: nt.base.BaseTransform | None = None,
+    test_xfm: nt.base.TransformBase,
+    reference_xfm: nt.base.TransformBase | None = None,
 ) -> np.ndarray:
     """
     Compute the distance between voxel coordinates mapped through two transforms.
@@ -55,10 +55,10 @@ def displacements_within_mask(
     mask_img : :obj:`~nibabel.spatialimages.SpatialImage`
         A mask image that defines the region of interest. Voxel coordinates
         within the mask are transformed.
-    test_xfm : :obj:`~nitransforms.base.BaseTransform`
+    test_xfm : :obj:`~nitransforms.base.TransformBase`
         The transformation to test. This transformation is applied to the
         voxel coordinates.
-    reference_xfm : :obj:`~nitransforms.base.BaseTransform`, optional
+    reference_xfm : :obj:`~nitransforms.base.TransformBase`, optional
         A reference transformation to compare with. If ``None``, the identity
         transformation is assumed (no transformation).
 
@@ -85,7 +85,7 @@ def displacements_within_mask(
 
 def compute_fd_from_transform(
     img: nb.spatialimages.SpatialImage,
-    test_xfm: nt.base.BaseTransform,
+    test_xfm: nt.base.TransformBase,
     radius: float = RADIUS,
 ) -> float:
     """
@@ -95,7 +95,7 @@ def compute_fd_from_transform(
     ----------
     img : :obj:`~nibabel.spatialimages.SpatialImage`
         The reference image. Used to extract the center coordinates.
-    test_xfm : :obj:`~nitransforms.base.BaseTransform`
+    test_xfm : :obj:`~nitransforms.base.TransformBase`
         The transformation to test. Applied to coordinates around the image center.
     radius : :obj:`float`, optional
         The radius (in mm) of the spherical neighborhood around the center of the image.
