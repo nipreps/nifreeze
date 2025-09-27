@@ -45,15 +45,11 @@ from nifreeze.utils.ndimage import load_api
 class PET(BaseDataset[np.ndarray | None]):
     """Data representation structure for PET data."""
 
-    midframe: np.ndarray | None = attrs.field(
-        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp)
-    )
+    midframe: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
     """A (N,) numpy array specifying the midpoint timing of each sample or frame."""
-    total_duration: float | None = attrs.field(default=None, repr=True)
+    total_duration: float = attrs.field(default=None, repr=True)
     """A float representing the total duration of the dataset."""
-    uptake: np.ndarray | None = attrs.field(
-        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp)
-    )
+    uptake: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
     """A (N,) numpy array specifying the uptake value of each sample or frame."""
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray | None]:
