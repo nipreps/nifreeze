@@ -55,7 +55,7 @@ def load(
 
     Raises
     ------
-    ValueError
+    :exc:`ValueError`
         If the file extension is not supported or the file cannot be loaded.
 
     """

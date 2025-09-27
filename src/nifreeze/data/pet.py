@@ -257,7 +257,7 @@ def from_nii(
 
     Raises
     ------
-    RuntimeError
+    :exc:`RuntimeError`
         If ``frame_time`` is not provided (BIDS requires it).
 
     """
