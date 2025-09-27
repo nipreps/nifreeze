@@ -26,91 +26,93 @@ import random
 from itertools import chain, zip_longest
 from typing import Iterator
 
+SIZE_KEYS = ("bvals", "uptake")
+"""Keys that may be used to infer the number of volumes in a dataset. These keys
+correspond to properties that distinguish one imaging modality from another, and
+are part of the 4th axis (e.g. diffusion gradients in DWI or update in PET)."""
 
-def linear_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
-    """
-    Traverse the dataset volumes in ascending order.
+SIZE_KEYS_DOC = """
+bvals : :obj:`list`, optional
+    List of b-values corresponding to all orientations of a DWI dataset.
+uptake : :obj:`list`, optional
+    List of uptake values corresponding to all volumes of the dataset.
+"""
+
+
+def _get_size_from_kwargs(kwargs: dict) -> int | None:
+    """Extract the size from kwargs, ensuring only one key is used.
 
     Parameters
     ----------
-    size : :obj:`int` or ``None``, optional
-        Number of volumes in the dataset.
-        If ``None``, ``size`` will be inferred from the ``bvals`` keyword argument.
+    kwargs : :obj:`dict`
+        The keyword arguments passed to the iterator function.
 
-    Other Parameters
-    ----------------
-    bvals : :obj:`list`
-        List of b-values corresponding to all orientations of a DWI dataset.
-        If ``size`` is provided, this argument will be ignored.
-        Otherwise, ``size`` will be inferred from the length of ``bvals``.
+    Returns
+    -------
+    :obj:`int` or None
+        The inferred size, or None if none of the keys are present.
 
-    Yields
+    Raises
     ------
-    :obj:`int`
-        The next index.
-
-    Examples
-    --------
-    >>> list(linear_iterator(10))
-    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-
+    :exc:`ValueError`
+        If more than one key from ``size_keys`` is present.
     """
-    if size is None and "bvals" in kwargs:
-        size = len(kwargs["bvals"])
+
+    present_keys = [k for k in SIZE_KEYS if k in kwargs]
+    if len(present_keys) > 1:
+        raise ValueError(f"Only one of {SIZE_KEYS} may be provided (got: {present_keys})")
+    if present_keys:
+        candidate = kwargs[present_keys[0]]
+        return candidate if isinstance(candidate, int) else len(candidate)
+    return None
+
+
+def linear_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
+    if size is None:
+        size = _get_size_from_kwargs(kwargs)
     if size is None:
         raise TypeError("Cannot build iterator without size")
 
     return (s for s in range(size))
 
 
+linear_iterator.__doc__ = f"""
+Traverse the dataset volumes in ascending order.
+
+Parameters
+----------
+size : :obj:`int` or ``None``, optional
+    Number of volumes in the dataset. If ``None``, ``size`` will be inferred
+    from the length of a suitable data keyword argument (see :data:`SIZE_KEYS`).
+
+Other Parameters
+----------------
+{SIZE_KEYS_DOC}
+
+Notes
+-----
+Only one of the above keyword arguments may be provided at a time. If ``size``
+is given, all other size-related keyword arguments will be ignored. If ``size``
+is not provided, the function will attempt to infer the number of volumes from
+the length or value of the provided keyword argument. If more than one such
+keyword is provided, a :exc:`ValueError` will be raised.
+
+Yields
+------
+:obj:`int`
+    The next index.
+
+Examples
+--------
+>>> list(linear_iterator(10))
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+"""
+
+
 def random_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
-    """
-    Traverse the dataset volumes randomly.
-
-    If the ``seed`` key is present in the keyword arguments, initializes the seed
-    of Python's ``random`` pseudo-random number generator library with the given
-    value. Specifically, if ``False``, ``None`` is used as the seed; if ``True``, a
-    default seed value is used.
-
-    Parameters
-    ----------
-    size : :obj:`int` or ``None``, optional
-        Number of volumes in the dataset.
-        If ``None``, ``size`` will be inferred from the ``bvals`` keyword argument.
-
-    Other Parameters
-    ----------------
-    bvals : :obj:`list`
-        List of b-values corresponding to all orientations of a DWI dataset.
-        If ``size`` is provided, this argument will be ignored.
-        Otherwise, ``size`` will be inferred from the length of ``bvals``.
-    seed : :obj:`int`, :obj:`bool`, :obj:`str`, or ``None``
-        If :obj:`int` or :obj:`str` or ``None``, initializes the seed of Python's random generator
-        with the given value.
-        If ``False``, the random generator is passed ``None``.
-        If ``True``, a default seed value is set.
-
-    Yields
-    ------
-    :obj:`int`
-        The next index.
-
-    Examples
-    --------
-    >>> list(random_iterator(15, seed=0))  # seed is 0
-    [1, 10, 9, 5, 11, 2, 3, 7, 8, 4, 0, 14, 12, 6, 13]
-    >>>  # seed is True -> the default value 20210324 is set
-    >>> list(random_iterator(15, seed=True))
-    [1, 12, 14, 5, 0, 11, 10, 9, 7, 8, 3, 13, 2, 6, 4]
-    >>> list(random_iterator(15, seed=20210324))
-    [1, 12, 14, 5, 0, 11, 10, 9, 7, 8, 3, 13, 2, 6, 4]
-    >>> list(random_iterator(15, seed=42))  # seed is 42
-    [8, 13, 7, 6, 14, 12, 5, 2, 9, 3, 4, 11, 0, 1, 10]
-
-    """
-
-    if size is None and "bvals" in kwargs:
-        size = len(kwargs["bvals"])
+    if size is None:
+        size = _get_size_from_kwargs(kwargs)
     if size is None:
         raise TypeError("Cannot build iterator without size")
 
@@ -122,6 +124,57 @@ def random_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
     index_order = list(range(size))
     random.shuffle(index_order)
     return (x for x in index_order)
+
+
+random_iterator.__doc__ = f"""
+Traverse the dataset volumes randomly.
+
+If the ``seed`` key is present in the keyword arguments, initializes the seed
+of Python's ``random`` pseudo-random number generator library with the given
+value. Specifically, if ``False``, ``None`` is used as the seed; if ``True``, a
+default seed value is used.
+
+Parameters
+----------
+size : :obj:`int` or ``None``, optional
+    Number of volumes in the dataset. If ``None``, ``size`` will be inferred
+    from the length of a suitable data keyword argument (see :data:`SIZE_KEYS`).
+
+Other Parameters
+----------------
+seed : :obj:`int`, :obj:`bool`, :obj:`str`, or ``None``
+    If :obj:`int` or :obj:`str` or ``None``, initializes the seed of Python's random generator
+    with the given value. If ``False``, the random generator is passed ``None``.
+    If ``True``, a default seed value is set.
+
+{SIZE_KEYS_DOC}
+
+Notes
+-----
+Only one of the above keyword arguments may be provided at a time. If ``size``
+is given, all other size-related keyword arguments will be ignored. If ``size``
+is not provided, the function will attempt to infer the number of volumes from
+the length or value of the provided keyword argument. If more than one such
+keyword is provided, a :exc:`ValueError` will be raised.
+
+Yields
+------
+:obj:`int`
+    The next index.
+
+Examples
+--------
+>>> list(random_iterator(15, seed=0))  # seed is 0
+[1, 10, 9, 5, 11, 2, 3, 7, 8, 4, 0, 14, 12, 6, 13]
+>>>  # seed is True -> the default value 20210324 is set
+>>> list(random_iterator(15, seed=True))
+[1, 12, 14, 5, 0, 11, 10, 9, 7, 8, 3, 13, 2, 6, 4]
+>>> list(random_iterator(15, seed=20210324))
+[1, 12, 14, 5, 0, 11, 10, 9, 7, 8, 3, 13, 2, 6, 4]
+>>> list(random_iterator(15, seed=42))  # seed is 42
+[8, 13, 7, 6, 14, 12, 5, 2, 9, 3, 4, 11, 0, 1, 10]
+
+"""
 
 
 def _value_iterator(values: list, ascending: bool, round_decimals: int = 2) -> Iterator[int]:
@@ -223,37 +276,8 @@ def uptake_iterator(*_, **kwargs) -> Iterator[int]:
 
 
 def centralsym_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
-    """
-    Traverse the dataset starting from the center and alternatingly progressing to the sides.
-
-    Parameters
-    ----------
-    size : :obj:`int` or ``None``, optional
-        Number of volumes in the dataset.
-        If ``None``, ``size`` will be inferred from the ``bvals`` keyword argument.
-
-    Other Parameters
-    ----------------
-    bvals : :obj:`list`
-        List of b-values corresponding to all orientations of the dataset.
-        If ``size`` is provided, this argument will be ignored.
-        Otherwise, ``size`` will be inferred from the length of ``bvals``.
-
-    Yields
-    ------
-    :obj:`~int`
-        The next index.
-
-    Examples
-    --------
-    >>> list(centralsym_iterator(10))
-    [5, 4, 6, 3, 7, 2, 8, 1, 9, 0]
-    >>> list(centralsym_iterator(11))
-    [5, 4, 6, 3, 7, 2, 8, 1, 9, 0, 10]
-
-    """
-    if size is None and "bvals" in kwargs:
-        size = len(kwargs["bvals"])
+    if size is None:
+        size = _get_size_from_kwargs(kwargs)
     if size is None:
         raise TypeError("Cannot build iterator without size")
     linear = list(range(size))
@@ -267,3 +291,33 @@ def centralsym_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
         )
         if x is not None
     )
+
+
+centralsym_iterator.__doc__ = f"""
+Traverse the dataset starting from the center and alternatingly progressing to the sides.
+
+Parameters
+----------
+size : :obj:`int` or ``None``, optional
+    Number of volumes in the dataset. If ``None``, ``size`` will be inferred
+    from the length of a suitable data keyword argument (see :data:`SIZE_KEYS`).
+
+Other Parameters
+----------------
+{SIZE_KEYS_DOC}
+
+Notes
+-----
+Only one of the above keyword arguments may be provided at a time. If ``size``
+is given, all other size-related keyword arguments will be ignored. If ``size``
+is not provided, the function will attempt to infer the number of volumes from
+the length or value of the provided keyword argument. If more than one such
+keyword is provided, a :exc:`ValueError` will be raised.
+
+Examples
+--------
+>>> list(centralsym_iterator(10))
+[5, 4, 6, 3, 7, 2, 8, 1, 9, 0]
+>>> list(centralsym_iterator(11))
+[5, 4, 6, 3, 7, 2, 8, 1, 9, 0, 10]
+"""
