@@ -61,7 +61,7 @@ class ModelFactory:
             raise RuntimeError("No model identifier provided.")
 
         if model.lower() == "trivial":
-            return TrivialModel(kwargs.pop("dataset"))
+            return TrivialModel(kwargs.pop("dataset"), **kwargs)
 
         if model.lower() in ("avg", "average", "mean"):
             return ExpectationModel(kwargs.pop("dataset"), **kwargs)

@@ -24,7 +24,7 @@
 
 import contextlib
 import warnings
-from typing import List
+from typing import List, Union
 
 import numpy as np
 import pytest
@@ -323,23 +323,63 @@ def test_model_factory_invalid_model():
 
 
 @pytest.mark.parametrize(
-    "name, expected_cls",
+    "name, expected_cls, particular_case",
     [
-        ("avg", model.ExpectationModel),
-        ("average", model.ExpectationModel),
-        ("mean", model.ExpectationModel),
+        ("trivial", model.TrivialModel, "predicted"),
+        ("trivial", model.TrivialModel, "reference"),
+        ("trivial", model.TrivialModel, "bzero"),
+        ("avg", model.ExpectationModel, None),
+        ("average", model.ExpectationModel, None),
+        ("mean", model.ExpectationModel, None),
     ],
 )
-def test_factory_variants(name, expected_cls, setup_random_base_data):
+def test_factory_variants(name, expected_cls, setup_random_base_data, particular_case):
     dataobj, affine, brainmask, motion_affines, datahdr = setup_random_base_data
-    dataset: BaseDataset = BaseDataset(
+
+    class BaseDatasetRef(BaseDataset):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args)
+            self.reference = kwargs["reference"]
+
+    class BaseDatasetBzero(BaseDataset):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args)
+            self.bzero = kwargs["bzero"]
+
+    # Define a union of all possible dataset types
+    DatasetType = Union[BaseDataset, BaseDatasetRef, BaseDatasetBzero]
+
+    dataset: DatasetType = BaseDataset(
         dataobj=dataobj,
         affine=affine,
         brainmask=brainmask,
         motion_affines=motion_affines,
         datahdr=datahdr,
     )
-    model_instance = model.ModelFactory.init(name, dataset=dataset)
+    _kwargs = {}
+    if name == "trivial":
+        if particular_case == "reference":
+            dataset = BaseDatasetRef(
+                dataobj,
+                affine,
+                brainmask,
+                motion_affines,
+                datahdr,
+                reference=np.zeros(dataobj.shape[:3]),
+            )
+        elif particular_case == "bzero":
+            dataset = BaseDatasetBzero(
+                dataobj,
+                affine,
+                brainmask,
+                motion_affines,
+                datahdr,
+                bzero=np.zeros(dataobj.shape[:3]),
+            )
+        elif particular_case == "predicted":
+            _kwargs = {"predicted": np.zeros(dataobj.shape[:3])}
+
+    model_instance = model.ModelFactory.init(name, dataset=dataset, **_kwargs)
     assert isinstance(model_instance, expected_cls)
 
 
