@@ -38,35 +38,49 @@ from nifreeze.utils.iterators import (
 
 
 @pytest.mark.parametrize(
-    "values, ascending, expected",
+    "values, ascending, round_decimals, expected",
     [
         # Simple integers
-        ([1, 2, 3], True, [0, 1, 2]),
-        ([1, 2, 3], False, [2, 1, 0]),
+        ([1, 2, 3], True, 2, [0, 1, 2]),
+        ([1, 2, 3], False, 2, [2, 1, 0]),
         # Repeated values
-        ([2, 1, 2, 1], True, [1, 3, 0, 2]),
-        ([2, 1, 2, 1], False, [2, 0, 3, 1]),  # Ties are reversed due to reverse=True
+        ([2, 1, 2, 1], True, 2, [1, 3, 0, 2]),
+        ([2, 1, 2, 1], False, 2, [2, 0, 3, 1]),  # Ties are reversed due to reverse=True
         # Floats
-        ([1.01, 1.02, 0.99], True, [2, 0, 1]),
-        ([1.01, 1.02, 0.99], False, [1, 0, 2]),
+        ([1.01, 1.02, 0.99], True, 2, [2, 0, 1]),
+        ([1.01, 1.02, 0.99], False, 2, [1, 0, 2]),
         # Floats with rounding
         (
             [1.001, 1.002, 0.999],
             True,
+            2,
             [0, 1, 2],
         ),  # All round to 1.00 (round_decimals=2), so original order
         (
             [1.001, 1.002, 0.999],
+            True,
+            4,
+            [2, 0, 1],
+        ),
+        (
+            [1.001, 1.002, 0.999],
             False,
+            2,
             [2, 1, 0],
         ),  # All round to 1.00 (round_decimals=2), ties are reversed due to reverse=True
+        (
+            [1.001, 1.002, 0.999],
+            False,
+            4,
+            [1, 0, 2],
+        ),
         # Negative and positive
-        ([-1.2, 0.0, 3.4, -1.2], True, [0, 3, 1, 2]),
-        ([-1.2, 0.0, 3.4, -1.2], False, [2, 1, 3, 0]),  # Ties are reversed due to reverse=True
+        ([-1.2, 0.0, 3.4, -1.2], True, 2, [0, 3, 1, 2]),
+        ([-1.2, 0.0, 3.4, -1.2], False, 2, [2, 1, 3, 0]),  # Ties are reversed due to reverse=True
     ],
 )
-def test_value_iterator(values, ascending, expected):
-    result = list(_value_iterator(values, ascending=ascending))
+def test_value_iterator(values, ascending, round_decimals, expected):
+    result = list(_value_iterator(values, ascending=ascending, round_decimals=round_decimals))
     assert result == expected
 
 
