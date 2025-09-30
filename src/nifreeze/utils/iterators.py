@@ -184,10 +184,10 @@ def bvalue_iterator(*_, **kwargs) -> Iterator[int]:
     [0, 1, 8, 4, 5, 2, 3, 6, 7]
 
     """
-    bvals = kwargs.get("bvals", None)
+    bvals = kwargs.pop("bvals", None)
     if bvals is None:
         raise TypeError("Keyword argument bvals is required")
-    return _value_iterator(bvals, round_decimals=2, ascending=True)
+    return _value_iterator(bvals, ascending=True, **kwargs)
 
 
 def uptake_iterator(*_, **kwargs) -> Iterator[int]:
@@ -216,10 +216,10 @@ def uptake_iterator(*_, **kwargs) -> Iterator[int]:
     [3, 7, 1, 8, 2, 5, 6, 0, 4]
 
     """
-    uptake = kwargs.get("uptake", None)
+    uptake = kwargs.pop("uptake", None)
     if uptake is None:
         raise TypeError("Keyword argument uptake is required")
-    return _value_iterator(uptake, round_decimals=2, ascending=False)
+    return _value_iterator(uptake, ascending=False, **kwargs)
 
 
 def centralsym_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
