@@ -28,7 +28,7 @@ import numpy.testing as npt
 from nifreeze.data.utils import apply_affines
 
 
-def test_apply_affines(request):
+def test_apply_affines(request, tmp_path):
     rng = request.node.rng
 
     # Create synthetic dataset
@@ -44,3 +44,14 @@ def test_apply_affines(request):
 
     npt.assert_allclose(nii.dataobj, nii_t.dataobj)
     npt.assert_array_equal(nii.affine, nii_t.affine)
+
+    # Test with output filename
+    out_fname = tmp_path / "affine.nii.gz"
+    nii_t_file = apply_affines(nii, em_affines, output_filename=out_fname)
+    npt.assert_allclose(nii.dataobj, nii_t_file.dataobj)
+    npt.assert_array_equal(nii.affine, nii_t_file.affine)
+    assert out_fname.exists()
+    # The saved file should load and match the expected result
+    nii_loaded = nb.load(out_fname)
+    npt.assert_allclose(nii.dataobj, nii_loaded.dataobj)
+    npt.assert_array_equal(nii.affine, nii_loaded.affine)
