@@ -21,11 +21,17 @@
 #     https://www.nipreps.org/community/licensing/
 #
 
-import numpy as np
+from typing import Union
 
+import numpy as np
+import pytest
+
+import nifreeze.estimator
 from nifreeze.data.base import BaseDataset
+from nifreeze.data.dmri import DEFAULT_LOWB_THRESHOLD
 from nifreeze.estimator import Estimator
 from nifreeze.model.base import BaseModel
+from nifreeze.utils import iterators
 
 DATAOBJ_SIZE = (5, 5, 5, 4)
 
@@ -57,6 +63,37 @@ class DummyDataset(BaseDataset):
         pass
 
 
+class DummyDWIDataset(BaseDataset):
+    def __init__(self, dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients):
+        self.dataobj = dwi_dataobj
+        self.affine = affine
+        self.brainmask = brainmask_dataobj
+        self.bzero = b0_dataobj
+        self.gradients = gradients
+
+    def __len__(self):
+        return self.dataobj.shape[-1]
+
+    def __getitem__(self, idx):
+        return self.dataobj[..., idx], self.brainmask, self.gradients
+
+
+class DummyPETDataset(BaseDataset):
+    def __init__(self, pet_dataobj, affine, brainmask_dataobj, midrame, total_duration):
+        self.dataobj = pet_dataobj
+        self.affine = affine
+        self.brainmask = brainmask_dataobj
+        self.midrame = midrame
+        self.gradients = total_duration
+        self.uptake = np.sum(pet_dataobj.reshape(-1, pet_dataobj.shape[-1]), axis=0)
+
+    def __len__(self):
+        return self.dataobj.shape[-1]
+
+    def __getitem__(self, idx):
+        return self.dataobj[..., idx], self.brainmask, self.midrame[idx]
+
+
 def test_estimator_init_model_instance(request):
     rng = request.node.rng
     model = DummyModel(dataset=DummyDataset(rng))
@@ -78,3 +115,93 @@ def test_estimator_init_model_string(request, monkeypatch):
     est.run(_dataset)
     assert isinstance(est._model, str)
     assert est._model == model_name
+
+
+@pytest.mark.parametrize(
+    "strategy, iterator_func, modality",
+    [
+        ("linear", iterators.linear_iterator, "dwi"),
+        ("linear", iterators.linear_iterator, "pet"),
+        ("random", iterators.random_iterator, "dwi"),
+        ("random", iterators.random_iterator, "pet"),
+        ("centralsym", iterators.centralsym_iterator, "dwi"),
+        ("centralsym", iterators.centralsym_iterator, "pet"),
+        ("bvalue", iterators.bvalue_iterator, "dwi"),
+        ("uptake", iterators.uptake_iterator, "pet"),
+    ],
+)
+def test_estimator_iterator_index_match(
+    monkeypatch, setup_random_dwi_data, setup_random_pet_data, strategy, iterator_func, modality
+):
+    dataset: Union["DummyDWIDataset", "DummyPETDataset"]  # Avoids type annotation errors
+    if modality == "dwi":
+        (
+            dwi_dataobj,
+            affine,
+            brainmask_dataobj,
+            b0_dataobj,
+            gradients,
+            _,
+        ) = setup_random_dwi_data
+
+        dataset = DummyDWIDataset(dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients)
+        bvals = gradients[-1, :][np.where(gradients[-1, :] > DEFAULT_LOWB_THRESHOLD)]
+        kwargs = dict({"bvals": bvals})
+    elif modality == "pet":
+        (
+            pet_dataobj,
+            affine,
+            brainmask_dataobj,
+            midframe,
+            total_duration,
+        ) = setup_random_pet_data
+
+        dataset = DummyPETDataset(pet_dataobj, affine, brainmask_dataobj, midframe, total_duration)
+        uptake = dataset.uptake
+        kwargs = dict({"uptake": uptake})
+    else:
+        raise NotImplementedError(f"{modality} not implemented")
+
+    # Patch set_transform to record indices and matrices
+    recorded_indices = []
+    recorded_matrices = []
+
+    # Make this accept `self` so it behaves as a proper instance method
+    def fake_set_transform(self, i, xform):
+        recorded_indices.append(i)
+        recorded_matrices.append(xform)
+
+    monkeypatch.setattr(type(dataset), "set_transform", fake_set_transform)
+
+    # Patch registration to return identity matrix
+    class DummyXForm:
+        matrix = np.eye(4)
+
+    nifreeze.estimator._run_registration = lambda *a, **k: DummyXForm()
+
+    model = DummyModel(dataset=dataset)
+    estimator = Estimator(model, strategy=strategy)
+    estimator.run(dataset, **kwargs)
+
+    n_vols = len(dataset)
+
+    # Get expected indices
+    if strategy == "linear":
+        expected_indices = list(iterator_func(size=n_vols))
+    elif strategy == "random":
+        expected_indices = sorted(list(iterator_func(size=n_vols, seed=42)))
+        recorded_indices_sorted = sorted(recorded_indices)
+        assert recorded_indices_sorted == expected_indices
+        return
+    elif strategy == "centralsym":
+        expected_indices = list(iterator_func(size=n_vols))
+    elif strategy == "bvalue":
+        expected_indices = list(iterator_func(bvals=bvals))
+    elif strategy == "uptake":
+        expected_indices = list(iterator_func(uptake=uptake))
+    else:
+        raise ValueError(f"Unknown strategy {strategy}")
+
+    # Assert indices and matrices
+    assert recorded_indices == expected_indices
+    assert all(np.allclose(mat, np.eye(4)) for mat in recorded_matrices)
