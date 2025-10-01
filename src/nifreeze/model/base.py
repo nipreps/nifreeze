@@ -31,6 +31,8 @@ import numpy as np
 mask_absence_warn_msg = (
     "No mask provided; consider using a mask to avoid issues in model optimization."
 )
+UNSUPPORTED_MODEL_ERROR_MSG = "Unsupported model <{model}>."
+"""Unsupported model error message"""
 
 
 class ModelFactory:
@@ -74,7 +76,7 @@ class ModelFactory:
             Model = getattr(dmrimod, f"{model.upper()}Model")
             return Model(kwargs.pop("dataset"), **kwargs)
 
-        raise NotImplementedError(f"Unsupported model <{model}>.")
+        raise NotImplementedError(UNSUPPORTED_MODEL_ERROR_MSG.format(model=model))
 
 
 class BaseModel(ABC):
