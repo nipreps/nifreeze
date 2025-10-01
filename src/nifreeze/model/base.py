@@ -72,8 +72,10 @@ class ModelFactory:
         if model.lower() in ("gqi", "dti", "dki", "pet"):
             from importlib import import_module
 
-            dmrimod = import_module("nifreeze.model.dmri")
-            Model = getattr(dmrimod, f"{model.upper()}Model")
+            thismod = import_module(
+                f"nifreeze.model.{'pet' if model.lower() == 'pet' else 'dmri'}"
+            )
+            Model = getattr(thismod, f"{model.upper()}Model")
             return Model(kwargs.pop("dataset"), **kwargs)
 
         raise NotImplementedError(UNSUPPORTED_MODEL_ERROR_MSG.format(model=model))
