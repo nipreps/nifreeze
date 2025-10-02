@@ -32,7 +32,7 @@ from nifreeze import model
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.dmri import DEFAULT_MAX_S0, DEFAULT_MIN_S0, DWI
 from nifreeze.model._dipy import GaussianProcessModel
-from nifreeze.model.base import mask_absence_warn_msg
+from nifreeze.model.base import UNSUPPORTED_MODEL_ERROR_MSG, mask_absence_warn_msg
 from nifreeze.testing import simulations as _sim
 
 
@@ -215,6 +215,14 @@ def test_factory_none_raises(setup_random_base_data):
     )
     with pytest.raises(RuntimeError, match="No model identifier provided."):
         model.ModelFactory.init(None, dataset=dataset)
+
+
+def test_model_factory_invalid_model():
+    model_name = "not_a_model"
+    with pytest.raises(
+        NotImplementedError, match=UNSUPPORTED_MODEL_ERROR_MSG.format(model=model_name)
+    ):
+        model.ModelFactory.init(model_name, dataset=DummyDataset())
 
 
 @pytest.mark.parametrize(
