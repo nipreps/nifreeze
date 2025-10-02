@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.model.base - nifreeze 25.0.0.dev516 documentation</title>
+        <title>nifreeze.model.base - nifreeze 25.0.0.dev518 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev516 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev518 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev516</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev518</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev516</span>
+  <span class="sidebar-brand-text">25.0.0.dev518</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -326,6 +326,8 @@
 <span class="n">mask_absence_warn_msg</span> <span class="o">=</span> <span class="p">(</span>
     <span class="s2">&quot;No mask provided; consider using a mask to avoid issues in model optimization.&quot;</span>
 <span class="p">)</span>
+<span class="n">UNSUPPORTED_MODEL_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;Unsupported model &lt;</span><span class="si">{model}</span><span class="s2">&gt;.&quot;</span>
+<span class="sd">&quot;&quot;&quot;Unsupported model error message&quot;&quot;&quot;</span>
 
 
 <div class="viewcode-block" id="ModelFactory">
@@ -373,7 +375,7 @@
             <span class="n">Model</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">dmrimod</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">Model&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">Model</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;dataset&quot;</span><span class="p">),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported model &lt;</span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2">&gt;.&quot;</span><span class="p">)</span></div>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="n">UNSUPPORTED_MODEL_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">))</span></div>
 </div>
 
 
@@ -533,7 +535,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=c35a81f5"></script>
+</div><script src="../../../_static/documentation_options.js?v=8f38a62e"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
