@@ -88,6 +88,7 @@ def test_from_nii_requires_frame_time(setup_random_uniform_spatial_data, tmp_pat
     [
         (None, [0.0, 5.0], [5.0, 5.0]),
         ("mask.nii.gz", [0.0, 5.0], [5.0, 5.0]),
+        ("mask.nii.gz", [0.0, 5.0], None),
     ],
 )
 def test_from_nii(tmp_path, random_nifti_file, brainmask_file, frame_time, frame_duration):
@@ -107,10 +108,21 @@ def test_from_nii(tmp_path, random_nifti_file, brainmask_file, frame_time, frame
     assert isinstance(pet_obj, PET)
     assert pet_obj.dataobj.shape == img.get_fdata().shape
     np.testing.assert_array_equal(pet_obj.affine, img.affine)
-    np.testing.assert_allclose(
-        pet_obj.midframe, np.array(frame_time) + 0.5 * np.array(frame_duration)
-    )
-    assert pet_obj.total_duration == frame_time[-1] + frame_duration[-1]
+
+    # Determine expected durations and midframe for None case
+    if frame_duration is None:
+        frame_time_arr = np.array(frame_time, dtype=np.float32)
+        durations = np.diff(frame_time_arr)
+        if len(durations) == (len(frame_time_arr) - 1):
+            durations = np.append(durations, durations[-1])  # last frame same as second-last
+        expected_midframe = frame_time_arr + 0.5 * durations
+        expected_total_duration = frame_time_arr[-1] + durations[-1]
+    else:
+        expected_midframe = np.array(frame_time) + 0.5 * np.array(frame_duration)
+        expected_total_duration = frame_time[-1] + frame_duration[-1]
+
+    np.testing.assert_allclose(pet_obj.midframe, expected_midframe)
+    assert pet_obj.total_duration == expected_total_duration
 
     if brainmask_file:
         assert hasattr(pet_obj, "brainmask")
