@@ -287,11 +287,7 @@ def from_nii(
     # If the user doesn't provide frame_duration, we derive it:
     if frame_duration is None:
         if pet_obj.midframe is not None:
-            frame_time_arr = pet_obj.midframe
-            # If shape is e.g. (N,), then we can do
-            durations = np.diff(frame_time_arr)
-            if len(durations) == (len(frame_time_arr) - 1):
-                durations = np.append(durations, durations[-1])  # last frame same as second-last
+            durations = _compute_frame_duration(pet_obj.midframe)
     else:
         durations = np.array(frame_duration, dtype=np.float32)
 
@@ -305,6 +301,28 @@ def from_nii(
         pet_obj.brainmask = np.asanyarray(mask_img.dataobj, dtype=bool)
 
     return pet_obj
+
+
+def _compute_frame_duration(midframe: np.ndarray) -> np.ndarray:
+    """Compute the frame duration from the midframe values.
+
+    Parameters
+    ----------
+    midframe : :obj:`~numpy.ndarray`
+        Midframe time values.
+
+    Returns
+    -------
+    durations : :obj:`~numpy.ndarray`
+        Frame duration.
+    """
+
+    # If shape is e.g. (N,), then we can do
+    durations = np.diff(midframe)
+    if len(durations) == (len(midframe) - 1):
+        durations = np.append(durations, durations[-1])  # last frame same as second-last
+
+    return durations
 
 
 def _compute_uptake_statistic(data: np.ndarray, stat_func: Callable = np.sum):
