@@ -29,7 +29,7 @@ import numpy as np
 import pytest
 from nitransforms.linear import Affine
 
-from nifreeze.data.pet import PET, _compute_uptake_statistic, from_nii
+from nifreeze.data.pet import PET, _compute_frame_duration, _compute_uptake_statistic, from_nii
 
 
 @pytest.fixture
@@ -60,6 +60,20 @@ def random_nifti_file(tmp_path, setup_random_uniform_spatial_data) -> Path:
     _img = nb.Nifti1Image(_data, _affine)
     _img.to_filename(_filename)
     return _filename
+
+
+@pytest.mark.parametrize(
+    "midframe, expected",
+    [
+        ([1.0, 4.0], [3.0, 3.0]),
+        ([0.0, 5.0, 9.0, 12.0], [5.0, 4.0, 3.0, 3.0]),
+    ],
+)
+def test_compute_frame_duration(midframe, expected):
+    midframe = np.array(midframe)
+    expected = np.array(expected)
+    durations = _compute_frame_duration(midframe)
+    np.testing.assert_allclose(durations, expected)
 
 
 @pytest.mark.parametrize("stat_func", (np.sum, np.mean, np.std))
@@ -112,9 +126,7 @@ def test_from_nii(tmp_path, random_nifti_file, brainmask_file, frame_time, frame
     # Determine expected durations and midframe for None case
     if frame_duration is None:
         frame_time_arr = np.array(frame_time, dtype=np.float32)
-        durations = np.diff(frame_time_arr)
-        if len(durations) == (len(frame_time_arr) - 1):
-            durations = np.append(durations, durations[-1])  # last frame same as second-last
+        durations = _compute_frame_duration(frame_time_arr)
         expected_midframe = frame_time_arr + 0.5 * durations
         expected_total_duration = frame_time_arr[-1] + durations[-1]
     else:
