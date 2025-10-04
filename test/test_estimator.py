@@ -22,10 +22,15 @@
 #
 
 import numpy as np
+import pytest
 
+import nifreeze.estimator
 from nifreeze.data.base import BaseDataset
+from nifreeze.data.dmri import DEFAULT_LOWB_THRESHOLD
 from nifreeze.estimator import Estimator
 from nifreeze.model.base import BaseModel
+from nifreeze.model.dmri import AverageDWIModel
+from nifreeze.utils import iterators
 
 DATAOBJ_SIZE = (5, 5, 5, 4)
 
@@ -58,3 +63,86 @@ def test_estimator_init_model_instance(request):
     model = DummyModel(dataset=DummyDataset(rng))
     est = Estimator(model=model)
     assert isinstance(est._model, DummyModel)
+
+
+@pytest.mark.parametrize(
+    "strategy, iterator_func",
+    [
+        ("linear", iterators.linear_iterator),
+        ("random", iterators.random_iterator),
+        ("bvalue", iterators.bvalue_iterator),
+        ("centralsym", iterators.centralsym_iterator),
+    ],
+)
+def test_estimator_iterator_index_match(setup_random_dwi_data, strategy, iterator_func):
+    (
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj,
+        b0_dataobj,
+        gradients,
+        _,
+    ) = setup_random_dwi_data
+
+    n_vols = dwi_dataobj.shape[-1]
+    vol_shape = b0_dataobj.shape
+    bvals = gradients[-1, :][np.where(gradients[-1, :] > DEFAULT_LOWB_THRESHOLD)]
+
+    class DummyDWI:
+        def __init__(self):
+            self.dataobj = dwi_dataobj
+            self.gradients = gradients
+            self.bzero = b0_dataobj
+            self.brainmask = brainmask_dataobj
+            self.affine = affine
+
+        def __len__(self):
+            return self.dataobj.shape[-1]
+
+        def __getitem__(self, idx):
+            return self.dataobj[..., idx], self.brainmask, self.gradients
+
+    # Patch set_transform to record indices and matrices
+    recorded_indices = []
+    recorded_matrices = []
+
+    def fake_set_transform(i, xform):
+        recorded_indices.append(i)
+        recorded_matrices.append(xform)
+
+    dwi_dataset = DummyDWI()
+    dwi_dataset.set_transform = fake_set_transform
+
+    # Patch registration to return identity matrix
+    class DummyXForm:
+        matrix = np.eye(4)
+
+    nifreeze.estimator._run_registration = lambda *a, **k: DummyXForm()
+
+    # Use a dummy model that returns ones
+    class DummyModel(AverageDWIModel):
+        def fit_predict(self, index, **kwargs):
+            return np.ones(vol_shape)
+
+    model = DummyModel(dwi_dataset)
+    estimator = Estimator(model, strategy=strategy)
+    estimator.run(dwi_dataset)
+
+    # Get expected indices
+    if strategy == "linear":
+        expected_indices = list(iterator_func(size=n_vols))
+    elif strategy == "random":
+        expected_indices = sorted(list(iterator_func(size=n_vols, seed=42)))
+        recorded_indices_sorted = sorted(recorded_indices)
+        assert recorded_indices_sorted == expected_indices
+        return
+    elif strategy == "bvalue":
+        expected_indices = list(iterator_func(bvals=bvals))
+    elif strategy == "centralsym":
+        expected_indices = list(iterator_func(size=n_vols))
+    else:
+        raise ValueError(f"Unknown strategy {strategy}")
+
+    # Assert indices and matrices
+    assert recorded_indices == expected_indices
+    assert all(np.allclose(mat, np.eye(4)) for mat in recorded_matrices)
