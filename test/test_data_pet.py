@@ -101,6 +101,7 @@ def test_from_nii_requires_frame_time(setup_random_uniform_spatial_data, tmp_pat
     ("brainmask_file", "frame_time", "frame_duration"),
     [
         (None, [0.0, 5.0], [5.0, 5.0]),
+        (None, [10.0, 15.0], [5.0, 5.0]),
         ("mask.nii.gz", [0.0, 5.0], [5.0, 5.0]),
         ("mask.nii.gz", [0.0, 5.0], None),
     ],
@@ -123,15 +124,16 @@ def test_from_nii(tmp_path, random_nifti_file, brainmask_file, frame_time, frame
     assert pet_obj.dataobj.shape == img.get_fdata().shape
     np.testing.assert_array_equal(pet_obj.affine, img.affine)
 
-    # Determine expected durations and midframe for None case
+    # Convert to a float32 numpy array and zero out the earliest time
+    frame_time_arr = np.array(frame_time, dtype=np.float32)
+    frame_time_arr -= frame_time_arr[0]
     if frame_duration is None:
-        frame_time_arr = np.array(frame_time, dtype=np.float32)
         durations = _compute_frame_duration(frame_time_arr)
-        expected_midframe = frame_time_arr + 0.5 * durations
-        expected_total_duration = frame_time_arr[-1] + durations[-1]
     else:
-        expected_midframe = np.array(frame_time) + 0.5 * np.array(frame_duration)
-        expected_total_duration = frame_time[-1] + frame_duration[-1]
+        durations = np.array(frame_duration, dtype=np.float32)
+
+    expected_total_duration = float(frame_time_arr[-1] + durations[-1])
+    expected_midframe = frame_time_arr + 0.5 * durations
 
     np.testing.assert_allclose(pet_obj.midframe, expected_midframe)
     assert pet_obj.total_duration == expected_total_duration
