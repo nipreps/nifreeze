@@ -58,3 +58,19 @@ def test_estimator_init_model_instance(request):
     model = DummyModel(dataset=DummyDataset(rng))
     est = Estimator(model=model)
     assert isinstance(est._model, DummyModel)
+
+
+def test_estimator_init_model_string(request, monkeypatch):
+    rng = request.node.rng
+    # Patch ModelFactory.init to return DummyModel
+    monkeypatch.setattr(
+        "nifreeze.model.base.ModelFactory.init",
+        lambda model, dataset, **kwargs: DummyModel(dataset=dataset),
+    )
+    model_name = "dummy"
+    est = Estimator(model=model_name, model_kwargs={})
+    _dataset = DummyDataset(rng)
+    # Should produce a DummyModel on run
+    est.run(_dataset)
+    assert isinstance(est._model, str)
+    assert est._model == model_name
