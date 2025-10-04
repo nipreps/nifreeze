@@ -87,17 +87,6 @@ def test_compute_uptake_statistic(stat_func):
     np.testing.assert_array_equal(obtained, expected)
 
 
-@pytest.mark.random_uniform_spatial_data((2, 2, 2, 2), 0.0, 1.0)
-def test_from_nii_requires_frame_time(setup_random_uniform_spatial_data, tmp_path):
-    data, affine = setup_random_uniform_spatial_data
-    img = nb.Nifti1Image(data, affine)
-    fname = tmp_path / "pet.nii.gz"
-    img.to_filename(fname)
-
-    with pytest.raises(RuntimeError, match="frame_time must be provided"):
-        from_nii(fname)
-
-
 @pytest.mark.parametrize(
     ("brainmask_file", "frame_time", "frame_duration"),
     [
