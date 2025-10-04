@@ -240,7 +240,7 @@ def from_nii(
     brainmask_file : :obj:`os.pathlike`, optional
         A brainmask NIfTI file. If provided, will be loaded and
         stored in the returned dataset.
-    motion_file : :obj:`os.pathlike`
+    motion_file : :obj:`os.pathlike`, optional
         A file containing head motion affine matrices (linear).
     frame_time : :obj:`numpy.ndarray` or :obj:`list` of :obj:`float`, optional
         The start times of each frame relative to the beginning of the acquisition.
