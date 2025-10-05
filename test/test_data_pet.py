@@ -87,6 +87,16 @@ def test_compute_uptake_statistic(stat_func):
     np.testing.assert_array_equal(obtained, expected)
 
 
+def test_motion_file_not_implemented():
+    with pytest.raises(NotImplementedError):
+        from_nii(
+            "pet.nii.gz",
+            np.ones(5),
+            brainmask_file="brainmaks.nii.gz",
+            motion_file="motion.x5",
+        )
+
+
 @pytest.mark.parametrize(
     ("brainmask_file", "frame_time", "frame_duration"),
     [
