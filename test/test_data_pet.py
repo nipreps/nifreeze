@@ -86,6 +86,16 @@ def test_compute_uptake_statistic(stat_func):
     np.testing.assert_array_equal(obtained, expected)
 
 
+def test_motion_file_not_implemented():
+    with pytest.raises(NotImplementedError):
+        from_nii(
+            "pet.nii.gz",
+            "brainmaks.nii.gz",
+            motion_file="motion.nii.gz",
+            frame_time=np.ones(5),
+        )
+
+
 @pytest.mark.random_uniform_spatial_data((2, 2, 2, 2), 0.0, 1.0)
 def test_from_nii_requires_frame_time(setup_random_uniform_spatial_data, tmp_path):
     data, affine = setup_random_uniform_spatial_data
