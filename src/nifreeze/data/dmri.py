@@ -310,7 +310,7 @@ def from_nii(
     brainmask_file : :obj:`os.pathlike`, optional
         A brainmask NIfTI file. If provided, will be loaded and
         stored in the returned dataset.
-    motion_file : :obj:`os.pathlike`
+    motion_file : :obj:`os.pathlike`, optional
         A file containing head motion affine matrices (linear)
     gradients_file : :obj:`os.pathlike`, optional
         A text file containing the gradients table, shape (4, N) or (N, 4).
