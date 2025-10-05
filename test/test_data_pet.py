@@ -29,6 +29,7 @@ import numpy as np
 import pytest
 from nitransforms.linear import Affine
 
+from nifreeze.data import load
 from nifreeze.data.pet import PET, _compute_frame_duration, _compute_uptake_statistic, from_nii
 
 
@@ -60,6 +61,12 @@ def random_nifti_file(tmp_path, setup_random_uniform_spatial_data) -> Path:
     _img = nb.Nifti1Image(_data, _affine)
     _img.to_filename(_filename)
     return _filename
+
+
+def test_main(datadir):
+    input_file = datadir / "pet.h5"
+
+    assert isinstance(load(input_file), PET)
 
 
 @pytest.mark.parametrize(
