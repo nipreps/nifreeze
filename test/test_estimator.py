@@ -31,9 +31,13 @@ DATAOBJ_SIZE = (5, 5, 5, 4)
 
 
 class DummyModel(BaseModel):
+    def __init__(self, **kwargs):
+        self._rng = np.random.default_rng(1234)
+        super().__init__(**kwargs)
+
     def fit_predict(self, idx=None, **kwargs):
         # Return a synthetic 3D image
-        return np.ones(DATAOBJ_SIZE[:-1])
+        return self._rng.random(DATAOBJ_SIZE[:-1])
 
 
 class DummyDataset(BaseDataset):
@@ -58,3 +62,19 @@ def test_estimator_init_model_instance(request):
     model = DummyModel(dataset=DummyDataset(rng))
     est = Estimator(model=model)
     assert isinstance(est._model, DummyModel)
+
+
+def test_estimator_init_model_string(request, monkeypatch):
+    rng = request.node.rng
+    # Patch ModelFactory.init to return DummyModel
+    monkeypatch.setattr(
+        "nifreeze.model.base.ModelFactory.init",
+        lambda model, dataset, **kwargs: DummyModel(dataset=dataset),
+    )
+    model_name = "dummy"
+    est = Estimator(model=model_name, model_kwargs={})
+    _dataset = DummyDataset(rng)
+    # Should produce a DummyModel on run
+    est.run(_dataset)
+    assert isinstance(est._model, str)
+    assert est._model == model_name
