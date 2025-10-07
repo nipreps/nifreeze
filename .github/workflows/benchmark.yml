@@ -56,5 +56,40 @@ jobs:
     - name: Run benchmarks
       run: |
         CONFIG_FILE="$(pwd)/benchmarks/asv.conf.json"
-        asv machine --yes --config "$CONFIG_FILE"
-        asv run --config "$CONFIG_FILE" --show-stderr
+        python - <<'PY'
+import json
+import os
+import platform
+
+machine_name = "github-actions"
+system, node, release, version, machine, processor = platform.uname()
+
+
+def read_sysconf(name):
+    try:
+        value = os.sysconf(name)
+    except (AttributeError, ValueError, OSError):
+        return None
+    return value
+
+
+page_size = read_sysconf("SC_PAGE_SIZE")
+phys_pages = read_sysconf("SC_PHYS_PAGES")
+ram_bytes = None
+if page_size is not None and phys_pages is not None:
+    ram_bytes = page_size * phys_pages
+
+machine_info = {
+    "machine": machine_name,
+    "os": f"{system} {release}",
+    "arch": str(platform.machine()),
+    "cpu": str(processor or platform.processor() or ""),
+    "num_cpu": str(os.cpu_count() or ""),
+    "ram": str(ram_bytes or ""),
+}
+
+path = os.path.expanduser("~/.asv-machine.json")
+with open(path, "w", encoding="utf-8") as handle:
+    json.dump({machine_name: machine_info}, handle)
+PY
+        asv run --config "$CONFIG_FILE" --machine github-actions --show-stderr
