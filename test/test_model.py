@@ -32,8 +32,19 @@ from nifreeze import model
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.dmri import DEFAULT_MAX_S0, DEFAULT_MIN_S0, DWI
 from nifreeze.model._dipy import GaussianProcessModel
-from nifreeze.model.base import mask_absence_warn_msg
+from nifreeze.model.base import UNSUPPORTED_MODEL_ERROR_MSG, mask_absence_warn_msg
 from nifreeze.testing import simulations as _sim
+
+
+# Dummy classes to simulate model factory essential features
+class DummyModel:
+    def __init__(self, dataset, **kwargs):
+        self._dataset = dataset
+        self._kwargs = kwargs
+
+
+class DummyDataset:
+    pass
 
 
 def test_base_model():
@@ -206,6 +217,14 @@ def test_factory_none_raises(setup_random_base_data):
         model.ModelFactory.init(None, dataset=dataset)
 
 
+def test_model_factory_invalid_model():
+    model_name = "not_a_model"
+    with pytest.raises(
+        NotImplementedError, match=UNSUPPORTED_MODEL_ERROR_MSG.format(model=model_name)
+    ):
+        model.ModelFactory.init(model_name, dataset=DummyDataset())
+
+
 @pytest.mark.parametrize(
     "name, expected_cls",
     [
@@ -270,6 +289,33 @@ def test_factory_avgdwi_variants(monkeypatch, name, setup_random_dwi_data):
             sys.modules["nifreeze.model.dmri"] = old_module
         else:
             del sys.modules["nifreeze.model.dmri"]
+
+
+@pytest.mark.parametrize(
+    "model_name, expected_cls",
+    [
+        ("gqi", DummyModel),
+        ("dti", DummyModel),
+        ("DTI", DummyModel),
+        ("dki", DummyModel),
+    ],
+)
+def test_model_factory_valid_models(monkeypatch, model_name, expected_cls):
+    # Monkeypatch import_module to return a dummy module with DTIModel, DKIModel, etc.
+    class DummyDMRI:
+        DTIModel = DummyModel
+        DKIModel = DummyModel
+        GQIModel = DummyModel
+
+    def dummy_import_module(name):
+        assert name == "nifreeze.model.dmri"
+        return DummyDMRI
+
+    monkeypatch.setattr("importlib.import_module", dummy_import_module)
+    model_instance = model.ModelFactory.init(model_name, dataset=DummyDataset(), extra="value")
+    assert isinstance(model_instance, expected_cls)
+    assert isinstance(model_instance._dataset, DummyDataset)
+    assert model_instance._kwargs.get("extra") == "value"
 
 
 def test_factory_initializations(datadir):
