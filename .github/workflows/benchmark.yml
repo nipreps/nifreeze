@@ -36,27 +36,27 @@ jobs:
         python-version: [ '3.12' ]
 
     steps:
-    - name: Set up system
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install .[antsopt,benchmark]
-    - name: Set threading parameters for reliable benchmarking
-      run: |
-        export OPENBLAS_NUM_THREADS=1
-        export MKL_NUM_THREADS=1
-        export OMP_NUM_THREADS=1
-    - name: Run benchmarks
-      run: |
-        CONFIG_FILE="$(pwd)/benchmarks/asv.conf.json"
-        python - <<'PY'
+      - name: Set up system
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[antsopt,benchmark]
+      - name: Set threading parameters for reliable benchmarking
+        run: |
+          export OPENBLAS_NUM_THREADS=1
+          export MKL_NUM_THREADS=1
+          export OMP_NUM_THREADS=1
+      - name: Run benchmarks
+        run: |
+          CONFIG_FILE="$(pwd)/benchmarks/asv.conf.json"
+          python - <<'PY'
 import json
 import os
 import platform
