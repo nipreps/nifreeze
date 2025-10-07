@@ -587,12 +587,18 @@ def compute_pairwise_angles(
     Examples
     --------
     >>> X = np.asarray([(1.0, -1.0), (0.0, 0.0), (0.0, 0.0)]).T
-    >>> compute_pairwise_angles(X, closest_polarity=False)[0, 1]  # doctest: +ELLIPSIS
-    3.1415...
+    >>> np.isclose(
+    ...     compute_pairwise_angles(X, closest_polarity=False)[0, 1],
+    ...     np.pi,
+    ... )
+    True
     >>> X = np.asarray([(1.0, -1.0), (0.0, 0.0), (0.0, 0.0)]).T
     >>> Y = np.asarray([(1.0, -1.0), (0.0, 0.0), (0.0, 0.0)]).T
-    >>> compute_pairwise_angles(X, Y, closest_polarity=False)[0, 1]  # doctest: +ELLIPSIS
-    3.1415...
+    >>> np.isclose(
+    ...     compute_pairwise_angles(X, Y, closest_polarity=False)[0, 1],
+    ...     np.pi,
+    ... )
+    True
     >>> X = np.asarray([(1.0, -1.0), (0.0, 0.0), (0.0, 0.0)]).T
     >>> compute_pairwise_angles(X)[0, 1]
     0.0
