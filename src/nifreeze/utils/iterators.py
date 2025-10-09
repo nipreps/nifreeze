@@ -26,6 +26,15 @@ import random
 from itertools import chain, zip_longest
 from typing import Iterator
 
+ITERATOR_SIZE_ERROR_MSG = "Cannot build iterator without size."
+"""Iterator size argument error message."""
+KWARG_ERROR_MSG = "Keyword argument {kwarg} is required."
+"""Iterator keyword argument error message."""
+BVALS_KWARG = "bvals"
+"""b-vals keyword argument name."""
+UPTAKE_KWARG = "uptake"
+"""Uptake keyword argument name."""
+
 
 def linear_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
     """
@@ -55,10 +64,10 @@ def linear_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
     """
-    if size is None and "bvals" in kwargs:
-        size = len(kwargs["bvals"])
+    if size is None and BVALS_KWARG in kwargs:
+        size = len(kwargs[BVALS_KWARG])
     if size is None:
-        raise TypeError("Cannot build iterator without size")
+        raise TypeError(ITERATOR_SIZE_ERROR_MSG)
 
     return (s for s in range(size))
 
@@ -109,10 +118,10 @@ def random_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
 
     """
 
-    if size is None and "bvals" in kwargs:
-        size = len(kwargs["bvals"])
+    if size is None and BVALS_KWARG in kwargs:
+        size = len(kwargs[BVALS_KWARG])
     if size is None:
-        raise TypeError("Cannot build iterator without size")
+        raise TypeError(ITERATOR_SIZE_ERROR_MSG)
 
     _seed = kwargs.get("seed", None)
     _seed = 20210324 if _seed is True else _seed
@@ -184,9 +193,9 @@ def bvalue_iterator(*_, **kwargs) -> Iterator[int]:
     [0, 1, 8, 4, 5, 2, 3, 6, 7]
 
     """
-    bvals = kwargs.get("bvals", None)
+    bvals = kwargs.get(BVALS_KWARG, None)
     if bvals is None:
-        raise TypeError("Keyword argument bvals is required")
+        raise TypeError(KWARG_ERROR_MSG.format(kwarg=BVALS_KWARG))
     return _value_iterator(bvals, round_decimals=2, ascending=True)
 
 
@@ -216,9 +225,9 @@ def uptake_iterator(*_, **kwargs) -> Iterator[int]:
     [3, 7, 1, 8, 2, 5, 6, 0, 4]
 
     """
-    uptake = kwargs.get("uptake", None)
+    uptake = kwargs.get(UPTAKE_KWARG, None)
     if uptake is None:
-        raise TypeError("Keyword argument uptake is required")
+        raise TypeError(KWARG_ERROR_MSG.format(kwarg=UPTAKE_KWARG))
     return _value_iterator(uptake, round_decimals=2, ascending=False)
 
 
@@ -252,10 +261,10 @@ def centralsym_iterator(size: int | None = None, **kwargs) -> Iterator[int]:
     [5, 4, 6, 3, 7, 2, 8, 1, 9, 0, 10]
 
     """
-    if size is None and "bvals" in kwargs:
-        size = len(kwargs["bvals"])
+    if size is None and BVALS_KWARG in kwargs:
+        size = len(kwargs[BVALS_KWARG])
     if size is None:
-        raise TypeError("Cannot build iterator without size")
+        raise TypeError(ITERATOR_SIZE_ERROR_MSG)
     linear = list(range(size))
     return (
         x
