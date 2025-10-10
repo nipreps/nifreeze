@@ -233,9 +233,7 @@ branch = true
 parallel = true
 concurrency = ["multiprocessing"]
 omit = [
-  "*/tests/*",
-  "*/testing/*",
-  "*/viz/*",
+  "^test/*",
   "*/__init__.py",
   "*/conftest.py",
   "src/nifreeze/_version.py"
