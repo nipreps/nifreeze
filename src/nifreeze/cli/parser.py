@@ -34,12 +34,12 @@ def _parse_yaml_config(file_path: str) -> dict:
 
     Parameters
     ----------
-    file_path : str
+    file_path : :obj:`str`
         Path to the YAML configuration file.
 
     Returns
     -------
-    dict
+    :obj:`dict`
         A dictionary containing the parsed YAML configuration.
     """
     with open(file_path, "r") as file:
@@ -209,12 +209,12 @@ def parse_args(argv: list) -> tuple[Namespace, dict, dict, dict]:
 
     Parameters
     ----------
-    argv : list
+    argv : :obj:`list`
         Arguments.
 
     Returns
     -------
-    args : :obj:`Namespace`
+    args : :obj:`~argparse.Namespace`
         Populated namespace.
     extra_kwargs : :obj:`dict`
         Extra keyword arguments passed to the dataset.
