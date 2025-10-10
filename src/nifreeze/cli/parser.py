@@ -201,7 +201,7 @@ def _normalize_model_name(model_name: str) -> str:
     return model_name.lower().replace("single", "")
 
 
-def parse_args(argv: list) -> tuple[Namespace, dict, dict, dict]:
+def parse_args(argv: list[str] | None = None) -> tuple[Namespace, dict, dict, dict]:
     """Parse the command line arguments and return a curated arguments.
 
     Performs further checks to ensure that necessary data is provided for the
@@ -209,7 +209,7 @@ def parse_args(argv: list) -> tuple[Namespace, dict, dict, dict]:
 
     Parameters
     ----------
-    argv : :obj:`list`
+    argv : :obj:`list`, optional
         Arguments.
 
     Returns
