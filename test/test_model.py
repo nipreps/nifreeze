@@ -60,6 +60,7 @@ def test_base_model():
 @pytest.mark.parametrize("use_mask", (False, True))
 def test_trivial_model(request, use_mask):
     """Check the implementation of the trivial B0 model."""
+    from typing import Any
 
     rng = request.node.rng
 
@@ -69,6 +70,7 @@ def test_trivial_model(request, use_mask):
 
     size = (2, 2, 2)
     mask = None
+    context: contextlib.AbstractContextManager[Any]
     if use_mask:
         mask = np.ones(size, dtype=bool)
         context = contextlib.nullcontext()
