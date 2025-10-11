@@ -34,6 +34,7 @@ from scipy.ndimage import binary_dilation
 from skimage.morphology import ball
 
 from nifreeze.model.gpr import DiffusionGPR, SphericalKriging
+from nifreeze.utils.ndimage import load_api
 
 
 class DiffusionGPRBenchmark(ABC):
@@ -67,7 +68,7 @@ class DiffusionGPRBenchmark(ABC):
         name = "sherbrooke_3shell"
 
         dwi_fname, bval_fname, bvec_fname = dpd.get_fnames(name=name)
-        dwi_data = nb.load(dwi_fname).get_fdata()
+        dwi_data = load_api(dwi_fname, nb.Nifti1Image).get_fdata()
         bvals, bvecs = read_bvals_bvecs(bval_fname, bvec_fname)
 
         _, brain_mask = median_otsu(dwi_data, vol_idx=[0])
