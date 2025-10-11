@@ -30,6 +30,7 @@ import pytest
 
 from nifreeze.data import load
 from nifreeze.data.dmri import DWI, find_shelling_scheme, from_nii, transform_fsl_bvec
+from nifreeze.utils.ndimage import load_api
 
 
 def _dwi_data_to_nifti(
@@ -90,7 +91,7 @@ def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
 
     dwi_h5.to_nifti(dwi_nifti_path, insert_b0=insert_b0)
 
-    nifti_data = nb.load(dwi_nifti_path).get_fdata()
+    nifti_data = load_api(dwi_nifti_path, nb.Nifti1Image).get_fdata()
     if insert_b0:
         nifti_data = nifti_data[..., 1:]
 
