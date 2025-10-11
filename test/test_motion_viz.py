@@ -64,7 +64,7 @@ def test_plot_framewise_displacement(request, tmp_path):
     labels = labels[:-1]
     ax = plot_framewise_displacement(fd, labels)
     out_svg = tmp_path / "framewise_displacement.svg"
-    ax.figure.savefig(out_svg, format="svg")
+    ax.get_figure().savefig(out_svg, format="svg")
 
 
 def test_plot_volumewise_motion(request, tmp_path):
@@ -151,4 +151,4 @@ def test_plot_motion_overlay(tmp_path, orientation):
         rel_diff, dwi_dir_data, brain_mask, orientation, slice_idx, smooth=smooth
     )
     out_svg = tmp_path / "motion_overlay.svg"
-    ax.figure.savefig(out_svg, format="svg")
+    ax.get_figure().savefig(out_svg, format="svg")
