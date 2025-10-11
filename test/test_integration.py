@@ -41,10 +41,11 @@ def test_proximity_estimator_trivial_model(motion_data, tmp_path):
 
     model = TrivialModel(dwi_motion)
     estimator = Estimator(model)
+    cpus = cpu_count()
     estimator.run(
         dwi_motion,
         seed=12345,
-        num_threads=min(cpu_count(), 8),
+        num_threads=min(cpus if cpus is not None else 1, 8),
     )
 
     # Uncomment to see the realigned dataset
