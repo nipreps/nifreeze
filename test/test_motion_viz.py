@@ -64,7 +64,8 @@ def test_plot_framewise_displacement(request, tmp_path):
 
     labels = labels[:-1]
     ax = plot_framewise_displacement(fd, labels)
-    fig: Figure = ax.figure
+    assert isinstance(ax.figure, Figure)
+    fig = ax.figure
     out_svg = tmp_path / "framewise_displacement.svg"
     fig.savefig(out_svg, format="svg")
 
@@ -86,7 +87,8 @@ def test_plot_volumewise_motion(request, tmp_path):
     motion_params = np.hstack([translations, rotations])
 
     ax = plot_volumewise_motion(frames, motion_params)
-    fig: Figure = ax[0].figure
+    assert isinstance(ax[0].figure, Figure)
+    fig = ax[0].figure
     out_svg = tmp_path / "volumewise_motion.svg"
     fig.savefig(out_svg, format="svg")
 
@@ -153,6 +155,7 @@ def test_plot_motion_overlay(tmp_path, orientation):
     ax = plot_motion_overlay(
         rel_diff, dwi_dir_data, brain_mask, orientation, slice_idx, smooth=smooth
     )
-    fig: Figure = ax.figure
+    assert isinstance(ax.figure, Figure)
+    fig = ax.figure
     out_svg = tmp_path / "motion_overlay.svg"
     fig.savefig(out_svg, format="svg")
