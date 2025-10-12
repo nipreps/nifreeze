@@ -68,7 +68,9 @@ def test_main_call(tmp_path, monkeypatch, write_hdf5):
     # Monkeypatch
     monkeypatch.setattr(cli_run.Estimator, "run", smoke_estimator_run)
 
-    input_file = Path(os.getenv("TEST_DATA_HOME")) / "dwi.h5"
+    test_data_home = os.getenv("TEST_DATA_HOME")
+    assert test_data_home is not None, "TEST_DATA_HOME must be set"
+    input_file = Path(test_data_home) / "dwi.h5"
     argv = [
         str(input_file),
         "--models",
