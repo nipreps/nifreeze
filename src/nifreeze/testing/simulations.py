@@ -407,7 +407,7 @@ def simulate_multifiber_voxels(S0, hsph_dirs, bval_shell=1000, snr=20, n_voxels=
         signal.append(_signal)
 
     # Shuffle voxels
-    signal = rng.permutation(np.vstack(signal))
+    signal = rng.permutation(np.vstack(signal)).tolist()
 
     return signal, gtab
 

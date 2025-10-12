@@ -97,7 +97,10 @@ class DiffusionGPRBenchmark(ABC):
         self._y_test = y[:, train_test_mask]
 
     def time_fit(self, *args):
+        assert self._estimator is not None
+        assert self._y_train is not None
         self._estimator = self._estimator.fit(self._X_train, self._y_train.T)
 
     def time_predict(self):
+        assert self._estimator is not None
         self._estimator.predict(self._X_test)

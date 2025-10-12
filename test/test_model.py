@@ -66,7 +66,7 @@ def test_trivial_model(request, use_mask):
 
     # Should not allow initialization without an oracle
     with pytest.raises(TypeError):
-        model.TrivialModel()
+        model.TrivialModel()  # type: ignore[call-arg]
 
     size = (2, 2, 2)
     mask = None
