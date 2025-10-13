@@ -49,10 +49,11 @@ def test_proximity_estimator_trivial_model(motion_data, tmp_path):
     )
 
     # Uncomment to see the realigned dataset
-    nt.linear.LinearTransformsMapping(
+    xfm = nt.linear.LinearTransformsMapping(
         dwi_motion.motion_affines,
         reference=b0nii,
-    ).apply(moved_nii).to_filename(tmp_path / "realigned.nii.gz")
+    )
+    nt.resampling.apply(xfm, moved_nii).to_filename(tmp_path / "realigned.nii.gz")
 
     # For each moved b0 volume
     for i, est in enumerate(dwi_motion.motion_affines):
