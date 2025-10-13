@@ -333,7 +333,7 @@ def test_factory_initializations(datadir):
         "stat": "mean",
     }
     # Direct initialisation
-    model1 = model.AverageDWIModel(dmri_dataset, **modelargs)
+    model1 = model.AverageDWIModel(dmri_dataset, **modelargs)  # type: ignore[arg-type]
 
     # Initialisation via ModelFactory
     model2 = model.ModelFactory.init(model="avgdwi", dataset=dmri_dataset, **modelargs)

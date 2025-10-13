@@ -85,8 +85,9 @@ def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
     gradients_path = tmp_path / "dwi.tsv"
 
     dwi_h5.motion_affines = (
-        # Only translations so bvecs should not change
-        [nb.affines.from_matvec(np.eye(3), (10, -5, -20))] * len(dwi_h5) if rotate_bvecs else None
+        np.array([nb.affines.from_matvec(np.eye(3), (10, -5, -20))] * len(dwi_h5))
+        if rotate_bvecs
+        else None
     )
 
     dwi_h5.to_nifti(dwi_nifti_path, insert_b0=insert_b0)
