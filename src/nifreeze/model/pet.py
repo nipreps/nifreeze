@@ -157,6 +157,10 @@ class PETModel(BaseModel):
         if self._locked_fit is None:
             self._fit(index, n_jobs=kwargs.pop("n_jobs", None), **kwargs)
 
+        # Make type checking happy by preventing it to signal that None has no
+        # attribute T: after this point, _locked_fit should no longer be None
+        assert self._locked_fit is not None, "Internal error: _locked_fit has not been set"
+
         if index is None:  # If no index, just fit the data.
             return None
 

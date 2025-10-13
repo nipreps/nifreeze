@@ -29,9 +29,14 @@ from nifreeze.data import BaseDataset, load
 from nifreeze.estimator import Estimator
 
 
-def main(argv=None) -> None:
+def main(argv: list[str] | None = None) -> None:
     """
     Entry point.
+
+    Parameters
+    ----------
+    argv : obj:`list`, optional
+        Arguments.
 
     Returns
     -------

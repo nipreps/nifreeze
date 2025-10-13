@@ -54,21 +54,23 @@ def test_base_model():
         TypeError,
         match="Can't instantiate abstract class BaseModel without an implementation for abstract method 'fit_predict'",
     ):
-        BaseModel(None)
+        BaseModel(None)  # type: ignore[abstract]
 
 
 @pytest.mark.parametrize("use_mask", (False, True))
 def test_trivial_model(request, use_mask):
     """Check the implementation of the trivial B0 model."""
+    from typing import Any
 
     rng = request.node.rng
 
     # Should not allow initialization without an oracle
     with pytest.raises(TypeError):
-        model.TrivialModel()
+        model.TrivialModel()  # type: ignore[call-arg]
 
     size = (2, 2, 2)
     mask = None
+    context: contextlib.AbstractContextManager[Any]
     if use_mask:
         mask = np.ones(size, dtype=bool)
         context = contextlib.nullcontext()
@@ -84,7 +86,7 @@ def test_trivial_model(request, use_mask):
     )
 
     data = DWI(
-        dataobj=(*_S0.shape, 10),
+        dataobj=rng.normal(size=(*_S0.shape, 10)),
         bzero=_clipped_S0,
         brainmask=mask,
     )
@@ -200,13 +202,13 @@ def test_dti_model(setup_random_dwi_data):
 
     dtimodel = model.DTIModel(dataset)
     predicted = dtimodel.fit_predict(4)
-
+    assert predicted is not None
     assert predicted.shape == dwi_dataobj.shape[:-1]
 
 
 def test_factory_none_raises(setup_random_base_data):
     dataobj, affine, brainmask, motion_affines, datahdr = setup_random_base_data
-    dataset = BaseDataset(
+    dataset: BaseDataset = BaseDataset(
         dataobj=dataobj,
         affine=affine,
         brainmask=brainmask,
@@ -235,7 +237,7 @@ def test_model_factory_invalid_model():
 )
 def test_factory_variants(name, expected_cls, setup_random_base_data):
     dataobj, affine, brainmask, motion_affines, datahdr = setup_random_base_data
-    dataset = BaseDataset(
+    dataset: BaseDataset = BaseDataset(
         dataobj=dataobj,
         affine=affine,
         brainmask=brainmask,
@@ -277,7 +279,7 @@ def test_factory_avgdwi_variants(monkeypatch, name, setup_random_dwi_data):
 
     old_module = sys.modules.get("nifreeze.model.dmri")
     dmri_module = _types.ModuleType("nifreeze.model.dmri")
-    dmri_module.AverageDWIModel = DummyAvgDWI
+    dmri_module.AverageDWIModel = DummyAvgDWI  # type: ignore[attr-defined]
     sys.modules["nifreeze.model.dmri"] = dmri_module
 
     try:

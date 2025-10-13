@@ -89,7 +89,7 @@ def test_advanced_clip(
     assert (
         np.allclose(data, expected_output, atol=1e-6)
         if inplace
-        else np.allclose(clipped_data, expected_output, atol=1e-6)
+        else np.allclose(clipped_data, expected_output, atol=1e-6)  # type: ignore[arg-type]
     )
 
 
@@ -166,7 +166,7 @@ def test_grand_mean_normalization(setup_random_uniform_ndim_data, use_mask, cent
     assert (
         np.allclose(data, expected_output, atol=1e-6)
         if inplace
-        else np.allclose(normalized_data, expected_output, atol=1e-6)
+        else np.allclose(normalized_data, expected_output, atol=1e-6)  # type: ignore[arg-type]
     )
 
 
@@ -211,5 +211,5 @@ def test_robust_minmax_normalization(
     assert (
         np.allclose(data, expected_output, atol=1e-6)
         if inplace
-        else np.allclose(normalized_data, expected_output, atol=1e-6)
+        else np.allclose(normalized_data, expected_output, atol=1e-6)  # type: ignore[arg-type]
     )

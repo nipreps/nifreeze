@@ -26,6 +26,7 @@ import numpy as np
 import numpy.testing as npt
 
 from nifreeze.data.utils import apply_affines
+from nifreeze.utils.ndimage import load_api
 
 
 def test_apply_affines(request, tmp_path):
@@ -52,6 +53,6 @@ def test_apply_affines(request, tmp_path):
     npt.assert_array_equal(nii.affine, nii_t_file.affine)
     assert out_fname.exists()
     # The saved file should load and match the expected result
-    nii_loaded = nb.load(out_fname)
+    nii_loaded = load_api(out_fname, nb.Nifti1Image)
     npt.assert_allclose(nii.dataobj, nii_loaded.dataobj)
     npt.assert_array_equal(nii.affine, nii_loaded.affine)

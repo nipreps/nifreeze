@@ -210,7 +210,7 @@ class DWI(BaseDataset[np.ndarray | None]):
 
         Parameters
         ----------
-        filename : :obj:`os.pathlike`
+        filename : :obj:`os.pathlike`, optional
             The output NIfTI file path.
         write_hmxfms : :obj:`bool`, optional
             If ``True``, the head motion affines will be written out to filesystem

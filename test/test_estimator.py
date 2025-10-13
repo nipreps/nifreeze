@@ -35,7 +35,7 @@ class DummyModel(BaseModel):
         self._rng = np.random.default_rng(1234)
         super().__init__(**kwargs)
 
-    def fit_predict(self, idx=None, **kwargs):
+    def fit_predict(self, index: int | None = None, **kwargs):
         # Return a synthetic 3D image
         return self._rng.random(DATAOBJ_SIZE[:-1])
 

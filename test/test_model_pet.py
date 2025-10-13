@@ -65,6 +65,7 @@ def test_petmodel_fit_predict(random_dataset):
 
     # Predict at a specific timepoint
     vol = model.fit_predict(random_dataset.midframe[2])
+    assert vol is not None
     assert vol.shape == random_dataset.shape3d
     assert vol.dtype == random_dataset.dataobj.dtype
 

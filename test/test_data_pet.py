@@ -30,6 +30,7 @@ import pytest
 from nitransforms.linear import Affine
 
 from nifreeze.data.pet import PET, _compute_frame_duration, _compute_uptake_statistic, from_nii
+from nifreeze.utils.ndimage import load_api
 
 
 @pytest.fixture
@@ -108,7 +109,7 @@ def test_from_nii_requires_frame_time(setup_random_uniform_spatial_data, tmp_pat
 )
 def test_from_nii(tmp_path, random_nifti_file, brainmask_file, frame_time, frame_duration):
     filename = random_nifti_file
-    img = nb.load(filename)
+    img = load_api(filename, nb.Nifti1Image)
     if brainmask_file:
         mask_data = np.ones(img.get_fdata().shape[:-1], dtype=bool)
         mask_img = nb.Nifti1Image(mask_data.astype(np.uint8), img.affine)
@@ -148,7 +149,7 @@ def test_to_nifti(tmp_path, random_dataset):
     out_filename = tmp_path / "random_pet_out.nii.gz"
     random_dataset.to_nifti(str(out_filename))
     assert out_filename.exists()
-    loaded_img = nb.load(str(out_filename))
+    loaded_img = load_api(str(out_filename), nb.Nifti1Image)
     assert np.allclose(loaded_img.get_fdata(), random_dataset.dataobj)
     assert np.allclose(loaded_img.affine, random_dataset.affine)
     units = loaded_img.header.get_xyzt_units()
@@ -163,12 +164,12 @@ def test_to_nifti(tmp_path, random_dataset):
 )
 def test_round_trip(tmp_path, random_nifti_file, frame_time, frame_duration):
     filename = random_nifti_file
-    img = nb.load(filename)
+    img = load_api(filename, nb.Nifti1Image)
     pet_obj = from_nii(filename, frame_time=frame_time, frame_duration=frame_duration)
     out_fname = tmp_path / "random_pet_out.nii.gz"
     pet_obj.to_nifti(out_fname)
     assert out_fname.exists()
-    loaded_img = nb.load(out_fname)
+    loaded_img = load_api(out_fname, nb.Nifti1Image)
     np.testing.assert_array_equal(loaded_img.affine, img.affine)
     np.testing.assert_allclose(loaded_img.get_fdata(), img.get_fdata())
     units = loaded_img.header.get_xyzt_units()

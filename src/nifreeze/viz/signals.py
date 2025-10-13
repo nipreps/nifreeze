@@ -132,6 +132,8 @@ def calculate_sphere_pts(points, center):
     kdtree = KDTree(points)  # tree of nearest points
     # d is an array of distances, i is an array of indices
     d, i = kdtree.query(center, points.shape[0])
+    d = np.atleast_1d(d)
+    i = np.atleast_1d(i)
     sphere_pts = np.zeros(points.shape, dtype=float)
 
     radius = np.amax(d)

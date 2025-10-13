@@ -264,11 +264,12 @@ def test_parsed_dwimodel_instatiation(setup_random_dwi_data, datadir, models):
     )
 
     if models == "dti":
-        model = DTIModel(dataset, **model_kwargs)
-        assert model._model_class == "dipy.reconst.dti.TensorModel"
+        assert DTIModel(dataset, **model_kwargs)._model_class == "dipy.reconst.dti.TensorModel"
     elif models == "dki":
-        model = DKIModel(dataset, **model_kwargs)
-        assert model._model_class == "dipy.reconst.dki.DiffusionKurtosisModel"
+        assert (
+            DKIModel(dataset, **model_kwargs)._model_class
+            == "dipy.reconst.dki.DiffusionKurtosisModel"
+        )
 
 
 @pytest.mark.parametrize(
