@@ -34,7 +34,6 @@ import attrs
 import h5py
 import nibabel as nb
 import numpy as np
-from nibabel.spatialimages import SpatialHeader
 from nitransforms.linear import LinearTransformsMapping
 from typing_extensions import Self, TypeVarTuple, Unpack
 
@@ -83,8 +82,8 @@ class BaseDataset(Generic[Unpack[Ts]]):
     """A boolean ndarray object containing a corresponding brainmask."""
     motion_affines: np.ndarray = attrs.field(default=None, eq=attrs.cmp_using(eq=_cmp))
     """List of :obj:`~nitransforms.linear.Affine` realigning the dataset."""
-    datahdr: SpatialHeader = attrs.field(default=None)
-    """A :obj:`~nibabel.spatialimages.SpatialHeader` header corresponding to the data."""
+    datahdr: nb.Nifti1Header = attrs.field(default=None)
+    """A :obj:`~nibabel.Nifti1Header` header corresponding to the data."""
 
     _filepath: Path = attrs.field(
         factory=lambda: Path(mkdtemp()) / "hmxfms_cache.h5",
