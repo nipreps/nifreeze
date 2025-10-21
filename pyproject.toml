@@ -141,6 +141,9 @@ version-file = "src/nifreeze/_version.py"
 # Developer tool configurations
 #
 
+[tool.mypy]
+check_untyped_defs = true
+
 [[tool.mypy.overrides]]
 module = [
   "nipype.*",
