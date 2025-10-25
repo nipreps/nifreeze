@@ -140,7 +140,7 @@ class TrivialModel(BaseModel):
         if self._locked_fit is None:
             raise TypeError("This model requires the predicted map at initialization")
 
-    def fit_predict(self, *_, **kwargs) -> np.ndarray:
+    def fit_predict(self, *_, **kwargs) -> np.ndarray | None:
         """Return the reference map."""
 
         # No need to check fit (if not fitted, has raised already)
