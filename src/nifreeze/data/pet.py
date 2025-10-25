@@ -42,7 +42,7 @@ from nifreeze.utils.ndimage import load_api
 
 
 @attrs.define(slots=True)
-class PET(BaseDataset[np.ndarray | None]):
+class PET(BaseDataset[np.ndarray]):
     """Data representation structure for PET data."""
 
     midframe: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
