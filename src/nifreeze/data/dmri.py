@@ -65,7 +65,7 @@ DTI_MIN_ORIENTATIONS = 6
 
 
 @attrs.define(slots=True)
-class DWI(BaseDataset[np.ndarray | None]):
+class DWI(BaseDataset[np.ndarray]):
     """Data representation structure for dMRI data."""
 
     bzero: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
