@@ -140,7 +140,7 @@ def test_from_nii(tmp_path, random_nifti_file, brainmask_file, frame_time, frame
     assert pet_obj.total_duration == expected_total_duration
 
     if brainmask_file:
-        assert hasattr(pet_obj, "brainmask")
+        assert pet_obj.brainmask is not None
         np.testing.assert_array_equal(pet_obj.brainmask, mask_data)
 
 
