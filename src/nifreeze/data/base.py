@@ -80,8 +80,8 @@ class BaseDataset(Generic[Unpack[Ts]]):
     """Best affine for RAS-to-voxel conversion of coordinates (NIfTI header)."""
     brainmask: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
     """A boolean ndarray object containing a corresponding brainmask."""
-    motion_affines: np.ndarray = attrs.field(default=None, eq=attrs.cmp_using(eq=_cmp))
-    """List of :obj:`~nitransforms.linear.Affine` realigning the dataset."""
+    motion_affines: np.ndarray | None = attrs.field(default=None, eq=attrs.cmp_using(eq=_cmp))
+    """Array of :obj:`~nitransforms.linear.Affine` realigning the dataset."""
     datahdr: nb.Nifti1Header | None = attrs.field(default=None)
     """A :obj:`~nibabel.Nifti1Header` header corresponding to the data."""
 

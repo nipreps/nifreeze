@@ -143,7 +143,7 @@ class PET(BaseDataset[np.ndarray | None]):
 
         # update transform
         if self.motion_affines is None:
-            self.motion_affines = [None] * len(self)
+            self.motion_affines = np.asarray([None] * len(self))
 
         self.motion_affines[index] = xform
 
