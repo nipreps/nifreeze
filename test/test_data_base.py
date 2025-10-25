@@ -73,15 +73,17 @@ def test_getitem_volume_index(random_dataset: BaseDataset):
     By default, motion_affines is None, so we expect to get None for the affine.
     """
     # Single volume  # Note that the type ignore can be removed once we can use *Ts
-    volume0, aff0 = random_dataset[0]  # type: ignore[misc]  # PY310
+    volume0, aff0, extra0 = random_dataset[0]  # type: ignore[misc]  # PY310
     assert volume0.shape == (32, 32, 32)
     # No transforms have been applied yet, so there's no motion_affines array
     assert aff0 is None
+    assert extra0 is None
 
     # Slice of volumes
-    volume_slice, aff_slice = random_dataset[2:4]  # type: ignore[misc]  # PY310
+    volume_slice, aff_slice, extra_slice = random_dataset[2:4]  # type: ignore[misc]  # PY310
     assert volume_slice.shape == (32, 32, 32, 2)
     assert aff_slice is None
+    assert extra_slice is None
 
 
 def test_set_transform(random_dataset: BaseDataset):
@@ -96,7 +98,7 @@ def test_set_transform(random_dataset: BaseDataset):
     random_dataset.set_transform(idx, affine)
 
     # Data shouldn't have changed (since transform is identity).
-    volume0, aff0 = random_dataset[idx]  # type: ignore[misc]  # PY310
+    volume0, aff0, extra0 = random_dataset[idx]  # type: ignore[misc]  # PY310
     assert np.allclose(data_before, volume0)
 
     # motion_affines should be created and match the transform matrix.
@@ -105,6 +107,8 @@ def test_set_transform(random_dataset: BaseDataset):
     # The returned affine from __getitem__ should be the same.
     assert aff0 is not None
     np.testing.assert_array_equal(aff0, affine)
+
+    assert extra0 is None
 
 
 def test_to_filename_and_from_filename(random_dataset: BaseDataset):
