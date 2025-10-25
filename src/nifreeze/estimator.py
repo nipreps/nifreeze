@@ -175,7 +175,7 @@ class Estimator:
             if dataset.brainmask is not None:
                 bmask_path = ptmp_dir / "brainmask.nii.gz"
                 nb.Nifti1Image(
-                    dataset.brainmask.astype("uint8"), dataset.affine, None
+                    dataset.brainmask.astype(np.uint8), dataset.affine, None
                 ).to_filename(bmask_path)
 
             with tqdm(total=dataset_length, unit="vols.") as pbar:
