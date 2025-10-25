@@ -93,7 +93,7 @@ def motion_data(tmp_path_factory, datadir):
     dwdata = DWI.from_filename(datadir / "dwi.h5")
     b0nii = nb.Nifti1Image(dwdata.bzero, dwdata.affine, None)
     masknii = (
-        nb.Nifti1Image(dwdata.brainmask.astype("uint8"), dwdata.affine, None)
+        nb.Nifti1Image(dwdata.brainmask.astype(np.uint8), dwdata.affine, None)
         if dwdata.brainmask is not None
         else None
     )
@@ -311,7 +311,7 @@ def setup_random_base_data(request):
     base_dataobj, affine = _generate_random_uniform_spatial_data(
         request, (*vol_size, volumes), 0.0, 1.0
     )
-    brainmask_dataobj = rng.choice([True, False], size=vol_size).astype(np.uint8)
+    brainmask_dataobj = rng.choice([True, False], size=vol_size).astype(bool)
     motion_affines = rng.random((volumes, 4, 4))
     datahdr = None
 
@@ -353,7 +353,7 @@ def setup_random_dwi_data(request, setup_random_gtab_data):
     dwi_dataobj, affine = _generate_random_uniform_spatial_data(
         request, (*vol_size, volumes), 0.0, 1.0
     )
-    brainmask_dataobj = rng.choice([True, False], size=vol_size).astype(np.uint8)
+    brainmask_dataobj = rng.choice([True, False], size=vol_size).astype(bool)
     b0_dataobj = rng.random(vol_size, dtype="float32")
     gradients = np.vstack([bvecs, bvals[np.newaxis, :]], dtype="float32")
 

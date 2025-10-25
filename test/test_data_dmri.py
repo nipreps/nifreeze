@@ -205,7 +205,7 @@ def test_equality_operator(tmp_path, setup_random_dwi_data):
     dwi, brainmask, b0 = _dwi_data_to_nifti(
         dwi_dataobj,
         affine,
-        brainmask_dataobj,
+        brainmask_dataobj.astype(np.uint8),
         b0_dataobj,
     )
 
