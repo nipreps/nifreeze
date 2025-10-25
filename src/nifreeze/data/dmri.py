@@ -75,8 +75,8 @@ class DWI(BaseDataset[np.ndarray | None]):
     eddy_xfms: list = attrs.field(default=None)
     """List of transforms to correct for estimated eddy current distortions."""
 
-    def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray | None]:
-        return (self.gradients[..., idx] if self.gradients is not None else None,)
+    def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray]:
+        return (self.gradients[..., idx],)
 
     # For the sake of the docstring
     def __getitem__(
