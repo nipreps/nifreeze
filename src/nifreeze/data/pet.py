@@ -52,8 +52,8 @@ class PET(BaseDataset[np.ndarray | None]):
     uptake: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
     """A (N,) numpy array specifying the uptake value of each sample or frame."""
 
-    def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray | None]:
-        return (self.midframe[idx] if self.midframe is not None else None,)
+    def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray]:
+        return (self.midframe[idx],)
 
     # For the sake of the docstring
     def __getitem__(
@@ -105,18 +105,17 @@ class PET(BaseDataset[np.ndarray | None]):
         with h5py.File(self._filepath, "r") as in_file:
             root = in_file["/0"]
             pet_frame = np.asanyarray(root["dataobj"][..., index])
-            if self.midframe is not None:
-                timing_frame = np.asanyarray(root["midframe"][..., index])
+            timing_frame = np.asanyarray(root["midframe"][..., index])
 
         # Mask to exclude the selected frame
         mask = np.ones(self.dataobj.shape[-1], dtype=bool)
         mask[index] = False
 
         train_data = self.dataobj[..., mask]
-        train_timings = self.midframe[mask] if self.midframe is not None else None
+        train_timings = self.midframe[mask]
 
         test_data = pet_frame
-        test_timing = timing_frame if self.midframe is not None else None
+        test_timing = timing_frame
 
         return (train_data, train_timings), (test_data, test_timing)
 
