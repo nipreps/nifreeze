@@ -100,6 +100,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
         return self.dataobj.shape[-1]
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[Unpack[Ts]]:
+        _ = idx  # Avoid unused parameter warning
         return ()  # type: ignore[return-value]
 
     def __getitem__(
