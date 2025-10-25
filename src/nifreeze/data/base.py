@@ -99,12 +99,12 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
         return self.dataobj.shape[-1]
 
-    def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[Unpack[Ts]]:
-        return ()  # type: ignore[return-value]
+    def _getextra(self, idx: int | slice | tuple | np.ndarray) -> np.ndarray | None:
+        return None
 
     def __getitem__(
         self, idx: int | slice | tuple | np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray | None, Unpack[Ts]]:
+    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None]:
         """
         Returns volume(s) and corresponding affine(s) through fancy indexing.
 
@@ -127,7 +127,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
             raise ValueError("No data available (dataobj is None).")
 
         affine = self.motion_affines[idx] if self.motion_affines is not None else None
-        return self.dataobj[..., idx], affine, *self._getextra(idx)
+        return self.dataobj[..., idx], affine, self._getextra(idx)
 
     @property
     def shape3d(self):

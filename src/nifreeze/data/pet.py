@@ -52,8 +52,8 @@ class PET(BaseDataset[np.ndarray | None]):
     uptake: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
     """A (N,) numpy array specifying the uptake value of each sample or frame."""
 
-    def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray | None]:
-        return (self.midframe[idx] if self.midframe is not None else None,)
+    def _getextra(self, idx: int | slice | tuple | np.ndarray) -> np.ndarray | None:
+        return self.midframe[idx] if self.midframe is not None else None
 
     # For the sake of the docstring
     def __getitem__(
