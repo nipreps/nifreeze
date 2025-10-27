@@ -92,7 +92,11 @@ def motion_data(tmp_path_factory, datadir):
 
     dwdata = DWI.from_filename(datadir / "dwi.h5")
     b0nii = nb.Nifti1Image(dwdata.bzero, dwdata.affine, None)
-    masknii = nb.Nifti1Image(dwdata.brainmask.astype("uint8"), dwdata.affine, None)
+    masknii = (
+        nb.Nifti1Image(dwdata.brainmask.astype("uint8"), dwdata.affine, None)
+        if dwdata.brainmask is not None
+        else None
+    )
 
     # Generate a list of large-yet-plausible bulk-head motion
     xfms = nt.linear.LinearTransformsMapping(
