@@ -24,8 +24,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import numpy as np
 from dipy.core.gradients import GradientTable
 from dipy.reconst.base import ReconstModel
@@ -139,7 +137,7 @@ class GaussianProcessModel(ReconstModel):
         self,
         data: np.ndarray,
         gtab: GradientTable | np.ndarray,
-        mask: np.ndarray[bool, Any] | None = None,
+        mask: np.ndarray | None = None,
         random_state: int = 0,
     ) -> GPFit:
         """Fit method of the DTI model class
