@@ -34,6 +34,12 @@ from nifreeze.model.base import BaseModel, ExpectationModel
 
 DEFAULT_S0_CLIP_PERCENTILE = 98
 """Upper percentile threshold for non-diffusion-weighted signal estimation."""
+DWI_OBJECT_ERROR_MSG = "Dataset MUST be a DWI object."
+"""dMRI object error message."""
+DWI_GTAB_ERROR_MSG = "Dataset MUST have a gradient table."
+"""dMRI gradient table error message."""
+DWI_SIZE_ERROR_MSG = "DWI dataset is too small ({directions} directions)."
+"""dMRI dataset size error message."""
 
 
 def _exec_fit(model, data, chunk=None, **kwargs):
@@ -69,15 +75,13 @@ class BaseDWIModel(BaseModel):
 
         # Duck typing, instead of explicitly testing for DWI type
         if not hasattr(dataset, "bzero"):
-            raise TypeError("Dataset MUST be a DWI object.")
+            raise TypeError(DWI_OBJECT_ERROR_MSG)
 
         if not hasattr(dataset, "gradients") or dataset.gradients is None:
-            raise ValueError("Dataset MUST have a gradient table.")
+            raise ValueError(DWI_GTAB_ERROR_MSG)
 
         if len(dataset) < DTI_MIN_ORIENTATIONS:
-            raise ValueError(
-                f"DWI dataset is too small ({dataset.gradients.shape[0]} directions)."
-            )
+            raise ValueError(DWI_SIZE_ERROR_MSG.format(directions=dataset.gradients.shape[0]))
 
         if max_b is not None and max_b > DEFAULT_LOWB_THRESHOLD:
             self._max_b = max_b
