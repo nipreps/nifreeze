@@ -102,6 +102,21 @@ class BaseDataset(Generic[Unpack[Ts]]):
         return self.dataobj.shape[-1]
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[Unpack[Ts]]:
+        """
+        Extracts extra fields synchronized with the indexed access of the corresponding data object.
+
+        Parameters
+        ----------
+        idx : :obj:`int` or :obj:`slice` or :obj:`tuple` or :obj:`~numpy.ndarray`
+            Index (or indexing type/object) for which extra information will be extracted.
+
+        Returns
+        -------
+        :obj:`tuple`
+            A tuple with the extra fields (may be an empty tuple if no extra fields are defined).
+
+        """
+        _ = idx  # Avoid unused parameter warning
         return ()  # type: ignore[return-value]
 
     def __getitem__(
