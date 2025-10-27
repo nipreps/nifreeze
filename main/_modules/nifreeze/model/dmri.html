@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.model.dmri - nifreeze 25.0.0.dev580 documentation</title>
+        <title>nifreeze.model.dmri - nifreeze 25.0.0.dev584 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev580 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev584 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev580</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev584</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev580</span>
+  <span class="sidebar-brand-text">25.0.0.dev584</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -329,6 +329,12 @@
 
 <span class="n">DEFAULT_S0_CLIP_PERCENTILE</span> <span class="o">=</span> <span class="mi">98</span>
 <span class="sd">&quot;&quot;&quot;Upper percentile threshold for non-diffusion-weighted signal estimation.&quot;&quot;&quot;</span>
+<span class="n">DWI_OBJECT_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;Dataset MUST be a DWI object.&quot;</span>
+<span class="sd">&quot;&quot;&quot;dMRI object error message.&quot;&quot;&quot;</span>
+<span class="n">DWI_GTAB_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;Dataset MUST have a gradient table.&quot;</span>
+<span class="sd">&quot;&quot;&quot;dMRI gradient table error message.&quot;&quot;&quot;</span>
+<span class="n">DWI_SIZE_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;DWI dataset is too small (</span><span class="si">{directions}</span><span class="s2"> directions).&quot;</span>
+<span class="sd">&quot;&quot;&quot;dMRI dataset size error message.&quot;&quot;&quot;</span>
 
 
 <span class="k">def</span> <span class="nf">_exec_fit</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">chunk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -366,15 +372,13 @@
 
         <span class="c1"># Duck typing, instead of explicitly testing for DWI type</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="s2">&quot;bzero&quot;</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Dataset MUST be a DWI object.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">DWI_OBJECT_ERROR_MSG</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="s2">&quot;gradients&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">dataset</span><span class="o">.</span><span class="n">gradients</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Dataset MUST have a gradient table.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">DWI_GTAB_ERROR_MSG</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">DTI_MIN_ORIENTATIONS</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;DWI dataset is too small (</span><span class="si">{</span><span class="n">dataset</span><span class="o">.</span><span class="n">gradients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> directions).&quot;</span>
-            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">DWI_SIZE_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">directions</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">gradients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
 
         <span class="k">if</span> <span class="n">max_b</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">max_b</span> <span class="o">&gt;</span> <span class="n">DEFAULT_LOWB_THRESHOLD</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_max_b</span> <span class="o">=</span> <span class="n">max_b</span>
@@ -680,7 +684,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=58f8cbc7"></script>
+</div><script src="../../../_static/documentation_options.js?v=a489d160"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
