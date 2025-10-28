@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.utils.ndimage module" href="nifreeze.utils.ndimage.html"><link rel="prev" title="nifreeze.utils package" href="nifreeze.utils.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.utils.iterators module - nifreeze 25.0.0.dev593 documentation</title>
+        <title>nifreeze.utils.iterators module - nifreeze 25.0.0.dev595 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev593 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev595 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev593</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev595</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev593</span>
+  <span class="sidebar-brand-text">25.0.0.dev595</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -310,7 +310,7 @@
 
 <dl class="py data">
 <dt class="sig sig-object py" id="nifreeze.utils.iterators.ITERATOR_SIZE_ERROR_MSG">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">ITERATOR_SIZE_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Cannot</span> <span class="pre">build</span> <span class="pre">iterator</span> <span class="pre">without</span> <span class="pre">size.'</span></em><a class="headerlink" href="#nifreeze.utils.iterators.ITERATOR_SIZE_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">ITERATOR_SIZE_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;None</span> <span class="pre">of</span> <span class="pre">('size',</span> <span class="pre">'bvals',</span> <span class="pre">'uptake')</span> <span class="pre">were</span> <span class="pre">provided</span> <span class="pre">to</span> <span class="pre">infer</span> <span class="pre">size:</span> <span class="pre">cannot</span> <span class="pre">build</span> <span class="pre">iterator</span> <span class="pre">without</span> <span class="pre">size.&quot;</span></em><a class="headerlink" href="#nifreeze.utils.iterators.ITERATOR_SIZE_ERROR_MSG" title="Link to this definition">¶</a></dt>
 <dd><p>Iterator size argument error message.</p>
 </dd></dl>
 
@@ -318,6 +318,15 @@
 <dt class="sig sig-object py" id="nifreeze.utils.iterators.KWARG_ERROR_MSG">
 <span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">KWARG_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Keyword</span> <span class="pre">argument</span> <span class="pre">{kwarg}</span> <span class="pre">is</span> <span class="pre">required.'</span></em><a class="headerlink" href="#nifreeze.utils.iterators.KWARG_ERROR_MSG" title="Link to this definition">¶</a></dt>
 <dd><p>Iterator keyword argument error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.utils.iterators.SIZE_KEYS">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">SIZE_KEYS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('size',</span> <span class="pre">'bvals',</span> <span class="pre">'uptake')</span></em><a class="headerlink" href="#nifreeze.utils.iterators.SIZE_KEYS" title="Link to this definition">¶</a></dt>
+<dd><p>Keys that may be used to infer the number of volumes in a dataset. When the
+size of the structure to iterate over is not given explicitly, these keys
+correspond to properties that distinguish one imaging modality from another, and
+are part of the 4th axis (e.g. diffusion gradients in DWI or update in PET).</p>
 </dd></dl>
 
 <dl class="py data">
@@ -349,26 +358,27 @@ to generate the volume sequence.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.utils.iterators.centralsym_iterator">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">centralsym_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#centralsym_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.centralsym_iterator" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">centralsym_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#centralsym_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.centralsym_iterator" title="Link to this definition">¶</a></dt>
 <dd><p>Traverse the dataset starting from the center and alternatingly progressing to the sides.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <code class="docutils literal notranslate"><span class="pre">None</span></code>, optional) – Number of volumes in the dataset.
-If <code class="docutils literal notranslate"><span class="pre">None</span></code>, <code class="docutils literal notranslate"><span class="pre">size</span></code> will be inferred from the <code class="docutils literal notranslate"><span class="pre">bvals</span></code> keyword argument.</p>
-</dd>
-<dt class="field-even">Other Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>) – List of b-values corresponding to all orientations of the dataset.
-If <code class="docutils literal notranslate"><span class="pre">size</span></code> is provided, this argument will be ignored.
-Otherwise, <code class="docutils literal notranslate"><span class="pre">size</span></code> will be inferred from the length of <code class="docutils literal notranslate"><span class="pre">bvals</span></code>.</p>
-</dd>
-<dt class="field-odd">Yields<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
+<dt class="field-odd">Other Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> (obj:<cite>int</cite>, optional) – Size of the structure to iterate over.</p></li>
+<li><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of b-values corresponding to all orientations of a DWI dataset.</p></li>
+<li><p><strong>uptake</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of uptake values corresponding to all volumes of the dataset.</p></li>
+</ul>
 </dd>
 </dl>
+<p class="rubric">Notes</p>
+<p>Only one of the above keyword arguments may be provided at a time. If <code class="docutils literal notranslate"><span class="pre">size</span></code>
+is given, all other size-related keyword arguments will be ignored. If <code class="docutils literal notranslate"><span class="pre">size</span></code>
+is not provided, the function will attempt to infer the number of volumes from
+the length or value of the provided keyword argument. If more than one such
+keyword is provided, a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code></a> will be raised.</p>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">centralsym_iterator</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">centralsym_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>
 <span class="go">[5, 4, 6, 3, 7, 2, 8, 1, 9, 0]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">centralsym_iterator</span><span class="p">(</span><span class="mi">11</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">centralsym_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">11</span><span class="p">))</span>
 <span class="go">[5, 4, 6, 3, 7, 2, 8, 1, 9, 0, 10]</span>
 </pre></div>
 </div>
@@ -376,24 +386,30 @@ Otherwise, <code class="docutils literal notranslate"><span class="pre">size</sp
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.utils.iterators.linear_iterator">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">linear_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#linear_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.linear_iterator" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">linear_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#linear_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.linear_iterator" title="Link to this definition">¶</a></dt>
 <dd><p>Traverse the dataset volumes in ascending order.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <code class="docutils literal notranslate"><span class="pre">None</span></code>, optional) – Number of volumes in the dataset.
-If <code class="docutils literal notranslate"><span class="pre">None</span></code>, <code class="docutils literal notranslate"><span class="pre">size</span></code> will be inferred from the <code class="docutils literal notranslate"><span class="pre">bvals</span></code> keyword argument.</p>
+<dt class="field-odd">Other Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> (obj:<cite>int</cite>, optional) – Size of the structure to iterate over.</p></li>
+<li><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of b-values corresponding to all orientations of a DWI dataset.</p></li>
+<li><p><strong>uptake</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of uptake values corresponding to all volumes of the dataset.</p></li>
+</ul>
 </dd>
-<dt class="field-even">Other Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>) – List of b-values corresponding to all orientations of a DWI dataset.
-If <code class="docutils literal notranslate"><span class="pre">size</span></code> is provided, this argument will be ignored.
-Otherwise, <code class="docutils literal notranslate"><span class="pre">size</span></code> will be inferred from the length of <code class="docutils literal notranslate"><span class="pre">bvals</span></code>.</p>
-</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Only one of the above keyword arguments may be provided at a time. If <code class="docutils literal notranslate"><span class="pre">size</span></code>
+is given, all other size-related keyword arguments will be ignored. If <code class="docutils literal notranslate"><span class="pre">size</span></code>
+is not provided, the function will attempt to infer the number of volumes from
+the length or value of the provided keyword argument. If more than one such
+keyword is provided, a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code></a> will be raised.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Yields<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">linear_iterator</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">linear_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>
 <span class="go">[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]</span>
 </pre></div>
 </div>
@@ -401,41 +417,47 @@ Otherwise, <code class="docutils literal notranslate"><span class="pre">size</sp
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.utils.iterators.random_iterator">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">random_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#random_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.random_iterator" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">random_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#random_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.random_iterator" title="Link to this definition">¶</a></dt>
 <dd><p>Traverse the dataset volumes randomly.</p>
 <p>If the <code class="docutils literal notranslate"><span class="pre">seed</span></code> key is present in the keyword arguments, initializes the seed
 of Python’s <code class="docutils literal notranslate"><span class="pre">random</span></code> pseudo-random number generator library with the given
 value. Specifically, if <code class="docutils literal notranslate"><span class="pre">False</span></code>, <code class="docutils literal notranslate"><span class="pre">None</span></code> is used as the seed; if <code class="docutils literal notranslate"><span class="pre">True</span></code>, a
 default seed value is used.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <code class="docutils literal notranslate"><span class="pre">None</span></code>, optional) – Number of volumes in the dataset.
-If <code class="docutils literal notranslate"><span class="pre">None</span></code>, <code class="docutils literal notranslate"><span class="pre">size</span></code> will be inferred from the <code class="docutils literal notranslate"><span class="pre">bvals</span></code> keyword argument.</p>
+<dt class="field-odd">Other Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>seed</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, or <code class="docutils literal notranslate"><span class="pre">None</span></code>) – If <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> or <code class="docutils literal notranslate"><span class="pre">None</span></code>, initializes the seed of Python’s random generator
+with the given value. If <code class="docutils literal notranslate"><span class="pre">False</span></code>, the random generator is passed <code class="docutils literal notranslate"><span class="pre">None</span></code>.
+If <code class="docutils literal notranslate"><span class="pre">True</span></code>, a default seed value is set.</p>
 </dd>
-<dt class="field-even">Other Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>) – List of b-values corresponding to all orientations of a DWI dataset.
-If <code class="docutils literal notranslate"><span class="pre">size</span></code> is provided, this argument will be ignored.
-Otherwise, <code class="docutils literal notranslate"><span class="pre">size</span></code> will be inferred from the length of <code class="docutils literal notranslate"><span class="pre">bvals</span></code>.</p></li>
-<li><p><strong>seed</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, or <code class="docutils literal notranslate"><span class="pre">None</span></code>) – If <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> or <code class="docutils literal notranslate"><span class="pre">None</span></code>, initializes the seed of Python’s random generator
-with the given value.
-If <code class="docutils literal notranslate"><span class="pre">False</span></code>, the random generator is passed <code class="docutils literal notranslate"><span class="pre">None</span></code>.
-If <code class="docutils literal notranslate"><span class="pre">True</span></code>, a default seed value is set.</p></li>
-</ul>
+</dl>
+<dl>
+<dt>size<span class="classifier">obj:<cite>int</cite>, optional</span></dt><dd><p>Size of the structure to iterate over.</p>
 </dd>
+<dt>bvals<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional</span></dt><dd><p>List of b-values corresponding to all orientations of a DWI dataset.</p>
+</dd>
+<dt>uptake<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional</span></dt><dd><p>List of uptake values corresponding to all volumes of the dataset.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Only one of the above keyword arguments may be provided at a time. If <code class="docutils literal notranslate"><span class="pre">size</span></code>
+is given, all other size-related keyword arguments will be ignored. If <code class="docutils literal notranslate"><span class="pre">size</span></code>
+is not provided, the function will attempt to infer the number of volumes from
+the length or value of the provided keyword argument. If more than one such
+keyword is provided, a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code></a> will be raised.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Yields<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>  <span class="c1"># seed is 0</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>  <span class="c1"># seed is 0</span>
 <span class="go">[1, 10, 9, 5, 11, 2, 3, 7, 8, 4, 0, 14, 12, 6, 13]</span>
 <span class="gp">&gt;&gt;&gt; </span> <span class="c1"># seed is True -&gt; the default value 20210324 is set</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 <span class="go">[1, 12, 14, 5, 0, 11, 10, 9, 7, 8, 3, 13, 2, 6, 4]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">20210324</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">20210324</span><span class="p">))</span>
 <span class="go">[1, 12, 14, 5, 0, 11, 10, 9, 7, 8, 3, 13, 2, 6, 4]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">))</span>  <span class="c1"># seed is 42</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">))</span>  <span class="c1"># seed is 42</span>
 <span class="go">[8, 13, 7, 6, 14, 12, 5, 2, 9, 3, 4, 11, 0, 1, 10]</span>
 </pre></div>
 </div>
@@ -526,6 +548,7 @@ to generate the volume sequence.</p>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.BVALS_KWARG"><code class="docutils literal notranslate"><span class="pre">BVALS_KWARG</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.ITERATOR_SIZE_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">ITERATOR_SIZE_ERROR_MSG</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.KWARG_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">KWARG_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.utils.iterators.SIZE_KEYS"><code class="docutils literal notranslate"><span class="pre">SIZE_KEYS</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.UPTAKE_KWARG"><code class="docutils literal notranslate"><span class="pre">UPTAKE_KWARG</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.bvalue_iterator"><code class="docutils literal notranslate"><span class="pre">bvalue_iterator()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.centralsym_iterator"><code class="docutils literal notranslate"><span class="pre">centralsym_iterator()</span></code></a></li>
@@ -543,7 +566,7 @@ to generate the volume sequence.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=0bcf91e9"></script>
+</div><script src="../_static/documentation_options.js?v=643e853d"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
