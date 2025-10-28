@@ -23,6 +23,7 @@
 """Unit tests exercising models."""
 
 import contextlib
+from typing import List
 
 import numpy as np
 import pytest
@@ -43,7 +44,13 @@ from nifreeze.testing import simulations as _sim
 
 
 # Dummy classes to simulate model factory essential features
-class DummyModel:
+class DummyDMRIModel:
+    def __init__(self, dataset, **kwargs):
+        self._dataset = dataset
+        self._kwargs = kwargs
+
+
+class DummyPETModel:
     def __init__(self, dataset, **kwargs):
         self._dataset = dataset
         self._kwargs = kwargs
@@ -302,28 +309,58 @@ def test_factory_avgdwi_variants(monkeypatch, name, setup_random_dwi_data):
 @pytest.mark.parametrize(
     "model_name, expected_cls",
     [
-        ("gqi", DummyModel),
-        ("dti", DummyModel),
-        ("DTI", DummyModel),
-        ("dki", DummyModel),
+        ("gqi", DummyDMRIModel),
+        ("dti", DummyDMRIModel),
+        ("DTI", DummyDMRIModel),
+        ("dki", DummyDMRIModel),
+        ("pet", DummyPETModel),
+        ("PET", DummyPETModel),
     ],
 )
 def test_model_factory_valid_models(monkeypatch, model_name, expected_cls):
+    # Track which module names were requested by the factory
+    imported_modules: List[str] = []
+
     # Monkeypatch import_module to return a dummy module with DTIModel, DKIModel, etc.
     class DummyDMRI:
-        DTIModel = DummyModel
-        DKIModel = DummyModel
-        GQIModel = DummyModel
+        DTIModel = DummyDMRIModel
+        DKIModel = DummyDMRIModel
+        GQIModel = DummyDMRIModel
+
+    class DummyPET:
+        # Use a distinct DummyPETModel so we can explicitly verify the factory
+        # resolves to nifreeze.model.pet:PETModel (not to a dMRI model).
+        PETModel = DummyPETModel
 
     def dummy_import_module(name):
-        assert name == "nifreeze.model.dmri"
-        return DummyDMRI
+        imported_modules.append(name)
+        if name == "nifreeze.model.dmri":
+            return DummyDMRI
+        if name == "nifreeze.model.pet":
+            return DummyPET
+        raise ImportError(f"Unexpected import: {name}")
 
     monkeypatch.setattr("importlib.import_module", dummy_import_module)
     model_instance = model.ModelFactory.init(model_name, dataset=DummyDataset(), extra="value")
-    assert isinstance(model_instance, expected_cls)
+    assert model_instance.__class__ is expected_cls
     assert isinstance(model_instance._dataset, DummyDataset)
     assert model_instance._kwargs.get("extra") == "value"
+
+    # Check the imported modules
+    if model_name.lower() == "pet":
+        assert "nifreeze.model.pet" in imported_modules, (
+            "Factory should import 'nifreeze.model.pet' when model_name is 'pet'"
+        )
+        assert "nifreeze.model.dmri" not in imported_modules, (
+            "Factory should not import 'nifreeze.model.dmri' when resolving PET models"
+        )
+    else:
+        assert "nifreeze.model.dmri" in imported_modules, (
+            "Factory should import 'nifreeze.model.dmri' for dMRI model names"
+        )
+        assert "nifreeze.model.pet" not in imported_modules, (
+            "Factory should not import 'nifreeze.model.pet' when resolving dMRI models"
+        )
 
 
 def test_factory_initializations(datadir):
