@@ -65,7 +65,7 @@ DTI_MIN_ORIENTATIONS = 6
 
 
 @attrs.define(slots=True)
-class DWI(BaseDataset[np.ndarray | None]):
+class DWI(BaseDataset[np.ndarray]):
     """Data representation structure for dMRI data."""
 
     bzero: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
@@ -81,7 +81,7 @@ class DWI(BaseDataset[np.ndarray | None]):
     # For the sake of the docstring
     def __getitem__(
         self, idx: int | slice | tuple | np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None]:
+    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray]:
         """
         Returns volume(s) and corresponding affine(s) and gradient(s) through fancy indexing.
 

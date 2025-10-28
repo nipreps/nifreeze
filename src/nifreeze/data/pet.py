@@ -42,7 +42,7 @@ from nifreeze.utils.ndimage import load_api
 
 
 @attrs.define(slots=True)
-class PET(BaseDataset[np.ndarray | None]):
+class PET(BaseDataset[np.ndarray]):
     """Data representation structure for PET data."""
 
     midframe: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
@@ -58,7 +58,7 @@ class PET(BaseDataset[np.ndarray | None]):
     # For the sake of the docstring
     def __getitem__(
         self, idx: int | slice | tuple | np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None]:
+    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray]:
         """
         Returns volume(s) and corresponding affine(s) and timing(s) through fancy indexing.
 
@@ -75,7 +75,7 @@ class PET(BaseDataset[np.ndarray | None]):
             otherwise it may have shape ``(X, Y, Z, k)``.
         motion_affine : :obj:`~numpy.ndarray` or ``None``
             The corresponding per-volume motion affine(s) or ``None`` if identity transform(s).
-        time : :obj:`float` or ``None``
+        time : :obj:`~numpy.ndarray`
             The frame time corresponding to the index(es).
 
         """

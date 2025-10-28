@@ -96,9 +96,6 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
     def __len__(self) -> int:
         """Obtain the number of volumes/frames in the dataset."""
-        if self.dataobj is None:
-            return 0
-
         return self.dataobj.shape[-1]
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[Unpack[Ts]]:
@@ -140,8 +137,6 @@ class BaseDataset(Generic[Unpack[Ts]]):
             The corresponding per-volume motion affine(s) or ``None`` if identity transform(s).
 
         """
-        if self.dataobj is None:
-            raise ValueError("No data available (dataobj is None).")
 
         affine = self.motion_affines[idx] if self.motion_affines is not None else None
         return self.dataobj[..., idx], affine, *self._getextra(idx)
