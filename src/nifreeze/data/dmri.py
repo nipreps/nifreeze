@@ -81,7 +81,7 @@ class DWI(BaseDataset[np.ndarray]):
     # For the sake of the docstring
     def __getitem__(
         self, idx: int | slice | tuple | np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None]:
+    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray]:
         """
         Returns volume(s) and corresponding affine(s) and gradient(s) through fancy indexing.
 
