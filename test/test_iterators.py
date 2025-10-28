@@ -21,6 +21,8 @@
 #     https://www.nipreps.org/community/licensing/
 #
 
+import re
+
 import pytest
 
 from nifreeze.utils.iterators import (
@@ -85,7 +87,7 @@ def test_value_iterator(values, ascending, round_decimals, expected):
 
 
 def test_linear_iterator_error():
-    with pytest.raises(TypeError, match=ITERATOR_SIZE_ERROR_MSG):
+    with pytest.raises(ValueError, match=re.escape(ITERATOR_SIZE_ERROR_MSG)):
         list(linear_iterator())
 
 
@@ -94,6 +96,7 @@ def test_linear_iterator_error():
     [
         ({"size": 4}, [0, 1, 2, 3]),
         ({"bvals": [0, 1000, 2000, 3000]}, [0, 1, 2, 3]),
+        ({"uptake": [-1.02, -0.56, 0.43, 1.16]}, [0, 1, 2, 3]),
     ],
 )
 def test_linear_iterator(kwargs, expected):
@@ -101,7 +104,7 @@ def test_linear_iterator(kwargs, expected):
 
 
 def test_random_iterator_error():
-    with pytest.raises(TypeError, match=ITERATOR_SIZE_ERROR_MSG):
+    with pytest.raises(ValueError, match=re.escape(ITERATOR_SIZE_ERROR_MSG)):
         list(random_iterator())
 
 
@@ -110,6 +113,7 @@ def test_random_iterator_error():
     [
         ({"size": 5, "seed": 1234}, [1, 2, 4, 0, 3]),
         ({"bvals": [0, 1000, 2000, 3000], "seed": 42}, [2, 1, 3, 0]),
+        ({"uptake": [-1.02, -0.56, 0.43, 1.16], "seed": True}, [3, 0, 1, 2]),
     ],
 )
 def test_random_iterator(kwargs, expected):
@@ -120,7 +124,7 @@ def test_random_iterator(kwargs, expected):
 
 
 def test_centralsym_iterator_error():
-    with pytest.raises(TypeError, match=ITERATOR_SIZE_ERROR_MSG):
+    with pytest.raises(ValueError, match=re.escape(ITERATOR_SIZE_ERROR_MSG)):
         list(random_iterator())
 
 
@@ -131,6 +135,8 @@ def test_centralsym_iterator_error():
         ({"bvals": [1000] * 6}, [3, 2, 4, 1, 5, 0]),
         ({"bvals": [0, 700, 1000, 2000, 3000]}, [2, 1, 3, 0, 4]),
         ({"bvals": [0, 1000, 700, 2000, 3000]}, [2, 1, 3, 0, 4]),
+        ({"uptake": [0.32, 0.27, -0.12]}, [1, 0, 2]),
+        ({"uptake": [-1.02, -0.56, 0.43, 0.89, 1.16]}, [2, 1, 3, 0, 4]),
     ],
 )
 def test_centralsym_iterator(kwargs, expected):
