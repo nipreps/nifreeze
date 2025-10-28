@@ -23,7 +23,6 @@
 """Base infrastructure for nifreeze's models."""
 
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Union
 from warnings import warn
 
 import numpy as np
@@ -104,7 +103,7 @@ class BaseModel(ABC):
             warn(mask_absence_warn_msg, stacklevel=2)
 
     @abstractmethod
-    def fit_predict(self, index: int | None = None, **kwargs) -> Union[np.ndarray, None]:
+    def fit_predict(self, index: int | None = None, **kwargs) -> np.ndarray | None:
         """
         Fit and predict the indicated index of the dataset (abstract signature).
 
@@ -140,7 +139,7 @@ class TrivialModel(BaseModel):
         if self._locked_fit is None:
             raise TypeError("This model requires the predicted map at initialization")
 
-    def fit_predict(self, *_, **kwargs) -> np.ndarray:
+    def fit_predict(self, *_, **kwargs) -> np.ndarray | None:
         """Return the reference map."""
 
         # No need to check fit (if not fitted, has raised already)
