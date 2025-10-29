@@ -218,9 +218,9 @@ class PET(BaseDataset[np.ndarray]):
 
 def from_nii(
     filename: Path | str,
+    frame_time: np.ndarray | list[float],
     brainmask_file: Path | str | None = None,
     motion_file: Path | str | None = None,
-    frame_time: np.ndarray | list[float] | None = None,
     frame_duration: np.ndarray | list[float] | None = None,
 ) -> PET:
     """
@@ -230,14 +230,13 @@ def from_nii(
     ----------
     filename : :obj:`os.pathlike`
         The NIfTI file.
+    frame_time : :obj:`numpy.ndarray` or :obj:`list` of :obj:`float`
+        The start times of each frame relative to the beginning of the acquisition.
     brainmask_file : :obj:`os.pathlike`, optional
         A brainmask NIfTI file. If provided, will be loaded and
         stored in the returned dataset.
     motion_file : :obj:`os.pathlike`, optional
         A file containing head motion affine matrices (linear).
-    frame_time : :obj:`numpy.ndarray` or :obj:`list` of :obj:`float`, optional
-        The start times of each frame relative to the beginning of the acquisition.
-        If ``None``, an error is raised (since BIDS requires ``FrameTimesStart``).
     frame_duration : :obj:`numpy.ndarray` or :obj:`list` of :obj:`float`, optional
         The duration of each frame.
         If ``None``, it is derived by the difference of consecutive frame times,
@@ -254,8 +253,6 @@ def from_nii(
         If ``frame_time`` is not provided (BIDS requires it).
 
     """
-    if frame_time is None:
-        raise RuntimeError("frame_time must be provided")
     if motion_file:
         raise NotImplementedError
 
@@ -270,17 +267,14 @@ def from_nii(
 
     pet_obj.uptake = _compute_uptake_statistic(data, stat_func=np.sum)
 
-    # If the user supplied new values, set them
-    if frame_time is not None:
-        # Convert to a float32 numpy array and zero out the earliest time
-        frame_time_arr = np.array(frame_time, dtype=np.float32)
-        frame_time_arr -= frame_time_arr[0]
-        pet_obj.midframe = frame_time_arr
+    # Convert to a float32 numpy array and zero out the earliest time
+    frame_time_arr = np.array(frame_time, dtype=np.float32)
+    frame_time_arr -= frame_time_arr[0]
+    pet_obj.midframe = frame_time_arr
 
     # If the user doesn't provide frame_duration, we derive it:
     if frame_duration is None:
-        if pet_obj.midframe is not None:
-            durations = _compute_frame_duration(pet_obj.midframe)
+        durations = _compute_frame_duration(pet_obj.midframe)
     else:
         durations = np.array(frame_duration, dtype=np.float32)
 
