@@ -129,12 +129,19 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
         Returns
         -------
-        volumes : :obj:`~numpy.ndarray`
+        :obj:`~numpy.ndarray`
             The selected data subset.
             If ``idx`` is a single integer, this will have shape ``(X, Y, Z)``,
             otherwise it may have shape ``(X, Y, Z, k)``.
-        motion_affine : :obj:`~numpy.ndarray` or ``None``
+        affine : :obj:`~numpy.ndarray` or ``None``
             The corresponding per-volume motion affine(s) or ``None`` if identity transform(s).
+        :obj:`tuple`
+            A variable-length tuple of additional per-volume fields. The precise
+            number, order, and types of elements in this tuple are determined by
+            the type variables :obj:`~nifreeze.data.base.Ts`. Subclasses provide
+            these values by implementing :meth:`_getextra`. If no extra fields
+            are defined, this will be an empty tuple. When a single extra field
+            is present, it appears as a one-element tuple.
 
         """
 
