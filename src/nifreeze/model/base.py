@@ -27,9 +27,12 @@ from warnings import warn
 
 import numpy as np
 
-mask_absence_warn_msg = (
+MASK_ABSENCE_WARN_MSG = (
     "No mask provided; consider using a mask to avoid issues in model optimization."
 )
+"""Mask warning message."""
+PREDICTED_MAP_ERROR_MSG = "This model requires the predicted map at initialization"
+"""Oracle requirement error message."""
 UNSUPPORTED_MODEL_ERROR_MSG = "Unsupported model <{model}>."
 """Unsupported model error message"""
 
@@ -102,7 +105,7 @@ class BaseModel(ABC):
         self._dataset = dataset
         # Warn if mask not present
         if dataset.brainmask is None:
-            warn(mask_absence_warn_msg, stacklevel=2)
+            warn(MASK_ABSENCE_WARN_MSG, stacklevel=2)
 
     @abstractmethod
     def fit_predict(self, index: int | None = None, **kwargs) -> np.ndarray | None:
@@ -139,7 +142,7 @@ class TrivialModel(BaseModel):
         )
 
         if self._locked_fit is None:
-            raise TypeError("This model requires the predicted map at initialization")
+            raise TypeError(PREDICTED_MAP_ERROR_MSG)
 
     def fit_predict(self, *_, **kwargs) -> np.ndarray | None:
         """Return the reference map."""

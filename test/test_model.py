@@ -39,7 +39,11 @@ from nifreeze.data.dmri import (
     DWI,
 )
 from nifreeze.model._dipy import GaussianProcessModel
-from nifreeze.model.base import UNSUPPORTED_MODEL_ERROR_MSG, mask_absence_warn_msg
+from nifreeze.model.base import (
+    MASK_ABSENCE_WARN_MSG,
+    PREDICTED_MAP_ERROR_MSG,
+    UNSUPPORTED_MODEL_ERROR_MSG,
+)
 from nifreeze.testing import simulations as _sim
 
 
@@ -60,6 +64,12 @@ class DummyDataset:
     pass
 
 
+class DummyDatasetNoRef:
+    def __init__(self):
+        # No reference or bzero here to trigger TrivialModel error
+        self.brainmask = np.ones((1, 1, 1, 1)).astype(bool)
+
+
 def test_base_model():
     from nifreeze.model.base import BaseModel
 
@@ -78,8 +88,8 @@ def test_trivial_model(request, use_mask):
     rng = request.node.rng
 
     # Should not allow initialization without an oracle
-    with pytest.raises(TypeError):
-        model.TrivialModel()  # type: ignore[call-arg]
+    with pytest.raises(TypeError, match=PREDICTED_MAP_ERROR_MSG):
+        model.TrivialModel(DummyDatasetNoRef())
 
     size = (2, 2, 2)
     mask = None
@@ -88,7 +98,7 @@ def test_trivial_model(request, use_mask):
         mask = np.ones(size, dtype=bool)
         context = contextlib.nullcontext()
     else:
-        context = pytest.warns(UserWarning, match=mask_absence_warn_msg)
+        context = pytest.warns(UserWarning, match=MASK_ABSENCE_WARN_MSG)
 
     _S0 = rng.normal(size=size)
 
