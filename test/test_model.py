@@ -60,6 +60,12 @@ class DummyDataset:
     pass
 
 
+class DummyDatasetNoRef:
+    def __init__(self):
+        # No reference or bzero here to trigger TrivialModel error
+        self.brainmask = np.ones((1, 1, 1, 1)).astype(bool)
+
+
 def test_base_model():
     from nifreeze.model.base import BaseModel
 
@@ -79,7 +85,7 @@ def test_trivial_model(request, use_mask):
 
     # Should not allow initialization without an oracle
     with pytest.raises(TypeError):
-        model.TrivialModel()  # type: ignore[call-arg]
+        model.TrivialModel(DummyDatasetNoRef())
 
     size = (2, 2, 2)
     mask = None
