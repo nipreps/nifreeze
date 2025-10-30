@@ -112,6 +112,57 @@ def test_trivial_model(request, use_mask):
     assert np.all(_clipped_S0 == predicted)
 
 
+def test_expectation_model(request):
+    class DummySequenceDataset:
+        def __init__(self, data, brainmask):
+            # data_4d shape is (x,y,z,t)
+            self.data = data
+            self.brainmask = brainmask
+
+        def __len__(self):
+            # pretend T timepoints
+            return self.data.shape[-1]
+
+        def __getitem__(self, index):
+            # When index is boolean mask, emulate the original dataset behavior:
+            # return a tuple whose first element is the 4D data subset
+            if isinstance(index, (list, tuple, np.ndarray)):
+                # Boolean indexing along time axis
+                sel = np.asarray(index, dtype=bool)
+                # Create subset along last axis and return as first element in tuple
+                return (self.data[..., sel],)
+            # Other cases: forward slice/index to the timepoint
+            return (self.data[..., index],)
+
+    # Create a dataset with a single voxel and 4 timepoints
+    vals = np.array([1.0, 2.0, 3.0, 4.0], dtype=float)
+    _data = vals.reshape((1, 1, 1, -1))
+    _brainmask = request.node.rng.choice([True, False], size=_data.shape[:3])
+    dataset = DummySequenceDataset(_data, _brainmask)
+
+    stat = "mean"
+    avg_func = getattr(np, stat)
+    em_model = model.ExpectationModel(dataset, stat=stat)
+
+    # Calling with index specified should exclude that index and return the
+    # immediate value
+    # exclude index 1 => use timepoints 0,2,3 -> mean of [1,3,4] = 8/3
+    _index = 1
+    index_mask = np.ones(len(dataset), dtype=bool)
+    index_mask[_index] = False
+    pred = em_model.fit_predict(index=1)
+    assert np.allclose(pred, avg_func(dataset[index_mask][0], axis=-1))
+
+    # First call with index=None should compute and lock the fit
+    pred = em_model.fit_predict(index=None)
+    assert em_model._locked_fit is not None
+    assert np.allclose(pred, em_model._locked_fit)
+    assert np.allclose(pred, avg_func(_data, axis=-1))
+    # Calling again returns the locked fit
+    pred2 = em_model.fit_predict(index=None)
+    assert pred2 is pred
+
+
 def test_average_model():
     """Check the implementation of the average DW model."""
 
