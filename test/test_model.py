@@ -39,7 +39,11 @@ from nifreeze.data.dmri import (
     DWI,
 )
 from nifreeze.model._dipy import GaussianProcessModel
-from nifreeze.model.base import UNSUPPORTED_MODEL_ERROR_MSG, mask_absence_warn_msg
+from nifreeze.model.base import (
+    PREDICTED_MAP_ERROR_MSG,
+    UNSUPPORTED_MODEL_ERROR_MSG,
+    mask_absence_warn_msg,
+)
 from nifreeze.testing import simulations as _sim
 
 
@@ -84,7 +88,7 @@ def test_trivial_model(request, use_mask):
     rng = request.node.rng
 
     # Should not allow initialization without an oracle
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match=PREDICTED_MAP_ERROR_MSG):
         model.TrivialModel(DummyDatasetNoRef())
 
     size = (2, 2, 2)

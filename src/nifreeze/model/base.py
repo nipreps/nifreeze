@@ -30,6 +30,8 @@ import numpy as np
 mask_absence_warn_msg = (
     "No mask provided; consider using a mask to avoid issues in model optimization."
 )
+PREDICTED_MAP_ERROR_MSG = "This model requires the predicted map at initialization"
+"""Oracle requirement error message."""
 UNSUPPORTED_MODEL_ERROR_MSG = "Unsupported model <{model}>."
 """Unsupported model error message"""
 
@@ -139,7 +141,7 @@ class TrivialModel(BaseModel):
         )
 
         if self._locked_fit is None:
-            raise TypeError("This model requires the predicted map at initialization")
+            raise TypeError(PREDICTED_MAP_ERROR_MSG)
 
     def fit_predict(self, *_, **kwargs) -> np.ndarray | None:
         """Return the reference map."""
