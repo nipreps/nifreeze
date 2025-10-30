@@ -26,6 +26,9 @@ import random
 from itertools import chain, zip_longest
 from typing import Iterator
 
+DEFAULT_ROUND_DECIMALS = 2
+"""Round decimals to use when comparing values to be sorted for iteration purposes."""
+
 SIZE_KEYS = ("size", "bvals", "uptake")
 """Keys that may be used to infer the number of volumes in a dataset. When the
 size of the structure to iterate over is not given explicitly, these keys
@@ -168,7 +171,9 @@ Examples
 """
 
 
-def _value_iterator(values: list, ascending: bool, round_decimals: int = 2) -> Iterator[int]:
+def _value_iterator(
+    values: list, ascending: bool, round_decimals: int = DEFAULT_ROUND_DECIMALS
+) -> Iterator[int]:
     """
     Traverse the given values in ascending or descenting order.
 
@@ -231,7 +236,9 @@ def bvalue_iterator(*_, **kwargs) -> Iterator[int]:
     bvals = kwargs.pop(BVALS_KWARG, None)
     if bvals is None:
         raise TypeError(KWARG_ERROR_MSG.format(kwarg=BVALS_KWARG))
-    return _value_iterator(bvals, ascending=True, **kwargs)
+    return _value_iterator(
+        bvals, ascending=True, round_decimals=kwargs.pop("round_decimals", DEFAULT_ROUND_DECIMALS)
+    )
 
 
 def uptake_iterator(*_, **kwargs) -> Iterator[int]:
@@ -263,7 +270,11 @@ def uptake_iterator(*_, **kwargs) -> Iterator[int]:
     uptake = kwargs.pop(UPTAKE_KWARG, None)
     if uptake is None:
         raise TypeError(KWARG_ERROR_MSG.format(kwarg=UPTAKE_KWARG))
-    return _value_iterator(uptake, ascending=False, **kwargs)
+    return _value_iterator(
+        uptake,
+        ascending=False,
+        round_decimals=kwargs.pop("round_decimals", DEFAULT_ROUND_DECIMALS),
+    )
 
 
 def centralsym_iterator(**kwargs) -> Iterator[int]:

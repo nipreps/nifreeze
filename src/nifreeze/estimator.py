@@ -125,7 +125,13 @@ class Estimator:
 
         # Prepare iterator
         iterfunc = getattr(iterators, f"{self._strategy}_iterator")
-        index_iter = iterfunc(size=len(dataset), seed=kwargs.get("seed", None))
+        index_iter = iterfunc(
+            size=len(dataset),
+            bvals=kwargs.pop("bvals", None),
+            uptake=kwargs.pop("uptake", None),
+            seed=kwargs.get("seed", None),
+            round_decimals=kwargs.pop("round_decimals", iterators.DEFAULT_ROUND_DECIMALS),
+        )
 
         # Initialize model
         if isinstance(self._model, str):
