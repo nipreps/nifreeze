@@ -184,11 +184,18 @@ def test_pet_set_transform_updates_motion_affines(random_dataset):
 
 
 @pytest.mark.random_uniform_spatial_data((2, 2, 2, 2), 0.0, 1.0)
-def test_pet_load(setup_random_uniform_spatial_data, tmp_path):
+def test_pet_load(request, tmp_path, setup_random_uniform_spatial_data):
     data, affine = setup_random_uniform_spatial_data
     img = nb.Nifti1Image(data, affine)
     fname = tmp_path / "pet.nii.gz"
     img.to_filename(fname)
+
+    brainmask_dataobj = request.node.rng.choice([True, False], size=data.shape[:3]).astype(
+        np.uint8
+    )
+    brainmask = nb.Nifti1Image(brainmask_dataobj, affine)
+    brainmask_fname = tmp_path / "brainmask.nii.gz"
+    brainmask.to_filename(brainmask_fname)
 
     json_file = tmp_path / "pet.json"
     metadata = {
@@ -197,8 +204,10 @@ def test_pet_load(setup_random_uniform_spatial_data, tmp_path):
     }
     json_file.write_text(json.dumps(metadata))
 
-    pet_obj = PET.load(fname, json_file)
+    pet_obj = PET.load(fname, json_file, brainmask_fname)
 
     assert pet_obj.dataobj.shape == data.shape
     assert np.allclose(pet_obj.midframe, [0.5, 1.5])
     assert pet_obj.total_duration == 2.0
+    if pet_obj.brainmask is not None:
+        assert pet_obj.brainmask.shape == brainmask_dataobj.shape
