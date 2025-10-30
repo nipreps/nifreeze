@@ -135,13 +135,16 @@ class BaseDataset(Generic[Unpack[Ts]]):
             otherwise it may have shape ``(X, Y, Z, k)``.
         affine : :obj:`~numpy.ndarray` or ``None``
             The corresponding per-volume motion affine(s) or ``None`` if identity transform(s).
-        :obj:`tuple`
-            A variable-length tuple of additional per-volume fields. The precise
-            number, order, and types of elements in this tuple are determined by
-            the type variables :obj:`~nifreeze.data.base.Ts`. Subclasses provide
-            these values by implementing :meth:`_getextra`. If no extra fields
-            are defined, this will be an empty tuple. When a single extra field
-            is present, it appears as a one-element tuple.
+        Unpack[:obj:`~nifreeze.data.base.Ts`]
+            Zero or more additional per-volume fields returned as unpacked
+            trailing elements. The exact number, order, and types of elements
+            are determined by the type variables :obj:`~nifreeze.data.base.Ts`
+            and by the values returned from :meth:`_getextra`. Subclasses
+            provide these values by implementing :meth:`_getextra`. If no extra
+            fields are defined, no element is returned.
+            Example usages:
+            - vols, aff, *extras = dataset[0:10]
+            - vol, aff, bvecs, bvals = dataset[0]  # when two extras are present
 
         """
 
