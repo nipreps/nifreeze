@@ -40,9 +40,9 @@ from nifreeze.data.dmri import (
 )
 from nifreeze.model._dipy import GaussianProcessModel
 from nifreeze.model.base import (
+    MASK_ABSENCE_WARN_MSG,
     PREDICTED_MAP_ERROR_MSG,
     UNSUPPORTED_MODEL_ERROR_MSG,
-    mask_absence_warn_msg,
 )
 from nifreeze.testing import simulations as _sim
 
@@ -98,7 +98,7 @@ def test_trivial_model(request, use_mask):
         mask = np.ones(size, dtype=bool)
         context = contextlib.nullcontext()
     else:
-        context = pytest.warns(UserWarning, match=mask_absence_warn_msg)
+        context = pytest.warns(UserWarning, match=MASK_ABSENCE_WARN_MSG)
 
     _S0 = rng.normal(size=size)
 
