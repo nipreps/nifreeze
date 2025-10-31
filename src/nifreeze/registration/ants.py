@@ -35,6 +35,7 @@ import nitransforms as nt
 import numpy as np
 from nipype.interfaces.ants.registration import Registration
 from nitransforms.linear import Affine
+from nitransforms.resampling import apply
 
 PARAMETERS_SINGLE_VALUE = {
     "collapse_output_transforms",
@@ -494,7 +495,7 @@ def _run_registration(
         ),
     )
     # debugging: generate aligned file for testing
-    xform.apply(moving_path, reference=fixed_path).to_filename(
+    apply(xform, moving_path, reference=fixed_path).to_filename(
         dirname / f"dbg_{vol_idx:05d}.nii.gz"
     )
 

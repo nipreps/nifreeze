@@ -58,7 +58,7 @@ def test_ANTs_config_b0(datadir, tmp_path, dataset, r_x, r_y, r_z, t_x, t_y, t_z
     T = from_matvec(euler2mat(x=r_x, y=r_y, z=r_z), (t_x, t_y, t_z))
     xfm = nt.linear.Affine(T, reference=b0nii)
 
-    (~xfm).apply(b0nii, reference=b0nii).to_filename(moving)
+    nt.resampling.apply(~xfm, b0nii, reference=b0nii).to_filename(moving)
 
     registration = Registration(
         terminal_output="file",

@@ -164,7 +164,7 @@ def main() -> None:
         _, brain_mask = median_otsu(dwi_data, vol_idx=[0])
 
     dwi_data_masked = dwi_data.copy()
-    dwi_data_masked[~brain_mask, :] = 0
+    dwi_data_masked[~brain_mask.astype(bool), :] = 0
 
     # Create a CSD model
     response, ratio = auto_response_ssst(

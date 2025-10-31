@@ -113,13 +113,13 @@ def motion_data(tmp_path_factory, datadir):
     )
 
     # Induce motion into dataset (i.e., apply the inverse transforms)
-    moved_nii = (~xfms).apply(b0nii, reference=b0nii)
+    moved_nii = nt.resampling.apply(~xfms, b0nii, reference=b0nii)
 
     # Save the moved dataset for debugging or further processing
     moved_path = tmp_path / "test.nii.gz"
     ground_truth_path = tmp_path / "ground_truth.nii.gz"
     moved_nii.to_filename(moved_path)
-    xfms.apply(moved_nii).to_filename(ground_truth_path)
+    nt.resampling.apply(xfms, moved_nii).to_filename(ground_truth_path)
 
     # Wrap into dataset object
     dwi_motion = DWI(

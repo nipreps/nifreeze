@@ -125,7 +125,7 @@ async def train_coro(
 
             index = i * len(REFERENCES) + j
             moving_path = tmp_folder / f"test-{index:04d}.nii.gz"
-            (~xfm).apply(refnii, reference=refnii).to_filename(moving_path)
+            nt.resampling.apply(~xfm, refnii, reference=refnii).to_filename(moving_path)
 
             _kwargs = {"output_transform_prefix": f"conversion-{index:04d}", **align_kwargs}
 
