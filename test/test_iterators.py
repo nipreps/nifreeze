@@ -31,11 +31,10 @@ from nifreeze.utils.iterators import (
     KWARG_ERROR_MSG,
     UPTAKE_KWARG,
     _value_iterator,
-    bvalue_iterator,
     centralsym_iterator,
     linear_iterator,
+    monotonic_value_iterator,
     random_iterator,
-    uptake_iterator,
 )
 
 
@@ -144,43 +143,46 @@ def test_centralsym_iterator(kwargs, expected):
     assert list(centralsym_iterator(**kwargs)) == expected
 
 
-def test_bvalue_iterator_error():
-    with pytest.raises(TypeError, match=KWARG_ERROR_MSG.format(kwarg=BVALS_KWARG)):
-        list(bvalue_iterator())
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {},
+        {"bvals": None},
+        {"uptake": None},
+        {"bvals": None, "uptake": None},
+    ],
+)
+def test_monotonic_value_iterator_error(kwargs):
+    with pytest.raises(
+        TypeError, match=KWARG_ERROR_MSG.format(kwarg=f"{BVALS_KWARG} or {UPTAKE_KWARG}")
+    ):
+        monotonic_value_iterator(**kwargs)
+
+
+def test_monotonic_value_iterator_sorting_preference():
+    result = list(monotonic_value_iterator(bvals=[700, 1000], uptake=[0.14, 0.23, 0.47]))
+    assert result == [0, 1]
+
+    result = list(monotonic_value_iterator(bvals=None, uptake=[0.14, 0.23, 0.47]))
+    assert result == [2, 1, 0]
 
 
 @pytest.mark.parametrize(
-    "bvals, expected",
+    "feature, values, expected",
     [
-        ([0, 700, 1200], [0, 1, 2]),
-        ([0, 0, 1000, 700], [0, 1, 3, 2]),
-        ([0, 1000, 1500, 700, 2000], [0, 3, 1, 2, 4]),
+        ("bvals", [0, 700, 1200], [0, 1, 2]),
+        ("bvals", [0, 0, 1000, 700], [0, 1, 3, 2]),
+        ("bvals", [0, 1000, 1500, 700, 2000], [0, 3, 1, 2, 4]),
+        ("uptake", [0.3, 0.2, 0.1], [0, 1, 2]),
+        ("uptake", [0.2, 0.1, 0.3], [2, 1, 0]),
+        ("uptake", [-1.02, 1.16, -0.56, 0.43], [1, 3, 2, 0]),
     ],
 )
-def test_bvalue_iterator(bvals, expected):
-    obtained = list(bvalue_iterator(bvals=bvals))
-    assert set(obtained) == set(range(len(bvals)))
-    # Should be ordered by increasing bvalue
-    sorted_bvals = [bvals[i] for i in obtained]
-    assert sorted_bvals == sorted(bvals)
-
-
-def test_uptake_iterator_error():
-    with pytest.raises(TypeError, match=KWARG_ERROR_MSG.format(kwarg=UPTAKE_KWARG)):
-        list(uptake_iterator())
-
-
-@pytest.mark.parametrize(
-    "uptake, expected",
-    [
-        ([0.3, 0.2, 0.1], [0, 1, 2]),
-        ([0.2, 0.1, 0.3], [2, 1, 0]),
-        ([-1.02, 1.16, -0.56, 0.43], [1, 3, 2, 0]),
-    ],
-)
-def test_uptake_iterator_valid(uptake, expected):
-    obtained = list(uptake_iterator(uptake=uptake))
-    assert set(obtained) == set(range(len(uptake)))
-    # Should be ordered by decreasing uptake
-    sorted_uptake = [uptake[i] for i in obtained]
-    assert sorted_uptake == sorted(uptake, reverse=True)
+def test_monotonic_value_iterator(feature, values, expected):
+    obtained = list(monotonic_value_iterator(**{feature: values}))
+    assert set(obtained) == set(range(len(values)))
+    # If b-values, should be ordered by increasing value; if uptake values,
+    # should be ordered by decreasing uptake
+    sorted_vals = [values[i] for i in obtained]
+    reverse = True if feature == "uptake" else False
+    assert sorted_vals == sorted(values, reverse=reverse)
