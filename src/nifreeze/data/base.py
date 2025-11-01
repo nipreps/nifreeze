@@ -43,6 +43,21 @@ NFDH5_EXT = ".h5"
 
 ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
 
+DATAOBJ_ABSENCE_ERROR_MSG = "BaseDataset 'dataobj' may not be None"
+"""BaseDataset initialization dataobj absence error message."""
+
+DATAOBJ_NDIM_ERROR_MSG = "BaseDataset 'dataobj' must be a 4-D numpy array"
+"""BaseDataset initialization dataobj dimensionality error message."""
+
+AFFINE_ABSENCE_ERROR_MSG = "BaseDataset 'affine' may not be None"
+"""BaseDataset initialization affine absence error message."""
+
+AFFINE_SHAPE_ERROR_MSG = "BaseDataset 'affine' must be a 2-D numpy array (4 x 4)"
+"""BaseDataset initialization affine shape error message."""
+
+BRAINMASK_SHAPE_MISMATCH_ERROR_MSG = "BaseDataset brainmask shape ({brainmask_shape}) does not match dataset volumes ({data_shape})."
+"""BaseDataset brainmask shape mismatch error message."""
+
 
 def _data_repr(value: np.ndarray | None) -> str:
     if value is None:
@@ -55,6 +70,20 @@ def _cmp(lh: Any, rh: Any) -> bool:
         return np.allclose(lh, rh)
 
     return lh == rh
+
+
+def _dataobj_validator(inst, attr, value) -> None:
+    if value is None:
+        raise ValueError(DATAOBJ_ABSENCE_ERROR_MSG)
+    if not isinstance(value, np.ndarray) or value.ndim != 4:
+        raise ValueError(DATAOBJ_NDIM_ERROR_MSG)
+
+
+def _affine_validator(inst, attr, value) -> None:
+    if value is None:
+        raise ValueError(AFFINE_ABSENCE_ERROR_MSG)
+    if not isinstance(value, np.ndarray) or value.shape != (4, 4):
+        raise ValueError(AFFINE_SHAPE_ERROR_MSG)
 
 
 @attrs.define(slots=True)
@@ -74,9 +103,13 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
     """
 
-    dataobj: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
+    dataobj: np.ndarray = attrs.field(
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=_dataobj_validator
+    )
     """A :obj:`~numpy.ndarray` object for the data array."""
-    affine: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
+    affine: np.ndarray = attrs.field(
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=_affine_validator
+    )
     """Best affine for RAS-to-voxel conversion of coordinates (NIfTI header)."""
     brainmask: np.ndarray | None = attrs.field(
         default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp)
@@ -93,6 +126,20 @@ class BaseDataset(Generic[Unpack[Ts]]):
         eq=False,
     )
     """A path to an HDF5 file to store the whole dataset."""
+
+    def __attrs_post_init__(self) -> None:
+        """Check h that rely on the fully initialized object.
+
+        - brainmask (if present) must match spatial shape of dataobj.
+        """
+
+        if self.brainmask is not None:
+            if self.brainmask.shape != tuple(self.dataobj.shape[:3]):
+                raise ValueError(
+                    BRAINMASK_SHAPE_MISMATCH_ERROR_MSG.format(
+                        brainmask_shape=self.brainmask.shape, data_shape=self.dataobj.shape[:3]
+                    )
+                )
 
     def __len__(self) -> int:
         """Obtain the number of volumes/frames in the dataset."""

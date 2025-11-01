@@ -39,6 +39,17 @@ from typing_extensions import Self
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr
 from nifreeze.utils.ndimage import get_data, load_api
 
+GRADIENT_ABSENCE_ERROR_MSG = "DWI 'gradients' may not be None"
+"""DWI initialization gradient absence error message."""
+
+GRADIENT_SHAPE_ERROR_MSG = "DWI 'gradients' must be a 2-D numpy array (4 x N)"
+"""DWI initialization gradient shape error message."""
+
+GRADIENT_COUNT_MISMATCH_ERROR_MSG = (
+    "DWI gradients count ({n_gradients}) does not match dataset volumes ({data_vols})."
+)
+"""DWI initialization gradient count mismatch error message."""
+
 DEFAULT_CLIP_PERCENTILE = 75
 """Upper percentile threshold for intensity clipping."""
 
@@ -64,16 +75,53 @@ DTI_MIN_ORIENTATIONS = 6
 """Minimum number of nonzero b-values in a DWI dataset."""
 
 
+def _gradients_validator(inst, attr, value) -> None:
+    if value is None:
+        raise ValueError(GRADIENT_ABSENCE_ERROR_MSG)
+    if not isinstance(value, np.ndarray) or value.shape[0] != 4:
+        raise ValueError(GRADIENT_SHAPE_ERROR_MSG)
+
+
 @attrs.define(slots=True)
 class DWI(BaseDataset[np.ndarray]):
     """Data representation structure for dMRI data."""
 
     bzero: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
     """A *b=0* reference map, preferably obtained by some smart averaging."""
-    gradients: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
+    gradients: np.ndarray = attrs.field(
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=_gradients_validator
+    )
     """A 2D numpy array of the gradient table (4xN)."""
     eddy_xfms: list = attrs.field(default=None)
     """List of transforms to correct for estimated eddy current distortions."""
+
+    def __attrs_post_init__(self) -> None:
+        """Enforce presence and basic consistency of required dMRI fields at
+        instantiation time.
+
+        Specifically, the number of gradient directions must match the last
+        dimension of the data (number of volumes).
+        """
+
+        # If the data object exists and has a time/volume axis, ensure sizes
+        # match.
+        data_vols = None
+        if getattr(self, "dataobj", None) is not None:
+            shape = getattr(self.dataobj, "shape", None)
+            if isinstance(shape, (tuple, list)) and len(shape) >= 1:
+                try:
+                    data_vols = int(shape[-1])
+                except (TypeError, ValueError):
+                    data_vols = None
+
+        if data_vols is not None:
+            n_gradients = self.gradients.shape[1]
+            if n_gradients != data_vols:
+                raise ValueError(
+                    GRADIENT_COUNT_MISMATCH_ERROR_MSG.format(
+                        n_gradients=n_gradients, data_vols=data_vols
+                    )
+                )
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray]:
         return (self.gradients[..., idx],)
