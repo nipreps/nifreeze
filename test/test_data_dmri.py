@@ -22,6 +22,7 @@
 #
 """Unit tests exercising the dMRI data structure."""
 
+import re
 from pathlib import Path
 
 import nibabel as nb
@@ -29,7 +30,15 @@ import numpy as np
 import pytest
 
 from nifreeze.data import load
-from nifreeze.data.dmri import DWI, find_shelling_scheme, from_nii, transform_fsl_bvec
+from nifreeze.data.dmri import (
+    DWI,
+    GRADIENT_ABSENCE_ERROR_MSG,
+    GRADIENT_COUNT_MISMATCH_ERROR_MSG,
+    GRADIENT_SHAPE_ERROR_MSG,
+    find_shelling_scheme,
+    from_nii,
+    transform_fsl_bvec,
+)
 from nifreeze.utils.ndimage import load_api
 
 
@@ -75,6 +84,36 @@ def test_main(datadir):
     input_file = datadir / "dwi.h5"
 
     assert isinstance(load(input_file), DWI)
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
+def test_missing_gradients_error(setup_random_uniform_spatial_data):
+    data, affine = setup_random_uniform_spatial_data
+    with pytest.raises(ValueError, match=GRADIENT_ABSENCE_ERROR_MSG):
+        DWI(dataobj=data, affine=affine)
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
+def test_gradients_shape_error(setup_random_uniform_spatial_data):
+    data, affine = setup_random_uniform_spatial_data
+    gradients = np.zeros((3, data.shape[-1]))
+    with pytest.raises(ValueError, match=re.escape(GRADIENT_SHAPE_ERROR_MSG)):
+        DWI(dataobj=data, affine=affine, gradients=gradients)
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
+def test_gradients_volume_mismatch_error(setup_random_uniform_spatial_data):
+    data, affine = setup_random_uniform_spatial_data
+    data_vols = data.shape[-1]
+    n_gradients = data_vols + 1
+    gradients = np.zeros((4, n_gradients))
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            GRADIENT_COUNT_MISMATCH_ERROR_MSG.format(n_gradients=n_gradients, data_vols=data_vols)
+        ),
+    ):
+        DWI(dataobj=data, affine=affine, gradients=gradients)
 
 
 @pytest.mark.parametrize("insert_b0", (False, True))

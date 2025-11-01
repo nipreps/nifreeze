@@ -40,17 +40,69 @@ from typing_extensions import Self
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr
 from nifreeze.utils.ndimage import load_api
 
+ARRAY_ATTRIBUTE_SHAPE_ERROR_MSG = "PET {attribute} must be a 1-D numpy array."
+"""PET array attribute shape error message."""
+
+SCALAR_ATTRIBUTE_ERROR_MSG = "PET {attribute} must be a scalar."
+"""PET scalar attribute shape error message."""
+
+ATTRIBUTE_SHAPE_MISMATCH_ERROR_MSG = (
+    "PET {attribute} length ({attr_len}) does not match number of frames ({data_frames})"
+)
+"""PET attribute shape mismatch error message."""
+
+
+def _1d_array_validator(inst, attr, value) -> None:
+    if not isinstance(value, np.ndarray) or value.ndim != 1:
+        raise ValueError(ARRAY_ATTRIBUTE_SHAPE_ERROR_MSG.format(attribute=attr.name))
+
+
+def _scalar_validator(inst, attr, value) -> None:
+    if not isinstance(value, (int, float, np.integer, np.floating)):
+        raise ValueError(SCALAR_ATTRIBUTE_ERROR_MSG.format(attribute=attr.name))
+
 
 @attrs.define(slots=True)
 class PET(BaseDataset[np.ndarray]):
     """Data representation structure for PET data."""
 
-    midframe: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
+    midframe: np.ndarray = attrs.field(
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=_1d_array_validator
+    )
     """A (N,) numpy array specifying the midpoint timing of each sample or frame."""
-    total_duration: float = attrs.field(default=None, repr=True)
+    total_duration: float = attrs.field(default=None, repr=True, validator=_scalar_validator)
     """A float representing the total duration of the dataset."""
-    uptake: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
+    uptake: np.ndarray = attrs.field(
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=_1d_array_validator
+    )
     """A (N,) numpy array specifying the uptake value of each sample or frame."""
+
+    def __attrs_post_init__(self) -> None:
+        """Enforce presence and basic consistency of required PET fields at
+        instantiation time.
+
+        Specifically, the length of the midframe and uptake attributes must
+        match the last  dimension of the data (number of frames).
+        """
+        data_frames = int(self.dataobj.shape[-1])
+
+        if len(self.midframe) != data_frames:
+            raise ValueError(
+                ATTRIBUTE_SHAPE_MISMATCH_ERROR_MSG.format(
+                    attribute=attrs.fields_dict(self.__class__)["midframe"].name,
+                    attr_len=len(self.midframe),
+                    data_frames=data_frames,
+                )
+            )
+
+        if len(self.uptake) != data_frames:
+            raise ValueError(
+                ATTRIBUTE_SHAPE_MISMATCH_ERROR_MSG.format(
+                    attribute=attrs.fields_dict(self.__class__)["uptake"].name,
+                    attr_len=len(self.uptake),
+                    data_frames=data_frames,
+                )
+            )
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray]:
         return (self.midframe[idx],)

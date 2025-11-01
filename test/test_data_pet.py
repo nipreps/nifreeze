@@ -22,6 +22,7 @@
 #
 
 import json
+import re
 from pathlib import Path
 
 import nibabel as nb
@@ -29,7 +30,15 @@ import numpy as np
 import pytest
 from nitransforms.linear import Affine
 
-from nifreeze.data.pet import PET, _compute_frame_duration, _compute_uptake_statistic, from_nii
+from nifreeze.data.pet import (
+    ARRAY_ATTRIBUTE_SHAPE_ERROR_MSG,
+    ATTRIBUTE_SHAPE_MISMATCH_ERROR_MSG,
+    PET,
+    SCALAR_ATTRIBUTE_ERROR_MSG,
+    _compute_frame_duration,
+    _compute_uptake_statistic,
+    from_nii,
+)
 from nifreeze.utils.ndimage import load_api
 
 
@@ -61,6 +70,98 @@ def random_nifti_file(tmp_path, setup_random_uniform_spatial_data) -> Path:
     _img = nb.Nifti1Image(_data, _affine)
     _img.to_filename(_filename)
     return _filename
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
+@pytest.mark.parametrize("size", ((2, 1), (1, 2), (3, 1), (3, 2)))
+def test_pet_midframe_shape_error(setup_random_uniform_spatial_data, size):
+    data, affine = setup_random_uniform_spatial_data
+    midframe = np.zeros(size, dtype=np.float32)
+    with pytest.raises(
+        ValueError, match=ARRAY_ATTRIBUTE_SHAPE_ERROR_MSG.format(attribute="midframe")
+    ):
+        PET(dataobj=data, affine=affine, midframe=midframe)
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
+@pytest.mark.parametrize("size", ((2, 1), (1, 1)))
+def test_pet_total_duration_error(request, setup_random_uniform_spatial_data, size):
+    data, affine = setup_random_uniform_spatial_data
+    midframe = np.zeros(data.shape[-1], dtype=np.float32)
+    total_duration = request.node.rng.uniform(5.0, 20.0, size=size)
+    with pytest.raises(
+        ValueError, match=SCALAR_ATTRIBUTE_ERROR_MSG.format(attribute="total_duration")
+    ):
+        PET(dataobj=data, affine=affine, midframe=midframe, total_duration=total_duration)
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
+@pytest.mark.parametrize("size", ((2, 1), (1, 2), (3, 1), (3, 2)))
+def test_pet_uptake_shape_error(setup_random_uniform_spatial_data, size):
+    data, affine = setup_random_uniform_spatial_data
+    midframe = np.zeros(data.shape[-1], dtype=np.float32)
+    total_duration = 16.2
+    uptake = np.zeros(size, dtype=np.float32)
+    with pytest.raises(
+        ValueError, match=ARRAY_ATTRIBUTE_SHAPE_ERROR_MSG.format(attribute="uptake")
+    ):
+        PET(
+            dataobj=data,
+            affine=affine,
+            midframe=midframe,
+            total_duration=total_duration,
+            uptake=uptake,
+        )
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
+def test_pet_midframe_length_mismatch(setup_random_uniform_spatial_data):
+    data, affine = setup_random_uniform_spatial_data
+    total_duration = 16.2
+    data_frames = data.shape[-1]
+    attr_len = data_frames + 1
+    midframe = np.zeros(attr_len, dtype=np.float32)
+    uptake = np.zeros(data_frames, dtype=np.float32)
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            ATTRIBUTE_SHAPE_MISMATCH_ERROR_MSG.format(
+                attribute="midframe", attr_len=attr_len, data_frames=data_frames
+            )
+        ),
+    ):
+        PET(
+            dataobj=data,
+            affine=affine,
+            midframe=midframe,
+            total_duration=total_duration,
+            uptake=uptake,
+        )
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
+def test_pet_uptake_length_mismatch(setup_random_uniform_spatial_data):
+    data, affine = setup_random_uniform_spatial_data
+    total_duration = 16.2
+    data_frames = data.shape[-1]
+    midframe = np.zeros(data_frames, dtype=np.float32)
+    attr_len = data_frames + 1
+    uptake = np.zeros(attr_len, dtype=np.float32)
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            ATTRIBUTE_SHAPE_MISMATCH_ERROR_MSG.format(
+                attribute="uptake", attr_len=attr_len, data_frames=data_frames
+            )
+        ),
+    ):
+        PET(
+            dataobj=data,
+            affine=affine,
+            midframe=midframe,
+            total_duration=total_duration,
+            uptake=uptake,
+        )
 
 
 @pytest.mark.parametrize(
