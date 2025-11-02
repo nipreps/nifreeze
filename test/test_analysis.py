@@ -105,7 +105,7 @@ def test_compute_bland_altman_features(request):
     assert np.isscalar(std_diff)
     assert np.isscalar(loa_lower)
     assert np.isscalar(loa_upper)
-    assert loa_lower < loa_upper
+    assert loa_lower < loa_upper  # type: ignore
     assert np.isscalar(ci_mean)
     assert np.isscalar(ci_loa)
 
