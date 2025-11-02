@@ -75,7 +75,7 @@ class DummyDWIDataset(BaseDataset):
         return self.dataobj.shape[-1]
 
     def __getitem__(self, idx):
-        return self.dataobj[..., idx], self.brainmask, self.gradients
+        return self.dataobj[..., idx], None, self.gradients[..., idx]
 
 
 class DummyPETDataset(BaseDataset):
@@ -91,7 +91,7 @@ class DummyPETDataset(BaseDataset):
         return self.dataobj.shape[-1]
 
     def __getitem__(self, idx):
-        return self.dataobj[..., idx], self.brainmask, self.midrame[idx]
+        return self.dataobj[..., idx], None, self.midrame[idx]
 
 
 def test_estimator_init_model_instance(request):
