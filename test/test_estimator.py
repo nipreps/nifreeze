@@ -47,11 +47,11 @@ class DummyDataset(BaseDataset):
         self.affine = np.eye(4)
 
     def __len__(self):
-        return len(self.dataobj)
+        return self.dataobj.shape[-1]
 
     def __getitem__(self, idx):
         # Return a valid 3D array and a dummy value
-        return self.dataobj[idx], 1
+        return self.dataobj[..., idx], None
 
     def set_transform(self, idx, matrix):
         pass
