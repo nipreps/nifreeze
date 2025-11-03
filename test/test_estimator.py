@@ -103,11 +103,18 @@ def test_estimator_init_model_instance(request):
 
 def test_estimator_init_model_string(request, monkeypatch):
     rng = request.node.rng
+
     # Patch ModelFactory.init to return DummyModel
     monkeypatch.setattr(
         "nifreeze.model.base.ModelFactory.init",
         lambda model, dataset, **kwargs: DummyModel(dataset=dataset),
     )
+
+    def mock_iterator(*_, **kwargs):
+        return []
+
+    monkeypatch.setattr(iterators, "random_iterator", mock_iterator)  # Avoid iterator issues
+
     model_name = "dummy"
     est = Estimator(model=model_name, model_kwargs={})
     _dataset = DummyDataset(rng)
