@@ -38,6 +38,12 @@ from nifreeze.model.base import BaseModel
 DEFAULT_TIMEFRAME_MIDPOINT_TOL = 1e-2
 """Time frame tolerance in seconds."""
 
+START_INDEX_RANGE_ERROR_MSG = "start_index must be within the range of provided timepoints."
+"""PET model fitting start index allowed values error."""
+
+FIT_INDEX_OUT_OF_RANGE_ERROR_MSG = "Index out of range for available timepoints."
+"""PET model fitting index out-of-range error"""
+
 
 class PETModel(BaseModel):
     """A PET imaging realignment model based on B-Spline approximation."""
@@ -52,6 +58,8 @@ class PETModel(BaseModel):
         "_mask",
         "_smooth_fwhm",
         "_thresh_pct",
+        "_start_index",
+        "_start_time",
     )
 
     def __init__(
@@ -63,6 +71,7 @@ class PETModel(BaseModel):
         order: int = 3,
         smooth_fwhm: float = 10.0,
         thresh_pct: float = 20.0,
+        start_index: int | None = None,
         **kwargs,
     ):
         """
@@ -80,6 +89,14 @@ class PETModel(BaseModel):
             six timepoints will be used. The less control points, the smoother is the
             model.
 
+        start_index : :obj:`int` or None
+            If provided, the model will be fitted using only timepoints starting from
+            this index (inclusive). Predictions for timepoints earlier than the
+            specified start will reuse the predicted volume for the start timepoint.
+            This is useful, for example, to discard a number of frames at the
+            beginning of the sequence, which due to their little SNR may impact
+            registration negatively.
+
         """
         super().__init__(dataset, **kwargs)
 
@@ -96,6 +113,15 @@ class PETModel(BaseModel):
             raise ValueError("First frame midpoint should not be zero or negative")
         if self._x[-1] > (self._xlim - DEFAULT_TIMEFRAME_MIDPOINT_TOL):
             raise ValueError("Last frame midpoint should not be equal or greater than duration")
+
+        # Validate and store start index / time
+        if start_index is None:
+            self._start_index = 0
+        else:
+            if start_index < 0 or start_index >= len(self._x):
+                raise ValueError(START_INDEX_RANGE_ERROR_MSG)
+            self._start_index = start_index
+        self._start_time = float(self._x[self._start_index])
 
         # Calculate index coordinates in the B-Spline grid
         self._n_ctrl = n_ctrl or (len(timepoints) // 4) + 1
@@ -119,7 +145,9 @@ class PETModel(BaseModel):
         if index is not None:
             raise NotImplementedError("Fitting with held-out data is not supported")
         timepoints = kwargs.get("timepoints", None) or self._x
-        x = np.asarray((np.array(timepoints, dtype="float32") / self._xlim) * self._n_ctrl)
+        timepoints_to_fit = np.asarray(timepoints, dtype="float32")[self._start_index :]
+
+        x = np.asarray((np.array(timepoints_to_fit) / self._xlim) * self._n_ctrl)
 
         data = self._dataset.dataobj
         brainmask = self._dataset.brainmask
@@ -137,6 +165,11 @@ class PETModel(BaseModel):
         # Convert data into V (voxels) x T (timepoints)
         data = data.reshape((-1, data.shape[-1])) if brainmask is None else data[brainmask]
 
+        # If fitting started later than the first frame, drop early columns so the
+        # temporal length matches timepoints_to_fit
+        if self._start_index > 0:
+            data = data[:, self._start_index :]
+
         # A.shape = (T, K - 4); T= n. timepoints, K= n. knots (with padding)
         A = BSpline.design_matrix(x, self._t, k=self._order)
         AT = A.T
@@ -151,7 +184,12 @@ class PETModel(BaseModel):
         return n_jobs
 
     def fit_predict(self, index: int | None = None, **kwargs) -> Union[np.ndarray, None]:
-        """Return the corrected volume using B-spline interpolation."""
+        """Return the corrected volume using B-spline interpolation.
+
+        Predictions for times earlier than the configured start_time will return
+        the prediction for the start_time (i.e., transforms estimated for the
+        start are reused for earlier low-SNR frames).
+        """
 
         # Fit the BSpline basis on all data
         if self._locked_fit is None:
@@ -164,8 +202,22 @@ class PETModel(BaseModel):
         if index is None:  # If no index, just fit the data.
             return None
 
+        # Map integer indices to actual timepoints if needed
+        if isinstance(index, (int, np.integer)):
+            idx_int = int(index)
+            if idx_int < 0 or idx_int >= len(self._x):
+                raise IndexError(FIT_INDEX_OUT_OF_RANGE_ERROR_MSG)
+            index_time = float(self._x[idx_int])
+        else:
+            index_time = float(index)
+
+        # If the requested time is earlier than the configured start time, use the
+        # start time's prediction (reuse the transforms estimated for start)
+        if index_time < self._start_time:
+            index_time = self._start_time
+
         # Project sample timing into B-Spline coordinates
-        x = np.asarray((index / self._xlim) * self._n_ctrl)
+        x = np.asarray((index_time / self._xlim) * self._n_ctrl)
         A = BSpline.design_matrix(x, self._t, k=self._order)
 
         # A is 1 (num. timepoints) x C (num. coeff)
