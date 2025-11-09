@@ -21,11 +21,96 @@
 #     https://www.nipreps.org/community/licensing/
 #
 
+import re
+import sys
+
 import numpy as np
 import pytest
 
 from nifreeze.data.pet import PET
-from nifreeze.model.pet import PETModel
+from nifreeze.model.pet import (
+    DEFAULT_TIMEPOINT_TOL,
+    PET_MODEL_PARAMETER_CONSISTENCY_ERROR_MSG,
+    PET_MODEL_PARAMETERS_ERROR_MSG,
+    PET_MODEL_TIMEPOINT_VALUE_ERROR_MSG,
+    PETModel,
+)
+
+
+@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]))
+@pytest.mark.parametrize(
+    "none_params", [("timepoints",), ("xlim",), ("timepoints=timepoints", "xlim")]
+)
+def test_petmodel_init_parameters_error(request, setup_random_pet_data, none_params):
+    rng = request.node.rng
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+
+    pet_obj = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+
+    timepoints = rng.random(len(pet_obj)) if "timepoints" in none_params else None
+    xlim = rng.random(1).item() if "xlim" in none_params else None
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(PET_MODEL_PARAMETERS_ERROR_MSG.format(timepoints=timepoints, xlim=xlim)),
+    ):
+        PETModel(dataset=pet_obj, timepoints=timepoints, xlim=xlim)  # type: ignore[arg-type]
+
+
+@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]))
+def test_petmodel_init_timepoint_value_error(request, setup_random_pet_data):
+    rng = request.node.rng
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+
+    pet_obj = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+
+    timepoints = rng.random(len(pet_obj))
+    xlim = rng.random(1).item()
+
+    timepoints[0] = DEFAULT_TIMEPOINT_TOL - sys.float_info.epsilon
+
+    with pytest.raises(
+        ValueError, match=PET_MODEL_TIMEPOINT_VALUE_ERROR_MSG.format(timepoints=timepoints)
+    ):
+        PETModel(dataset=pet_obj, timepoints=timepoints, xlim=xlim)
+
+
+@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]))
+def test_petmodel_parameter_consistency_error(request, setup_random_pet_data):
+    rng = request.node.rng
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+
+    pet_obj = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+
+    xlim = rng.random(1).item()
+    timepoints = np.ones(len(pet_obj)) * DEFAULT_TIMEPOINT_TOL
+    timepoints[-1] = xlim - DEFAULT_TIMEPOINT_TOL + sys.float_info.epsilon
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            PET_MODEL_PARAMETER_CONSISTENCY_ERROR_MSG.format(timepoints=timepoints, xlim=xlim)
+        ),
+    ):
+        PETModel(dataset=pet_obj, timepoints=timepoints, xlim=xlim)
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
@@ -57,36 +142,3 @@ def test_petmodel_fit_predict(setup_random_pet_data):
     assert vol is not None
     assert vol.shape == pet_obj.shape3d
     assert vol.dtype == pet_obj.dataobj.dtype
-
-
-@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]))
-def test_petmodel_invalid_init1(setup_random_pet_data):
-    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
-
-    pet_obj = PET(
-        dataobj=pet_dataobj,
-        affine=affine,
-        brainmask=brainmask_dataobj,
-        midframe=midframe,
-        total_duration=total_duration,
-    )
-
-    with pytest.raises(TypeError):
-        PETModel(dataset=pet_obj)
-
-
-@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([5.0, 10.0, 15.0, 20.0, 25.0]))
-def test_petmodel_time_check(setup_random_pet_data):
-    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
-
-    pet_obj = PET(
-        dataobj=pet_dataobj,
-        affine=affine,
-        brainmask=brainmask_dataobj,
-        midframe=midframe,
-        total_duration=total_duration,
-    )
-
-    bad_times = np.array([0, 10, 20, 30, 50], dtype=np.float32)
-    with pytest.raises(ValueError):
-        PETModel(dataset=pet_obj, timepoints=bad_times, xlim=60.0)
