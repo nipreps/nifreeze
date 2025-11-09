@@ -25,7 +25,13 @@ import numpy as np
 import pytest
 
 from nifreeze.data.pet import PET
-from nifreeze.model.pet import PETModel
+from nifreeze.model.pet import (
+    DEFAULT_TIMEFRAME_MIDPOINT_TOL,
+    FIRST_MIDPOINT_VALUE_ERROR_MSG,
+    LAST_MIDPOINT_VALUE_ERROR_MSG,
+    TIMEPOINT_XLIM_DATA_MISSING_ERROR_MSG,
+    PETModel,
+)
 
 
 @pytest.fixture
@@ -71,13 +77,38 @@ def test_petmodel_fit_predict(random_dataset):
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]), 60.0)
-def test_petmodel_invalid_init(random_dataset):
-    with pytest.raises(TypeError):
+def test_petmodel_init_mandatory_attr_errors(random_dataset):
+    with pytest.raises(TypeError, match=TIMEPOINT_XLIM_DATA_MISSING_ERROR_MSG):
         PETModel(dataset=random_dataset)
+
+    xlim = 55.0
+    with pytest.raises(TypeError, match=TIMEPOINT_XLIM_DATA_MISSING_ERROR_MSG):
+        PETModel(dataset=random_dataset, xlim=xlim)
+
+    timepoints = np.array([20, 30, 40, 50, 60], dtype=np.float32)
+    with pytest.raises(TypeError, match=TIMEPOINT_XLIM_DATA_MISSING_ERROR_MSG):
+        PETModel(dataset=random_dataset, timepoints=timepoints)
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]), 60.0)
-def test_petmodel_time_check(random_dataset):
-    bad_times = np.array([0, 10, 20, 30, 50], dtype=np.float32)
-    with pytest.raises(ValueError):
-        PETModel(dataset=random_dataset, timepoints=bad_times, xlim=60.0)
+def test_petmodel_first_midpoint_error(random_dataset):
+    timepoints = np.array([0, 10, 20, 30, 50], dtype=np.float32)
+    xlim = 60.0
+    with pytest.raises(ValueError, match=FIRST_MIDPOINT_VALUE_ERROR_MSG):
+        PETModel(dataset=random_dataset, timepoints=timepoints, xlim=xlim)
+
+    timepoints[0] = DEFAULT_TIMEFRAME_MIDPOINT_TOL
+    with pytest.raises(ValueError, match=FIRST_MIDPOINT_VALUE_ERROR_MSG):
+        PETModel(dataset=random_dataset, timepoints=timepoints, xlim=xlim)
+
+
+@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]), 40.0)
+def test_petmodel_last_midpoint_error(random_dataset):
+    xlim = 45.0
+    timepoints = np.array([5, 10, 20, 30, 50], dtype=np.float32)
+    with pytest.raises(ValueError, match=LAST_MIDPOINT_VALUE_ERROR_MSG):
+        PETModel(dataset=random_dataset, timepoints=timepoints, xlim=xlim)
+
+    timepoints[-1] = xlim - DEFAULT_TIMEFRAME_MIDPOINT_TOL
+    with pytest.raises(ValueError, match=LAST_MIDPOINT_VALUE_ERROR_MSG):
+        PETModel(dataset=random_dataset, timepoints=timepoints, xlim=xlim)
