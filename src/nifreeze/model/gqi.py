@@ -147,7 +147,7 @@ class GeneralizedQSamplingFit(ReconstFit):
 
     def fit(self, data, *, mask=None):
         if self.odf_fit is None:
-            self.odf_fit = self.odf(data)
+            self.odf_fit = self.odf()
         return self
 
     def odf(self):
@@ -305,7 +305,7 @@ def upper_hemi_map(v):
 
 
 def equatorial_maximum(vertices, odf, pole, width):
-    eqvert = equatorial_zone_vertices(vertices, pole, width)
+    eqvert = equatorial_zone_vertices(vertices, pole, width=width)
     # need to test for whether eqvert is empty or not
     if len(eqvert) == 0:
         print(f"empty equatorial band at {np.array_str(pole)}  pole with width {width:f}")
@@ -334,7 +334,7 @@ def patch_maximum(vertices, odf, pole, width):
     # need to test for whether eqvert is empty or not
     if len(eqvert) == 0:
         print(f"empty cone around pole {np.array_str(pole)} with with width {width:f}")
-        return np.Null, np.Null
+        return None, None
     eqvals = [odf[i] for i in eqvert]
     eqargmax = np.argmax(eqvals)
     eqvertmax = eqvert[eqargmax]
@@ -351,7 +351,7 @@ def patch_sum(vertices, odf, pole, width):
     # need to test for whether eqvert is empty or not
     if len(eqvert) == 0:
         print(f"empty cone around pole {np.array_str(pole)} with with width {width:f}")
-        return np.Null
+        return None
     return np.sum([odf[i] for i in eqvert])
 
 
@@ -359,7 +359,7 @@ def triple_odf_maxima(vertices, odf, width):
     indmax1 = np.argmax([odf[i] for i, v in enumerate(vertices)])
     odfmax1 = odf[indmax1]
     pole = vertices[indmax1]
-    eqvert = equatorial_zone_vertices(vertices, pole, width)
+    eqvert = equatorial_zone_vertices(vertices, pole, width=width)
     indmax2, odfmax2 = equatorial_maximum(vertices, odf, pole, width)
     indmax3 = eqvert[np.argmin([np.abs(np.dot(vertices[indmax2], vertices[p])) for p in eqvert])]
     odfmax3 = odf[indmax3]

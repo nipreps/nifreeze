@@ -26,15 +26,32 @@
 from pathlib import Path
 
 import pytest
+import yaml
 
 from nifreeze.cli.parser import (
     _build_parser,
     _determine_single_fit_mode,
     _normalize_model_name,
+    _parse_yaml_config,
     parse_args,
 )
 
 MIN_ARGS = ["data/dwi.h5"]
+
+
+def test_parse_yaml_config(tmp_path):
+    # Sample YAML content
+    yaml_content = {"key1": "value1", "key2": 2, "nested": {"subkey": "subvalue"}}
+
+    # Create a temporary YAML file
+    filename = tmp_path / "config_file.yaml"
+    with open(filename, "w") as f:
+        yaml.dump(yaml_content, f)
+
+    # Call the function
+    result = _parse_yaml_config(str(filename))
+    # Assert the result matches the original content
+    assert result == yaml_content
 
 
 @pytest.mark.parametrize(
@@ -247,11 +264,12 @@ def test_parsed_dwimodel_instatiation(setup_random_dwi_data, datadir, models):
     )
 
     if models == "dti":
-        model = DTIModel(dataset, **model_kwargs)
-        assert model._model_class == "dipy.reconst.dti.TensorModel"
+        assert DTIModel(dataset, **model_kwargs)._model_class == "dipy.reconst.dti.TensorModel"
     elif models == "dki":
-        model = DKIModel(dataset, **model_kwargs)
-        assert model._model_class == "dipy.reconst.dki.DiffusionKurtosisModel"
+        assert (
+            DKIModel(dataset, **model_kwargs)._model_class
+            == "dipy.reconst.dki.DiffusionKurtosisModel"
+        )
 
 
 @pytest.mark.parametrize(

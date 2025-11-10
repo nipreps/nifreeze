@@ -141,6 +141,9 @@ version-file = "src/nifreeze/_version.py"
 # Developer tool configurations
 #
 
+[tool.mypy]
+check_untyped_defs = true
+
 [[tool.mypy.overrides]]
 module = [
   "nipype.*",
@@ -233,9 +236,7 @@ branch = true
 parallel = true
 concurrency = ["multiprocessing"]
 omit = [
-  "*/tests/*",
-  "*/testing/*",
-  "*/viz/*",
+  "^test/*",
   "*/__init__.py",
   "*/conftest.py",
   "src/nifreeze/_version.py"

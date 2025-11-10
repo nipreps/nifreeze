@@ -65,7 +65,7 @@ DTI_MIN_ORIENTATIONS = 6
 
 
 @attrs.define(slots=True)
-class DWI(BaseDataset[np.ndarray | None]):
+class DWI(BaseDataset[np.ndarray]):
     """Data representation structure for dMRI data."""
 
     bzero: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
@@ -75,13 +75,13 @@ class DWI(BaseDataset[np.ndarray | None]):
     eddy_xfms: list = attrs.field(default=None)
     """List of transforms to correct for estimated eddy current distortions."""
 
-    def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray | None]:
-        return (self.gradients[..., idx] if self.gradients is not None else None,)
+    def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray]:
+        return (self.gradients[..., idx],)
 
     # For the sake of the docstring
     def __getitem__(
         self, idx: int | slice | tuple | np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None]:
+    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray]:
         """
         Returns volume(s) and corresponding affine(s) and gradient(s) through fancy indexing.
 
@@ -210,7 +210,7 @@ class DWI(BaseDataset[np.ndarray | None]):
 
         Parameters
         ----------
-        filename : :obj:`os.pathlike`
+        filename : :obj:`os.pathlike`, optional
             The output NIfTI file path.
         write_hmxfms : :obj:`bool`, optional
             If ``True``, the head motion affines will be written out to filesystem
@@ -310,7 +310,7 @@ def from_nii(
     brainmask_file : :obj:`os.pathlike`, optional
         A brainmask NIfTI file. If provided, will be loaded and
         stored in the returned dataset.
-    motion_file : :obj:`os.pathlike`
+    motion_file : :obj:`os.pathlike`, optional
         A file containing head motion affine matrices (linear)
     gradients_file : :obj:`os.pathlike`, optional
         A text file containing the gradients table, shape (4, N) or (N, 4).

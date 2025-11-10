@@ -55,5 +55,6 @@ jobs:
         export OMP_NUM_THREADS=1
     - name: Run benchmarks
       run: |
-        asv machine --yes --config benchmarks/asv.conf.json
-        asv run --config benchmarks/asv.conf.json --show-stderr
+        CONFIG_FILE="$(pwd)/benchmarks/asv.conf.json"
+        asv machine --yes --config "$CONFIG_FILE"
+        asv run --config "$CONFIG_FILE" --show-stderr

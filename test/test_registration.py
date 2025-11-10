@@ -35,6 +35,7 @@ from nipype.interfaces.ants.registration import Registration
 
 from nifreeze.registration.ants import _massage_mask_path
 from nifreeze.registration.utils import displacements_within_mask
+from nifreeze.utils.ndimage import load_api
 
 
 @pytest.mark.parametrize("r_x", [0.0, 0.1, 0.3])
@@ -53,7 +54,7 @@ def test_ANTs_config_b0(datadir, tmp_path, dataset, r_x, r_y, r_z, t_x, t_y, t_z
     fixed_mask = datadir / f"{dataset}-b0_desc-brain.nii.gz"
     moving = tmp_path / "moving.nii.gz"
 
-    b0nii = nb.load(fixed)
+    b0nii = load_api(fixed, nb.Nifti1Image)
     T = from_matvec(euler2mat(x=r_x, y=r_y, z=r_z), (t_x, t_y, t_z))
     xfm = nt.linear.Affine(T, reference=b0nii)
 
@@ -75,7 +76,7 @@ def test_ANTs_config_b0(datadir, tmp_path, dataset, r_x, r_y, r_z, t_x, t_y, t_z
         reference=b0nii,
     )
 
-    masknii = nb.load(fixed_mask)
+    masknii = load_api(fixed_mask, nb.Nifti1Image)
     assert displacements_within_mask(masknii, xform, xfm).mean() < (
         0.6 * np.mean(b0nii.header.get_zooms()[:3])
     )

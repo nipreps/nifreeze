@@ -27,6 +27,7 @@ import pandas as pd
 import pytest
 from dipy.data import read_stanford_hardi
 from dipy.segment.mask import median_otsu
+from matplotlib.figure import Figure
 from scipy.ndimage import affine_transform, binary_dilation
 from skimage.morphology import ball
 
@@ -63,8 +64,10 @@ def test_plot_framewise_displacement(request, tmp_path):
 
     labels = labels[:-1]
     ax = plot_framewise_displacement(fd, labels)
+    assert isinstance(ax.figure, Figure)
+    fig = ax.figure
     out_svg = tmp_path / "framewise_displacement.svg"
-    ax.figure.savefig(out_svg, format="svg")
+    fig.savefig(out_svg, format="svg")
 
 
 def test_plot_volumewise_motion(request, tmp_path):
@@ -84,8 +87,10 @@ def test_plot_volumewise_motion(request, tmp_path):
     motion_params = np.hstack([translations, rotations])
 
     ax = plot_volumewise_motion(frames, motion_params)
+    assert isinstance(ax[0].figure, Figure)
+    fig = ax[0].figure
     out_svg = tmp_path / "volumewise_motion.svg"
-    ax[0].figure.savefig(out_svg, format="svg")
+    fig.savefig(out_svg, format="svg")
 
 
 @pytest.mark.parametrize("orientation", ["axial", "coronal", "sagittal"])
@@ -150,5 +155,7 @@ def test_plot_motion_overlay(tmp_path, orientation):
     ax = plot_motion_overlay(
         rel_diff, dwi_dir_data, brain_mask, orientation, slice_idx, smooth=smooth
     )
+    assert isinstance(ax.figure, Figure)
+    fig = ax.figure
     out_svg = tmp_path / "motion_overlay.svg"
-    ax.figure.savefig(out_svg, format="svg")
+    fig.savefig(out_svg, format="svg")

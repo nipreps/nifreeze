@@ -34,7 +34,6 @@ import attrs
 import h5py
 import nibabel as nb
 import numpy as np
-from nibabel.spatialimages import SpatialHeader
 from nitransforms.linear import LinearTransformsMapping
 from typing_extensions import Self, TypeVarTuple, Unpack
 
@@ -79,12 +78,14 @@ class BaseDataset(Generic[Unpack[Ts]]):
     """A :obj:`~numpy.ndarray` object for the data array."""
     affine: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
     """Best affine for RAS-to-voxel conversion of coordinates (NIfTI header)."""
-    brainmask: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
+    brainmask: np.ndarray | None = attrs.field(
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp)
+    )
     """A boolean ndarray object containing a corresponding brainmask."""
-    motion_affines: np.ndarray = attrs.field(default=None, eq=attrs.cmp_using(eq=_cmp))
-    """List of :obj:`~nitransforms.linear.Affine` realigning the dataset."""
-    datahdr: SpatialHeader = attrs.field(default=None)
-    """A :obj:`~nibabel.spatialimages.SpatialHeader` header corresponding to the data."""
+    motion_affines: np.ndarray | None = attrs.field(default=None, eq=attrs.cmp_using(eq=_cmp))
+    """Array of :obj:`~nitransforms.linear.Affine` realigning the dataset."""
+    datahdr: nb.Nifti1Header | None = attrs.field(default=None)
+    """A :obj:`~nibabel.Nifti1Header` header corresponding to the data."""
 
     _filepath: Path = attrs.field(
         factory=lambda: Path(mkdtemp()) / "hmxfms_cache.h5",
@@ -95,12 +96,24 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
     def __len__(self) -> int:
         """Obtain the number of volumes/frames in the dataset."""
-        if self.dataobj is None:
-            return 0
-
         return self.dataobj.shape[-1]
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[Unpack[Ts]]:
+        """
+        Extracts extra fields synchronized with the indexed access of the corresponding data object.
+
+        Parameters
+        ----------
+        idx : :obj:`int` or :obj:`slice` or :obj:`tuple` or :obj:`~numpy.ndarray`
+            Index (or indexing type/object) for which extra information will be extracted.
+
+        Returns
+        -------
+        :obj:`tuple`
+            A tuple with the extra fields (may be an empty tuple if no extra fields are defined).
+
+        """
+        _ = idx  # Avoid unused parameter warning
         return ()  # type: ignore[return-value]
 
     def __getitem__(
@@ -116,16 +129,24 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
         Returns
         -------
-        volumes : :obj:`~numpy.ndarray`
+        :obj:`~numpy.ndarray`
             The selected data subset.
             If ``idx`` is a single integer, this will have shape ``(X, Y, Z)``,
             otherwise it may have shape ``(X, Y, Z, k)``.
-        motion_affine : :obj:`~numpy.ndarray` or ``None``
+        affine : :obj:`~numpy.ndarray` or ``None``
             The corresponding per-volume motion affine(s) or ``None`` if identity transform(s).
+        Unpack[:obj:`~nifreeze.data.base.Ts`]
+            Zero or more additional per-volume fields returned as unpacked
+            trailing elements. The exact number, order, and types of elements
+            are determined by the type variables :obj:`~nifreeze.data.base.Ts`
+            and by the values returned from :meth:`_getextra`. Subclasses
+            provide these values by implementing :meth:`_getextra`. If no extra
+            fields are defined, no element is returned.
+            Example usages:
+            - vols, aff, *extras = dataset[0:10]
+            - vol, aff, bvecs, bvals = dataset[0]  # when two extras are present
 
         """
-        if self.dataobj is None:
-            raise ValueError("No data available (dataobj is None).")
 
         affine = self.motion_affines[idx] if self.motion_affines is not None else None
         return self.dataobj[..., idx], affine, *self._getextra(idx)
