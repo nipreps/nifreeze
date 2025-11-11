@@ -64,16 +64,16 @@ def test_proximity_estimator_trivial_model(datadir):
         else None
     )
 
-    # For each moved b0 volume
-    for est, truth in zip(dwi_motion.motion_affines, ground_truth_affines, strict=False):
-        assert (
-            displacements_within_mask(
-                masknii,
-                nt.linear.Affine(est),
-                nt.linear.Affine(truth),
-            ).max()
-            < 0.25
-        )
+    max_error = np.array([
+        displacements_within_mask(
+            masknii,
+            nt.linear.Affine(est),
+            nt.linear.Affine(truth),
+        ).max()
+        for est, truth in zip(dwi_motion.motion_affines, ground_truth_affines, strict=False)
+    ])
+
+    assert np.all(max_error < 0.25)
 
 
 def test_stacked_estimators(datadir):
