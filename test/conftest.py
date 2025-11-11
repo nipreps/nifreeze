@@ -158,7 +158,8 @@ def _generate_random_choices(rng, values, count):
 
     if count < num_elements:
         raise ValueError(
-            f"Count must be at least the number of unique values to guarantee inclusion\nProvided: {count} and {values}."
+            "Count must be at least the number of unique values to guarantee inclusion"
+            f"Provided: {count} and {values}."
         )
 
     # Start by assigning one of each value

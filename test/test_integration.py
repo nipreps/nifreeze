@@ -34,13 +34,15 @@ from nifreeze.model.base import TrivialModel
 from nifreeze.registration.utils import displacements_within_mask
 
 
-def test_proximity_estimator_trivial_model(datadir):
+def test_proximity_estimator_trivial_model(datadir, tmp_path):
     """Check the proximity of transforms estimated by the estimator with a trivial B0 model."""
 
     dwi_motion = DWI.from_filename(datadir / "dmri_data" / "motion_test_data" / "dwi_motion.h5")
-    dwi_motion._filepath = None  # Prevent accidental overwriting
+    dwi_motion._filepath = tmp_path / "dwi_motion.h5"  # Prevent accidental overwriting
 
-    ground_truth_affines = dwi_motion.motion_affines.copy()
+    ground_truth_affines = (
+        np.copy(dwi_motion.motion_affines) if dwi_motion.motion_affines is not None else None
+    )
     dwi_motion.motion_affines = None  # Erase ground truth for estimation
 
     model = TrivialModel(dwi_motion)
@@ -64,25 +66,34 @@ def test_proximity_estimator_trivial_model(datadir):
         else None
     )
 
-    max_error = np.array([
-        displacements_within_mask(
-            masknii,
-            nt.linear.Affine(est),
-            nt.linear.Affine(truth),
-        ).max()
-        for est, truth in zip(dwi_motion.motion_affines, ground_truth_affines, strict=False)
-    ])
+    max_error = np.array(
+        [
+            displacements_within_mask(
+                masknii,  # type: ignore
+                nt.linear.Affine(est),
+                nt.linear.Affine(truth),
+            ).max()
+            for est, truth in zip(dwi_motion.motion_affines, ground_truth_affines, strict=False)  # type: ignore
+        ]
+    )
 
     assert np.all(max_error < 0.25)
 
 
-def test_stacked_estimators(datadir):
+def test_stacked_estimators(datadir, tmp_path, monkeypatch):
     """Check that models can be stacked."""
+
+    from nifreeze.utils import iterators
 
     # Wrap into dataset object
     dwi_motion = DWI.from_filename(datadir / "dmri_data" / "motion_test_data" / "dwi_motion.h5")
-    dwi_motion._filepath = None  # Prevent accidental overwriting
+    dwi_motion._filepath = tmp_path / "dwi_motion.h5"  # Prevent accidental overwriting
     dwi_motion.motion_affines = None  # Erase ground truth for estimation
+
+    def mock_iterator(*_, **kwargs):
+        return []
+
+    monkeypatch.setattr(iterators, "random_iterator", mock_iterator)  # Avoid iterator issues
 
     estimator1 = Estimator(
         TrivialModel(dwi_motion),
