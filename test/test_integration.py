@@ -34,7 +34,7 @@ from nifreeze.model.base import TrivialModel
 from nifreeze.registration.utils import displacements_within_mask
 
 
-def test_proximity_estimator_trivial_model(datadir, tmp_path):
+def test_proximity_estimator_trivial_model(datadir, tmp_path, atol_mm=0.15):
     """Check the proximity of transforms estimated by the estimator with a trivial B0 model."""
 
     dwi_motion = DWI.from_filename(datadir / "dmri_data" / "motion_test_data" / "dwi_motion.h5")
@@ -60,13 +60,17 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path):
     #     reference=b0nii,
     # ).apply(moved_nii).to_filename(tmp_path / "realigned.nii.gz")
     dwi_orig = DWI.from_filename(datadir / "dwi.h5")
-    masknii = (
-        nb.Nifti1Image(dwi_orig.brainmask.astype(np.uint8), dwi_orig.affine, None)
-        if dwi_orig.brainmask is not None
-        else None
+    has_mask = dwi_orig.brainmask is not None
+    masknii = nb.Nifti1Image(
+        dwi_orig.brainmask.astype(np.uint8)  # type: ignore
+        if has_mask
+        else np.ones(dwi_orig.dataobj.shape[:-1], dtype=np.uint8),
+        dwi_orig.affine,
+        None,
     )
 
-    max_error = np.array(
+    # Compute FD within brainmask
+    max_error_mask = np.array(
         [
             displacements_within_mask(
                 masknii,  # type: ignore
@@ -77,7 +81,10 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path):
         ]
     )
 
-    assert np.all(max_error < 0.25)
+    masksize = (np.asanyarray(masknii.dataobj) > 0).astype(int).sum()
+    assert np.all(max_error_mask < atol_mm), (
+        f"Some max error exceeds {atol_mm}mm, N={masksize}vox."
+    )
 
 
 def test_stacked_estimators(datadir, tmp_path, monkeypatch):
