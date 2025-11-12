@@ -24,20 +24,26 @@
 
 from os import cpu_count
 
+import nibabel as nb
 import nitransforms as nt
+import numpy as np
 
+from nifreeze.data.dmri import DWI
 from nifreeze.estimator import Estimator
 from nifreeze.model.base import TrivialModel
 from nifreeze.registration.utils import displacements_within_mask
 
 
-def test_proximity_estimator_trivial_model(motion_data, tmp_path):
+def test_proximity_estimator_trivial_model(datadir, tmp_path, atol_mm=0.15):
     """Check the proximity of transforms estimated by the estimator with a trivial B0 model."""
 
-    b0nii = motion_data["b0nii"]
-    moved_nii = motion_data["moved_nii"]
-    xfms = motion_data["xfms"]
-    dwi_motion = motion_data["moved_nifreeze"]
+    dwi_motion = DWI.from_filename(datadir / "dmri_data" / "motion_test_data" / "dwi_motion.h5")
+    dwi_motion._filepath = tmp_path / "dwi_motion.h5"  # Prevent accidental overwriting
+
+    ground_truth_affines = (
+        np.copy(dwi_motion.motion_affines) if dwi_motion.motion_affines is not None else None
+    )
+    dwi_motion.motion_affines = None  # Erase ground truth for estimation
 
     model = TrivialModel(dwi_motion)
     estimator = Estimator(model)
@@ -48,39 +54,63 @@ def test_proximity_estimator_trivial_model(motion_data, tmp_path):
         num_threads=min(cpus if cpus is not None else 1, 8),
     )
 
-    # Uncomment to see the realigned dataset
-    nt.linear.LinearTransformsMapping(
-        dwi_motion.motion_affines,
-        reference=b0nii,
-    ).apply(moved_nii).to_filename(tmp_path / "realigned.nii.gz")
+    # # Uncomment to see the realigned dataset
+    # nt.linear.LinearTransformsMapping(
+    #     dwi_motion.motion_affines,
+    #     reference=b0nii,
+    # ).apply(moved_nii).to_filename(tmp_path / "realigned.nii.gz")
+    dwi_orig = DWI.from_filename(datadir / "dwi.h5")
+    has_mask = dwi_orig.brainmask is not None
+    masknii = nb.Nifti1Image(
+        dwi_orig.brainmask.astype(np.uint8)  # type: ignore
+        if has_mask
+        else np.ones(dwi_orig.dataobj.shape[:-1], dtype=np.uint8),
+        dwi_orig.affine,
+        None,
+    )
 
-    # For each moved b0 volume
-    for i, est in enumerate(dwi_motion.motion_affines):
-        assert (
+    # Compute FD within brainmask
+    max_error_mask = np.array(
+        [
             displacements_within_mask(
-                motion_data["masknii"],
+                masknii,  # type: ignore
                 nt.linear.Affine(est),
-                xfms[i],
+                nt.linear.Affine(truth),
             ).max()
-            < 0.25
-        )
+            for est, truth in zip(dwi_motion.motion_affines, ground_truth_affines, strict=False)  # type: ignore
+        ]
+    )
+
+    masksize = (np.asanyarray(masknii.dataobj) > 0).astype(int).sum()
+    assert np.all(max_error_mask < atol_mm), (
+        f"Some max error exceeds {atol_mm}mm, N={masksize}vox."
+    )
 
 
-def test_stacked_estimators(motion_data):
+def test_stacked_estimators(datadir, tmp_path, monkeypatch):
     """Check that models can be stacked."""
 
+    from nifreeze.utils import iterators
+
     # Wrap into dataset object
-    dmri_dataset = motion_data["moved_nifreeze"]
+    dwi_motion = DWI.from_filename(datadir / "dmri_data" / "motion_test_data" / "dwi_motion.h5")
+    dwi_motion._filepath = tmp_path / "dwi_motion.h5"  # Prevent accidental overwriting
+    dwi_motion.motion_affines = None  # Erase ground truth for estimation
+
+    def mock_iterator(*_, **kwargs):
+        return []
+
+    monkeypatch.setattr(iterators, "random_iterator", mock_iterator)  # Avoid iterator issues
 
     estimator1 = Estimator(
-        TrivialModel(dmri_dataset),
+        TrivialModel(dwi_motion),
         ants_config="dwi-to-dwi_level0.json",
         clip=False,
     )
     estimator2 = Estimator(
-        TrivialModel(dmri_dataset),
+        TrivialModel(dwi_motion),
         prev=estimator1,
         clip=False,
     )
 
-    estimator2.run(dmri_dataset)
+    estimator2.run(dwi_motion)
