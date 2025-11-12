@@ -51,6 +51,8 @@ The project's source code lives under `src/nifreeze/` and tests under `tests/`.
       datalad get -r -J4 *
   fi
   ```
+  Files in GIN's annex can be retrieved using curl by composing the URL like this one for the [`dmri_data/motion_test_data/dwi_motion.h5` file](https://gin.g-node.org/nipreps-data/tests-nifreeze/raw/master/dmri_data/motion_test_data/dwi_motion.h5)
+
 - Some test data comes from DIPY:
   ```
   echo "from dipy.data import fetch_stanford_hardi; fetch_stanford_hardi()" > fetch.py
