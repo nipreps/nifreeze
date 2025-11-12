@@ -23,6 +23,7 @@
 """Integration tests."""
 
 from os import cpu_count
+import hashlib
 
 import nibabel as nb
 import nitransforms as nt
@@ -34,10 +35,26 @@ from nifreeze.model.base import TrivialModel
 from nifreeze.registration.utils import displacements_within_mask
 
 
+EXPECTED_DWI_MOTION_SHA256 = "REPLACE_WITH_ACTUAL_SHA256"
+
+
+def _sha256sum(path):
+    hasher = hashlib.sha256()
+    with path.open("rb") as fileobj:
+        for chunk in iter(lambda: fileobj.read(1024 * 1024), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
 def test_proximity_estimator_trivial_model(datadir, tmp_path, atol_mm=0.15):
     """Check the proximity of transforms estimated by the estimator with a trivial B0 model."""
 
-    dwi_motion = DWI.from_filename(datadir / "dmri_data" / "motion_test_data" / "dwi_motion.h5")
+    dwi_motion_path = datadir / "dmri_data" / "motion_test_data" / "dwi_motion.h5"
+    assert (
+        _sha256sum(dwi_motion_path) == EXPECTED_DWI_MOTION_SHA256
+    ), "Unexpected checksum for dwi_motion.h5"
+
+    dwi_motion = DWI.from_filename(dwi_motion_path)
     dwi_motion._filepath = tmp_path / "dwi_motion.h5"  # Prevent accidental overwriting
 
     ground_truth_affines = (
@@ -81,9 +98,21 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path, atol_mm=0.15):
         ]
     )
 
+    gt_inverse_errors = np.array(
+        [
+            displacements_within_mask(
+                masknii,  # type: ignore
+                nt.linear.Affine(np.eye(4)),
+                nt.linear.Affine(truth).inverse(),
+            ).max()
+            for truth in ground_truth_affines  # type: ignore
+        ]
+    )
+
     masksize = (np.asanyarray(masknii.dataobj) > 0).astype(int).sum()
-    assert np.all(max_error_mask < atol_mm), (
-        f"Some max error exceeds {atol_mm}mm, N={masksize}vox."
+    assert np.all(max_error_mask <= gt_inverse_errors), (
+        "Estimated transforms yield higher maximum displacement than the ground "
+        f"truth inverse transforms for at least one volume (N={masksize} voxels)."
     )
 
 
