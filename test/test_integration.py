@@ -22,6 +22,7 @@
 #
 """Integration tests."""
 
+import hashlib
 from os import cpu_count
 
 import nibabel as nb
@@ -33,11 +34,38 @@ from nifreeze.estimator import Estimator
 from nifreeze.model.base import TrivialModel
 from nifreeze.registration.utils import displacements_within_mask
 
+EXPECTED_DWI_MOTION_SHA256 = "3ba55cc3acfd584a7738f9701724e284f54bdf72261bf535b5dae062d7c0c30e"
 
-def test_proximity_estimator_trivial_model(datadir, tmp_path, atol_mm=0.15):
-    """Check the proximity of transforms estimated by the estimator with a trivial B0 model."""
 
-    dwi_motion = DWI.from_filename(datadir / "dmri_data" / "motion_test_data" / "dwi_motion.h5")
+def _sha256sum(path):
+    hasher = hashlib.sha256()
+    with path.open("rb") as fileobj:
+        for chunk in iter(lambda: fileobj.read(1024 * 1024), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
+def test_proximity_estimator_trivial_model(datadir, tmp_path, p_error=20.0):
+    """
+    Check the proximity of transforms estimated by the estimator with a trivial B0 model.
+
+    Parameters
+    ----------
+    datadir : pathlib.Path
+        Path to the test data directory.
+    tmp_path : pathlib.Path
+        Path to a temporary directory for test outputs.
+    p_error : float, optional
+        Acceptable percentage error in the estimated transforms, by default 20.0.
+
+    """
+
+    dwi_motion_path = datadir / "dmri_data" / "motion_test_data" / "dwi_motion.h5"
+    assert _sha256sum(dwi_motion_path) == EXPECTED_DWI_MOTION_SHA256, (
+        "Unexpected checksum for dwi_motion.h5"
+    )
+
+    dwi_motion = DWI.from_filename(dwi_motion_path)
     dwi_motion._filepath = tmp_path / "dwi_motion.h5"  # Prevent accidental overwriting
 
     ground_truth_affines = (
@@ -81,9 +109,23 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path, atol_mm=0.15):
         ]
     )
 
+    gt_inverse_errors = np.array(
+        [
+            displacements_within_mask(
+                masknii,  # type: ignore
+                ~nt.linear.Affine(truth),
+                nt.linear.Affine(np.eye(4)),
+            ).max()
+            for truth in ground_truth_affines  # type: ignore
+        ]
+    )
+
+    error_levels = gt_inverse_errors * p_error * 0.01
     masksize = (np.asanyarray(masknii.dataobj) > 0).astype(int).sum()
-    assert np.all(max_error_mask < atol_mm), (
-        f"Some max error exceeds {atol_mm}mm, N={masksize}vox."
+    assert np.all(max_error_mask < error_levels), (
+        "Errors per volume [estimated(ground truth) mm]: "
+        + ", ".join(f"{e:.2f}({g:.2f})" for e, g in zip(max_error_mask, gt_inverse_errors))
+        + f" (N={masksize} voxels)."
     )
 
 
