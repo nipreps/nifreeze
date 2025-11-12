@@ -35,6 +35,29 @@ The project's source code lives under `src/nifreeze/` and tests under `tests/`.
   ```
   sudo apt install texlive texlive-latex-extra texlive-fonts-recommended cm-super dvipng
   ```
+- A number of tests use pre-existing data (stored in the git-annex-enabled GIN G-Node https://gin.g-node.org/nipreps-data/tests-nifreeze) that need be found at location indicated by the environment variable `TEST_DATA_HOME`:
+  ```
+  uvx datalad-installer --sudo ok git-annex
+  uv tool install --with=datalad-osf --with=datalad-next datalad
+  uv tool install --with=datalad-next datalad-osf
+  datalad wtf  # check datalad is installed
+
+  # Install the dataset
+  if [[ ! -d "${TEST_DATA_HOME}" ]]; then
+      datalad install -rg --source=https://gin.g-node.org/nipreps-data/tests-nifreeze ${TEST_DATA_HOME}
+  else
+      cd ${TEST_DATA_HOME}
+      datalad update --merge -r .
+      datalad get -r -J4 *
+  fi
+  ```
+- Some test data comes from DIPY:
+  ```
+  echo "from dipy.data import fetch_stanford_hardi; fetch_stanford_hardi()" > fetch.py
+  uv tool install dipy
+  uv add --script fetch.py dipy
+  uv run fetch.py
+  ```
 
 Details about testing are found in `.github/workflows/test.yml`
 
