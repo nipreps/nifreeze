@@ -29,7 +29,7 @@ The project's source code lives under `src/nifreeze/` and tests under `tests/`.
 
 - Some software needs to be installed prior to testing, for example ANTs
   ```
-  conda install -c conda-forge ants=2.5 libiconv
+  conda install -c conda-forge ants=2.3 libiconv
   ```
 - Notebooks generate figures with latex commands inside, therefore:
   ```
