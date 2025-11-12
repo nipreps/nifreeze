@@ -184,7 +184,11 @@ def test_estimator_iterator_index_match(
     class DummyXForm:
         matrix = np.eye(4)
 
-    nifreeze.estimator._run_registration = lambda *a, **k: DummyXForm()
+    monkeypatch.setattr(
+        nifreeze.estimator,
+        "_run_registration",
+        lambda *a, **k: DummyXForm(),
+    )
 
     model = DummyModel(dataset=dataset)
     estimator = Estimator(model, strategy=strategy)
