@@ -22,8 +22,8 @@
 #
 """Integration tests."""
 
-from os import cpu_count
 import hashlib
+from os import cpu_count
 
 import nibabel as nb
 import nitransforms as nt
@@ -34,8 +34,7 @@ from nifreeze.estimator import Estimator
 from nifreeze.model.base import TrivialModel
 from nifreeze.registration.utils import displacements_within_mask
 
-
-EXPECTED_DWI_MOTION_SHA256 = "REPLACE_WITH_ACTUAL_SHA256"
+EXPECTED_DWI_MOTION_SHA256 = "3ba55cc3acfd584a7738f9701724e284f54bdf72261bf535b5dae062d7c0c30e"
 
 
 def _sha256sum(path):
@@ -46,13 +45,25 @@ def _sha256sum(path):
     return hasher.hexdigest()
 
 
-def test_proximity_estimator_trivial_model(datadir, tmp_path, atol_mm=0.15):
-    """Check the proximity of transforms estimated by the estimator with a trivial B0 model."""
+def test_proximity_estimator_trivial_model(datadir, tmp_path, p_error=20.0):
+    """
+    Check the proximity of transforms estimated by the estimator with a trivial B0 model.
+
+    Parameters
+    ----------
+    datadir : pathlib.Path
+        Path to the test data directory.
+    tmp_path : pathlib.Path
+        Path to a temporary directory for test outputs.
+    p_error : float, optional
+        Acceptable percentage error in the estimated transforms, by default 20.0.
+
+    """
 
     dwi_motion_path = datadir / "dmri_data" / "motion_test_data" / "dwi_motion.h5"
-    assert (
-        _sha256sum(dwi_motion_path) == EXPECTED_DWI_MOTION_SHA256
-    ), "Unexpected checksum for dwi_motion.h5"
+    assert _sha256sum(dwi_motion_path) == EXPECTED_DWI_MOTION_SHA256, (
+        "Unexpected checksum for dwi_motion.h5"
+    )
 
     dwi_motion = DWI.from_filename(dwi_motion_path)
     dwi_motion._filepath = tmp_path / "dwi_motion.h5"  # Prevent accidental overwriting
@@ -102,17 +113,19 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path, atol_mm=0.15):
         [
             displacements_within_mask(
                 masknii,  # type: ignore
+                ~nt.linear.Affine(truth),
                 nt.linear.Affine(np.eye(4)),
-                nt.linear.Affine(truth).inverse(),
             ).max()
             for truth in ground_truth_affines  # type: ignore
         ]
     )
 
+    error_levels = gt_inverse_errors * p_error * 0.01
     masksize = (np.asanyarray(masknii.dataobj) > 0).astype(int).sum()
-    assert np.all(max_error_mask <= gt_inverse_errors), (
-        "Estimated transforms yield higher maximum displacement than the ground "
-        f"truth inverse transforms for at least one volume (N={masksize} voxels)."
+    assert np.all(max_error_mask < error_levels), (
+        "Errors per volume [estimated(ground truth) mm]: "
+        + ", ".join(f"{e:.2f}({g:.2f})" for e, g in zip(max_error_mask, gt_inverse_errors))
+        + f" (N={masksize} voxels)."
     )
 
 
