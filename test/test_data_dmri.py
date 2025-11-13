@@ -263,10 +263,7 @@ def test_shells(setup_random_dwi_data):
         dwi_obj.bvals, num_bins=num_bins
     )
 
-    indices = [
-        np.where(np.isin(dwi_obj.bvals, bvals))[0]
-        for bvals in expected_bval_groups
-    ]
+    indices = [np.where(np.isin(dwi_obj.bvals, bvals))[0] for bvals in expected_bval_groups]
     expected_dwi_data = [dwi_obj.dataobj[..., idx] for idx in indices]
     expected_motion_affines = [
         dwi_obj.motion_affines[idx] if dwi_obj.motion_affines else None for idx in indices

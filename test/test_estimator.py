@@ -153,7 +153,7 @@ def test_estimator_iterator_index_match(
 
         dataset = DummyDWIDataset(dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients)
         bvals = gradients[:, -1][gradients[:, -1] > DEFAULT_LOWB_THRESHOLD]
-        kwargs = dict({"bvals": bvals})
+        kwargs = {"bvals": bvals}
     elif modality == "pet":
         (
             pet_dataobj,
@@ -165,7 +165,7 @@ def test_estimator_iterator_index_match(
 
         dataset = DummyPETDataset(pet_dataobj, affine, brainmask_dataobj, midframe, total_duration)
         uptake = dataset.uptake
-        kwargs = dict({"uptake": uptake})
+        kwargs = {"uptake": uptake}
     else:
         raise NotImplementedError(f"{modality} not implemented")
 
@@ -200,7 +200,7 @@ def test_estimator_iterator_index_match(
     if strategy == "linear":
         expected_indices = list(iterator_func(size=n_vols))
     elif strategy == "random":
-        expected_indices = sorted(list(iterator_func(size=n_vols, seed=42)))
+        expected_indices = sorted(iterator_func(size=n_vols, seed=42))
         recorded_indices_sorted = sorted(recorded_indices)
         assert recorded_indices_sorted == expected_indices
         return

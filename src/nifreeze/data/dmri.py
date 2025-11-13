@@ -196,9 +196,7 @@ class DWI(BaseDataset[np.ndarray]):
             multishell_nonempty_bin_count_thr=multishell_nonempty_bin_count_thr,
             bval_cap=bval_cap,
         )
-        indices = [
-            np.where(np.isin(self.bvals, bvals))[0] for bvals in bval_groups
-        ]
+        indices = [np.where(np.isin(self.bvals, bvals))[0] for bvals in bval_groups]
         return list(zip(bval_estimated, indices, strict=True))
 
     def to_filename(
@@ -416,7 +414,7 @@ def from_nii(
             grad = grad.T
         else:
             raise ValueError(
-                "Gradient table must have four columns (three direction components and one b-value)."
+                "Gradient table must have four columns (3 direction components and one b-value)."
             )
 
     # 3) Create the DWI instance. We'll filter out volumes where b-value > b0_thres

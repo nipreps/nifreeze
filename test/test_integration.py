@@ -124,7 +124,9 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path, p_error=20.0):
     masksize = (np.asanyarray(masknii.dataobj) > 0).astype(int).sum()
     assert np.all(max_error_mask < error_levels), (
         "Errors per volume [estimated(ground truth) mm]: "
-        + ", ".join(f"{e:.2f}({g:.2f})" for e, g in zip(max_error_mask, gt_inverse_errors))
+        + ", ".join(
+            f"{e:.2f}({g:.2f})" for e, g in zip(max_error_mask, gt_inverse_errors, strict=False)
+        )
         + f" (N={masksize} voxels)."
     )
 

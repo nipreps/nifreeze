@@ -75,7 +75,8 @@ def test_base_model():
 
     with pytest.raises(
         TypeError,
-        match="Can't instantiate abstract class BaseModel without an implementation for abstract method 'fit_predict'",
+        match="Can't instantiate abstract class BaseModel without an implementation "
+        "for abstract method 'fit_predict'",
     ):
         BaseModel(None)  # type: ignore[abstract]
 
