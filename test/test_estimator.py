@@ -75,7 +75,7 @@ class DummyDWIDataset(BaseDataset):
         return self.dataobj.shape[-1]
 
     def __getitem__(self, idx):
-        return self.dataobj[..., idx], None, self.gradients[..., idx]
+        return self.dataobj[..., idx], None, self.gradients[idx, ...]
 
 
 class DummyPETDataset(BaseDataset):
@@ -152,7 +152,7 @@ def test_estimator_iterator_index_match(
         ) = setup_random_dwi_data
 
         dataset = DummyDWIDataset(dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients)
-        bvals = gradients[-1, :][np.where(gradients[-1, :] > DEFAULT_LOWB_THRESHOLD)]
+        bvals = gradients[:, -1][gradients[:, -1] > DEFAULT_LOWB_THRESHOLD]
         kwargs = dict({"bvals": bvals})
     elif modality == "pet":
         (

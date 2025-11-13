@@ -459,7 +459,7 @@ def test_dmri_exceptions():
             if bzero:
                 self.bzero = np.ones(data_shape[:3])
             if gradients:
-                self.gradients = np.ones((data_shape[-1], 3))
+                self.gradients = np.ones((data_shape[-1], 4))
             self.dataobj = np.ones(data_shape)
             self.brainmask = brainmask
 
@@ -488,7 +488,7 @@ def test_dmri_max_b_attribute():
     class DummyDWI(DWI):
         def __init__(self, data_shape=(10, 10, 10, 35)):
             self.bzero = np.ones(data_shape[:3])
-            self.gradients = np.ones((data_shape[-1], 3))
+            self.gradients = np.ones((data_shape[-1], 4))
             self.dataobj = np.ones(data_shape)
             self.brainmask = np.ones(data_shape[:-1]).astype(bool)
 

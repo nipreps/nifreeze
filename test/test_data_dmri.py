@@ -61,7 +61,7 @@ def _serialize_dwi_data(
     nb.save(dwi, dwi_fname)
     nb.save(brainmask, brainmask_fname)
     nb.save(b0, b0_fname)
-    np.savetxt(gradients_fname, gradients.T)
+    np.savetxt(gradients_fname, gradients)
 
     return (
         dwi_fname,
@@ -127,17 +127,17 @@ def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
     assert np.allclose(dwi_h5.bvals, dwi_from_nifti1.bvals, atol=1e-3)
 
     bvec_diffs = np.where(
-        (~np.isclose(dwi_h5.bvecs, dwi_from_nifti1.bvecs, atol=1e-3)).sum(0).astype(bool)
+        (~np.isclose(dwi_h5.bvecs, dwi_from_nifti1.bvecs, atol=1e-3)).any(axis=1)
     )[0].tolist()
 
     assert not bvec_diffs, "\n".join(
-        [f"{dwi_h5.bvecs[:, i]} vs {dwi_from_nifti1.bvecs[:, i]}" for i in bvec_diffs]
+        [f"{dwi_h5.bvecs[i, :]} vs {dwi_from_nifti1.bvecs[i, :]}" for i in bvec_diffs]
     )
-    assert np.allclose(dwi_h5.gradients.T, dwi_from_nifti1.gradients.T, atol=1e-3)
+    assert np.allclose(dwi_h5.gradients, dwi_from_nifti1.gradients, atol=1e-3)
 
     grad_table = dwi_h5.gradients
     if insert_b0:
-        grad_table = np.hstack((np.zeros((4, 1)), dwi_h5.gradients))
+        grad_table = np.vstack((np.zeros((1, grad_table.shape[1])), grad_table))
     np.savetxt(str(gradients_path), grad_table)
 
     # Try loading NIfTI + gradients table
@@ -260,18 +260,18 @@ def test_shells(setup_random_dwi_data):
 
     num_bins = 3
     _, expected_bval_groups, expected_bval_est = find_shelling_scheme(
-        dwi_obj.gradients[-1, ...], num_bins=num_bins
+        dwi_obj.bvals, num_bins=num_bins
     )
 
     indices = [
-        np.hstack(np.where(np.isin(dwi_obj.gradients[-1, ...], bvals)))
+        np.where(np.isin(dwi_obj.bvals, bvals))[0]
         for bvals in expected_bval_groups
     ]
     expected_dwi_data = [dwi_obj.dataobj[..., idx] for idx in indices]
     expected_motion_affines = [
         dwi_obj.motion_affines[idx] if dwi_obj.motion_affines else None for idx in indices
     ]
-    expected_gradients = [dwi_obj.gradients[..., idx] for idx in indices]
+    expected_gradients = [dwi_obj.gradients[idx, ...] for idx in indices]
 
     obtained_bval_est, obtained_indices = zip(*dwi_obj.get_shells(num_bins=num_bins), strict=True)
 
