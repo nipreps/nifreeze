@@ -263,8 +263,8 @@ class DWI(BaseDataset[np.ndarray]):
         # Rotate b-vectors if self.motion_affines is not None
         if self.motion_affines is not None:
             rotated = [
-                transform_fsl_bvec(gradient, affine, self.affine, invert=True)
-                for gradient, affine in zip(self.gradients, self.motion_affines, strict=True)
+                transform_fsl_bvec(bvec, affine, self.affine, invert=True)
+                for bvec, affine in zip(self.gradients[:, :3], self.motion_affines, strict=True)
             ]
             bvecs = np.asarray(rotated)
         else:
