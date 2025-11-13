@@ -75,6 +75,37 @@ class DWI(BaseDataset[np.ndarray]):
     eddy_xfms: list = attrs.field(default=None)
     """List of transforms to correct for estimated eddy current distortions."""
 
+    def __attrs_post_init__(self) -> None:
+        self._normalize_gradients()
+
+    def _normalize_gradients(self) -> None:
+        if self.gradients is None:
+            return
+
+        gradients = np.asarray(self.gradients)
+        if gradients.ndim != 2:
+            raise ValueError("Gradient table must be a 2D array")
+
+        n_volumes = None
+        if self.dataobj is not None:
+            try:
+                n_volumes = self.dataobj.shape[-1]
+            except Exception:  # pragma: no cover - extremely defensive
+                n_volumes = None
+
+        if n_volumes is not None and gradients.shape[0] != n_volumes:
+            if gradients.shape[1] == n_volumes:
+                gradients = gradients.T
+            else:
+                raise ValueError(
+                    "Gradient table shape does not match the number of diffusion volumes: "
+                    f"expected {n_volumes} rows, found {gradients.shape[0]}"
+                )
+        elif n_volumes is None and gradients.shape[1] > gradients.shape[0]:
+            gradients = gradients.T
+
+        self.gradients = gradients
+
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray]:
         return (self.gradients[idx, ...],)
 
@@ -399,6 +430,7 @@ def from_nii(
     )
 
     dwi_obj.gradients = grad[gradmsk, :]
+    dwi_obj._normalize_gradients()
 
     # 4) b=0 volume (bzero)
     #    If the user provided a b0_file, load it
