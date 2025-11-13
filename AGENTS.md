@@ -84,7 +84,16 @@ Documentation can be built as described in `.github/workflows/docs-build-pr.yml`
 
 ## Linting
 
-Before accepting new PRs, we use the latest version of Ruff to lint the code, as in `.github/workflows/contrib.yml`
+Before accepting new PRs, we use the latest version of Ruff to lint the code, as in `.github/workflows/contrib.yml`:
+
+- Check correctness:
+  ```
+  pipx run ruff check --fix <files>
+  ```
+- Reformat:
+  ```
+  pipx run ruff format <files>
+  ```
 
 ## Codex instructions
 
