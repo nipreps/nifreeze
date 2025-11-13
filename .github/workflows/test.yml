@@ -115,7 +115,7 @@ jobs:
           # Override libiconv pre-installed from anaconda channel
           # See https://github.com/conda-forge/libitk-feedstock/issues/98
           # Since we're not creating a new environment, we must be explicit
-          conda install -c conda-forge ants=2.4 libiconv
+          conda install -c conda-forge ants=2.4 libitk=5.3 libiconv
       - name: Verify antsRegistration path
         run: |
           export PATH=$ANTSPATH:$PATH
