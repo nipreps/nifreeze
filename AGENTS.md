@@ -27,6 +27,11 @@ The project's source code lives under `src/nifreeze/` and tests under `tests/`.
 
 ### Pre-requisites
 
+- Bootstrap version metadata (which will create an `src/nifreeze/_version.py` file):
+  ```
+  python -m hatch version
+  ```
+
 - Some software needs to be installed prior to testing, for example ANTs
   ```
   conda install -c conda-forge ants=2.4 libitk=5.3 libiconv
