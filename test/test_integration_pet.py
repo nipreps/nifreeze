@@ -28,6 +28,7 @@ import pytest
 
 from nifreeze.data.pet import PET
 from nifreeze.estimator import PETMotionEstimator
+from nifreeze.model.base import BaseModel
 
 
 @pytest.fixture
@@ -51,16 +52,6 @@ def random_dataset(setup_random_pet_data) -> PET:
     )
 
 
-@pytest.mark.random_pet_data(4, (2, 2, 2), np.asarray([1.0, 2.0, 3.0, 4.0]), 5.0)
-def test_lofo_split_shapes(random_dataset, tmp_path):
-    idx = 2
-    (train_data, train_times), (test_data, test_time) = random_dataset.lofo_split(idx)
-    assert train_data.shape[-1] == random_dataset.dataobj.shape[-1] - 1
-    np.testing.assert_array_equal(test_data, random_dataset.dataobj[..., idx])
-    np.testing.assert_array_equal(train_times, np.delete(random_dataset.midframe, idx))
-    assert test_time == random_dataset.midframe[idx]
-
-
 @pytest.mark.random_pet_data(3, (2, 2, 2), np.asarray([1.0, 2.0, 3.0]), 4.0)
 def test_to_from_filename_roundtrip(random_dataset, tmp_path):
     out_file = tmp_path / "petdata"
@@ -75,16 +66,16 @@ def test_to_from_filename_roundtrip(random_dataset, tmp_path):
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]), 60.0)
 def test_pet_motion_estimator_run(random_dataset, monkeypatch):
-    class DummyModel:
+    class DummyModel(BaseModel):
         def __init__(self, dataset, timepoints, xlim):
             self.dataset = dataset
 
-        def fit_predict(self, index):
+        def fit_predict(self, index = None, **kawargs):
             if index is None:
                 return None
             return np.zeros(self.dataset.shape3d, dtype=np.float32)
 
-    monkeypatch.setattr("nifreeze.estimator.PETModel", DummyModel)
+    model = DummyModel(random_dataset, None, None)
 
     class DummyRegistration:
         def __init__(self, *args, **kwargs):
@@ -95,7 +86,7 @@ def test_pet_motion_estimator_run(random_dataset, monkeypatch):
 
     monkeypatch.setattr("nifreeze.estimator.Registration", DummyRegistration)
 
-    estimator = PETMotionEstimator(None)
+    estimator = PETMotionEstimator(model)
     affines = estimator.run(random_dataset)
     assert len(affines) == len(random_dataset)
     for mat in affines:
