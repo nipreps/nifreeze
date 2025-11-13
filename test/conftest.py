@@ -290,7 +290,10 @@ def setup_random_dwi_data(request, setup_random_gtab_data):
             str(_datadir / "hcph_multishell.bval"),
             str(_datadir / "hcph_multishell.bvec"),
         )
-        bvecs = bvecs.T
+        if bvecs.ndim == 1:
+            bvecs = bvecs[np.newaxis, :]
+        if bvecs.shape[1] != 3 and bvecs.shape[0] == 3:
+            bvecs = bvecs.T
 
     n_gradients = np.count_nonzero(bvals)
     b0s = len(bvals) - n_gradients
