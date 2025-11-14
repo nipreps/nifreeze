@@ -35,6 +35,7 @@ import h5py
 import nibabel as nb
 import numpy as np
 from nitransforms.linear import LinearTransformsMapping
+from nitransforms.resampling import apply
 from typing_extensions import Self, TypeVarTuple, Unpack
 
 Ts = TypeVarTuple("Ts")
@@ -285,7 +286,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
                 datamoving = nb.Nifti1Image(frame[0], self.affine, self.datahdr)
                 # resample at index
                 resampled[..., i] = np.asanyarray(
-                    xform.apply(datamoving, order=order).dataobj,
+                    apply(xform, datamoving, order=order).dataobj,
                     dtype=self.dataobj.dtype,
                 )
 

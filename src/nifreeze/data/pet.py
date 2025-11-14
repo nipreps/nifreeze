@@ -35,6 +35,7 @@ import nibabel as nb
 import numpy as np
 from nibabel.spatialimages import SpatialImage
 from nitransforms.linear import Affine
+from nitransforms.resampling import apply
 from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr
@@ -137,7 +138,7 @@ class PET(BaseDataset[np.ndarray]):
 
         # resample and update orientation at index
         self.dataobj[..., index] = np.asanyarray(
-            xform.apply(dmoving, order=order).dataobj,
+            apply(xform, dmoving, order=order).dataobj,
             dtype=self.dataobj.dtype,
         )
 
