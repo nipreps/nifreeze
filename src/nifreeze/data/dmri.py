@@ -71,12 +71,43 @@ class DWI(BaseDataset[np.ndarray]):
     bzero: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
     """A *b=0* reference map, preferably obtained by some smart averaging."""
     gradients: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
-    """A 2D numpy array of the gradient table (4xN)."""
+    """A 2D numpy array of the gradient table (``N`` orientations x ``C`` components)."""
     eddy_xfms: list = attrs.field(default=None)
     """List of transforms to correct for estimated eddy current distortions."""
 
+    def __attrs_post_init__(self) -> None:
+        self._normalize_gradients()
+
+    def _normalize_gradients(self) -> None:
+        if self.gradients is None:
+            return
+
+        gradients = np.asarray(self.gradients)
+        if gradients.ndim != 2:
+            raise ValueError("Gradient table must be a 2D array")
+
+        n_volumes = None
+        if self.dataobj is not None:
+            try:
+                n_volumes = self.dataobj.shape[-1]
+            except Exception:  # pragma: no cover - extremely defensive
+                n_volumes = None
+
+        if n_volumes is not None and gradients.shape[0] != n_volumes:
+            if gradients.shape[1] == n_volumes:
+                gradients = gradients.T
+            else:
+                raise ValueError(
+                    "Gradient table shape does not match the number of diffusion volumes: "
+                    f"expected {n_volumes} rows, found {gradients.shape[0]}"
+                )
+        elif n_volumes is None and gradients.shape[1] > gradients.shape[0]:
+            gradients = gradients.T
+
+        self.gradients = gradients
+
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray]:
-        return (self.gradients[..., idx],)
+        return (self.gradients[idx, ...],)
 
     # For the sake of the docstring
     def __getitem__(
@@ -99,8 +130,8 @@ class DWI(BaseDataset[np.ndarray]):
         motion_affine : :obj:`~numpy.ndarray` or ``None``
             The corresponding per-volume motion affine(s) or ``None`` if identity transform(s).
         gradient : :obj:`~numpy.ndarray`
-            The corresponding gradient(s), which may have shape ``(4,)`` if a single volume
-            or ``(4, k)`` if multiple volumes, or ``None`` if gradients are not available.
+            The corresponding gradient(s), which may have shape ``(C,)`` if a single volume
+            or ``(k, C)`` if multiple volumes, or ``None`` if gradients are not available.
 
         """
 
@@ -126,11 +157,11 @@ class DWI(BaseDataset[np.ndarray]):
 
     @property
     def bvals(self):
-        return self.gradients[-1, ...]
+        return self.gradients[..., -1]
 
     @property
     def bvecs(self):
-        return self.gradients[:-1, ...]
+        return self.gradients[..., :-1]
 
     def get_shells(
         self,
@@ -160,14 +191,12 @@ class DWI(BaseDataset[np.ndarray]):
         """
 
         _, bval_groups, bval_estimated = find_shelling_scheme(
-            self.gradients[-1, ...],
+            self.bvals,
             num_bins=num_bins,
             multishell_nonempty_bin_count_thr=multishell_nonempty_bin_count_thr,
             bval_cap=bval_cap,
         )
-        indices = [
-            np.hstack(np.where(np.isin(self.gradients[-1, ...], bvals))) for bvals in bval_groups
-        ]
+        indices = [np.where(np.isin(self.bvals, bvals))[0] for bvals in bval_groups]
         return list(zip(bval_estimated, indices, strict=True))
 
     def to_filename(
@@ -232,16 +261,14 @@ class DWI(BaseDataset[np.ndarray]):
         bvals = self.bvals
 
         # Rotate b-vectors if self.motion_affines is not None
-        bvecs = (
-            np.array(
-                [
-                    transform_fsl_bvec(bvec, affine, self.affine, invert=True)
-                    for bvec, affine in zip(self.gradients.T, self.motion_affines, strict=True)
-                ]
-            ).T
-            if self.motion_affines is not None
-            else self.bvecs
-        )
+        if self.motion_affines is not None:
+            rotated = [
+                transform_fsl_bvec(bvec, affine, self.affine, invert=True)
+                for bvec, affine in zip(self.gradients[:, :3], self.motion_affines, strict=True)
+            ]
+            bvecs = np.asarray(rotated)
+        else:
+            bvecs = self.bvecs
 
         # Parent's to_nifti to handle the primary NIfTI export.
         nii = super().to_nifti(
@@ -266,7 +293,7 @@ class DWI(BaseDataset[np.ndarray]):
             # If inserting a b0 volume is requested, add the corresponding null
             # gradient value to the bval/bvec pair
             bvals = np.concatenate((np.zeros(1), bvals))
-            bvecs = np.concatenate((np.zeros(3)[:, np.newaxis], bvecs), axis=-1)
+            bvecs = np.vstack((np.zeros((1, bvecs.shape[1])), bvecs))
 
         if filename is not None:
             # Convert filename to a Path object.
@@ -279,9 +306,8 @@ class DWI(BaseDataset[np.ndarray]):
             bvecs_file = out_root.with_suffix(".bvec")
             bvals_file = out_root.with_suffix(".bval")
 
-            # Save bvecs and bvals to text files
-            # Each row of bvecs is one direction (3 rows, N columns).
-            np.savetxt(bvecs_file, bvecs, fmt=f"%.{bvecs_dec_places}f")
+            # Save bvecs and bvals to text files. BIDS expects 3 rows x N columns.
+            np.savetxt(bvecs_file, bvecs.T, fmt=f"%.{bvecs_dec_places}f")
             np.savetxt(bvals_file, bvals[np.newaxis, :], fmt=f"%.{bvals_dec_places}f")
 
         return nii
@@ -313,10 +339,12 @@ def from_nii(
     motion_file : :obj:`os.pathlike`, optional
         A file containing head motion affine matrices (linear)
     gradients_file : :obj:`os.pathlike`, optional
-        A text file containing the gradients table, shape (4, N) or (N, 4).
-        If provided, it supersedes any .bvec / .bval combination.
+        A text file containing the gradients table, shape (N, C) where the last column
+        stores the b-values. If provided following the column-major convention(C, N),
+        it will be transposed automatically. If provided, it supersedes any .bvec / .bval
+        combination.
     bvec_file : :obj:`os.pathlike`, optional
-        A text file containing b-vectors, shape (3, N).
+        A text file containing b-vectors, shape (N, 3) or (3, N).
     bval_file : :obj:`os.pathlike`, optional
         A text file containing b-values, shape (N,).
     b0_file : :obj:`os.pathlike`, optional
@@ -359,31 +387,48 @@ def from_nii(
                 stacklevel=2,
             )
     elif bvec_file and bval_file:
-        bvecs = np.loadtxt(bvec_file, dtype="float32")  # shape (3, N)
-        if bvecs.shape[0] != 3 and bvecs.shape[1] == 3:
+        bvecs = np.loadtxt(bvec_file, dtype="float32")
+        if bvecs.ndim == 1:
+            bvecs = bvecs[np.newaxis, :]
+        if bvecs.shape[1] != 3 and bvecs.shape[0] == 3:
             bvecs = bvecs.T
 
-        bvals = np.loadtxt(bval_file, dtype="float32")  # shape (N,)
-        # Stack to shape (4, N)
-        grad = np.vstack((bvecs, bvals))
+        bvals = np.loadtxt(bval_file, dtype="float32")
+        if bvals.ndim > 1:
+            bvals = np.squeeze(bvals)
+        grad = np.column_stack((bvecs, bvals))
     else:
         raise RuntimeError(
             "No gradient data provided. "
             "Please specify either a gradients_file or (bvec_file & bval_file)."
         )
 
+    if grad.ndim == 1:
+        grad = grad[np.newaxis, :]
+
+    if grad.shape[1] < 2:
+        raise ValueError("Gradient table must have at least two columns (direction + b-value).")
+
+    if grad.shape[1] != 4:
+        if grad.shape[0] == 4:
+            grad = grad.T
+        else:
+            raise ValueError(
+                "Gradient table must have four columns (3 direction components and one b-value)."
+            )
+
     # 3) Create the DWI instance. We'll filter out volumes where b-value > b0_thres
     #    as "DW volumes" if the user wants to store only the high-b volumes here
-    gradmsk = (grad[-1] if grad.shape[0] == 4 else grad[:, -1]) > b0_thres
+    gradmsk = grad[:, -1] > b0_thres
 
-    # The shape checking is somewhat flexible: (4, N) or (N, 4)
     dwi_obj = DWI(
         dataobj=fulldata[..., gradmsk],
         affine=img.affine,
         # We'll assign the filtered gradients below.
     )
 
-    dwi_obj.gradients = grad[:, gradmsk] if grad.shape[0] == 4 else grad[gradmsk, :].T
+    dwi_obj.gradients = grad[gradmsk, :]
+    dwi_obj._normalize_gradients()
 
     # 4) b=0 volume (bzero)
     #    If the user provided a b0_file, load it

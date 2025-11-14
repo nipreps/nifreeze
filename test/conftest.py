@@ -188,7 +188,10 @@ def _generate_random_bvals(rng, b0s, shells, n_gradients):
 def _generate_random_bvecs(rng, b0s, n_gradients):
     from dipy.core.geometry import normalized_vector
 
-    return np.hstack([np.zeros((3, b0s)), normalized_vector(rng.random((3, n_gradients)), axis=0)])
+    vectors = normalized_vector(rng.random((3, n_gradients)), axis=0).T
+    if b0s:
+        vectors = np.vstack([np.zeros((b0s, 3)), vectors])
+    return vectors
 
 
 @pytest.fixture(autouse=True)
@@ -287,7 +290,10 @@ def setup_random_dwi_data(request, setup_random_gtab_data):
             str(_datadir / "hcph_multishell.bval"),
             str(_datadir / "hcph_multishell.bvec"),
         )
-        bvecs = bvecs.T
+        if bvecs.ndim == 1:
+            bvecs = bvecs[np.newaxis, :]
+        if bvecs.shape[1] != 3 and bvecs.shape[0] == 3:
+            bvecs = bvecs.T
 
     n_gradients = np.count_nonzero(bvals)
     b0s = len(bvals) - n_gradients
@@ -298,7 +304,7 @@ def setup_random_dwi_data(request, setup_random_gtab_data):
     )
     brainmask_dataobj = rng.choice([True, False], size=vol_size).astype(bool)
     b0_dataobj = rng.random(vol_size, dtype="float32")
-    gradients = np.vstack([bvecs, bvals[np.newaxis, :]], dtype="float32")
+    gradients = np.column_stack((bvecs, bvals)).astype("float32")
 
     return (
         dwi_dataobj,

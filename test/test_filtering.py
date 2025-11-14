@@ -111,19 +111,19 @@ def test_dwi_select_shells(
 ):
     bvecs = setup_random_bvec_data
 
-    gradients = np.vstack([bvecs, bvals[np.newaxis, :]], dtype="float32")
+    gradients = np.column_stack((bvecs, bvals)).astype("float32")
 
     if expect_exception:
         with pytest.raises(RuntimeError):
             _ = dwi_select_shells(
-                gradients.T,
+                gradients,
                 index,
                 atol_low=BVAL_ATOL,
                 atol_high=BVAL_ATOL,
             )
     else:
         shell_mask = dwi_select_shells(
-            gradients.T,
+            gradients,
             index,
             atol_low=BVAL_ATOL,
             atol_high=BVAL_ATOL,

@@ -41,7 +41,7 @@ def test_lovo_split(request, datadir):
 
     # Set 1 in dataobj and gradients of the dwi object at this specific index
     data.dataobj[..., index] = 1
-    data.gradients[..., index] = 1
+    data.gradients[index, ...] = 1
 
     # Apply the lovo_split function at the specified index
     train_data, test_data = lovo_split(data, index)
