@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.utils.ndimage module" href="nifreeze.utils.ndimage.html"><link rel="prev" title="nifreeze.utils package" href="nifreeze.utils.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.utils.iterators module - nifreeze 25.0.0.dev658 documentation</title>
+        <title>nifreeze.utils.iterators module - nifreeze 25.0.0.dev660 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev658 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev660 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev658</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev660</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev658</span>
+  <span class="sidebar-brand-text">25.0.0.dev660</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -342,27 +342,6 @@ are part of the 4th axis (e.g. diffusion gradients in DWI or update in PET).</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.utils.iterators.bvalue_iterator">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">bvalue_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">_</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#bvalue_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.bvalue_iterator" title="Link to this definition">¶</a></dt>
-<dd><p>Traverse the volumes in a DWI dataset by increasing b-value.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>) – List of b-values corresponding to all orientations of the dataset.
-Please note that <code class="docutils literal notranslate"><span class="pre">bvals</span></code> is a keyword argument and MUST be provided
-to generate the volume sequence.</p>
-</dd>
-<dt class="field-even">Yields<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
-</dd>
-</dl>
-<p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">bvalue_iterator</span><span class="p">(</span><span class="n">bvals</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">,</span> <span class="mf">2000.0</span><span class="p">,</span> <span class="mf">2000.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]))</span>
-<span class="go">[0, 1, 8, 4, 5, 2, 3, 6, 7]</span>
-</pre></div>
-</div>
-</dd></dl>
-
-<dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.utils.iterators.centralsym_iterator">
 <span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">centralsym_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#centralsym_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.centralsym_iterator" title="Link to this definition">¶</a></dt>
 <dd><p>Traverse the dataset starting from the center and alternatingly progressing to the sides.</p>
@@ -422,6 +401,46 @@ keyword is provided, a <a class="reference external" href="https://docs.python.o
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="nifreeze.utils.iterators.monotonic_value_iterator">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">monotonic_value_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">_</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#monotonic_value_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.monotonic_value_iterator" title="Link to this definition">¶</a></dt>
+<dd><p>Traverse the volumes by increasing b-value in a DWI dataset or by decreasing
+uptake value in a PET dataset.</p>
+<p>This function requires <code class="docutils literal notranslate"><span class="pre">bvals</span></code> or <code class="docutils literal notranslate"><span class="pre">uptake</span></code> be a keyword argument to generate
+the volume sequence. The b-values are assumed to all orientations in a DWI
+dataset, and uptake uptake values correspond to all volumes in a PET dataset.</p>
+<p>It is assumed that each uptake value corresponds to a single volume, and that
+this value summarizes the uptake of the volume in a meaningful way, e.g. a mean
+value across the entire volume.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Other Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> (obj:<cite>int</cite>, optional) – Size of the structure to iterate over.</p></li>
+<li><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of b-values corresponding to all orientations of a DWI dataset.</p></li>
+<li><p><strong>uptake</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of uptake values corresponding to all volumes of the dataset.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Only one of the above keyword arguments may be provided at a time. If <code class="docutils literal notranslate"><span class="pre">size</span></code>
+is given, all other size-related keyword arguments will be ignored. If <code class="docutils literal notranslate"><span class="pre">size</span></code>
+is not provided, the function will attempt to infer the number of volumes from
+the length or value of the provided keyword argument. If more than one such
+keyword is provided, a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code></a> will be raised.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Yields<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">monotonic_value_iterator</span><span class="p">(</span><span class="n">bvals</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">,</span> <span class="mf">2000.0</span><span class="p">,</span> <span class="mf">2000.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]))</span>
+<span class="go">[0, 1, 8, 4, 5, 2, 3, 6, 7]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">monotonic_value_iterator</span><span class="p">(</span><span class="n">uptake</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">1.23</span><span class="p">,</span> <span class="mf">1.06</span><span class="p">,</span> <span class="mf">1.02</span><span class="p">,</span> <span class="mf">1.38</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.46</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.12</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.19</span><span class="p">,</span> <span class="mf">1.24</span><span class="p">,</span> <span class="mf">1.05</span><span class="p">]))</span>
+<span class="go">[3, 7, 1, 8, 2, 5, 6, 0, 4]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.utils.iterators.random_iterator">
 <span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">random_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#random_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.random_iterator" title="Link to this definition">¶</a></dt>
 <dd><p>Traverse the dataset volumes randomly.</p>
@@ -465,30 +484,6 @@ keyword is provided, a <a class="reference external" href="https://docs.python.o
 <span class="go">[1, 12, 14, 5, 0, 11, 10, 9, 7, 8, 3, 13, 2, 6, 4]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">))</span>  <span class="c1"># seed is 42</span>
 <span class="go">[8, 13, 7, 6, 14, 12, 5, 2, 9, 3, 4, 11, 0, 1, 10]</span>
-</pre></div>
-</div>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.utils.iterators.uptake_iterator">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">uptake_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">_</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#uptake_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.uptake_iterator" title="Link to this definition">¶</a></dt>
-<dd><p>Traverse the volumes in a PET dataset by decreasing uptake value.</p>
-<p>This function assumes that each uptake value corresponds to a single volume,
-and that this value summarizes the uptake of the volume in a meaningful way,
-e.g. a mean value across the entire volume.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>uptake</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>) – List of uptake values corresponding to all volumes of the dataset.
-Please note that <code class="docutils literal notranslate"><span class="pre">uptake</span></code> is a keyword argument and MUST be provided
-to generate the volume sequence.</p>
-</dd>
-<dt class="field-even">Yields<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
-</dd>
-</dl>
-<p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">uptake_iterator</span><span class="p">(</span><span class="n">uptake</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">1.23</span><span class="p">,</span> <span class="mf">1.06</span><span class="p">,</span> <span class="mf">1.02</span><span class="p">,</span> <span class="mf">1.38</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.46</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.12</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.19</span><span class="p">,</span> <span class="mf">1.24</span><span class="p">,</span> <span class="mf">1.05</span><span class="p">]))</span>
-<span class="go">[3, 7, 1, 8, 2, 5, 6, 0, 4]</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -557,11 +552,10 @@ to generate the volume sequence.</p>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.KWARG_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">KWARG_ERROR_MSG</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.SIZE_KEYS"><code class="docutils literal notranslate"><span class="pre">SIZE_KEYS</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.UPTAKE_KWARG"><code class="docutils literal notranslate"><span class="pre">UPTAKE_KWARG</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.utils.iterators.bvalue_iterator"><code class="docutils literal notranslate"><span class="pre">bvalue_iterator()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.centralsym_iterator"><code class="docutils literal notranslate"><span class="pre">centralsym_iterator()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.linear_iterator"><code class="docutils literal notranslate"><span class="pre">linear_iterator()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.utils.iterators.monotonic_value_iterator"><code class="docutils literal notranslate"><span class="pre">monotonic_value_iterator()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.random_iterator"><code class="docutils literal notranslate"><span class="pre">random_iterator()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.utils.iterators.uptake_iterator"><code class="docutils literal notranslate"><span class="pre">uptake_iterator()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -573,7 +567,7 @@ to generate the volume sequence.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=55093f94"></script>
+</div><script src="../_static/documentation_options.js?v=dbca7c57"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

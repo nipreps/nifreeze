@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.utils.iterators - nifreeze 25.0.0.dev658 documentation</title>
+        <title>nifreeze.utils.iterators - nifreeze 25.0.0.dev660 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev658 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev660 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev658</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev660</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev658</span>
+  <span class="sidebar-brand-text">25.0.0.dev660</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -319,7 +319,7 @@
 
 <span class="kn">import</span> <span class="nn">random</span>
 <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">chain</span><span class="p">,</span> <span class="n">zip_longest</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterator</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">Sequence</span>
 
 <span class="n">DEFAULT_ROUND_DECIMALS</span> <span class="o">=</span> <span class="mi">2</span>
 <span class="sd">&quot;&quot;&quot;Round decimals to use when comparing values to be sorted for iteration purposes.&quot;&quot;&quot;</span>
@@ -473,14 +473,14 @@
 
 
 <span class="k">def</span> <span class="nf">_value_iterator</span><span class="p">(</span>
-    <span class="n">values</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">ascending</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">round_decimals</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_ROUND_DECIMALS</span>
+    <span class="n">values</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">ascending</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">round_decimals</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_ROUND_DECIMALS</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Traverse the given values in ascending or descenting order.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    values : :obj:`list`</span>
+<span class="sd">    values : :obj:`Sequence`</span>
 <span class="sd">        List of values to traverse.</span>
 <span class="sd">    ascending : :obj:`bool`</span>
 <span class="sd">        If ``True``, traverse in ascending order; traverse in descending order</span>
@@ -512,76 +512,60 @@
     <span class="k">return</span> <span class="p">(</span><span class="n">index</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">indexed_vals</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="bvalue_iterator">
-<a class="viewcode-back" href="../../../api/nifreeze.utils.iterators.html#nifreeze.utils.iterators.bvalue_iterator">[docs]</a>
-<span class="k">def</span> <span class="nf">bvalue_iterator</span><span class="p">(</span><span class="o">*</span><span class="n">_</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Traverse the volumes in a DWI dataset by increasing b-value.</span>
+<div class="viewcode-block" id="monotonic_value_iterator">
+<a class="viewcode-back" href="../../../api/nifreeze.utils.iterators.html#nifreeze.utils.iterators.monotonic_value_iterator">[docs]</a>
+<span class="k">def</span> <span class="nf">monotonic_value_iterator</span><span class="p">(</span><span class="o">*</span><span class="n">_</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">feature</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="n">BVALS_KWARG</span><span class="p">,</span> <span class="n">UPTAKE_KWARG</span><span class="p">)</span> <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">KWARG_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">kwarg</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">BVALS_KWARG</span><span class="si">}</span><span class="s2"> or </span><span class="si">{</span><span class="n">UPTAKE_KWARG</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">))</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    bvals : :obj:`list`</span>
-<span class="sd">        List of b-values corresponding to all orientations of the dataset.</span>
-<span class="sd">        Please note that ``bvals`` is a keyword argument and MUST be provided</span>
-<span class="sd">        to generate the volume sequence.</span>
-
-<span class="sd">    Yields</span>
-<span class="sd">    ------</span>
-<span class="sd">    :obj:`int`</span>
-<span class="sd">        The next index.</span>
-
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; list(bvalue_iterator(bvals=[0.0, 0.0, 1000.0, 1000.0, 700.0, 700.0, 2000.0, 2000.0, 0.0]))</span>
-<span class="sd">    [0, 1, 8, 4, 5, 2, 3, 6, 7]</span>
-
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">bvals</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">BVALS_KWARG</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">bvals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">KWARG_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">kwarg</span><span class="o">=</span><span class="n">BVALS_KWARG</span><span class="p">))</span>
+    <span class="n">ascending</span> <span class="o">=</span> <span class="n">feature</span> <span class="o">==</span> <span class="n">BVALS_KWARG</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">_value_iterator</span><span class="p">(</span>
-        <span class="n">bvals</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">round_decimals</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;round_decimals&quot;</span><span class="p">,</span> <span class="n">DEFAULT_ROUND_DECIMALS</span><span class="p">)</span>
+        <span class="n">values</span><span class="p">,</span>
+        <span class="n">ascending</span><span class="o">=</span><span class="n">ascending</span><span class="p">,</span>
+        <span class="n">round_decimals</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;round_decimals&quot;</span><span class="p">,</span> <span class="n">DEFAULT_ROUND_DECIMALS</span><span class="p">),</span>
     <span class="p">)</span></div>
 
 
 
-<div class="viewcode-block" id="uptake_iterator">
-<a class="viewcode-back" href="../../../api/nifreeze.utils.iterators.html#nifreeze.utils.iterators.uptake_iterator">[docs]</a>
-<span class="k">def</span> <span class="nf">uptake_iterator</span><span class="p">(</span><span class="o">*</span><span class="n">_</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Traverse the volumes in a PET dataset by decreasing uptake value.</span>
+<span class="n">monotonic_value_iterator</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">Traverse the volumes by increasing b-value in a DWI dataset or by decreasing</span>
+<span class="s2">uptake value in a PET dataset.</span>
 
-<span class="sd">    This function assumes that each uptake value corresponds to a single volume,</span>
-<span class="sd">    and that this value summarizes the uptake of the volume in a meaningful way,</span>
-<span class="sd">    e.g. a mean value across the entire volume.</span>
+<span class="s2">This function requires ``bvals`` or ``uptake`` be a keyword argument to generate</span>
+<span class="s2">the volume sequence. The b-values are assumed to all orientations in a DWI</span>
+<span class="s2">dataset, and uptake uptake values correspond to all volumes in a PET dataset.</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    uptake : :obj:`list`</span>
-<span class="sd">        List of uptake values corresponding to all volumes of the dataset.</span>
-<span class="sd">        Please note that ``uptake`` is a keyword argument and MUST be provided</span>
-<span class="sd">        to generate the volume sequence.</span>
+<span class="s2">It is assumed that each uptake value corresponds to a single volume, and that</span>
+<span class="s2">this value summarizes the uptake of the volume in a meaningful way, e.g. a mean</span>
+<span class="s2">value across the entire volume.</span>
 
-<span class="sd">    Yields</span>
-<span class="sd">    ------</span>
-<span class="sd">    :obj:`int`</span>
-<span class="sd">        The next index.</span>
+<span class="s2">Other Parameters</span>
+<span class="s2">----------------</span>
+<span class="si">{</span><span class="n">SIZE_KEYS_DOC</span><span class="si">}</span>
 
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; list(uptake_iterator(uptake=[-1.23, 1.06, 1.02, 1.38, -1.46, -1.12, -1.19, 1.24, 1.05]))</span>
-<span class="sd">    [3, 7, 1, 8, 2, 5, 6, 0, 4]</span>
+<span class="s2">Notes</span>
+<span class="s2">-----</span>
+<span class="s2">Only one of the above keyword arguments may be provided at a time. If ``size``</span>
+<span class="s2">is given, all other size-related keyword arguments will be ignored. If ``size``</span>
+<span class="s2">is not provided, the function will attempt to infer the number of volumes from</span>
+<span class="s2">the length or value of the provided keyword argument. If more than one such</span>
+<span class="s2">keyword is provided, a :exc:`ValueError` will be raised.</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">uptake</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">UPTAKE_KWARG</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">uptake</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">KWARG_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">kwarg</span><span class="o">=</span><span class="n">UPTAKE_KWARG</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">_value_iterator</span><span class="p">(</span>
-        <span class="n">uptake</span><span class="p">,</span>
-        <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-        <span class="n">round_decimals</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;round_decimals&quot;</span><span class="p">,</span> <span class="n">DEFAULT_ROUND_DECIMALS</span><span class="p">),</span>
-    <span class="p">)</span></div>
+<span class="s2">Yields</span>
+<span class="s2">------</span>
+<span class="s2">:obj:`int`</span>
+<span class="s2">    The next index.</span>
 
+<span class="s2">Examples</span>
+<span class="s2">--------</span>
+<span class="s2">&gt;&gt;&gt; list(monotonic_value_iterator(bvals=[0.0, 0.0, 1000.0, 1000.0, 700.0, 700.0, 2000.0, 2000.0, 0.0]))</span>
+<span class="s2">[0, 1, 8, 4, 5, 2, 3, 6, 7]</span>
+<span class="s2">&gt;&gt;&gt; list(monotonic_value_iterator(uptake=[-1.23, 1.06, 1.02, 1.38, -1.46, -1.12, -1.19, 1.24, 1.05]))</span>
+<span class="s2">[3, 7, 1, 8, 2, 5, 6, 0, 4]</span>
+<span class="s2">&quot;&quot;&quot;</span>
 
 
 <div class="viewcode-block" id="centralsym_iterator">
@@ -657,7 +641,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=55093f94"></script>
+</div><script src="../../../_static/documentation_options.js?v=dbca7c57"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
