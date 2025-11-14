@@ -24,7 +24,7 @@
 
 import random
 from itertools import chain, zip_longest
-from typing import Iterator
+from typing import Iterator, Sequence
 
 DEFAULT_ROUND_DECIMALS = 2
 """Round decimals to use when comparing values to be sorted for iteration purposes."""
@@ -172,14 +172,14 @@ Examples
 
 
 def _value_iterator(
-    values: list, ascending: bool, round_decimals: int = DEFAULT_ROUND_DECIMALS
+    values: Sequence[float], ascending: bool, round_decimals: int = DEFAULT_ROUND_DECIMALS
 ) -> Iterator[int]:
     """
     Traverse the given values in ascending or descenting order.
 
     Parameters
     ----------
-    values : :obj:`list`
+    values : :obj:`Sequence`
         List of values to traverse.
     ascending : :obj:`bool`
         If ``True``, traverse in ascending order; traverse in descending order
@@ -211,70 +211,57 @@ def _value_iterator(
     return (index[1] for index in indexed_vals)
 
 
-def bvalue_iterator(*_, **kwargs) -> Iterator[int]:
-    """
-    Traverse the volumes in a DWI dataset by increasing b-value.
+def monotonic_value_iterator(*_, **kwargs) -> Iterator[int]:
+    try:
+        feature = next(k for k in (BVALS_KWARG, UPTAKE_KWARG) if kwargs.get(k) is not None)
+    except StopIteration:
+        raise TypeError(KWARG_ERROR_MSG.format(kwarg=f"{BVALS_KWARG} or {UPTAKE_KWARG}"))
 
-    Parameters
-    ----------
-    bvals : :obj:`list`
-        List of b-values corresponding to all orientations of the dataset.
-        Please note that ``bvals`` is a keyword argument and MUST be provided
-        to generate the volume sequence.
-
-    Yields
-    ------
-    :obj:`int`
-        The next index.
-
-    Examples
-    --------
-    >>> list(bvalue_iterator(bvals=[0.0, 0.0, 1000.0, 1000.0, 700.0, 700.0, 2000.0, 2000.0, 0.0]))
-    [0, 1, 8, 4, 5, 2, 3, 6, 7]
-
-    """
-    bvals = kwargs.pop(BVALS_KWARG, None)
-    if bvals is None:
-        raise TypeError(KWARG_ERROR_MSG.format(kwarg=BVALS_KWARG))
+    ascending = feature == BVALS_KWARG
+    values = kwargs[feature]
     return _value_iterator(
-        bvals, ascending=True, round_decimals=kwargs.pop("round_decimals", DEFAULT_ROUND_DECIMALS)
+        values,
+        ascending=ascending,
+        round_decimals=kwargs.get("round_decimals", DEFAULT_ROUND_DECIMALS),
     )
 
 
-def uptake_iterator(*_, **kwargs) -> Iterator[int]:
-    """
-    Traverse the volumes in a PET dataset by decreasing uptake value.
+monotonic_value_iterator.__doc__ = f"""
+Traverse the volumes by increasing b-value in a DWI dataset or by decreasing
+uptake value in a PET dataset.
 
-    This function assumes that each uptake value corresponds to a single volume,
-    and that this value summarizes the uptake of the volume in a meaningful way,
-    e.g. a mean value across the entire volume.
+This function requires ``bvals`` or ``uptake`` be a keyword argument to generate
+the volume sequence. The b-values are assumed to all orientations in a DWI
+dataset, and uptake uptake values correspond to all volumes in a PET dataset.
 
-    Parameters
-    ----------
-    uptake : :obj:`list`
-        List of uptake values corresponding to all volumes of the dataset.
-        Please note that ``uptake`` is a keyword argument and MUST be provided
-        to generate the volume sequence.
+It is assumed that each uptake value corresponds to a single volume, and that
+this value summarizes the uptake of the volume in a meaningful way, e.g. a mean
+value across the entire volume.
 
-    Yields
-    ------
-    :obj:`int`
-        The next index.
+Other Parameters
+----------------
+{SIZE_KEYS_DOC}
 
-    Examples
-    --------
-    >>> list(uptake_iterator(uptake=[-1.23, 1.06, 1.02, 1.38, -1.46, -1.12, -1.19, 1.24, 1.05]))
-    [3, 7, 1, 8, 2, 5, 6, 0, 4]
+Notes
+-----
+Only one of the above keyword arguments may be provided at a time. If ``size``
+is given, all other size-related keyword arguments will be ignored. If ``size``
+is not provided, the function will attempt to infer the number of volumes from
+the length or value of the provided keyword argument. If more than one such
+keyword is provided, a :exc:`ValueError` will be raised.
 
-    """
-    uptake = kwargs.pop(UPTAKE_KWARG, None)
-    if uptake is None:
-        raise TypeError(KWARG_ERROR_MSG.format(kwarg=UPTAKE_KWARG))
-    return _value_iterator(
-        uptake,
-        ascending=False,
-        round_decimals=kwargs.pop("round_decimals", DEFAULT_ROUND_DECIMALS),
-    )
+Yields
+------
+:obj:`int`
+    The next index.
+
+Examples
+--------
+>>> list(monotonic_value_iterator(bvals=[0.0, 0.0, 1000.0, 1000.0, 700.0, 700.0, 2000.0, 2000.0, 0.0]))
+[0, 1, 8, 4, 5, 2, 3, 6, 7]
+>>> list(monotonic_value_iterator(uptake=[-1.23, 1.06, 1.02, 1.38, -1.46, -1.12, -1.19, 1.24, 1.05]))
+[3, 7, 1, 8, 2, 5, 6, 0, 4]
+"""
 
 
 def centralsym_iterator(**kwargs) -> Iterator[int]:

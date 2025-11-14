@@ -133,8 +133,8 @@ def test_estimator_init_model_string(request, monkeypatch):
         ("random", iterators.random_iterator, "pet"),
         ("centralsym", iterators.centralsym_iterator, "dwi"),
         ("centralsym", iterators.centralsym_iterator, "pet"),
-        ("bvalue", iterators.bvalue_iterator, "dwi"),
-        ("uptake", iterators.uptake_iterator, "pet"),
+        ("monotonic_value", iterators.monotonic_value_iterator, "dwi"),
+        ("monotonic_value", iterators.monotonic_value_iterator, "pet"),
     ],
 )
 def test_estimator_iterator_index_match(
@@ -206,10 +206,13 @@ def test_estimator_iterator_index_match(
         return
     elif strategy == "centralsym":
         expected_indices = list(iterator_func(size=n_vols))
-    elif strategy == "bvalue":
-        expected_indices = list(iterator_func(bvals=bvals))
-    elif strategy == "uptake":
-        expected_indices = list(iterator_func(uptake=uptake))
+    elif strategy == "monotonic_value":
+        if modality == "dwi":
+            expected_indices = list(iterator_func(bvals=bvals, ascending=True))
+        elif modality == "pet":
+            expected_indices = list(iterator_func(uptake=uptake, ascending=False))
+        else:
+            raise NotImplementedError(f"Modality {modality} not implemented")
     else:
         raise ValueError(f"Unknown strategy {strategy}")
 
