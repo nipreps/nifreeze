@@ -22,6 +22,7 @@
 #
 """Unit tests exercising the dMRI data structure."""
 
+import re
 from pathlib import Path
 
 import nibabel as nb
@@ -29,7 +30,17 @@ import numpy as np
 import pytest
 
 from nifreeze.data import load
-from nifreeze.data.dmri import DWI, find_shelling_scheme, from_nii, transform_fsl_bvec
+from nifreeze.data.dmri import (
+    DWI,
+    GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG,
+    GRADIENT_DATA_MISSING_ERROR,
+    GRADIENT_EXPECTED_COLUMNS_ERROR_MSG,
+    GRADIENT_NDIM_ERROR_MSG,
+    GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR,
+    find_shelling_scheme,
+    from_nii,
+    transform_fsl_bvec,
+)
 from nifreeze.utils.ndimage import load_api
 
 
@@ -82,6 +93,364 @@ def test_motion_file_not_implemented():
         from_nii("dmri.nii.gz", motion_file="motion.x5")
 
 
+@pytest.mark.random_gtab_data(10, (1000, 2000), 2)
+@pytest.mark.random_dwi_data(50, (34, 36, 24), True)
+@pytest.mark.parametrize("row_major_gradients", (False, True))
+@pytest.mark.parametrize("additional_grad_columns", (-1, -2, 1))
+def test_dwi_instantiation_gradients_unexpected_columns_error(
+    request, tmp_path, setup_random_dwi_data, row_major_gradients, additional_grad_columns
+):
+    (
+        dwi_dataobj,
+        affine,
+        _,
+        b0_dataobj,
+        gradients,
+        _,
+    ) = setup_random_dwi_data
+
+    # Remove/prepend columns. At this point, it is irrelevant whether the
+    # potential N-dimensional vector is normalized or not
+    if additional_grad_columns < 1:
+        gradients = gradients[:, : gradients.shape[1] + additional_grad_columns]
+    else:
+        rng = request.node.rng
+        add_gradients = rng.random(size=(gradients.shape[0], additional_grad_columns))
+        gradients = np.insert(gradients, 0, add_gradients, axis=1)
+
+    if not row_major_gradients:
+        gradients = gradients.T
+
+    with pytest.raises(ValueError, match=re.escape(GRADIENT_EXPECTED_COLUMNS_ERROR_MSG)):
+        DWI(
+            dataobj=dwi_dataobj,
+            affine=affine,
+            bzero=b0_dataobj,
+            gradients=gradients,
+        )
+
+
+@pytest.mark.random_gtab_data(10, (1000, 2000), 2)
+@pytest.mark.random_dwi_data(50, (34, 36, 24), True)
+@pytest.mark.parametrize("row_major_gradients", (False, True))
+def test_dwi_instantiation_gradients_ndim_error(
+    tmp_path, setup_random_dwi_data, row_major_gradients
+):
+    (
+        dwi_dataobj,
+        affine,
+        _,
+        b0_dataobj,
+        gradients,
+        _,
+    ) = setup_random_dwi_data
+
+    # Store a single column from gradients to try loading a 1D-array. Transpose
+    # depending on whether to follow the row-major convention or not
+    gradients = gradients[:, 0]
+    if not row_major_gradients:
+        gradients = gradients.T
+
+    with pytest.raises(ValueError, match=GRADIENT_NDIM_ERROR_MSG):
+        DWI(
+            dataobj=dwi_dataobj,
+            affine=affine,
+            bzero=b0_dataobj,
+            gradients=gradients,
+        )
+
+
+@pytest.mark.random_gtab_data(10, (1000, 2000), 2)
+@pytest.mark.random_dwi_data(50, (34, 36, 24), True)
+@pytest.mark.parametrize(
+    ("additional_volume_count", "additional_gradient_count"),
+    [(1, 0), (2, 0), (2, 1), (0, 1), (0, 2), (1, 2)],
+)
+def test_gradient_instantiation_dwi_vol_mismatch_error(
+    tmp_path, setup_random_dwi_data, additional_volume_count, additional_gradient_count
+):
+    (
+        dwi_dataobj,
+        affine,
+        _,
+        b0_dataobj,
+        gradients,
+        _,
+    ) = setup_random_dwi_data
+
+    # Add additional volumes: simply concatenate the last volume
+    if additional_volume_count:
+        additional_dwi_dataobj = np.tile(dwi_dataobj[..., -1:], (1, additional_volume_count))
+        dwi_dataobj = np.concatenate((dwi_dataobj, additional_dwi_dataobj), axis=-1)
+    # Add additional gradients: simply concatenate the gradient
+    if additional_gradient_count:
+        additional_gradients = np.tile(gradients[-1:, :], (additional_gradient_count, 1))
+        gradients = np.concatenate((gradients, additional_gradients), axis=0)
+
+    n_volumes = dwi_dataobj.shape[-1]
+    with pytest.raises(
+        ValueError,
+        match=GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR.format(
+            n_volumes=n_volumes, n_gradients=gradients.shape[0]
+        ),
+    ):
+        DWI(
+            dataobj=dwi_dataobj,
+            affine=affine,
+            bzero=b0_dataobj,
+            gradients=gradients,
+        )
+
+
+@pytest.mark.random_gtab_data(10, (1000, 2000), 2)
+@pytest.mark.random_dwi_data(50, (34, 36, 24), True)
+@pytest.mark.parametrize("row_major_gradients", (False, True))
+def test_load_gradients_ndim_error(tmp_path, setup_random_dwi_data, row_major_gradients):
+    (
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj,
+        b0_dataobj,
+        gradients,
+        b0_thres,
+    ) = setup_random_dwi_data
+
+    dwi, _, _ = _dwi_data_to_nifti(
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj.astype(np.uint8),
+        b0_dataobj,
+    )
+
+    dwi_fname = tmp_path / "dwi.nii.gz"
+    nb.save(dwi, dwi_fname)
+
+    # Store a single column from gradients to try loading a 1D-array. Store as
+    # column or array depending on whether to follow the row-major convention or
+    # not
+    gradients = gradients[:, 0]
+    if not row_major_gradients:
+        gradients = gradients[np.newaxis, :]
+
+    grads_fname = tmp_path / "grads.txt"
+    np.savetxt(grads_fname, gradients, fmt="%.6f")
+
+    with pytest.raises(ValueError, match=GRADIENT_NDIM_ERROR_MSG):
+        from_nii(dwi_fname, gradients_file=grads_fname)
+
+
+@pytest.mark.random_gtab_data(10, (1000, 2000), 2)
+@pytest.mark.random_dwi_data(50, (34, 36, 24), True)
+@pytest.mark.parametrize("row_major_gradients", (False, True))
+@pytest.mark.parametrize("additional_grad_columns", (-1, -2, 1))
+def test_load_gradients_expected_columns_error(
+    request, tmp_path, setup_random_dwi_data, row_major_gradients, additional_grad_columns
+):
+    (
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj,
+        b0_dataobj,
+        gradients,
+        b0_thres,
+    ) = setup_random_dwi_data
+
+    dwi, _, _ = _dwi_data_to_nifti(
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj.astype(np.uint8),
+        b0_dataobj,
+    )
+
+    dwi_fname = tmp_path / "dwi.nii.gz"
+    nb.save(dwi, dwi_fname)
+
+    # Remove/prepend columns. At this point, it is irrelevant whether the
+    # potential N-dimensional vector is normalized or not
+    if additional_grad_columns < 1:
+        gradients = gradients[:, : gradients.shape[1] + additional_grad_columns]
+    else:
+        rng = request.node.rng
+        add_gradients = rng.random(size=(gradients.shape[0], additional_grad_columns))
+        gradients = np.insert(gradients, 0, add_gradients, axis=1)
+
+    if not row_major_gradients:
+        gradients = gradients.T
+
+    grads_fname = tmp_path / "grads.txt"
+    np.savetxt(grads_fname, gradients, fmt="%.6f")
+
+    with pytest.raises(ValueError, match=re.escape(GRADIENT_EXPECTED_COLUMNS_ERROR_MSG)):
+        from_nii(dwi_fname, gradients_file=grads_fname)
+
+
+@pytest.mark.random_gtab_data(10, (1000, 2000), 2)
+@pytest.mark.random_dwi_data(50, (34, 36, 24), True)
+def test_load_gradients_bval_bvec_warn(tmp_path, setup_random_dwi_data):
+    (
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj,
+        b0_dataobj,
+        gradients,
+        b0_thres,
+    ) = setup_random_dwi_data
+
+    dwi, _, _ = _dwi_data_to_nifti(
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj.astype(np.uint8),
+        b0_dataobj,
+    )
+
+    dwi_fname = tmp_path / "dwi.nii.gz"
+    nb.save(dwi, dwi_fname)
+
+    grads_fname = tmp_path / "grads.txt"
+    np.savetxt(grads_fname, gradients, fmt="%.6f")
+
+    bvals = gradients[:, -1]
+    bvecs = gradients[:, :-1]
+
+    bval_fname = tmp_path / "dwi.bval"
+    bvec_fname = tmp_path / "dwi.bvec"
+    np.savetxt(bvec_fname, bvecs, fmt="%.6f")
+    np.savetxt(bval_fname, bvals, fmt="%.6f")
+
+    with pytest.warns(UserWarning, match=re.escape(GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG)):
+        _ = from_nii(
+            dwi_fname,
+            gradients_file=grads_fname,
+            bvec_file=bvec_fname,
+            bval_file=bval_fname,
+            b0_thres=b0_thres,
+        )
+
+
+@pytest.mark.random_gtab_data(10, (1000, 2000), 2)
+@pytest.mark.random_dwi_data(50, (34, 36, 24), True)
+@pytest.mark.parametrize("row_major_gradients", (False, True))
+def test_load_gradients(tmp_path, setup_random_dwi_data, row_major_gradients):
+    (
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj,
+        b0_dataobj,
+        gradients,
+        b0_thres,
+    ) = setup_random_dwi_data
+
+    dwi, _, _ = _dwi_data_to_nifti(
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj.astype(np.uint8),
+        b0_dataobj,
+    )
+
+    dwi_fname = tmp_path / "dwi.nii.gz"
+    nb.save(dwi, dwi_fname)
+
+    if not row_major_gradients:
+        gradients = gradients.T
+
+    grads_fname = tmp_path / "grads.txt"
+    np.savetxt(grads_fname, gradients, fmt="%.6f")
+
+    dwi = from_nii(dwi_fname, gradients_file=grads_fname, b0_thres=b0_thres)
+    if not row_major_gradients:
+        gradmask = gradients.T[:, -1] > b0_thres
+    else:
+        gradmask = gradients[:, -1] > b0_thres
+
+    if not row_major_gradients:
+        expected_nonzero_grads = gradients.T[gradmask]
+    else:
+        expected_nonzero_grads = gradients[gradmask]
+
+    assert hasattr(dwi, "gradients")
+    assert dwi.gradients.shape == expected_nonzero_grads.shape
+    assert np.allclose(dwi.gradients, expected_nonzero_grads)
+
+
+@pytest.mark.random_gtab_data(10, (1000, 2000), 2)
+@pytest.mark.random_dwi_data(50, (34, 36, 24), True)
+@pytest.mark.parametrize(
+    ("transpose_bvals", "transpose_bvecs"),
+    [
+        (False, False),
+        (True, False),
+        (False, True),
+        (True, True),
+    ],
+)
+def test_load_bvecs_bvals(tmp_path, setup_random_dwi_data, transpose_bvals, transpose_bvecs):
+    (
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj,
+        b0_dataobj,
+        gradients,
+        b0_thres,
+    ) = setup_random_dwi_data
+
+    bvals = gradients[:, -1]
+    bvecs = gradients[:, :-1]
+
+    dwi, _, _ = _dwi_data_to_nifti(
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj.astype(np.uint8),
+        b0_dataobj,
+    )
+
+    dwi_fname = tmp_path / "dwi.nii.gz"
+    nb.save(dwi, dwi_fname)
+
+    if transpose_bvals:
+        bvals = bvals.T
+    if transpose_bvecs:
+        bvecs = bvecs.T
+
+    bval_fname = tmp_path / "dwi.bval"
+    bvec_fname = tmp_path / "dwi.bvec"
+    np.savetxt(bvec_fname, bvecs, fmt="%.6f")
+    np.savetxt(bval_fname, bvals, fmt="%.6f")
+
+    dwi = from_nii(dwi_fname, bvec_file=bvec_fname, bval_file=bval_fname, b0_thres=b0_thres)
+    gradmask = gradients[:, -1] > b0_thres
+
+    expected_nonzero_grads = gradients[gradmask]
+    assert hasattr(dwi, "gradients")
+    assert dwi.gradients.shape == expected_nonzero_grads.shape
+    assert np.allclose(dwi.gradients, expected_nonzero_grads)
+
+
+@pytest.mark.random_gtab_data(10, (1000, 2000), 2)
+@pytest.mark.random_dwi_data(50, (34, 36, 24), True)
+def test_load_gradients_missing(tmp_path, setup_random_dwi_data):
+    (
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj,
+        b0_dataobj,
+        _,
+        _,
+    ) = setup_random_dwi_data
+
+    dwi, _, _ = _dwi_data_to_nifti(
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj.astype(np.uint8),
+        b0_dataobj,
+    )
+
+    dwi_fname = tmp_path / "dwi.nii.gz"
+    nb.save(dwi, dwi_fname)
+
+    with pytest.raises(RuntimeError, match=re.escape(GRADIENT_DATA_MISSING_ERROR)):
+        from_nii(dwi_fname)
+
+
 @pytest.mark.parametrize("insert_b0", (False, True))
 @pytest.mark.parametrize("rotate_bvecs", (False, True))
 def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
@@ -100,9 +469,6 @@ def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
     nifti_data = load_api(dwi_nifti_path, nb.Nifti1Image).get_fdata()
     if insert_b0:
         nifti_data = nifti_data[..., 1:]
-
-    with pytest.raises(RuntimeError):
-        from_nii(dwi_nifti_path)
 
     # Try loading NIfTI + b-vecs/vals
     out_root = dwi_nifti_path.parent / dwi_nifti_path.name.replace(
