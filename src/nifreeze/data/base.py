@@ -101,7 +101,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[Unpack[Ts]]:
         """
-        Extracts extra fields synchronized with the indexed access of the corresponding data object.
+        Extract extra fields for a given index of the corresponding data object.
 
         Parameters
         ----------

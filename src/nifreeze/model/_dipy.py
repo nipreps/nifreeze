@@ -36,6 +36,20 @@ from nifreeze.model.gpr import (
 )
 
 
+def _cartesian_components(gtab: GradientTable | np.ndarray) -> np.ndarray:
+    """Return the gradient directions as Cartesian components."""
+
+    if hasattr(gtab, "bvecs"):
+        components = gtab.bvecs
+    else:
+        components = np.asarray(gtab)
+        if components.ndim == 1:
+            components = components[np.newaxis, :]
+        if components.shape[-1] > 3:
+            components = components[:, :-1]
+    return components
+
+
 def gp_prediction(
     model: GaussianProcessRegressor,
     gtab: GradientTable | np.ndarray,
@@ -67,7 +81,7 @@ def gp_prediction(
 
     """
 
-    X = gtab.bvecs.T if hasattr(gtab, "bvecs") else np.asarray(gtab)
+    X = _cartesian_components(gtab)
 
     # Check it's fitted as they do in sklearn internally
     # https://github.com/scikit-learn/scikit-learn/blob/972e17fe1aa12d481b120ad4a3dc076bae736931/\
@@ -165,7 +179,7 @@ class GaussianProcessModel(ReconstModel):
         # Extract b-vecs: scikit-learn wants (n_samples, n_features)
         # where n_features is 3, and n_samples the different diffusion-encoding
         # gradient orientations.
-        X = gtab.bvecs if hasattr(gtab, "bvecs") else np.asarray(gtab)
+        X = _cartesian_components(gtab)
 
         # Data must have shape (n_samples, n_targets) where n_samples is
         # the number of diffusion-encoding gradient orientations, and n_targets

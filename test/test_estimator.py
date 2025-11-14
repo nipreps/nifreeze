@@ -75,7 +75,7 @@ class DummyDWIDataset(BaseDataset):
         return self.dataobj.shape[-1]
 
     def __getitem__(self, idx):
-        return self.dataobj[..., idx], self.brainmask, self.gradients
+        return self.dataobj[..., idx], None, self.gradients[idx, ...]
 
 
 class DummyPETDataset(BaseDataset):
@@ -91,7 +91,7 @@ class DummyPETDataset(BaseDataset):
         return self.dataobj.shape[-1]
 
     def __getitem__(self, idx):
-        return self.dataobj[..., idx], self.brainmask, self.midrame[idx]
+        return self.dataobj[..., idx], None, self.midrame[idx]
 
 
 def test_estimator_init_model_instance(request):
@@ -103,11 +103,18 @@ def test_estimator_init_model_instance(request):
 
 def test_estimator_init_model_string(request, monkeypatch):
     rng = request.node.rng
+
     # Patch ModelFactory.init to return DummyModel
     monkeypatch.setattr(
         "nifreeze.model.base.ModelFactory.init",
         lambda model, dataset, **kwargs: DummyModel(dataset=dataset),
     )
+
+    def mock_iterator(*_, **kwargs):
+        return []
+
+    monkeypatch.setattr(iterators, "random_iterator", mock_iterator)  # Avoid iterator issues
+
     model_name = "dummy"
     est = Estimator(model=model_name, model_kwargs={})
     _dataset = DummyDataset(rng)
@@ -145,8 +152,8 @@ def test_estimator_iterator_index_match(
         ) = setup_random_dwi_data
 
         dataset = DummyDWIDataset(dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients)
-        bvals = gradients[-1, :][np.where(gradients[-1, :] > DEFAULT_LOWB_THRESHOLD)]
-        kwargs = dict({"bvals": bvals})
+        bvals = gradients[:, -1][gradients[:, -1] > DEFAULT_LOWB_THRESHOLD]
+        kwargs = {"bvals": bvals}
     elif modality == "pet":
         (
             pet_dataobj,
@@ -158,7 +165,7 @@ def test_estimator_iterator_index_match(
 
         dataset = DummyPETDataset(pet_dataobj, affine, brainmask_dataobj, midframe, total_duration)
         uptake = dataset.uptake
-        kwargs = dict({"uptake": uptake})
+        kwargs = {"uptake": uptake}
     else:
         raise NotImplementedError(f"{modality} not implemented")
 
@@ -177,7 +184,11 @@ def test_estimator_iterator_index_match(
     class DummyXForm:
         matrix = np.eye(4)
 
-    nifreeze.estimator._run_registration = lambda *a, **k: DummyXForm()
+    monkeypatch.setattr(
+        nifreeze.estimator,
+        "_run_registration",
+        lambda *a, **k: DummyXForm(),
+    )
 
     model = DummyModel(dataset=dataset)
     estimator = Estimator(model, strategy=strategy)
@@ -189,7 +200,7 @@ def test_estimator_iterator_index_match(
     if strategy == "linear":
         expected_indices = list(iterator_func(size=n_vols))
     elif strategy == "random":
-        expected_indices = sorted(list(iterator_func(size=n_vols, seed=42)))
+        expected_indices = sorted(iterator_func(size=n_vols, seed=42))
         recorded_indices_sorted = sorted(recorded_indices)
         assert recorded_indices_sorted == expected_indices
         return

@@ -130,7 +130,7 @@ class BaseDWIModel(BaseModel):
         # DIPY models (or one with a fully-compliant interface)
         model_str = getattr(self, "_model_class", "")
         if "dipy" in model_str or "GeneralizedQSamplingModel" in model_str:
-            gtab = gradient_table_from_bvals_bvecs(gtab[-1, :], gtab[:-1, :].T)
+            gtab = gradient_table_from_bvals_bvecs(gtab[:, -1], gtab[:, :-1])
 
         if model_str:
             module_name, class_name = model_str.rsplit(".", 1)
@@ -193,7 +193,7 @@ class BaseDWIModel(BaseModel):
         if index is None:
             return None
 
-        gradient = self._dataset.gradients[:, index]
+        gradient = self._dataset.gradients[index, :]
 
         model_str = getattr(self, "_model_class", "")
         if "dipy" in model_str or "GeneralizedQSamplingModel" in model_str:

@@ -182,7 +182,8 @@ def plot_motion_overlay(
     smooth: bool = True,
     ax: Union[Axes, None] = None,
 ) -> Axes:
-    """Plot motion relative difference as an overlay on a given orientation and slice of the imaging data.
+    """
+    Plot motion relative difference on a given orientation and slice of the imaging data.
 
     The values of the relative difference can optionally be smoothed using a
     Gaussian filter for a more appealing visual result.
@@ -213,7 +214,8 @@ def plot_motion_overlay(
     # Check dimensionality
     if img_data.shape != rel_diff.shape:
         raise IndexError(
-            f"Dimension mismatch: imaging data shape {img_data.shape}, overlay shape {rel_diff.shape}"
+            f"Dimension mismatch: imaging data shape {img_data.shape}, "
+            f"overlay shape {rel_diff.shape}"
         )
 
     # Smooth the relative difference

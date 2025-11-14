@@ -240,7 +240,7 @@ def dwi_select_shells(
     Parameters
     ----------
     gradients : :obj:`~numpy.ndarray`
-        Gradients.
+        Gradients arranged as ``(N, C)`` with the last column storing b-values.
     index : :obj:`int`
         Index of the shell data.
     atol_low : :obj:`float`, optional

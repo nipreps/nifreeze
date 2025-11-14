@@ -34,10 +34,11 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
    Use the appropriate parameters for the particular imaging modality (e.g.
    dMRI, fMRI, or PET) that you are using.
 
-   For example, for dMRI data, ensure the gradient table is provided. It
-   should have one column per diffusion-weighted image. The first three rows
-   represent the gradient directions, and the last row indicates the timing
-   and strength of the gradients in units of s/mm² ``[ R A S+ b ]``.
+   For example, for dMRI data, ensure the gradient table is provided. NiFreeze
+   expects the table to have one row per diffusion-weighted image, with the
+   first three columns storing the gradient direction components and the last
+   column indicating the timing and strength of the gradients in units of
+   s/mm² ``[ R A S+ b ]``.
 
    .. code-block:: python
 
