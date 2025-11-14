@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.data.filtering module" href="nifreeze.data.filtering.html"><link rel="prev" title="nifreeze.data.base module" href="nifreeze.data.base.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.data.dmri module - nifreeze 25.0.0.dev649 documentation</title>
+        <title>nifreeze.data.dmri module - nifreeze 25.0.0.dev658 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev649 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev658 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev649</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev658</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev649</span>
+  <span class="sidebar-brand-text">25.0.0.dev658</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -421,7 +421,7 @@
 <dl class="py attribute">
 <dt class="sig sig-object py" id="nifreeze.data.dmri.DWI.gradients">
 <span class="sig-name descname"><span class="pre">gradients</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">np.ndarray</span></em><a class="headerlink" href="#nifreeze.data.dmri.DWI.gradients" title="Link to this definition">¶</a></dt>
-<dd><p>A 2D numpy array of the gradient table (4xN).</p>
+<dd><p>A 2D numpy array of the gradient table (<code class="docutils literal notranslate"><span class="pre">N</span></code> orientations x <code class="docutils literal notranslate"><span class="pre">C</span></code> components).</p>
 </dd></dl>
 
 <dl class="py method">
@@ -505,9 +505,11 @@ from either a separate gradients file or from .bvec / .bval files.</p>
 <li><p><strong>brainmask_file</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>, optional) – A brainmask NIfTI file. If provided, will be loaded and
 stored in the returned dataset.</p></li>
 <li><p><strong>motion_file</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>, optional) – A file containing head motion affine matrices (linear)</p></li>
-<li><p><strong>gradients_file</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>, optional) – A text file containing the gradients table, shape (4, N) or (N, 4).
-If provided, it supersedes any .bvec / .bval combination.</p></li>
-<li><p><strong>bvec_file</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>, optional) – A text file containing b-vectors, shape (3, N).</p></li>
+<li><p><strong>gradients_file</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>, optional) – A text file containing the gradients table, shape (N, C) where the last column
+stores the b-values. If provided following the column-major convention(C, N),
+it will be transposed automatically. If provided, it supersedes any .bvec / .bval
+combination.</p></li>
+<li><p><strong>bvec_file</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>, optional) – A text file containing b-vectors, shape (N, 3) or (3, N).</p></li>
 <li><p><strong>bval_file</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>, optional) – A text file containing b-values, shape (N,).</p></li>
 <li><p><strong>b0_file</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>, optional) – A NIfTI file containing a b=0 volume (possibly averaged or reference).
 If not provided, and the data contains at least one b=0 volume, one will be computed.</p></li>
@@ -647,7 +649,7 @@ the realigned space.</p></li>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=95be6bc9"></script>
+</div><script src="../_static/documentation_options.js?v=55093f94"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

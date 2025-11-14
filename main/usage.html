@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Running NiFreeze" href="running.html"><link rel="prev" title="Installation" href="installation.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>How to Use - nifreeze 25.0.0.dev649 documentation</title>
+        <title>How to Use - nifreeze 25.0.0.dev658 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 25.0.0.dev649 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 25.0.0.dev658 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev649</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev658</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev649</span>
+  <span class="sidebar-brand-text">25.0.0.dev658</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -331,10 +331,11 @@ purposes, we will use some dMRI data:</p>
 <a class="reference internal" href="api/nifreeze.data.html#nifreeze.data.load" title="nifreeze.data.load"><code class="xref py py-func docutils literal notranslate"><span class="pre">load()</span></code></a> function.</p>
 <p>Use the appropriate parameters for the particular imaging modality (e.g.
 dMRI, fMRI, or PET) that you are using.</p>
-<p>For example, for dMRI data, ensure the gradient table is provided. It
-should have one column per diffusion-weighted image. The first three rows
-represent the gradient directions, and the last row indicates the timing
-and strength of the gradients in units of s/mm² <code class="docutils literal notranslate"><span class="pre">[</span> <span class="pre">R</span> <span class="pre">A</span> <span class="pre">S+</span> <span class="pre">b</span> <span class="pre">]</span></code>.</p>
+<p>For example, for dMRI data, ensure the gradient table is provided. NiFreeze
+expects the table to have one row per diffusion-weighted image, with the
+first three columns storing the gradient direction components and the last
+column indicating the timing and strength of the gradients in units of
+s/mm² <code class="docutils literal notranslate"><span class="pre">[</span> <span class="pre">R</span> <span class="pre">A</span> <span class="pre">S+</span> <span class="pre">b</span> <span class="pre">]</span></code>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load dMRI data into a DWI object</span>
 <span class="n">dataset</span> <span class="o">=</span> <span class="n">dmri</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;/path/to/your/dwi_data.nii.gz&quot;</span><span class="p">,</span> <span class="n">gradients_file</span><span class="o">=</span><span class="s2">&quot;/path/to/your/gradient_file&quot;</span><span class="p">)</span>
 </pre></div>
@@ -519,7 +520,7 @@ visualize diffusion gradients.</p></li>
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=95be6bc9"></script>
+</div><script src="_static/documentation_options.js?v=55093f94"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

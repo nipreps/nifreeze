@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.data.dmri - nifreeze 25.0.0.dev649 documentation</title>
+        <title>nifreeze.data.dmri - nifreeze 25.0.0.dev658 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev649 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev658 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev649</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev658</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev649</span>
+  <span class="sidebar-brand-text">25.0.0.dev658</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -368,12 +368,43 @@
     <span class="n">bzero</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="n">attrs</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">))</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A *b=0* reference map, preferably obtained by some smart averaging.&quot;&quot;&quot;</span>
     <span class="n">gradients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="n">attrs</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">))</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A 2D numpy array of the gradient table (4xN).&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A 2D numpy array of the gradient table (``N`` orientations x ``C`` components).&quot;&quot;&quot;</span>
     <span class="n">eddy_xfms</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;List of transforms to correct for estimated eddy current distortions.&quot;&quot;&quot;</span>
 
+    <span class="k">def</span> <span class="nf">__attrs_post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_gradients</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_normalize_gradients</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">gradients</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">gradients</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Gradient table must be a 2D array&quot;</span><span class="p">)</span>
+
+        <span class="n">n_volumes</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">n_volumes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># pragma: no cover - extremely defensive</span>
+                <span class="n">n_volumes</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">n_volumes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">gradients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">n_volumes</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">gradients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">n_volumes</span><span class="p">:</span>
+                <span class="n">gradients</span> <span class="o">=</span> <span class="n">gradients</span><span class="o">.</span><span class="n">T</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;Gradient table shape does not match the number of diffusion volumes: &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;expected </span><span class="si">{</span><span class="n">n_volumes</span><span class="si">}</span><span class="s2"> rows, found </span><span class="si">{</span><span class="n">gradients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">n_volumes</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">gradients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">gradients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">gradients</span> <span class="o">=</span> <span class="n">gradients</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span> <span class="o">=</span> <span class="n">gradients</span>
+
     <span class="k">def</span> <span class="nf">_getextra</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">slice</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">idx</span><span class="p">],)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="o">...</span><span class="p">],)</span>
 
     <span class="c1"># For the sake of the docstring</span>
     <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span>
@@ -396,8 +427,8 @@
 <span class="sd">        motion_affine : :obj:`~numpy.ndarray` or ``None``</span>
 <span class="sd">            The corresponding per-volume motion affine(s) or ``None`` if identity transform(s).</span>
 <span class="sd">        gradient : :obj:`~numpy.ndarray`</span>
-<span class="sd">            The corresponding gradient(s), which may have shape ``(4,)`` if a single volume</span>
-<span class="sd">            or ``(4, k)`` if multiple volumes, or ``None`` if gradients are not available.</span>
+<span class="sd">            The corresponding gradient(s), which may have shape ``(C,)`` if a single volume</span>
+<span class="sd">            or ``(k, C)`` if multiple volumes, or ``None`` if gradients are not available.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
 
@@ -426,11 +457,11 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">bvals</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">bvecs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 
 <div class="viewcode-block" id="DWI.get_shells">
 <a class="viewcode-back" href="../../../api/nifreeze.data.dmri.html#nifreeze.data.dmri.DWI.get_shells">[docs]</a>
@@ -462,14 +493,12 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">_</span><span class="p">,</span> <span class="n">bval_groups</span><span class="p">,</span> <span class="n">bval_estimated</span> <span class="o">=</span> <span class="n">find_shelling_scheme</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bvals</span><span class="p">,</span>
             <span class="n">num_bins</span><span class="o">=</span><span class="n">num_bins</span><span class="p">,</span>
             <span class="n">multishell_nonempty_bin_count_thr</span><span class="o">=</span><span class="n">multishell_nonempty_bin_count_thr</span><span class="p">,</span>
             <span class="n">bval_cap</span><span class="o">=</span><span class="n">bval_cap</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="n">indices</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">bvals</span><span class="p">)))</span> <span class="k">for</span> <span class="n">bvals</span> <span class="ow">in</span> <span class="n">bval_groups</span>
-        <span class="p">]</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bvals</span><span class="p">,</span> <span class="n">bvals</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">bvals</span> <span class="ow">in</span> <span class="n">bval_groups</span><span class="p">]</span>
         <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">bval_estimated</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span></div>
 
 
@@ -540,16 +569,14 @@
         <span class="n">bvals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bvals</span>
 
         <span class="c1"># Rotate b-vectors if self.motion_affines is not None</span>
-        <span class="n">bvecs</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
-                <span class="p">[</span>
-                    <span class="n">transform_fsl_bvec</span><span class="p">(</span><span class="n">bvec</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-                    <span class="k">for</span> <span class="n">bvec</span><span class="p">,</span> <span class="n">affine</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">motion_affines</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-                <span class="p">]</span>
-            <span class="p">)</span><span class="o">.</span><span class="n">T</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">motion_affines</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-            <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">bvecs</span>
-        <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">motion_affines</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">rotated</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">transform_fsl_bvec</span><span class="p">(</span><span class="n">bvec</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">bvec</span><span class="p">,</span> <span class="n">affine</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">3</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">motion_affines</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="n">bvecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">rotated</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">bvecs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bvecs</span>
 
         <span class="c1"># Parent&#39;s to_nifti to handle the primary NIfTI export.</span>
         <span class="n">nii</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_nifti</span><span class="p">(</span>
@@ -574,7 +601,7 @@
             <span class="c1"># If inserting a b0 volume is requested, add the corresponding null</span>
             <span class="c1"># gradient value to the bval/bvec pair</span>
             <span class="n">bvals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">bvals</span><span class="p">))</span>
-            <span class="n">bvecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="n">bvecs</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">bvecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">bvecs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])),</span> <span class="n">bvecs</span><span class="p">))</span>
 
         <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># Convert filename to a Path object.</span>
@@ -587,9 +614,8 @@
             <span class="n">bvecs_file</span> <span class="o">=</span> <span class="n">out_root</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.bvec&quot;</span><span class="p">)</span>
             <span class="n">bvals_file</span> <span class="o">=</span> <span class="n">out_root</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.bval&quot;</span><span class="p">)</span>
 
-            <span class="c1"># Save bvecs and bvals to text files</span>
-            <span class="c1"># Each row of bvecs is one direction (3 rows, N columns).</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">bvecs_file</span><span class="p">,</span> <span class="n">bvecs</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;%.</span><span class="si">{</span><span class="n">bvecs_dec_places</span><span class="si">}</span><span class="s2">f&quot;</span><span class="p">)</span>
+            <span class="c1"># Save bvecs and bvals to text files. BIDS expects 3 rows x N columns.</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">bvecs_file</span><span class="p">,</span> <span class="n">bvecs</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;%.</span><span class="si">{</span><span class="n">bvecs_dec_places</span><span class="si">}</span><span class="s2">f&quot;</span><span class="p">)</span>
             <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">bvals_file</span><span class="p">,</span> <span class="n">bvals</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">fmt</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;%.</span><span class="si">{</span><span class="n">bvals_dec_places</span><span class="si">}</span><span class="s2">f&quot;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">nii</span></div>
@@ -625,10 +651,12 @@
 <span class="sd">    motion_file : :obj:`os.pathlike`, optional</span>
 <span class="sd">        A file containing head motion affine matrices (linear)</span>
 <span class="sd">    gradients_file : :obj:`os.pathlike`, optional</span>
-<span class="sd">        A text file containing the gradients table, shape (4, N) or (N, 4).</span>
-<span class="sd">        If provided, it supersedes any .bvec / .bval combination.</span>
+<span class="sd">        A text file containing the gradients table, shape (N, C) where the last column</span>
+<span class="sd">        stores the b-values. If provided following the column-major convention(C, N),</span>
+<span class="sd">        it will be transposed automatically. If provided, it supersedes any .bvec / .bval</span>
+<span class="sd">        combination.</span>
 <span class="sd">    bvec_file : :obj:`os.pathlike`, optional</span>
-<span class="sd">        A text file containing b-vectors, shape (3, N).</span>
+<span class="sd">        A text file containing b-vectors, shape (N, 3) or (3, N).</span>
 <span class="sd">    bval_file : :obj:`os.pathlike`, optional</span>
 <span class="sd">        A text file containing b-values, shape (N,).</span>
 <span class="sd">    b0_file : :obj:`os.pathlike`, optional</span>
@@ -671,31 +699,48 @@
                 <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
             <span class="p">)</span>
     <span class="k">elif</span> <span class="n">bvec_file</span> <span class="ow">and</span> <span class="n">bval_file</span><span class="p">:</span>
-        <span class="n">bvecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">bvec_file</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>  <span class="c1"># shape (3, N)</span>
-        <span class="k">if</span> <span class="n">bvecs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">bvecs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">bvecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">bvec_file</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">bvecs</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">bvecs</span> <span class="o">=</span> <span class="n">bvecs</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="k">if</span> <span class="n">bvecs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">bvecs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
             <span class="n">bvecs</span> <span class="o">=</span> <span class="n">bvecs</span><span class="o">.</span><span class="n">T</span>
 
-        <span class="n">bvals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">bval_file</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>  <span class="c1"># shape (N,)</span>
-        <span class="c1"># Stack to shape (4, N)</span>
-        <span class="n">grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">bvecs</span><span class="p">,</span> <span class="n">bvals</span><span class="p">))</span>
+        <span class="n">bvals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">bval_file</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">bvals</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">bvals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">bvals</span><span class="p">)</span>
+        <span class="n">grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">((</span><span class="n">bvecs</span><span class="p">,</span> <span class="n">bvals</span><span class="p">))</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
             <span class="s2">&quot;No gradient data provided. &quot;</span>
             <span class="s2">&quot;Please specify either a gradients_file or (bvec_file &amp; bval_file).&quot;</span>
         <span class="p">)</span>
 
+    <span class="k">if</span> <span class="n">grad</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">grad</span> <span class="o">=</span> <span class="n">grad</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span>
+
+    <span class="k">if</span> <span class="n">grad</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Gradient table must have at least two columns (direction + b-value).&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">grad</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">grad</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="n">grad</span> <span class="o">=</span> <span class="n">grad</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Gradient table must have four columns (3 direction components and one b-value).&quot;</span>
+            <span class="p">)</span>
+
     <span class="c1"># 3) Create the DWI instance. We&#39;ll filter out volumes where b-value &gt; b0_thres</span>
     <span class="c1">#    as &quot;DW volumes&quot; if the user wants to store only the high-b volumes here</span>
-    <span class="n">gradmsk</span> <span class="o">=</span> <span class="p">(</span><span class="n">grad</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">grad</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span> <span class="k">else</span> <span class="n">grad</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">&gt;</span> <span class="n">b0_thres</span>
+    <span class="n">gradmsk</span> <span class="o">=</span> <span class="n">grad</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">b0_thres</span>
 
-    <span class="c1"># The shape checking is somewhat flexible: (4, N) or (N, 4)</span>
     <span class="n">dwi_obj</span> <span class="o">=</span> <span class="n">DWI</span><span class="p">(</span>
         <span class="n">dataobj</span><span class="o">=</span><span class="n">fulldata</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">gradmsk</span><span class="p">],</span>
         <span class="n">affine</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span>
         <span class="c1"># We&#39;ll assign the filtered gradients below.</span>
     <span class="p">)</span>
 
-    <span class="n">dwi_obj</span><span class="o">.</span><span class="n">gradients</span> <span class="o">=</span> <span class="n">grad</span><span class="p">[:,</span> <span class="n">gradmsk</span><span class="p">]</span> <span class="k">if</span> <span class="n">grad</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span> <span class="k">else</span> <span class="n">grad</span><span class="p">[</span><span class="n">gradmsk</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">dwi_obj</span><span class="o">.</span><span class="n">gradients</span> <span class="o">=</span> <span class="n">grad</span><span class="p">[</span><span class="n">gradmsk</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">dwi_obj</span><span class="o">.</span><span class="n">_normalize_gradients</span><span class="p">()</span>
 
     <span class="c1"># 4) b=0 volume (bzero)</span>
     <span class="c1">#    If the user provided a b0_file, load it</span>
@@ -856,7 +901,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=95be6bc9"></script>
+</div><script src="../../../_static/documentation_options.js?v=55093f94"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
