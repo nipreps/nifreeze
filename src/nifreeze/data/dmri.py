@@ -340,8 +340,8 @@ def from_nii(
         A file containing head motion affine matrices (linear)
     gradients_file : :obj:`os.pathlike`, optional
         A text file containing the gradients table, shape (N, C) where the last column
-        stores the b-values. The legacy column-major layout (C, N) is also accepted and
-        will be transposed automatically. If provided, it supersedes any .bvec / .bval
+        stores the b-values. If provided following the column-major convention(C, N),
+        it will be transposed automatically. If provided, it supersedes any .bvec / .bval
         combination.
     bvec_file : :obj:`os.pathlike`, optional
         A text file containing b-vectors, shape (N, 3) or (3, N).
