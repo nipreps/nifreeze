@@ -63,6 +63,25 @@ DEFAULT_MULTISHELL_BIN_COUNT_THR = 7
 DTI_MIN_ORIENTATIONS = 6
 """Minimum number of nonzero b-values in a DWI dataset."""
 
+GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR = "Gradient table shape does not match the number of diffusion volumes: expected {n_volumes} rows, found {n_gradients}."
+"""dMRI volume count vs. gradient count mismatch error message."""
+
+GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG = "Both a gradients table file and b-vec/val files are defined; ignoring b-vec/val files in favor of the gradients_file."
+""""dMRI gradient file priority warning message."""
+
+GRADIENT_NDIM_ERROR_MSG = "Gradient table must be a 2D array"
+"""dMRI gradient dimensionality error message."""
+
+GRADIENT_DATA_MISSING_ERROR = (
+    "No gradient data provided. Please specify either a gradients_file or (bvec_file & bval_file)."
+)
+"""dMRI missing gradient data error message."""
+
+GRADIENT_EXPECTED_COLUMNS_ERROR_MSG = (
+    "Gradient table must have four columns (3 direction components and one b-value)."
+)
+"""dMRI gradient expected columns error message."""
+
 
 @attrs.define(slots=True)
 class DWI(BaseDataset[np.ndarray]):
@@ -86,7 +105,13 @@ class DWI(BaseDataset[np.ndarray]):
 
         gradients = np.asarray(self.gradients)
         if gradients.ndim != 2:
-            raise ValueError("Gradient table must be a 2D array")
+            raise ValueError(GRADIENT_NDIM_ERROR_MSG)
+        if gradients.shape[1] == 4:
+            pass
+        elif gradients.shape[0] == 4:
+            gradients = gradients.T
+        else:
+            raise ValueError(GRADIENT_EXPECTED_COLUMNS_ERROR_MSG)
 
         n_volumes = None
         if self.dataobj is not None:
@@ -96,15 +121,11 @@ class DWI(BaseDataset[np.ndarray]):
                 n_volumes = None
 
         if n_volumes is not None and gradients.shape[0] != n_volumes:
-            if gradients.shape[1] == n_volumes:
-                gradients = gradients.T
-            else:
-                raise ValueError(
-                    "Gradient table shape does not match the number of diffusion volumes: "
-                    f"expected {n_volumes} rows, found {gradients.shape[0]}"
+            raise ValueError(
+                GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_MISSING_ERROR.format(
+                    n_volumes=n_volumes, n_gradients=gradients.shape[0]
                 )
-        elif n_volumes is None and gradients.shape[1] > gradients.shape[0]:
-            gradients = gradients.T
+            )
 
         self.gradients = gradients
 
@@ -383,11 +404,15 @@ def from_nii(
     if gradients_file:
         grad = np.loadtxt(gradients_file, dtype="float32")
         if bvec_file and bval_file:
-            warn(
-                "Both a gradients table file and b-vec/val files are defined; "
-                "ignoring b-vec/val files in favor of the gradients_file.",
-                stacklevel=2,
-            )
+            warn(GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG, stacklevel=2)
+        if grad.ndim != 2:
+            raise ValueError(GRADIENT_NDIM_ERROR_MSG)
+        if grad.shape[1] == 4:
+            pass
+        elif grad.shape[0] == 4:
+            grad = grad.T
+        else:
+            raise ValueError(GRADIENT_EXPECTED_COLUMNS_ERROR_MSG)
     elif bvec_file and bval_file:
         bvecs = np.loadtxt(bvec_file, dtype="float32")
         if bvecs.ndim == 1:
@@ -400,24 +425,7 @@ def from_nii(
             bvals = np.squeeze(bvals)
         grad = np.column_stack((bvecs, bvals))
     else:
-        raise RuntimeError(
-            "No gradient data provided. "
-            "Please specify either a gradients_file or (bvec_file & bval_file)."
-        )
-
-    if grad.ndim == 1:
-        grad = grad[np.newaxis, :]
-
-    if grad.shape[1] < 2:
-        raise ValueError("Gradient table must have at least two columns (direction + b-value).")
-
-    if grad.shape[1] != 4:
-        if grad.shape[0] == 4:
-            grad = grad.T
-        else:
-            raise ValueError(
-                "Gradient table must have four columns (3 direction components and one b-value)."
-            )
+        raise RuntimeError(GRADIENT_DATA_MISSING_ERROR)
 
     # 3) Create the DWI instance. We'll filter out volumes where b-value > b0_thres
     #    as "DW volumes" if the user wants to store only the high-b volumes here
