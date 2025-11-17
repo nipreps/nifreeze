@@ -254,21 +254,21 @@ def dwi_select_shells(
         Shell mask.
     """
 
-    bvalues = gradients[:, -1]
-    bcenter = bvalues[index]
+    bvals = gradients[:, -1]
+    bcenter = bvals[index]
 
-    shellmask = np.ones(len(bvalues), dtype=bool)
+    shellmask = np.ones(len(bvals), dtype=bool)
     shellmask[index] = False  # Drop the held-out index
 
     if atol_low is None and atol_high is None:
         return shellmask
 
     atol_low = 0 if atol_low is None else atol_low
-    atol_high = gradients[:, -1].max() if atol_high is None else atol_high
+    atol_high = bvals.max() if atol_high is None else atol_high
 
     # Keep only b-values within the range defined by atol_high and atol_low
-    shellmask[bvalues > (bcenter + atol_high)] = False
-    shellmask[bvalues < (bcenter - atol_low)] = False
+    shellmask[bvals > (bcenter + atol_high)] = False
+    shellmask[bvals < (bcenter - atol_low)] = False
 
     if not shellmask.sum():
         raise RuntimeError(f"Shell corresponding to index {index} (b={bcenter}) is empty.")

@@ -157,11 +157,11 @@ class DWI(BaseDataset[np.ndarray]):
 
     @property
     def bvals(self):
-        return self.gradients[..., -1]
+        return self.gradients[:, -1]
 
     @property
     def bvecs(self):
-        return self.gradients[..., :-1]
+        return self.gradients[:, :-1]
 
     def get_shells(
         self,
