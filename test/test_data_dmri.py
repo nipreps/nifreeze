@@ -77,6 +77,11 @@ def test_main(datadir):
     assert isinstance(load(input_file), DWI)
 
 
+def test_motion_file_not_implemented():
+    with pytest.raises(NotImplementedError):
+        from_nii("dmri.nii.gz", motion_file="motion.x5")
+
+
 @pytest.mark.parametrize("insert_b0", (False, True))
 @pytest.mark.parametrize("rotate_bvecs", (False, True))
 def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
