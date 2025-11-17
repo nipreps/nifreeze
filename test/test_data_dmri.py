@@ -122,6 +122,8 @@ def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
         )
 
     if insert_b0:
+        assert dwi_h5.bzero is not None
+        assert dwi_from_nifti1.bzero is not None
         assert np.allclose(dwi_h5.bzero, dwi_from_nifti1.bzero)
 
     assert np.allclose(dwi_h5.bvals, dwi_from_nifti1.bvals, atol=1e-3)
@@ -146,6 +148,8 @@ def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
     if not rotate_bvecs:  # If we set motion_affines, data WILL change
         assert np.allclose(dwi_h5.dataobj, dwi_from_nifti2.dataobj)
     if insert_b0:
+        assert dwi_h5.bzero is not None
+        assert dwi_from_nifti2.bzero is not None
         assert np.allclose(dwi_h5.bzero, dwi_from_nifti2.bzero)
 
     assert np.allclose(dwi_h5.gradients, dwi_from_nifti2.gradients)
@@ -173,6 +177,8 @@ def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
     if not rotate_bvecs:  # If we set motion_affines, data WILL change
         assert np.allclose(dwi_h5.dataobj, dwi_from_nifti3.dataobj)
 
+    assert dwi_h5.bzero is not None
+    assert dwi_from_nifti3.bzero is not None
     assert np.allclose(dwi_h5.bzero, dwi_from_nifti3.bzero)
     assert np.allclose(dwi_h5.gradients, dwi_from_nifti3.gradients, atol=1e-6)
     assert np.allclose(dwi_h5.bvals, dwi_from_nifti3.bvals, atol=1e-6)
@@ -184,6 +190,7 @@ def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
     if not rotate_bvecs:  # If we set motion_affines, data WILL change
         assert np.allclose(dwi_h5.dataobj, dwi_from_nifti4.dataobj)
 
+    assert dwi_from_nifti4.bzero is not None
     assert np.allclose(dwi_h5.bzero, dwi_from_nifti4.bzero)
     assert np.allclose(dwi_h5.gradients, dwi_from_nifti4.gradients)
     assert np.allclose(dwi_h5.bvals, dwi_from_nifti4.bvals, atol=1e-6)

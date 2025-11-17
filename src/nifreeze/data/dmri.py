@@ -68,7 +68,9 @@ DTI_MIN_ORIENTATIONS = 6
 class DWI(BaseDataset[np.ndarray]):
     """Data representation structure for dMRI data."""
 
-    bzero: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
+    bzero: np.ndarray | None = attrs.field(
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp)
+    )
     """A *b=0* reference map, preferably obtained by some smart averaging."""
     gradients: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
     """A 2D numpy array of the gradient table (``N`` orientations x ``C`` components)."""
@@ -284,7 +286,7 @@ class DWI(BaseDataset[np.ndarray]):
                     stacklevel=2,
                 )
         else:
-            data = np.concatenate((self.bzero[..., np.newaxis], self.dataobj), axis=-1)
+            data = np.concatenate((self.bzero[..., np.newaxis], self.dataobj), axis=-1)  # type: ignore
             nii = nb.Nifti1Image(data, nii.affine, nii.header)
 
             if filename is not None:
