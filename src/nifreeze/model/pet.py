@@ -57,8 +57,8 @@ class PETModel(BaseModel):
     def __init__(
         self,
         dataset: PET,
-        timepoints: list | np.ndarray | None = None,
-        xlim: float | None = None,
+        timepoints: list | np.ndarray,
+        xlim: float,
         n_ctrl: int | None = None,
         order: int = 3,
         smooth_fwhm: float = 10.0,
