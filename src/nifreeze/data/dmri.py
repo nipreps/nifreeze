@@ -63,18 +63,20 @@ DEFAULT_MULTISHELL_BIN_COUNT_THR = 7
 DTI_MIN_ORIENTATIONS = 6
 """Minimum number of nonzero b-values in a DWI dataset."""
 
-GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR = "Gradient table shape does not match the number of diffusion volumes: expected {n_volumes} rows, found {n_gradients}."
+GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR = """\
+Gradient table shape does not match the number of diffusion volumes: \
+expected {n_volumes} rows, found {n_gradients}."""
 """dMRI volume count vs. gradient count mismatch error message."""
 
-GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG = "Both a gradients table file and b-vec/val files are defined; ignoring b-vec/val files in favor of the gradients_file."
+GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG = """\
+Both a gradients table file and b-vec/val files are defined; \
+ignoring b-vec/val files in favor of the gradients_file."""
 """"dMRI gradient file priority warning message."""
 
 GRADIENT_NDIM_ERROR_MSG = "Gradient table must be a 2D array"
 """dMRI gradient dimensionality error message."""
 
-GRADIENT_DATA_MISSING_ERROR = (
-    "No gradient data provided. Please specify either a gradients_file or (bvec_file & bval_file)."
-)
+GRADIENT_DATA_MISSING_ERROR = "No gradient data provided."
 """dMRI missing gradient data error message."""
 
 GRADIENT_EXPECTED_COLUMNS_ERROR_MSG = (
@@ -83,51 +85,144 @@ GRADIENT_EXPECTED_COLUMNS_ERROR_MSG = (
 """dMRI gradient expected columns error message."""
 
 
+def format_gradients(
+    value: npt.ArrayLike | None,
+) -> np.ndarray | None:
+    """
+    Validate and orient gradient tables to row-major convention.
+
+    Parameters
+    ----------
+    value : :obj:`ArrayLike`
+        The value to format.
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        Row-major convention gradient table.
+
+    Raises
+    ------
+    exc:`ValueError`
+        If ``value`` is not a 2D :obj:`~numpy.ndarray` (``value.ndim != 2``).
+
+    Examples
+    --------
+    Passing an already well-formed table returns the data unchanged::
+
+        >>> format_gradients(
+        ...     [
+        ...         [1, 0, 0, 0],
+        ...         [0, 1, 0, 1000],
+        ...         [0, 0, 1, 2000],
+        ...         [0, 0, 0, 0],
+        ...         [0, 0, 0, 1000],
+        ...     ]
+        ... )
+        array([[   1,    0,    0,    0],
+               [   0,    1,    0, 1000],
+               [   0,    0,    1, 2000],
+               [   0,    0,    0,    0],
+               [   0,    0,    0, 1000]])
+
+    Column-major inputs are automatically transposed when an expected
+    number of diffusion volumes is provided::
+
+        >>> format_gradients(
+        ...     [[1, 0], [0, 1], [0, 0], [1000, 2000]],
+        ... )
+        array([[   1,    0,    0, 1000],
+               [   0,    1,    0, 2000]])
+
+    Gradient tables must always have two dimensions::
+
+        >>> format_gradients([0, 1, 0, 1000])
+        Traceback (most recent call last):
+        ...
+        ValueError: Gradient table must be a 2D array
+
+    """
+
+    formatted = np.asarray(value)
+    if formatted.ndim != 2:
+        raise ValueError(GRADIENT_NDIM_ERROR_MSG)
+
+    # Transpose if column-major
+    return formatted.T if formatted.shape[0] == 4 and formatted.shape[1] != 4 else formatted
+
+
+def validate_gradients(
+    inst: DWI,
+    attr: attrs.Attribute,
+    value: npt.NDArray[np.floating],
+) -> None:
+    """Strict validator for use in attribute validation (e.g. attrs / validators).
+
+    Ensures row-major convention for gradient table.
+
+    This function is intended for use as an attrs-style validator.
+
+    Parameters
+    ----------
+    inst : :obj:`~nifreeze.data.dmri.DWI`
+        The instance being validated (unused; present for validator signature).
+    attr : :obj:`~attrs.Attribute`
+        The attribute being validated; attr.name is used in the error message.
+    value : :obj:`~npt.NDArray`
+        The value to validate.
+    """
+    if value.shape[1] != 4:
+        raise ValueError(GRADIENT_EXPECTED_COLUMNS_ERROR_MSG)
+
+
 @attrs.define(slots=True)
 class DWI(BaseDataset[np.ndarray]):
     """Data representation structure for dMRI data."""
 
+    gradients: np.ndarray = attrs.field(
+        default=None,
+        repr=_data_repr,
+        eq=attrs.cmp_using(eq=_cmp),
+        converter=format_gradients,
+        validator=validate_gradients,
+    )
+    """A 2D numpy array of the gradient table (``N`` orientations x ``C`` components)."""
     bzero: np.ndarray | None = attrs.field(
         default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp)
     )
-    """A *b=0* reference map, preferably obtained by some smart averaging."""
-    gradients: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
-    """A 2D numpy array of the gradient table (``N`` orientations x ``C`` components)."""
+    """A *b=0* reference map, computed automatically when low-b frames are present."""
     eddy_xfms: list = attrs.field(default=None)
     """List of transforms to correct for estimated eddy current distortions."""
 
     def __attrs_post_init__(self) -> None:
-        self._normalize_gradients()
-
-    def _normalize_gradients(self) -> None:
         if self.gradients is None:
-            return
+            raise ValueError(GRADIENT_DATA_MISSING_ERROR)
 
-        gradients = np.asarray(self.gradients)
-        if gradients.ndim != 2:
-            raise ValueError(GRADIENT_NDIM_ERROR_MSG)
-        if gradients.shape[1] == 4:
-            pass
-        elif gradients.shape[0] == 4:
-            gradients = gradients.T
-        else:
-            raise ValueError(GRADIENT_EXPECTED_COLUMNS_ERROR_MSG)
-
-        n_volumes = None
-        if self.dataobj is not None:
-            try:
-                n_volumes = self.dataobj.shape[-1]
-            except Exception:  # pragma: no cover - extremely defensive
-                n_volumes = None
-
-        if n_volumes is not None and gradients.shape[0] != n_volumes:
+        if self.dataobj.shape[-1] != self.gradients.shape[0]:
             raise ValueError(
-                GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_MISSING_ERROR.format(
-                    n_volumes=n_volumes, n_gradients=gradients.shape[0]
+                GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR.format(
+                    n_volumes=self.dataobj.shape[-1],
+                    n_gradients=self.gradients.shape[0],
                 )
             )
 
-        self.gradients = gradients
+        b0_mask = self.gradients[:, -1] <= DEFAULT_LOWB_THRESHOLD
+        b0_num = np.sum(b0_mask)
+
+        if b0_num > 0 and self.bzero is None:
+            bzeros = self.dataobj[..., b0_mask]
+            self.bzero = bzeros if bzeros.ndim == 3 else np.median(bzeros, axis=-1)
+
+        if b0_num > 0:
+            # Remove b0 volumes from dataobj and gradients
+            self.gradients = self.gradients[~b0_mask, :]
+            self.dataobj = self.dataobj[..., ~b0_mask]
+
+        if self.gradients.shape[0] < DTI_MIN_ORIENTATIONS:
+            raise ValueError(
+                f"DWI datasets must have at least {DTI_MIN_ORIENTATIONS} diffusion-weighted "
+                f"orientations; found {self.dataobj.shape[-1]}."
+            )
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray]:
         return (self.gradients[idx, ...],)
@@ -339,12 +434,10 @@ class DWI(BaseDataset[np.ndarray]):
 def from_nii(
     filename: Path | str,
     brainmask_file: Path | str | None = None,
-    motion_file: Path | str | None = None,
     gradients_file: Path | str | None = None,
     bvec_file: Path | str | None = None,
     bval_file: Path | str | None = None,
     b0_file: Path | str | None = None,
-    b0_thres: float = DEFAULT_LOWB_THRESHOLD,
 ) -> DWI:
     """
     Load DWI data from NIfTI and construct a DWI object.
@@ -359,8 +452,6 @@ def from_nii(
     brainmask_file : :obj:`os.pathlike`, optional
         A brainmask NIfTI file. If provided, will be loaded and
         stored in the returned dataset.
-    motion_file : :obj:`os.pathlike`, optional
-        A file containing head motion affine matrices (linear)
     gradients_file : :obj:`os.pathlike`, optional
         A text file containing the gradients table, shape (N, C) where the last column
         stores the b-values. If provided following the column-major convention(C, N),
@@ -373,9 +464,6 @@ def from_nii(
     b0_file : :obj:`os.pathlike`, optional
         A NIfTI file containing a b=0 volume (possibly averaged or reference).
         If not provided, and the data contains at least one b=0 volume, one will be computed.
-    b0_thres : float, optional
-        Threshold for determining which volumes are considered DWI vs. b=0
-        if you combine them in the same file.
 
     Returns
     -------
@@ -390,10 +478,6 @@ def from_nii(
         ``bvec_file`` + ``bval_file``).
 
     """
-
-    if motion_file:
-        raise NotImplementedError
-
     filename = Path(filename)
 
     # 1) Load a NIfTI
@@ -405,18 +489,8 @@ def from_nii(
         grad = np.loadtxt(gradients_file, dtype="float32")
         if bvec_file and bval_file:
             warn(GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG, stacklevel=2)
-        if grad.ndim != 2:
-            raise ValueError(GRADIENT_NDIM_ERROR_MSG)
-        if grad.shape[1] == 4:
-            pass
-        elif grad.shape[0] == 4:
-            grad = grad.T
-        else:
-            raise ValueError(GRADIENT_EXPECTED_COLUMNS_ERROR_MSG)
     elif bvec_file and bval_file:
         bvecs = np.loadtxt(bvec_file, dtype="float32")
-        if bvecs.ndim == 1:
-            bvecs = bvecs[np.newaxis, :]
         if bvecs.shape[1] != 3 and bvecs.shape[0] == 3:
             bvecs = bvecs.T
 
@@ -427,40 +501,26 @@ def from_nii(
     else:
         raise RuntimeError(GRADIENT_DATA_MISSING_ERROR)
 
-    # 3) Create the DWI instance. We'll filter out volumes where b-value > b0_thres
-    #    as "DW volumes" if the user wants to store only the high-b volumes here
-    gradmsk = grad[:, -1] > b0_thres
-
-    dwi_obj = DWI(
-        dataobj=fulldata[..., gradmsk],
-        affine=img.affine,
-        # We'll assign the filtered gradients below.
-    )
-
-    dwi_obj.gradients = grad[gradmsk, :]
-    dwi_obj._normalize_gradients()
-
-    # 4) b=0 volume (bzero)
-    #    If the user provided a b0_file, load it
+    # 3) Read b-zero volume if provided
+    b0_data = None
     if b0_file:
         b0img = load_api(b0_file, SpatialImage)
-        b0vol = np.asanyarray(b0img.dataobj)
-        # We'll assume your DWI class has a bzero: np.ndarray | None attribute
-        dwi_obj.bzero = b0vol
-    # Otherwise, if any volumes remain outside gradmsk, compute a median B0:
-    elif np.any(~gradmsk):
-        # The b=0 volumes are those that did NOT pass b0_thres
-        b0_volumes = fulldata[..., ~gradmsk]
-        # A simple approach is to take the median across that last dimension
-        # Note that axis=3 is valid only if your data is 4D (x, y, z, volumes).
-        dwi_obj.bzero = np.median(b0_volumes, axis=3)
+        b0_data = np.asanyarray(b0img.dataobj)
 
-    # 5) If a brainmask_file was provided, load it
+    # 4) If a brainmask_file was provided, load it
+    brainmask_data = None
     if brainmask_file:
         mask_img = load_api(brainmask_file, SpatialImage)
-        dwi_obj.brainmask = np.asanyarray(mask_img.dataobj, dtype=bool)
+        brainmask_data = np.asanyarray(mask_img.dataobj, dtype=bool)
 
-    return dwi_obj
+    # 5) Create and return the DWI instance.
+    return DWI(
+        dataobj=fulldata,
+        affine=img.affine,
+        gradients=grad,
+        bzero=b0_data,
+        brainmask=brainmask_data,
+    )
 
 
 def find_shelling_scheme(

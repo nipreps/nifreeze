@@ -221,7 +221,6 @@ def from_nii(
     filename: Path | str,
     frame_time: np.ndarray | list[float],
     brainmask_file: Path | str | None = None,
-    motion_file: Path | str | None = None,
     frame_duration: np.ndarray | list[float] | None = None,
 ) -> PET:
     """
@@ -236,8 +235,6 @@ def from_nii(
     brainmask_file : :obj:`os.pathlike`, optional
         A brainmask NIfTI file. If provided, will be loaded and
         stored in the returned dataset.
-    motion_file : :obj:`os.pathlike`, optional
-        A file containing head motion affine matrices (linear).
     frame_duration : :obj:`numpy.ndarray` or :obj:`list` of :obj:`float`, optional
         The duration of each frame.
         If ``None``, it is derived by the difference of consecutive frame times,
@@ -254,8 +251,6 @@ def from_nii(
         If ``frame_time`` is not provided (BIDS requires it).
 
     """
-    if motion_file:
-        raise NotImplementedError
 
     filename = Path(filename)
     # Load from NIfTI
