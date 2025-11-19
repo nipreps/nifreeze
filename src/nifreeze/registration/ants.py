@@ -398,7 +398,7 @@ def generate_command(
         elif key not in PARAMETERS_SINGLE_LIST:
             continue
 
-        if levels == 1:
+        if nlevels == 1:
             settings[key] = [value]
         else:
             settings[key][-1] = value
