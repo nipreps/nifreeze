@@ -109,11 +109,19 @@ def test_trivial_model(request, use_mask):
         a_max=DEFAULT_MAX_S0,
     )
 
+    n_vols = 10
+
+    bvecs = rng.normal(size=(n_vols, 3))
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+    bvals = np.full((bvecs.shape[0], 1), 1000.0)
+    gradients = np.hstack((bvecs, bvals))
+
     data = DWI(
-        dataobj=rng.normal(size=(*_S0.shape, 10)),
+        dataobj=rng.normal(size=(*_S0.shape, n_vols)),
         affine=np.eye(4),
         bzero=_clipped_S0,
         brainmask=mask,
+        gradients=gradients,
     )
 
     with context:
