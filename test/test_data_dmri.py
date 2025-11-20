@@ -24,6 +24,7 @@
 
 import re
 from pathlib import Path
+from string import Formatter
 
 import attrs
 import nibabel as nb
@@ -47,6 +48,28 @@ from nifreeze.data.dmri import (
     validate_gradients,
 )
 from nifreeze.utils.ndimage import load_api
+
+
+def _template_has_field(template: str, field_name: str | None = None) -> bool:
+    """Return True if `template` contains a format field.
+    If `field_name` is provided, return True only if that named field appears.
+
+    This uses Formatter.parse() so it recognizes real format fields and
+    ignores literal substrings that merely look like "{shape}".
+    """
+    formatter = Formatter()
+    for _literal_text, field, _format_spec, _conversion in formatter.parse(template):
+        if field is None:
+            # no field in this segment
+            continue
+        # field can be '' (positional {}), 'shape', or complex like 'shape[0]' or 'obj.attr'
+        if field_name is None:
+            return True
+        # Compare the base name before any attribute/indexing syntax
+        base = field.split(".", 1)[0].split("[", 1)[0]
+        if base == field_name:
+            return True
+    return False
 
 
 def _dwi_data_to_nifti(
