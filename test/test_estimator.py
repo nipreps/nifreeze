@@ -36,27 +36,26 @@ from nifreeze.utils import iterators
 DATAOBJ_SIZE = (5, 5, 5, 4)
 
 
-class DummyModel(BaseModel):
-    def __init__(self, **kwargs):
-        self._rng = np.random.default_rng(1234)
-        super().__init__(**kwargs)
+class DummyInsiderModel(BaseModel):
+    def __init__(self, dataset, **kwargs):
+        super().__init__(dataset, **kwargs)
 
     def fit_predict(self, index: int | None = None, **kwargs):
-        # Return a synthetic 3D image
-        return self._rng.random(DATAOBJ_SIZE[:-1])
+        # Return the indexed volume
+        return self._dataset.dataobj[..., index]
 
 
 class DummyDataset(BaseDataset):
     def __init__(self, rng):
-        self.dataobj = rng.uniform(0.0, 1.0, DATAOBJ_SIZE)
-        self.brainmask = np.ones(self.dataobj.shape[:-1], dtype=bool)
+        self.dataobj = rng.uniform(0.0, 1.0, DATAOBJ_SIZE)  # np.ones(DATAOBJ_SIZE)
+        self.brainmask = rng.choice([True, False], size=self.dataobj.shape[:-1]).astype(bool)
         self.affine = np.eye(4)
 
     def __len__(self):
         return self.dataobj.shape[-1]
 
     def __getitem__(self, idx):
-        # Return a valid 3D array and a dummy value
+        # Return the indexed volume and a dummy value
         return self.dataobj[..., idx], None
 
     def set_transform(self, idx, matrix):
@@ -95,19 +94,17 @@ class DummyPETDataset(BaseDataset):
 
 
 def test_estimator_init_model_instance(request):
-    rng = request.node.rng
-    model = DummyModel(dataset=DummyDataset(rng))
+    model = DummyInsiderModel(dataset=DummyDataset(rng=request.node.rng))
     est = Estimator(model=model)
-    assert isinstance(est._model, DummyModel)
+    assert isinstance(est._model, DummyInsiderModel)
 
 
 def test_estimator_init_model_string(request, monkeypatch):
     rng = request.node.rng
-
     # Patch ModelFactory.init to return DummyModel
     monkeypatch.setattr(
         "nifreeze.model.base.ModelFactory.init",
-        lambda model, dataset, **kwargs: DummyModel(dataset=dataset),
+        lambda model, dataset, **kwargs: DummyInsiderModel(dataset=dataset),
     )
 
     def mock_iterator(*_, **kwargs):
@@ -117,7 +114,7 @@ def test_estimator_init_model_string(request, monkeypatch):
 
     model_name = "dummy"
     est = Estimator(model=model_name, model_kwargs={})
-    _dataset = DummyDataset(rng)
+    _dataset = DummyDataset(rng=request.node.rng)
     # Should produce a DummyModel on run
     est.run(_dataset)
     assert isinstance(est._model, str)
@@ -190,7 +187,7 @@ def test_estimator_iterator_index_match(
         lambda *a, **k: DummyXForm(),
     )
 
-    model = DummyModel(dataset=dataset)
+    model = DummyInsiderModel(dataset=dataset)
     estimator = Estimator(model, strategy=strategy)
     estimator.run(dataset, **kwargs)
 
