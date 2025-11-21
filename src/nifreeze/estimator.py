@@ -257,6 +257,8 @@ class PETMotionEstimator:
                     dataobj=train_data,
                     affine=pet_dataset.affine,
                     brainmask=pet_dataset.brainmask,
+                    frame_time=pet_dataset.frame_time,
+                    uptake=pet_dataset.uptake,
                     midframe=train_times,
                     total_duration=pet_dataset.total_duration,
                 )

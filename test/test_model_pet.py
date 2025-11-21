@@ -28,33 +28,42 @@ from nifreeze.data.pet import PET
 from nifreeze.model.pet import PETModel
 
 
-@pytest.fixture
-def random_dataset(setup_random_pet_data) -> PET:
-    """Create a PET dataset with random data for testing."""
-
+@pytest.mark.random_pet_data(
+    5,
+    (4, 4, 4),
+    np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]),
+    np.sum,
+    np.asarray([3.0, 4.0, 5.0, 6.0, 7.0]),
+    np.asarray([2.0, 17.0, 22.0, 32.0, 29.0]),
+    47.0,
+)
+def test_petmodel_fit_predict(setup_random_pet_data):
     (
         pet_dataobj,
         affine,
         brainmask_dataobj,
+        frame_time,
+        uptake,
+        frame_duration,
         midframe,
         total_duration,
     ) = setup_random_pet_data
 
-    return PET(
+    pet_obj = PET(
         dataobj=pet_dataobj,
         affine=affine,
         brainmask=brainmask_dataobj,
+        frame_time=frame_time,
+        uptake=uptake,
+        frame_duration=frame_duration,
         midframe=midframe,
         total_duration=total_duration,
     )
 
-
-@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]), 60.0)
-def test_petmodel_fit_predict(random_dataset):
     model = PETModel(
-        dataset=random_dataset,
-        timepoints=random_dataset.midframe,
-        xlim=random_dataset.total_duration,
+        dataset=pet_obj,
+        timepoints=pet_obj.midframe,
+        xlim=pet_obj.total_duration,
         smooth_fwhm=0,
         thresh_pct=0,
     )
@@ -64,20 +73,80 @@ def test_petmodel_fit_predict(random_dataset):
     assert model.is_fitted
 
     # Predict at a specific timepoint
-    vol = model.fit_predict(random_dataset.midframe[2])
+    vol = model.fit_predict(pet_obj.midframe[2])
     assert vol is not None
-    assert vol.shape == random_dataset.shape3d
-    assert vol.dtype == random_dataset.dataobj.dtype
+    assert vol.shape == pet_obj.shape3d
+    assert vol.dtype == pet_obj.dataobj.dtype
 
 
-@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]), 60.0)
-def test_petmodel_invalid_init(random_dataset):
+@pytest.mark.random_pet_data(
+    5,
+    (4, 4, 4),
+    np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]),
+    np.sum,
+    np.asarray([1.0, 1.0, 1.0, 1.0, 1.0]),
+    np.asarray([0.5, 1.5, 2.5, 3.5, 4.5]),
+    5.0,
+)
+def test_petmodel_invalid_init1(setup_random_pet_data):
+    (
+        pet_dataobj,
+        affine,
+        brainmask_dataobj,
+        frame_time,
+        uptake,
+        frame_duration,
+        midframe,
+        total_duration,
+    ) = setup_random_pet_data
+
+    pet_obj = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        frame_time=frame_time,
+        uptake=uptake,
+        frame_duration=frame_duration,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+
     with pytest.raises(TypeError):
-        PETModel(dataset=random_dataset)
+        PETModel(dataset=pet_obj)
 
 
-@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]), 60.0)
-def test_petmodel_time_check(random_dataset):
+@pytest.mark.random_pet_data(
+    5,
+    (4, 4, 4),
+    np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]),
+    np.sum,
+    np.asarray([5.0, 5.0, 5.0, 5.0, 5.0]),
+    np.asarray([2.5, 7.5, 12.5, 17.5, 22.5]),
+    25.0,
+)
+def test_petmodel_time_check(setup_random_pet_data):
+    (
+        pet_dataobj,
+        affine,
+        brainmask_dataobj,
+        frame_time,
+        uptake,
+        frame_duration,
+        midframe,
+        total_duration,
+    ) = setup_random_pet_data
+
+    pet_obj = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        frame_time=frame_time,
+        uptake=uptake,
+        frame_duration=frame_duration,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+
     bad_times = np.array([0, 10, 20, 30, 50], dtype=np.float32)
     with pytest.raises(ValueError):
-        PETModel(dataset=random_dataset, timepoints=bad_times, xlim=60.0)
+        PETModel(dataset=pet_obj, timepoints=bad_times, xlim=60.0)
