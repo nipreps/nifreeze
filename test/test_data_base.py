@@ -22,6 +22,7 @@
 #
 """Test dataset base class."""
 
+import re
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
@@ -31,6 +32,18 @@ import numpy as np
 import pytest
 
 from nifreeze.data import NFDH5_EXT, BaseDataset, load
+from nifreeze.data.base import (
+    AFFINE_ABSENCE_ERROR_MSG,
+    AFFINE_NDIM_ERROR_MSG,
+    AFFINE_OBJECT_ERROR_MSG,
+    AFFINE_SHAPE_ERROR_MSG,
+    BRAINMASK_SHAPE_MISMATCH_ERROR_MSG,
+    DATAOBJ_ABSENCE_ERROR_MSG,
+    DATAOBJ_NDIM_ERROR_MSG,
+    DATAOBJ_OBJECT_ERROR_MSG,
+    _has_dim_size,
+    _has_ndim,
+)
 from nifreeze.utils.ndimage import get_data
 
 DEFAULT_RANDOM_DATASET_SHAPE = (32, 32, 32, 5)
@@ -49,6 +62,110 @@ def random_dataset(setup_random_uniform_spatial_data) -> BaseDataset:
 
     data, affine = setup_random_uniform_spatial_data
     return BaseDataset(dataobj=data, affine=affine)
+
+
+@pytest.mark.parametrize(
+    "value, size, expected",
+    [
+        (np.zeros((2, 4, 5)), 4, True),
+        (np.zeros((2, 4, 5)), 6, False),
+        # Objects without .shape
+        ([1, 2, 3], 3, False),
+        # Shape that is not iterable
+        (
+            type("BadShape", (), {"shape": 5})(),
+            5,
+            False,
+        ),
+    ],
+)
+def test_has_dim_size(value, size, expected):
+    assert _has_dim_size(value, size) is expected
+
+
+@pytest.mark.parametrize(
+    "obj_factory, ndim, expected",
+    [
+        (lambda: type("WithNdim", (), {"ndim": 2})(), 2, True),
+        (lambda: type("WithNdim", (), {"ndim": 2})(), 3, False),
+        (lambda: type("BadNdim", (), {"ndim": "not-an-int"})(), 2, False),
+        (lambda: type("WithShape", (), {"shape": (3, 4)})(), 2, True),
+        (lambda: (123), 1, False),  # No ndim or shape
+    ],
+)
+def test_has_ndim(obj_factory, ndim, expected):
+    obj = obj_factory()
+    assert _has_ndim(obj, ndim) is expected
+
+
+@pytest.mark.parametrize(
+    "value, expected_exc, expected_msg",
+    [
+        (None, ValueError, DATAOBJ_ABSENCE_ERROR_MSG),
+        (1, TypeError, DATAOBJ_OBJECT_ERROR_MSG),
+    ],
+)
+def test_dataobj_basic_errors(value, expected_exc, expected_msg):
+    with pytest.raises(expected_exc, match=str(expected_msg)):
+        BaseDataset(dataobj=value)  # type: ignore[arg-type]
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4, 6), 0.0, 1.0)
+def test_dataobj_ndim_error(setup_random_uniform_spatial_data):
+    data, _ = setup_random_uniform_spatial_data
+    with pytest.raises(ValueError, match=DATAOBJ_NDIM_ERROR_MSG):
+        BaseDataset(dataobj=data)
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
+@pytest.mark.parametrize(
+    "affine, expected_exc, expected_msg",
+    [
+        (None, ValueError, AFFINE_ABSENCE_ERROR_MSG),
+        (1, TypeError, AFFINE_OBJECT_ERROR_MSG),
+    ],
+)
+def test_missing_affine_error(
+    setup_random_uniform_spatial_data, affine, expected_exc, expected_msg
+):
+    data, _ = setup_random_uniform_spatial_data
+    with pytest.raises(expected_exc, match=str(expected_msg)):
+        BaseDataset(dataobj=data, affine=affine)  # type: ignore[arg-type]
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
+@pytest.mark.parametrize("size", ((2,), (3, 4, 2)))
+def test_affine_ndim_error(setup_random_uniform_ndim_data, size):
+    data = setup_random_uniform_ndim_data
+    affine = np.ones(size)
+    with pytest.raises(ValueError, match=re.escape(AFFINE_NDIM_ERROR_MSG)):
+        BaseDataset(dataobj=data, affine=affine)
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
+@pytest.mark.parametrize("size", ((2, 2), (3, 4), (4, 3), (5, 5)))
+def test_affine_shape_error(setup_random_uniform_ndim_data, size):
+    data = setup_random_uniform_ndim_data
+    affine = np.ones(size)
+    with pytest.raises(ValueError, match=re.escape(AFFINE_SHAPE_ERROR_MSG)):
+        BaseDataset(dataobj=data, affine=affine)
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
+def test_brainmask_volume_mismatch_error(request, setup_random_uniform_spatial_data):
+    data, affine = setup_random_uniform_spatial_data
+    data_shape = data.shape[:3]
+    brainmask_size = tuple(map(lambda x: x + 1, data_shape))
+    brainmask = request.node.rng.choice([True, False], size=brainmask_size)
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            BRAINMASK_SHAPE_MISMATCH_ERROR_MSG.format(
+                brainmask_shape=brainmask.shape, data_shape=data_shape
+            )
+        ),
+    ):
+        BaseDataset(dataobj=data, affine=affine, brainmask=brainmask)
 
 
 def test_base_dataset_init(random_dataset: BaseDataset):
