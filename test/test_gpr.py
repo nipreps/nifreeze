@@ -292,3 +292,22 @@ def test_kernel(repodata, covariance):
 
     K_predict = kernel(bvecs, bvecs[10:14, ...])
     assert K_predict.shape == (K.shape[0], 4)
+
+
+def test_unknown_optimizer():
+    # Create a GPR with an optimizer string that is not supported
+    optimizer = "bad-optimizer"
+    gp = gpr.DiffusionGPR(optimizer=optimizer)  # type: ignore
+
+    # A minimal objective function (will not be called by this test path)
+    def obj_func(theta, eval_gradient):
+        return 0.0
+
+    initial_theta = np.array([0.1])
+    bounds = [(0.0, 1.0)]
+
+    # Expect the specific ValueError message including the optimizer name
+    with pytest.raises(
+        ValueError, match=gpr.UNKNOWN_OPTIMIZER_ERROR_MSG.format(optimizer=optimizer)
+    ):
+        gp._constrained_optimization(obj_func, initial_theta, bounds)
