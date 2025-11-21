@@ -38,20 +38,131 @@ from nitransforms.linear import Affine
 from nitransforms.resampling import apply
 from typing_extensions import Self
 
-from nifreeze.data.base import BaseDataset, _cmp, _data_repr
+from nifreeze.data.base import BaseDataset, _cmp, _data_repr, _has_ndim
 from nifreeze.utils.ndimage import load_api
+
+ARRAY_ATTRIBUTE_ABSENCE_ERROR_MSG = "PET '{attribute}' may not be None"
+"""PET initialization array attribute absence error message."""
+
+ARRAY_ATTRIBUTE_OBJECT_ERROR_MSG = "PET '{attribute}' must be a numpy array."
+"""PET initialization array attribute object error message."""
+
+ARRAY_ATTRIBUTE_NDIM_ERROR_MSG = "PET '{attribute}' must be a 1D numpy array."
+"""PET initialization array attribute ndim error message."""
+
+ATTRIBUTE_VOLUME_DIMENSIONALITY_MISMATCH_ERROR = """\
+PET '{attribute}' length does not match number of frames: \
+expected {n_frames} values, found {attr_len}."""
+"""PET attribute shape mismatch error message."""
+
+
+def validate_1d_array(inst: PET, attr: attrs.Attribute, value: Any) -> None:
+    """Strict validator to ensure an attribute is a 1D NumPy array.
+
+    Enforces that ``value`` is a :obj:`~numpy.ndarray` and that it has exactly
+    one dimension (``value.ndim == 1``).
+
+    This function is intended for use as an attrs-style validator.
+
+    Parameters
+    ----------
+    inst : :obj:`~nifreeze.data.pet.PET`
+        The instance being validated (unused; present for validator signature).
+    attr : :obj:`~attrs.Attribute`
+        The attribute being validated; ``attr.name`` is used in the error message.
+    value : :obj:`Any`
+        The value to validate.
+
+    Raises
+    ------
+    exc:`TypeError`
+        If the input cannot be converted to a float :obj:`~numpy.ndarray`.
+    exc:`ValueError`
+        If the value is ``None``, or not 1D.
+    """
+
+    if value is None:
+        raise ValueError(ARRAY_ATTRIBUTE_ABSENCE_ERROR_MSG.format(attribute=attr.name))
+
+    if not isinstance(value, np.ndarray):
+        raise TypeError(ARRAY_ATTRIBUTE_OBJECT_ERROR_MSG.format(attribute=attr.name))
+
+    if not _has_ndim(value, 1):
+        raise ValueError(ARRAY_ATTRIBUTE_NDIM_ERROR_MSG.format(attribute=attr.name))
 
 
 @attrs.define(slots=True)
 class PET(BaseDataset[np.ndarray]):
-    """Data representation structure for PET data."""
+    """Data representation structure for PET data.
 
-    midframe: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
-    """A (N,) numpy array specifying the midpoint timing of each sample or frame."""
-    total_duration: float = attrs.field(default=None, repr=True)
-    """A float representing the total duration of the dataset."""
-    uptake: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
+    If not provided, frame duration data are computed as differences between
+    consecutive midframe times. The last interval is duplicated.
+    """
+
+    frame_time: np.ndarray = attrs.field(
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=validate_1d_array
+    )
+    """A (N,) numpy array specifying the timing of each sample or frame."""
+    uptake: np.ndarray = attrs.field(
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=validate_1d_array
+    )
     """A (N,) numpy array specifying the uptake value of each sample or frame."""
+    frame_duration: np.ndarray | None = attrs.field(
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp)
+    )
+    """A (N,) numpy array specifying the frame duration."""
+    midframe: np.ndarray = attrs.field(
+        default=None, repr=_data_repr, init=False, eq=attrs.cmp_using(eq=_cmp)
+    )
+    """A (N,) numpy array specifying the midpoint timing of each sample or frame."""
+    total_duration: float = attrs.field(default=None, repr=True, init=False)
+    """A float representing the total duration of the dataset."""
+
+    def __attrs_post_init__(self) -> None:
+        """Enforce presence and basic consistency of PET data fields at
+        instantiation time.
+
+        Specifically, the length of the frame_time and uptake attributes must
+        match the last dimension of the data (number of frames).
+
+        Computes the values for the private attributes.
+        """
+        n_frames = int(self.dataobj.shape[-1])
+
+        if len(self.frame_time) != n_frames:
+            raise ValueError(
+                ATTRIBUTE_VOLUME_DIMENSIONALITY_MISMATCH_ERROR.format(
+                    attribute=attrs.fields_dict(self.__class__)["frame_time"].name,
+                    n_frames=n_frames,
+                    attr_len=len(self.frame_time),
+                )
+            )
+
+        if len(self.uptake) != n_frames:
+            raise ValueError(
+                ATTRIBUTE_VOLUME_DIMENSIONALITY_MISMATCH_ERROR.format(
+                    attribute=attrs.fields_dict(self.__class__)["uptake"].name,
+                    n_frames=n_frames,
+                    attr_len=len(self.uptake),
+                )
+            )
+
+        # Compute temporal attributes
+
+        # Convert to a float32 numpy array and zero out the earliest time
+        frame_time_arr = np.array(self.frame_time, dtype=np.float32)
+        frame_time_arr -= frame_time_arr[0]
+        self.midframe = frame_time_arr
+
+        # If the user did not provide frame duration values,compute them
+        if self.frame_duration:
+            durations = np.array(self.frame_duration, dtype=np.float32)
+        else:
+            durations = _compute_frame_duration(self.midframe)
+
+        # Compute total duration and shift midframe to the midpoint
+        self.total_duration = float(self.midframe[-1] + durations[-1])
+        self.midframe = self.midframe + 0.5 * durations
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray]:
         return (self.midframe[idx],)
@@ -223,6 +334,7 @@ def from_nii(
     brainmask_file: Path | str | None = None,
     motion_file: Path | str | None = None,
     frame_duration: np.ndarray | list[float] | None = None,
+    uptake_stat_func: Callable[..., np.ndarray] = np.sum,
 ) -> PET:
     """
     Load PET data from NIfTI, creating a PET object with appropriate metadata.
@@ -242,6 +354,8 @@ def from_nii(
         The duration of each frame.
         If ``None``, it is derived by the difference of consecutive frame times,
         defaulting the last frame to match the second-last.
+    uptake_stat_func : :obj:`Callable`, optional
+        The statistic function to be used to compute the uptake value.
 
     Returns
     -------
@@ -258,37 +372,29 @@ def from_nii(
         raise NotImplementedError
 
     filename = Path(filename)
-    # Load from NIfTI
+
+    # 1) Load a NIfTI
     img = load_api(filename, SpatialImage)
-    data = img.get_fdata(dtype=np.float32)
-    pet_obj = PET(
-        dataobj=data,
-        affine=img.affine,
-    )
+    fulldata = img.get_fdata(dtype=np.float32)
 
-    pet_obj.uptake = _compute_uptake_statistic(data, stat_func=np.sum)
+    # 2) Determine uptake value
+    uptake = _compute_uptake_statistic(fulldata, stat_func=uptake_stat_func)
 
-    # Convert to a float32 numpy array and zero out the earliest time
-    frame_time_arr = np.array(frame_time, dtype=np.float32)
-    frame_time_arr -= frame_time_arr[0]
-    pet_obj.midframe = frame_time_arr
-
-    # If the user doesn't provide frame_duration, we derive it:
-    if frame_duration is None:
-        durations = _compute_frame_duration(pet_obj.midframe)
-    else:
-        durations = np.array(frame_duration, dtype=np.float32)
-
-    # Set total_duration and shift frame_time to the midpoint
-    pet_obj.total_duration = float(frame_time_arr[-1] + durations[-1])
-    pet_obj.midframe = frame_time_arr + 0.5 * durations
-
-    # If a brain mask is provided, load and attach
+    # 3) If a brainmask_file was provided, load it
+    brainmask_data = None
     if brainmask_file is not None:
         mask_img = load_api(brainmask_file, SpatialImage)
-        pet_obj.brainmask = np.asanyarray(mask_img.dataobj, dtype=bool)
+        brainmask_data = np.asanyarray(mask_img.dataobj, dtype=bool)
 
-    return pet_obj
+    # 4) Create and return the PET instance
+    return PET(
+        dataobj=fulldata,
+        affine=img.affine,
+        brainmask=brainmask_data,
+        frame_time=np.asarray(frame_time),
+        frame_duration=np.asarray(frame_duration),
+        uptake=uptake,
+    )
 
 
 def _compute_frame_duration(midframe: np.ndarray) -> np.ndarray:
@@ -313,7 +419,7 @@ def _compute_frame_duration(midframe: np.ndarray) -> np.ndarray:
     return durations
 
 
-def _compute_uptake_statistic(data: np.ndarray, stat_func: Callable = np.sum):
+def _compute_uptake_statistic(data: np.ndarray, stat_func: Callable[..., np.ndarray] = np.sum):
     """Compute a statistic over all voxels for each frame on a PET sequence.
 
     Assumes the last dimension corresponds to the number of frames in the

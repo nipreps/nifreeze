@@ -29,8 +29,34 @@ import numpy as np
 import pytest
 from nitransforms.linear import Affine
 
-from nifreeze.data.pet import PET, _compute_frame_duration, _compute_uptake_statistic, from_nii
+from nifreeze.data.pet import (
+    ARRAY_ATTRIBUTE_ABSENCE_ERROR_MSG,
+    ARRAY_ATTRIBUTE_NDIM_ERROR_MSG,
+    ARRAY_ATTRIBUTE_OBJECT_ERROR_MSG,
+    ATTRIBUTE_VOLUME_DIMENSIONALITY_MISMATCH_ERROR,
+    PET,
+    _compute_frame_duration,
+    _compute_uptake_statistic,
+    from_nii,
+)
 from nifreeze.utils.ndimage import load_api
+
+
+def _pet_data_to_nifti(pet_dataobj, affine, brainmask_dataobj):
+    pet = nb.Nifti1Image(pet_dataobj, affine)
+    brainmask = nb.Nifti1Image(brainmask_dataobj, affine)
+
+    return pet, brainmask
+
+
+def _serialize_pet_data(pet, brainmask, _tmp_path):
+    pet_fname = _tmp_path / "pet.nii.gz"
+    brainmask_fname = _tmp_path / "brainmask.nii.gz"
+
+    nb.save(pet, pet_fname)
+    nb.save(brainmask, brainmask_fname)
+
+    return pet_fname, brainmask_fname
 
 
 @pytest.fixture
@@ -61,6 +87,127 @@ def random_nifti_file(tmp_path, setup_random_uniform_spatial_data) -> Path:
     _img = nb.Nifti1Image(_data, _affine)
     _img.to_filename(_filename)
     return _filename
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
+@pytest.mark.parametrize(
+    "attribute_name, value, expected_exc, expected_msg",
+    [
+        ("frame_time", None, ValueError, ARRAY_ATTRIBUTE_ABSENCE_ERROR_MSG),
+        ("frame_time", 1, TypeError, ARRAY_ATTRIBUTE_OBJECT_ERROR_MSG),
+        ("uptake", None, ValueError, ARRAY_ATTRIBUTE_ABSENCE_ERROR_MSG),
+        ("uptake", 3.0, TypeError, ARRAY_ATTRIBUTE_OBJECT_ERROR_MSG),
+    ],
+)
+def test_pet_instantiation_attribute_basic_errors(
+    setup_random_uniform_spatial_data, attribute_name, value, expected_exc, expected_msg
+):
+    data, affine = setup_random_uniform_spatial_data
+
+    if attribute_name == "frame_time":
+        frame_time = value
+        uptake = np.zeros(data.shape[-1], dtype=np.float32)
+
+        with pytest.raises(expected_exc, match=expected_msg.format(attribute="frame_time")):
+            PET(dataobj=data, affine=affine, frame_time=frame_time, uptake=uptake)  # type: ignore[arg-type]
+
+    elif attribute_name == "uptake":
+        uptake = value
+        frame_time = np.zeros(data.shape[-1], dtype=np.float32)
+
+        with pytest.raises(expected_exc, match=expected_msg.format(attribute="uptake")):
+            PET(dataobj=data, affine=affine, frame_time=frame_time, uptake=uptake)  # type: ignore[arg-type]
+
+
+@pytest.mark.random_pet_data(4, (2, 2, 2), np.sum, None)
+@pytest.mark.parametrize("attribute_name", ("frame_time", "uptake"))
+@pytest.mark.parametrize("additional_dimensions", (1, 2))
+@pytest.mark.parametrize("transpose", (True, False))
+def test_pet_instantiation_attribute_ndim_errors(
+    request, setup_random_pet_data, attribute_name, additional_dimensions, transpose
+):
+    rng = request.node.rng
+    (
+        pet_dataobj,
+        affine,
+        _,
+        frame_time,
+        uptake,
+        _,
+    ) = setup_random_pet_data
+
+    if attribute_name == "frame_time":
+        frame_time = np.concatenate(
+            [frame_time[:, None], rng.random((frame_time.size, additional_dimensions))], axis=1
+        )
+        frame_time = frame_time.T if transpose else frame_time
+        with pytest.raises(
+            ValueError, match=ARRAY_ATTRIBUTE_NDIM_ERROR_MSG.format(attribute="frame_time")
+        ):
+            PET(dataobj=pet_dataobj, affine=affine, frame_time=frame_time, uptake=uptake)  # type: ignore[arg-type]
+
+    elif attribute_name == "uptake":
+        uptake = np.concatenate(
+            [uptake[:, None], rng.random((uptake.size, additional_dimensions))], axis=1
+        )
+        uptake = uptake.T if transpose else uptake
+        with pytest.raises(
+            ValueError, match=ARRAY_ATTRIBUTE_NDIM_ERROR_MSG.format(attribute="uptake")
+        ):
+            PET(dataobj=pet_dataobj, affine=affine, frame_time=frame_time, uptake=uptake)  # type: ignore[arg-type]
+
+
+@pytest.mark.random_pet_data(4, (2, 2, 2), np.sum, None)
+@pytest.mark.parametrize("attribute_name", ("frame_time", "uptake"))
+@pytest.mark.parametrize(
+    ("additional_volume_count", "additional_attribute_count"),
+    [(1, 0), (2, 0), (2, 1), (0, 1), (0, 2), (1, 2)],
+)
+def test_pet_instantiation_attribute_vol_mismatch_error(
+    setup_random_pet_data, attribute_name, additional_volume_count, additional_attribute_count
+):
+    (
+        pet_dataobj,
+        affine,
+        _,
+        frame_time,
+        uptake,
+        _,
+    ) = setup_random_pet_data
+
+    n_frames = int(pet_dataobj.shape[-1])
+
+    # Add additional volumes: simply concatenate the last volume
+    if additional_volume_count:
+        additional_dwi_dataobj = np.tile(pet_dataobj[..., -1:], (1, additional_volume_count))
+        pet_dataobj = np.concatenate((pet_dataobj, additional_dwi_dataobj), axis=-1)
+        n_frames = int(pet_dataobj.shape[-1])
+    # Add additional values to attribute: simply concatenate the attribute
+    if additional_attribute_count:
+        if attribute_name == "frame_time":
+            additional_frame_time = np.repeat(frame_time[-1], additional_attribute_count)
+            frame_time = np.concatenate((frame_time, additional_frame_time))
+        elif attribute_name == "uptake":
+            additional_uptake = np.repeat(uptake[-1], additional_attribute_count)
+            uptake = np.concatenate((uptake, additional_uptake))
+
+    if attribute_name == "frame_time" or additional_volume_count != 0:
+        with pytest.raises(
+            ValueError,
+            match=ATTRIBUTE_VOLUME_DIMENSIONALITY_MISMATCH_ERROR.format(
+                attribute="frame_time", n_frames=n_frames, attr_len=len(frame_time)
+            ),
+        ):
+            PET(dataobj=pet_dataobj, affine=affine, frame_time=frame_time, uptake=uptake)  # type: ignore[arg-type]
+
+    elif attribute_name == "uptake":
+        with pytest.raises(
+            ValueError,
+            match=ATTRIBUTE_VOLUME_DIMENSIONALITY_MISMATCH_ERROR.format(
+                attribute="uptake", n_frames=n_frames, attr_len=len(uptake)
+            ),
+        ):
+            PET(dataobj=pet_dataobj, affine=affine, frame_time=frame_time, uptake=uptake)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
@@ -173,6 +320,84 @@ def test_round_trip(tmp_path, random_nifti_file, frame_time, frame_duration):
     np.testing.assert_allclose(loaded_img.get_fdata(), img.get_fdata())
     units = loaded_img.header.get_xyzt_units()
     assert units[0] == "mm"
+
+
+def test_equality_operator(tmp_path, setup_random_pet_data):
+    (
+        pet_dataobj,
+        affine,
+        brainmask_dataobj,
+        midframe,
+        total_duration,
+    ) = setup_random_pet_data
+
+    pet, brainmask = _pet_data_to_nifti(
+        pet_dataobj,
+        affine,
+        brainmask_dataobj.astype(np.uint8),
+    )
+
+    (
+        pet_fname,
+        brainmask_fname,
+    ) = _serialize_pet_data(
+        pet,
+        brainmask,
+        tmp_path,
+    )
+
+    # ToDo
+    # All this needs to be done automatically: the from_nii and PET data
+    # instantiation need to be refactored
+
+    start_time = 0.0
+    mid = np.asarray(midframe, dtype=np.float32)
+    frame_time = (mid + np.float32(start_time)).astype(np.float32)
+    frame_duration = _compute_frame_duration(midframe)
+
+    # Read back using public API
+    pet_obj_from_nii = from_nii(
+        pet_fname,
+        frame_time=frame_time,
+        brainmask_file=brainmask_fname,
+        frame_duration=frame_duration,
+    )
+
+    # Direct instantiation with the same arrays
+    uptake = _compute_uptake_statistic(pet_dataobj, stat_func=np.sum)
+    pet_obj_direct = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+        uptake=uptake,
+    )
+
+    # Sanity checks (element-wise)
+    assert np.allclose(pet_obj_direct.dataobj, pet_obj_from_nii.dataobj)
+    assert np.allclose(pet_obj_direct.affine, pet_obj_from_nii.affine)
+    if pet_obj_direct.brainmask is None or pet_obj_from_nii.brainmask is None:
+        assert pet_obj_direct.brainmask is None
+        assert pet_obj_from_nii.brainmask is None
+    else:
+        assert np.array_equal(pet_obj_direct.brainmask, pet_obj_from_nii.brainmask)
+    assert np.allclose(pet_obj_direct.midframe, pet_obj_from_nii.midframe)
+    assert np.allclose(pet_obj_direct.total_duration, pet_obj_from_nii.total_duration)
+    assert np.allclose(pet_obj_direct.uptake, pet_obj_from_nii.uptake)
+
+    # Test equality operator
+    assert pet_obj_direct == pet_obj_from_nii
+
+    # Test equality operator against an instance from HDF5
+    hdf5_filename = tmp_path / "test_pet.h5"
+    pet_obj_from_nii.to_filename(hdf5_filename)
+
+    round_trip_pet_obj = PET.from_filename(hdf5_filename)
+
+    # Symmetric equality
+    assert pet_obj_from_nii == round_trip_pet_obj
+    assert round_trip_pet_obj == pet_obj_from_nii
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]), 60.0)
