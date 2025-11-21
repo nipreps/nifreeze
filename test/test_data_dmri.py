@@ -22,6 +22,7 @@
 #
 """Unit tests exercising the dMRI data structure."""
 
+import re
 from pathlib import Path
 
 import nibabel as nb
@@ -29,7 +30,15 @@ import numpy as np
 import pytest
 
 from nifreeze.data import load
-from nifreeze.data.dmri import DWI, find_shelling_scheme, from_nii, transform_fsl_bvec
+from nifreeze.data.dmri import (
+    DWI,
+    GRADIENT_ABSENCE_ERROR_MSG,
+    GRADIENT_COUNT_MISMATCH_ERROR_MSG,
+    GRADIENT_SHAPE_ERROR_MSG,
+    find_shelling_scheme,
+    from_nii,
+    transform_fsl_bvec,
+)
 from nifreeze.utils.ndimage import load_api
 
 
@@ -80,6 +89,36 @@ def test_main(datadir):
 def test_motion_file_not_implemented():
     with pytest.raises(NotImplementedError):
         from_nii("dmri.nii.gz", motion_file="motion.x5")
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
+def test_missing_gradients_error(setup_random_uniform_spatial_data):
+    data, affine = setup_random_uniform_spatial_data
+    with pytest.raises(ValueError, match=GRADIENT_ABSENCE_ERROR_MSG):
+        DWI(dataobj=data, affine=affine)
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
+def test_gradients_shape_error(setup_random_uniform_spatial_data):
+    data, affine = setup_random_uniform_spatial_data
+    gradients = np.zeros((3, data.shape[-1]))
+    with pytest.raises(ValueError, match=re.escape(GRADIENT_SHAPE_ERROR_MSG)):
+        DWI(dataobj=data, affine=affine, gradients=gradients)
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
+def test_gradients_volume_mismatch_error(setup_random_uniform_spatial_data):
+    data, affine = setup_random_uniform_spatial_data
+    data_vols = data.shape[-1]
+    n_gradients = data_vols + 1
+    gradients = np.zeros((4, n_gradients))
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            GRADIENT_COUNT_MISMATCH_ERROR_MSG.format(n_gradients=n_gradients, data_vols=data_vols)
+        ),
+    ):
+        DWI(dataobj=data, affine=affine, gradients=gradients)
 
 
 @pytest.mark.parametrize("insert_b0", (False, True))
@@ -959,3 +998,115 @@ def test_transform_fsl_bvec(b_ijk, zooms, flips, axis_order, origin, angles):
         f"Expected {rotated_b_ijk}, got {test_b_ijk} for b_ijk={b_ijk}, "
         f"zooms={zooms}, origin={origin}, angles={angles}"
     )
+
+
+#####################################################################
+def _get_checker():
+    # Support either name used in different iterations: _check_gradient_shape or _check_ndarray_shape
+    return getattr(gradients, "_check_gradient_shape", None) or getattr(
+        gradients, "_check_ndarray_shape", None
+    )
+
+
+@pytest.mark.parametrize(
+    "value, expected_exc, expected_msg",
+    [
+        (None, ValueError, GRADIENT_ABSENCE_ERROR_MSG),
+        (np.array([[1], [2]], dtype=object), TypeError, GRADIENT_OBJECT_ERROR_MSG),
+        (np.zeros((3,)), ValueError, GRADIENT_NDIM_ERROR_MSG),
+        (np.zeros((2, 3)), ValueError, GRADIENT_EXPECTED_COLUMNS_ERROR_MSG),
+    ],
+)
+def test_check_gradient_shape_raises_for_invalid_inputs(value, expected_exc, expected_msg):
+    checker = _get_checker()
+    assert checker is not None, "no checker function found in gradients module"
+    with pytest.raises(expected_exc, match=expected_msg):
+        checker(value)
+
+
+@pytest.mark.parametrize(
+    "bad_input, expected_exc, expected_msg",
+    [
+        (3.14, ValueError, GRADIENT_NDIM_ERROR_MSG),
+        ([[1, 2], [3, 4, 5]], (TypeError, ValueError), GRADIENT_OBJECT_ERROR_MSG),  # Ragged
+    ],
+)
+def test_format_gradients_rejects_scalar_and_ragged(
+    monkeypatch, bad_input, expected_exc, expected_msg
+):
+    # normalize no-op
+    monkeypatch.setattr(gradients, "_normalize_gradients", lambda x: x)
+
+    with pytest.raises(expected_exc, match=expected_msg):
+        format_gradients(bad_input)
+
+
+@pytest.mark.parametrize(
+    "arr",
+    [
+        np.zeros((2, 4)),
+        np.zeros((4, 2)),
+    ],
+)
+def test_check_gradient_shape_accepts_valid_oriented_arrays(arr):
+    checker = _get_checker()
+    assert checker is not None, "no checker function found in gradients module"
+    # Should not raise
+    checker(arr)
+
+
+@pytest.mark.parametrize(
+    "input_value, expected_shape, expected_values",
+    [
+        (
+            [[1, 2, 3, 4], [5, 6, 7, 8]],  # list of lists -> (2,4)
+            (2, 4),
+            np.array([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=float),
+        ),
+        (
+            np.arange(8).reshape(4, 2).astype(float),  # (4,2) should be transposed to (2,4)
+            (2, 4),
+            np.arange(8).reshape(4, 2).astype(float).T,
+        ),
+    ],
+)
+def test_format_gradients_converts_list_and_transposes_when_needed(
+    input_value, expected_shape, expected_values, monkeypatch
+):
+    # Make normalize a no-op so tests can inspect returned array
+    monkeypatch.setattr(gradients, "_normalize_gradients", lambda x: x)
+
+    out = format_gradients(input_value)
+    assert isinstance(out, np.ndarray)
+    assert out.shape == expected_shape
+    assert np.allclose(out, expected_values)
+
+
+@pytest.mark.parametrize(
+    "value, expected_exc, expected_msg",
+    [
+        (None, ValueError, GRADIENT_ABSENCE_ERROR_MSG),
+        ([1, 2, 3, 4], GRADIENT_OBJECT_ERROR_MSG),  # Non-ndarray
+        (
+            np.array([[1], [2]], dtype=object),
+            TypeError,
+            GRADIENT_OBJECT_ERROR_MSG,
+        ),  # ndarray with object dtype
+        (np.zeros((3,)), ValueError, GRADIENT_NDIM_ERROR_MSG),  # Wrong ndim
+        (
+            np.zeros((2, 3)),
+            ValueError,
+            GRADIENT_EXPECTED_COLUMNS_ERROR_MSG,
+        ),  # Missing dimension size 4
+    ],
+)
+def test_validate_gradients_errors(value, expected_exc, expected_msg):
+    validator = validate_gradients
+    with pytest.raises(expected_exc, match=expected_msg):
+        validator(None, "gradients", value)
+
+
+def test_validate_gradients_accepts_valid_oriented_arrays():
+    # Valid arrays (either orientation) -> no exception
+    validate_gradients(None, "gradients", np.zeros((2, 4)))
+    validate_gradients(None, "gradients", np.zeros((4, 2)))
