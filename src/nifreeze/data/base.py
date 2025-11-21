@@ -44,6 +44,125 @@ NFDH5_EXT = ".h5"
 
 ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
 
+DATAOBJ_ABSENCE_ERROR_MSG = "BaseDataset 'dataobj' may not be None"
+"""BaseDataset initialization dataobj absence error message."""
+
+DATAOBJ_OBJECT_ERROR_MSG = "BaseDataset 'dataobj' must be a numpy array."
+"""BaseDataset initialization dataobj object error message."""
+
+DATAOBJ_NDIM_ERROR_MSG = "BaseDataset 'dataobj' must be a 4-D numpy array"
+"""BaseDataset initialization dataobj dimensionality error message."""
+
+AFFINE_ABSENCE_ERROR_MSG = "BaseDataset 'affine' may not be None"
+"""BaseDataset initialization affine absence error message."""
+
+AFFINE_OBJECT_ERROR_MSG = "BaseDataset 'affine' must be a numpy array."
+"""BaseDataset initialization affine object error message."""
+
+AFFINE_NDIM_ERROR_MSG = "BaseDataset 'affine' must be a 2D array"
+"""Affine dimensionality error message."""
+
+AFFINE_SHAPE_ERROR_MSG = "BaseDataset 'affine' must be a 2-D numpy array (4 x 4)"
+"""BaseDataset initialization affine shape error message."""
+
+BRAINMASK_SHAPE_MISMATCH_ERROR_MSG = "BaseDataset 'brainmask' shape ({brainmask_shape}) does not match dataset volumes ({data_shape})."
+"""BaseDataset brainmask shape mismatch error message."""
+
+
+def _has_dim_size(value: Any, size: int) -> bool:
+    """Return ``True`` if ``value`` has a ``.shape`` attribute and one of its
+     dimensions equals ``size``.
+
+    This is useful for checks where at least one axis must match an expected
+    length. It does not require a specific axis index; it only verifies presence
+    of the size in any axis in ``.shape``.
+
+    Parameters
+    ----------
+     value : :obj:`Any`
+        Object to inspect. Typical inputs are NumPy arrays or objects exposing
+        ``.shape``.
+     size : :obj:`int`
+        The required dimension size to look for in ``value.shape``.
+
+    Returns
+    -------
+     :obj:`bool`
+        ``True`` if ``.shape`` exists and any of its integers equals ``size``,
+        ``False`` otherwise.
+
+    Examples
+    --------
+    >>> _has_dim_size(np.zeros((10, 3)), 3)
+    True
+    >>> _has_dim_size(np.zeros((4, 5)), 6)
+    False
+    """
+
+    shape = getattr(value, "shape", None)
+    if shape is None:
+        return False
+    # Shape may be an object that is not iterable; handle TypeError explicitly
+    try:
+        return size in tuple(shape)
+    except TypeError:
+        return False
+
+
+def _has_ndim(value: Any, ndim: int) -> bool:
+    """Check if ``value`` has ``ndim`` dimensionality.
+
+    Returns ``True`` if `value` has an ``.ndim`` attribute equal to ``ndim``, or
+    if it has a ``.shape`` attribute whose length equals ``ndim``.
+
+    This helper is tolerant: it accepts objects that either:
+    - expose an integer ``.ndim`` attribute (e.g., NumPy arrays), or
+    - expose a ``.shape`` attribute (sequence/tuple-like) whose length equals
+     ``ndim``.
+
+    Parameters
+    ----------
+    value : :obj:`Any`
+        Object to inspect for dimensionality. Typical inputs are NumPy arrays,
+        array-likes, or objects that provide ``.ndim`` / ``.shape``.
+    ndim : :obj:`int`
+        The required dimensionality.
+
+    Returns
+    -------
+    :obj:`bool`
+        ``True`` if ``value`` appears to have ``ndim`` dimensions, ``False``
+        otherwise.
+
+    Examples
+    --------
+    >>> _has_ndim(np.zeros((2, 3)), 2)
+    True
+    >>> _has_ndim(np.zeros((3,)), 2)
+    False
+    >>> class WithShape:
+    ...     shape = (2, 2, 2)
+    >>> _has_ndim(WithShape(), 3)
+    True
+    """
+
+    # Prefer .ndim if available
+    ndim_attr = getattr(value, "ndim", None)
+    if ndim_attr is not None:
+        try:
+            return int(ndim_attr) == ndim
+        except (TypeError, ValueError):
+            return False
+
+    # Fallback to checking shape length
+    shape = getattr(value, "shape", None)
+    if shape is None:
+        return False
+    try:
+        return len(tuple(shape)) == ndim
+    except TypeError:
+        return False
+
 
 def _data_repr(value: np.ndarray | None) -> str:
     if value is None:
@@ -56,6 +175,76 @@ def _cmp(lh: Any, rh: Any) -> bool:
         return np.allclose(lh, rh)
 
     return lh == rh
+
+
+def _dataobj_validator(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> None:
+    """Strict validator for data objects.
+
+    It enforces that ``value`` is present and is a NumPy array with exactly 4
+    dimensions (``ndim == 4``).
+
+    This function is intended for use as an attrs-style validator.
+
+    Parameters
+    ----------
+    inst : :obj:`~nifreeze.data.base.BaseDataset`
+        The instance being validated (unused, present for validator signature).
+    attr : :obj:`attrs.Attribute`
+        The attribute being validated (unused, present for validator signature).
+    value : :obj:`Any`
+        The value to validate.
+
+    Raises
+    ------
+    exc:`TypeError`
+        If the input cannot be converted to a float :obj:`~numpy.ndarray`.
+    exc:`ValueError`
+        If the value is ``None``, or not 4-dimensional.
+    """
+    if value is None:
+        raise ValueError(DATAOBJ_ABSENCE_ERROR_MSG)
+
+    if not isinstance(value, np.ndarray):
+        raise TypeError(DATAOBJ_OBJECT_ERROR_MSG)
+
+    if not _has_ndim(value, 4):
+        raise ValueError(DATAOBJ_NDIM_ERROR_MSG)
+
+
+def _affine_validator(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> None:
+    """Strict validator for affine matrices.
+
+    It enforces that ``value`` is present and is a 4x4 NumPy array.
+
+    This function is intended for use as an attrs-style validator.
+
+    Parameters
+    ----------
+    inst : :obj:`~nifreeze.data.base.BaseDataset`
+        The instance being validated (unused, present for validator signature).
+    attr : :obj:`attrs.Attribute`
+        The attribute being validated (unused, present for validator signature).
+    value : :obj:`Any`
+        The value to validate.
+
+    Raises
+    ------
+    exc:`TypeError`
+        If the input cannot be converted to a float :obj:`~numpy.ndarray`.
+    exc:`ValueError`
+        If the value is ``None``, or not shaped ``(4, 4)``.
+    """
+    if value is None:
+        raise ValueError(AFFINE_ABSENCE_ERROR_MSG)
+
+    if not isinstance(value, np.ndarray):
+        raise TypeError(AFFINE_OBJECT_ERROR_MSG)
+
+    if not _has_ndim(value, 2):
+        raise ValueError(AFFINE_NDIM_ERROR_MSG)
+
+    if value.shape != (4, 4):
+        raise ValueError(AFFINE_SHAPE_ERROR_MSG)
 
 
 @attrs.define(slots=True)
@@ -75,9 +264,13 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
     """
 
-    dataobj: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
+    dataobj: np.ndarray = attrs.field(
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=_dataobj_validator
+    )
     """A :obj:`~numpy.ndarray` object for the data array."""
-    affine: np.ndarray = attrs.field(default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp))
+    affine: np.ndarray = attrs.field(
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=_affine_validator
+    )
     """Best affine for RAS-to-voxel conversion of coordinates (NIfTI header)."""
     brainmask: np.ndarray | None = attrs.field(
         default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp)
@@ -94,6 +287,22 @@ class BaseDataset(Generic[Unpack[Ts]]):
         eq=False,
     )
     """A path to an HDF5 file to store the whole dataset."""
+
+    def __attrs_post_init__(self) -> None:
+        """Enforce basic consistency of base dataset fields at instantiation
+        time.
+
+        Specifically, the brainmask (if present) must match spatial shape of
+        dataobj.
+        """
+
+        if self.brainmask is not None:
+            if self.brainmask.shape != tuple(self.dataobj.shape[:3]):
+                raise ValueError(
+                    BRAINMASK_SHAPE_MISMATCH_ERROR_MSG.format(
+                        brainmask_shape=self.brainmask.shape, data_shape=self.dataobj.shape[:3]
+                    )
+                )
 
     def __len__(self) -> int:
         """Obtain the number of volumes/frames in the dataset."""

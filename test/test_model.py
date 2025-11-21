@@ -111,6 +111,7 @@ def test_trivial_model(request, use_mask):
 
     data = DWI(
         dataobj=rng.normal(size=(*_S0.shape, 10)),
+        affine=np.eye(4),
         bzero=_clipped_S0,
         brainmask=mask,
     )
@@ -197,7 +198,7 @@ def test_average_model():
     mask = np.ones(size[:3], dtype=bool)
 
     data *= gtab[:, -1]
-    dataset = DWI(dataobj=data, gradients=gtab, brainmask=mask)
+    dataset = DWI(dataobj=data, affine=np.eye(4), gradients=gtab, brainmask=mask)
 
     avgmodel_mean = model.AverageDWIModel(dataset, stat="mean")
     avgmodel_mean_full = model.AverageDWIModel(dataset, stat="mean", atol_low=2000, atol_high=2000)
