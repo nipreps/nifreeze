@@ -213,15 +213,16 @@ def test_average_model():
     avgmodel_median = model.AverageDWIModel(dataset)
 
     # Verify that average cannot be calculated in shells with one single value
+    # The two first gradients are considered low-b orientations because of the
+    # default threshold and are pulled out (so now index is 0 for b=500).
     with pytest.raises(RuntimeError):
-        avgmodel_mean.fit_predict(2)
+        avgmodel_mean.fit_predict(0)
 
     assert np.allclose(avgmodel_mean.fit_predict(3), 1000)
     assert np.allclose(avgmodel_median.fit_predict(3), 1000)
 
-    grads = list(gtab[:, -1])
-    del grads[1]
-    assert np.allclose(avgmodel_mean_full.fit_predict(1), np.mean(grads))
+    grads = list(gtab[2:, -1])
+    assert np.allclose(avgmodel_mean_full.fit_predict(0), np.mean(grads))
 
     avgmodel_mean_2000 = model.AverageDWIModel(dataset, stat="mean", atol_low=1100)
     avgmodel_median_2000 = model.AverageDWIModel(dataset, atol_low=1100)
