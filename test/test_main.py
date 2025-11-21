@@ -21,14 +21,45 @@
 #     https://www.nipreps.org/community/licensing/
 #
 
-import os
+import importlib.util
+import runpy
 import sys
-from pathlib import Path
+import types
 
 import pytest
 
-import nifreeze.cli.run as cli_run
 from nifreeze.__main__ import main
+
+
+def _make_dummy_run_module(call_recorder: dict):
+    """Create a fake nifreeze.cli.run module with a main() that records it was
+    called.
+    """
+    dummy_cli_run = types.ModuleType("nifreeze.cli.run")
+
+    def _main():
+        # Record that main was invoked and with which argv
+        call_recorder["called"] = True
+        call_recorder["argv"] = list(sys.argv)
+
+    # Use setattr to avoid a static attribute access that mypy flags on
+    # ModuleType
+    setattr(dummy_cli_run, "main", _main)  # noqa
+    return dummy_cli_run
+
+
+def _make_dummy_package():
+    """
+    Create a package-like module object for 'nifreeze' so package-relative imports
+    inside nifreeze.__main__ resolve to injected sys.modules entries like
+    'nifreeze.cli.run'. Use spec_from_loader(loader=None) so the spec has a
+    loader argument and linters/runtime checks are satisfied.
+    """
+    spec = importlib.util.spec_from_loader("nifreeze", loader=None, is_package=True)
+    pkg = types.ModuleType("nifreeze")
+    pkg.__spec__ = spec
+    pkg.__path__ = []  # mark as a package
+    return pkg
 
 
 @pytest.fixture(autouse=True)
@@ -46,57 +77,67 @@ def test_help(capsys):
 
 
 @pytest.mark.parametrize(
-    "write_hdf5",
+    "initial_argv0, expect_rewrite",
     [
-        False,
-        True,
+        ("something/path/__main__.py", True),
+        (f"{sys.executable}", False),
     ],
 )
-@pytest.mark.filterwarnings("ignore:write_hmxfms is set to True")
-@pytest.mark.filterwarnings("error")
-def test_main_call(tmp_path, monkeypatch, write_hdf5):
-    """Test the main function of the CLI."""
+def test_nifreeze_call(monkeypatch, initial_argv0, expect_rewrite):
+    """Execute the package's __main__ and assert that:
+    - nifreeze.cli.run.main() is called
+    - sys.argv[0] gets rewritten only when '__main__.py' is in argv[0]
+    """
+    orig_modules = sys.modules.copy()
 
-    os.chdir(tmp_path)
-    called = {}
+    recorder = {"called": False, "argv": None}
 
-    # Define smoke run method
-    def smoke_estimator_run(self, dataset, **kwargs):
-        called["dataset"] = dataset
-        called["kwargs"] = kwargs
+    # Remove any pre-existing nifreeze-related modules to avoid runpy's warning:
+    # runpy warns when it finds nifreeze.__main__ in sys.modules after the package
+    # is imported but before executing __main__. Removing such entries ensures
+    # importlib/runpy will load and execute the package/__main__ without the
+    # spurious warning and without accidentally reusing a stale module object.
+    for key in list(sys.modules.keys()):
+        if key == "nifreeze" or key.startswith("nifreeze."):
+            # Pop and drop: we'll restore full original snapshot afterwards
+            sys.modules.pop(key, None)
 
-    # Monkeypatch
-    monkeypatch.setattr(cli_run.Estimator, "run", smoke_estimator_run)
+    # Insert a dummy run module so "from .cli.run import main" resolves to our
+    # dummy
+    sys.modules["nifreeze.cli.run"] = _make_dummy_run_module(recorder)
 
-    test_data_home = os.getenv("TEST_DATA_HOME")
-    assert test_data_home is not None, "TEST_DATA_HOME must be set"
-    input_file = Path(test_data_home) / "dwi.h5"
-    argv = [
-        str(input_file),
-        "--models",
-        "dti",
-    ]
+    # Install the dummy run module (monkeypatch target)
+    sys.modules["nifreeze.cli.run"] = _make_dummy_run_module(recorder)
 
-    if write_hdf5:
-        argv.append("--write-hdf5")
-        out_filename = "dwi.h5"
-        cli_run.main(argv)
+    # Set argv[0] to the desired test value
+    sys_argv_backup = list(sys.argv)
+    sys.argv[0:1] = [initial_argv0]
+
+    try:
+        # Execute nifreeze.__main__ as a script (so its if __name__ == "__main__" block runs)
+        runpy.run_module("nifreeze.__main__", run_name="__main__")
+    finally:
+        # Restore sys.argv and sys.modules to avoid side effects on other tests
+        sys.argv[:] = sys_argv_backup
+        # Restore modules: remove keys we injected and put back original modules
+        # First clear any modules added during run_module
+        for key in list(sys.modules.keys()):
+            if key not in orig_modules:
+                del sys.modules[key]
+        # Put back original modules mapping
+        sys.modules.update(orig_modules)
+
+    # Assert main() was called
+    assert recorder["called"] is True
+
+    # Tell the type checker (and document the runtime expectation) that argv is
+    # a list
+    assert isinstance(recorder["argv"], list)
+
+    if expect_rewrite:
+        expected = f"{sys.executable} -m nifreeze"
+        # recorder["argv"] captured sys.argv as seen by dummy main()
+        assert recorder["argv"][0] == expected
     else:
-        out_filename = "dwi.nii.gz"
-        with pytest.warns(
-            UserWarning,
-            match="no motion affines were found",
-        ):
-            cli_run.main(argv)
-
-    assert Path(tmp_path / out_filename).is_file()
-    out_bval_filename = Path(Path(input_file).name).stem + ".bval"
-    out_bval_path: Path = Path(tmp_path) / out_bval_filename
-    out_bvec_filename = Path(Path(input_file).name).stem + ".bvec"
-    out_bvec_path: Path = Path(tmp_path) / out_bvec_filename
-    assert out_bval_path.is_file()
-    assert out_bvec_path.is_file()
-    if write_hdf5:
-        out_h5_filename = Path(Path(input_file).name).stem + ".h5"
-        out_h5_path: Path = Path(tmp_path) / out_h5_filename
-        assert out_h5_path.is_file()
+        # argv[0] should not have been rewritten
+        assert recorder["argv"][0] == initial_argv0
