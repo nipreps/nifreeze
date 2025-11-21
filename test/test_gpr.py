@@ -134,6 +134,17 @@ EXPECTED_SPHERICAL = [
 ]
 
 
+def _unit_vectors_nd(n_samples: int, n_features: int) -> np.ndarray:
+    # Orthogonal unit vectors as rows
+    if n_samples < 1 or n_features < 1:
+        raise ValueError("n_samples and n_features must be >= 1")
+    if n_samples > n_features:
+        # In R^d we can have at most d mutually orthogonal non‑zero vectors
+        raise ValueError("n_samples must be <= n_features to produce orthogonal vectors")
+
+    return np.eye(n_features, dtype=float)[:n_samples]
+
+
 # No need to use normalized vectors: compute_pairwise_angles takes care of it.
 # The [-1, 0, 1].T vector serves as a case where e.g. the angle between vector
 # [1, 0, 0] and the former is 135 unless the closest polarity flag is set to
@@ -311,3 +322,156 @@ def test_unknown_optimizer():
         ValueError, match=gpr.UNKNOWN_OPTIMIZER_ERROR_MSG.format(optimizer=optimizer)
     ):
         gp._constrained_optimization(obj_func, initial_theta, bounds)
+
+
+@pytest.mark.parametrize(
+    "beta_a, beta_l, a_bounds, l_bounds, eval_gradient",
+    [
+        (0.5, 2.0, (0.1, 1.0), (0.1, 10.0), False),
+        (1.0, 1.0, (0.1, 2.0), (0.01, 5.0), True),
+    ],
+)
+def test_exponential_kriging_properties(beta_a, beta_l, a_bounds, l_bounds, eval_gradient):
+    ek = gpr.ExponentialKriging(beta_a=beta_a, beta_l=beta_l, a_bounds=a_bounds, l_bounds=l_bounds)
+
+    # Hyperparameter properties
+    hp_a = ek.hyperparameter_a
+    hp_l = ek.hyperparameter_l
+    assert getattr(hp_a, "name", None) == "beta_a"
+    assert getattr(hp_l, "name", None) == "beta_l"
+    # Bounds should match what we passed (fallback to instance attr if absent)
+    hp_a_bounds = np.asarray(getattr(hp_a, "bounds", ek.a_bounds), dtype=float)
+    expected_a_bounds = np.asarray(ek.a_bounds, dtype=float)
+    assert np.allclose(hp_a_bounds, expected_a_bounds)
+    hp_l_bounds = np.asarray(getattr(hp_l, "bounds", ek.l_bounds), dtype=float)
+    expected_l_bounds = np.asarray(ek.l_bounds, dtype=float)
+    assert np.allclose(hp_l_bounds, expected_l_bounds)
+
+    X = _unit_vectors_nd(2, 2)
+    K2, _ = ek(X, eval_gradient=eval_gradient)
+
+    # stationarity and repr
+    assert ek.is_stationary() is True
+    assert "ExponentialKriging" in repr(ek)
+    assert f"a={ek.beta_a}" in repr(ek) or "beta_a" in repr(ek)
+
+
+@pytest.mark.parametrize(
+    "beta_a, beta_l, a_bounds, l_bounds, eval_gradient",
+    [
+        (10.0, 0.5, (0.1, 20.0), (0.1, 5.0), False),  # large a to trigger deriv_a active
+        (1.5, 2.0, (0.1, 5.0), (0.1, 10.0), True),
+    ],
+)
+def test_spherical_kriging_properties(beta_a, beta_l, a_bounds, l_bounds, eval_gradient):
+    sk = gpr.SphericalKriging(beta_a=beta_a, beta_l=beta_l, a_bounds=a_bounds, l_bounds=l_bounds)
+
+    hp_a = sk.hyperparameter_a
+    hp_l = sk.hyperparameter_l
+    assert getattr(hp_a, "name", None) == "beta_a"
+    assert getattr(hp_l, "name", None) == "beta_l"
+    hp_a_bounds = np.asarray(getattr(hp_a, "bounds", sk.a_bounds), dtype=float)
+    expected_a_bounds = np.asarray(sk.a_bounds, dtype=float)
+    assert np.allclose(hp_a_bounds, expected_a_bounds)
+    hp_l_bounds = np.asarray(getattr(hp_l, "bounds", sk.l_bounds), dtype=float)
+    expected_l_bounds = np.asarray(sk.l_bounds, dtype=float)
+    assert np.allclose(hp_l_bounds, expected_l_bounds)
+
+    X = _unit_vectors_nd(2, 2)
+    K, _ = sk(X, eval_gradient=eval_gradient)
+
+    # stationarity and repr
+    assert sk.is_stationary() is True
+    assert "SphericalKriging" in repr(sk)
+
+
+@pytest.mark.parametrize(
+    "beta_a, beta_l, a_bounds, l_bounds, n_samples, n_features, eval_gradient",
+    [
+        (0.5, 2.0, (0.1, 1.0), (0.1, 10.0), 2, 3, False),
+        (1.0, 1.0, (0.1, 2.0), (0.01, 5.0), 3, 4, True),
+    ],
+)
+def test_exponential_kriging_basic(
+    beta_a, beta_l, a_bounds, l_bounds, n_samples, n_features, eval_gradient
+):
+    ek = gpr.ExponentialKriging(beta_a=beta_a, beta_l=beta_l, a_bounds=a_bounds, l_bounds=l_bounds)
+
+    X = _unit_vectors_nd(n_samples, n_features)
+    if eval_gradient:
+        K, grad = ek(X, eval_gradient=True)
+    else:
+        K = ek(X, eval_gradient=False)
+        grad = None
+
+    assert K.shape == (n_samples, n_samples)
+
+    thetas = gpr.compute_pairwise_angles(X)
+    expected = ek.beta_l * gpr.exponential_covariance(thetas, ek.beta_a)
+    assert np.allclose(K, expected)
+
+    if eval_gradient:
+        assert grad is not None
+        assert grad.shape == (*thetas.shape, 2)  # two params: a and lambda
+
+        C_theta = gpr.exponential_covariance(thetas, ek.beta_a)
+        deriv_a = ek.beta_l * C_theta * thetas / (ek.beta_a**2)
+        deriv_lambda = C_theta
+
+        expected_grad = np.zeros((*thetas.shape, 2))
+        expected_grad[..., 0] = deriv_a
+        expected_grad[..., 1] = deriv_lambda
+
+        assert np.allclose(grad, expected_grad)
+
+    # diag
+    d = ek.diag(X)
+    assert d.shape == (n_samples,)
+    assert np.allclose(d, ek.beta_l * np.ones(n_samples))
+
+
+@pytest.mark.parametrize(
+    "beta_a, beta_l, a_bounds, l_bounds, n_samples, n_features, eval_gradient",
+    [
+        (10.0, 0.5, (0.1, 20.0), (0.1, 5.0), 2, 3, False),  # large a to trigger deriv_a active
+        (1.5, 2.0, (0.1, 5.0), (0.1, 10.0), 3, 4, True),
+    ],
+)
+def test_spherical_kriging_basic(
+    beta_a, beta_l, a_bounds, l_bounds, n_samples, n_features, eval_gradient
+):
+    sk = gpr.SphericalKriging(beta_a=beta_a, beta_l=beta_l, a_bounds=a_bounds, l_bounds=l_bounds)
+
+    X = _unit_vectors_nd(n_samples, n_features)
+    if eval_gradient:
+        K, grad = sk(X, eval_gradient=True)
+    else:
+        K = sk(X, eval_gradient=False)
+        grad = None
+
+    assert K.shape == (n_samples, n_samples)
+
+    thetas = gpr.compute_pairwise_angles(X)
+    expected = sk.beta_l * gpr.spherical_covariance(thetas, sk.beta_a)
+    assert np.allclose(K, expected)
+
+    if eval_gradient:
+        assert grad is not None
+        assert grad.shape == (*thetas.shape, 2)  # two params: a and lambda
+
+        # deriv_a as implemented in SphericalKriging
+        deriv_a = np.zeros_like(thetas)
+        nonzero = thetas <= sk.beta_a
+        deriv_a[nonzero] = (
+            1.5
+            * sk.beta_l
+            * (thetas[nonzero] / sk.beta_a**2 - thetas[nonzero] ** 3 / sk.beta_a**4)
+        )
+        expected_grad = np.dstack((deriv_a, gpr.spherical_covariance(thetas, sk.beta_a)))
+
+        assert np.allclose(grad, expected_grad)
+
+    # diag
+    d = sk.diag(X)
+    assert d.shape == (n_samples,)
+    assert np.allclose(d, sk.beta_l * np.ones(n_samples))
