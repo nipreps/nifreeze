@@ -58,6 +58,9 @@ PARAMETERS_SINGLE_LIST = {
 }
 PARAMETERS_DOUBLE_LIST = {"shrink_factors", "smoothing_sigmas", "transform_parameters"}
 
+REGISTRATION_MALFORMED_SETTINGS_ERROR_MSG = "Malformed settings file (levels: {levels})"
+"""Registration malformed settings error message."""
+
 
 def _to_nifti(
     data: np.ndarray, affine: np.ndarray, filename: str | Path, clip: bool = True
@@ -389,7 +392,7 @@ def generate_command(
     levels = {len(settings[p]) for p in PARAMETERS_SINGLE_LIST if p in settings}
     nlevels = levels.pop()
     if levels:
-        raise RuntimeError(f"Malformed settings file (levels: {levels})")
+        raise RuntimeError(REGISTRATION_MALFORMED_SETTINGS_ERROR_MSG.format(levels=levels))
 
     # Override list (and nested-list) parameters
     for key, value in kwargs.items():
