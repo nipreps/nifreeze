@@ -62,6 +62,9 @@ NONGRADIENT_METHODS = {"Nelder-Mead"}
 SUPPORTED_OPTIMIZERS = set(CONFIGURABLE_OPTIONS.keys()) | {"fmin_l_bfgs_b"}
 """A set of supported optimizers (automatically created)."""
 
+UNKNOWN_OPTIMIZER_ERROR_MSG = "Unknown optimizer {optimizer}."
+"""Unknown optimizer error message."""
+
 
 class DiffusionGPR(GaussianProcessRegressor):
     r"""
@@ -252,7 +255,7 @@ class DiffusionGPR(GaussianProcessRegressor):
         if callable(self.optimizer):
             return self.optimizer(obj_func, initial_theta, bounds=bounds)
 
-        raise ValueError(f"Unknown optimizer {self.optimizer}.")
+        raise ValueError(UNKNOWN_OPTIMIZER_ERROR_MSG.format(optimizer=self.optimizer))
 
 
 class ExponentialKriging(Kernel):
