@@ -222,13 +222,14 @@ def test_average_model():
     assert np.allclose(avgmodel_median.fit_predict(3), 1000)
 
     grads = list(gtab[2:, -1])
-    assert np.allclose(avgmodel_mean_full.fit_predict(0), np.mean(grads))
+    del grads[3]
+    assert np.allclose(avgmodel_mean_full.fit_predict(3), np.mean(grads))
 
     avgmodel_mean_2000 = model.AverageDWIModel(dataset, stat="mean", atol_low=1100)
     avgmodel_median_2000 = model.AverageDWIModel(dataset, atol_low=1100)
 
-    assert np.allclose(avgmodel_mean_2000.fit_predict(9), gtab[3:-1, -1].mean())
-    assert np.allclose(avgmodel_median_2000.fit_predict(9), 1000)
+    assert np.allclose(avgmodel_mean_2000.fit_predict(7), gtab[3:-1, -1].mean())
+    assert np.allclose(avgmodel_median_2000.fit_predict(7), 1000)
 
 
 @pytest.mark.parametrize(
