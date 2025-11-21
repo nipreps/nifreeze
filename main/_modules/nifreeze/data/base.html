@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.data.base - nifreeze 25.0.0.dev680 documentation</title>
+        <title>nifreeze.data.base - nifreeze 25.0.0.dev682 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev680 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev682 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev680</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev682</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev680</span>
+  <span class="sidebar-brand-text">25.0.0.dev682</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -339,6 +339,125 @@
 
 <span class="n">ImageGrid</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;ImageGrid&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="s2">&quot;affine&quot;</span><span class="p">))</span>
 
+<span class="n">DATAOBJ_ABSENCE_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;BaseDataset &#39;dataobj&#39; may not be None&quot;</span>
+<span class="sd">&quot;&quot;&quot;BaseDataset initialization dataobj absence error message.&quot;&quot;&quot;</span>
+
+<span class="n">DATAOBJ_OBJECT_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;BaseDataset &#39;dataobj&#39; must be a numpy array.&quot;</span>
+<span class="sd">&quot;&quot;&quot;BaseDataset initialization dataobj object error message.&quot;&quot;&quot;</span>
+
+<span class="n">DATAOBJ_NDIM_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;BaseDataset &#39;dataobj&#39; must be a 4-D numpy array&quot;</span>
+<span class="sd">&quot;&quot;&quot;BaseDataset initialization dataobj dimensionality error message.&quot;&quot;&quot;</span>
+
+<span class="n">AFFINE_ABSENCE_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;BaseDataset &#39;affine&#39; may not be None&quot;</span>
+<span class="sd">&quot;&quot;&quot;BaseDataset initialization affine absence error message.&quot;&quot;&quot;</span>
+
+<span class="n">AFFINE_OBJECT_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;BaseDataset &#39;affine&#39; must be a numpy array.&quot;</span>
+<span class="sd">&quot;&quot;&quot;BaseDataset initialization affine object error message.&quot;&quot;&quot;</span>
+
+<span class="n">AFFINE_NDIM_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;BaseDataset &#39;affine&#39; must be a 2D array&quot;</span>
+<span class="sd">&quot;&quot;&quot;Affine dimensionality error message.&quot;&quot;&quot;</span>
+
+<span class="n">AFFINE_SHAPE_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;BaseDataset &#39;affine&#39; must be a 2-D numpy array (4 x 4)&quot;</span>
+<span class="sd">&quot;&quot;&quot;BaseDataset initialization affine shape error message.&quot;&quot;&quot;</span>
+
+<span class="n">BRAINMASK_SHAPE_MISMATCH_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;BaseDataset &#39;brainmask&#39; shape (</span><span class="si">{brainmask_shape}</span><span class="s2">) does not match dataset volumes (</span><span class="si">{data_shape}</span><span class="s2">).&quot;</span>
+<span class="sd">&quot;&quot;&quot;BaseDataset brainmask shape mismatch error message.&quot;&quot;&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">_has_dim_size</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return ``True`` if ``value`` has a ``.shape`` attribute and one of its</span>
+<span class="sd">     dimensions equals ``size``.</span>
+
+<span class="sd">    This is useful for checks where at least one axis must match an expected</span>
+<span class="sd">    length. It does not require a specific axis index; it only verifies presence</span>
+<span class="sd">    of the size in any axis in ``.shape``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">     value : :obj:`Any`</span>
+<span class="sd">        Object to inspect. Typical inputs are NumPy arrays or objects exposing</span>
+<span class="sd">        ``.shape``.</span>
+<span class="sd">     size : :obj:`int`</span>
+<span class="sd">        The required dimension size to look for in ``value.shape``.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">     :obj:`bool`</span>
+<span class="sd">        ``True`` if ``.shape`` exists and any of its integers equals ``size``,</span>
+<span class="sd">        ``False`` otherwise.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; _has_dim_size(np.zeros((10, 3)), 3)</span>
+<span class="sd">    True</span>
+<span class="sd">    &gt;&gt;&gt; _has_dim_size(np.zeros((4, 5)), 6)</span>
+<span class="sd">    False</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">shape</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">shape</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="c1"># Shape may be an object that is not iterable; handle TypeError explicitly</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">size</span> <span class="ow">in</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span> <span class="nf">_has_ndim</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ndim</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if ``value`` has ``ndim`` dimensionality.</span>
+
+<span class="sd">    Returns ``True`` if `value` has an ``.ndim`` attribute equal to ``ndim``, or</span>
+<span class="sd">    if it has a ``.shape`` attribute whose length equals ``ndim``.</span>
+
+<span class="sd">    This helper is tolerant: it accepts objects that either:</span>
+<span class="sd">    - expose an integer ``.ndim`` attribute (e.g., NumPy arrays), or</span>
+<span class="sd">    - expose a ``.shape`` attribute (sequence/tuple-like) whose length equals</span>
+<span class="sd">     ``ndim``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    value : :obj:`Any`</span>
+<span class="sd">        Object to inspect for dimensionality. Typical inputs are NumPy arrays,</span>
+<span class="sd">        array-likes, or objects that provide ``.ndim`` / ``.shape``.</span>
+<span class="sd">    ndim : :obj:`int`</span>
+<span class="sd">        The required dimensionality.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    :obj:`bool`</span>
+<span class="sd">        ``True`` if ``value`` appears to have ``ndim`` dimensions, ``False``</span>
+<span class="sd">        otherwise.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; _has_ndim(np.zeros((2, 3)), 2)</span>
+<span class="sd">    True</span>
+<span class="sd">    &gt;&gt;&gt; _has_ndim(np.zeros((3,)), 2)</span>
+<span class="sd">    False</span>
+<span class="sd">    &gt;&gt;&gt; class WithShape:</span>
+<span class="sd">    ...     shape = (2, 2, 2)</span>
+<span class="sd">    &gt;&gt;&gt; _has_ndim(WithShape(), 3)</span>
+<span class="sd">    True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Prefer .ndim if available</span>
+    <span class="n">ndim_attr</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s2">&quot;ndim&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">ndim_attr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">ndim_attr</span><span class="p">)</span> <span class="o">==</span> <span class="n">ndim</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="c1"># Fallback to checking shape length</span>
+    <span class="n">shape</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">shape</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">shape</span><span class="p">))</span> <span class="o">==</span> <span class="n">ndim</span>
+    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
 
 <span class="k">def</span> <span class="nf">_data_repr</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -351,6 +470,76 @@
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">lh</span><span class="p">,</span> <span class="n">rh</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">lh</span> <span class="o">==</span> <span class="n">rh</span>
+
+
+<span class="k">def</span> <span class="nf">_dataobj_validator</span><span class="p">(</span><span class="n">inst</span><span class="p">:</span> <span class="n">BaseDataset</span><span class="p">,</span> <span class="n">attr</span><span class="p">:</span> <span class="n">attrs</span><span class="o">.</span><span class="n">Attribute</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Strict validator for data objects.</span>
+
+<span class="sd">    It enforces that ``value`` is present and is a NumPy array with exactly 4</span>
+<span class="sd">    dimensions (``ndim == 4``).</span>
+
+<span class="sd">    This function is intended for use as an attrs-style validator.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    inst : :obj:`~nifreeze.data.base.BaseDataset`</span>
+<span class="sd">        The instance being validated (unused, present for validator signature).</span>
+<span class="sd">    attr : :obj:`attrs.Attribute`</span>
+<span class="sd">        The attribute being validated (unused, present for validator signature).</span>
+<span class="sd">    value : :obj:`Any`</span>
+<span class="sd">        The value to validate.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    exc:`TypeError`</span>
+<span class="sd">        If the input cannot be converted to a float :obj:`~numpy.ndarray`.</span>
+<span class="sd">    exc:`ValueError`</span>
+<span class="sd">        If the value is ``None``, or not 4-dimensional.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">DATAOBJ_ABSENCE_ERROR_MSG</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">DATAOBJ_OBJECT_ERROR_MSG</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">_has_ndim</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">4</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">DATAOBJ_NDIM_ERROR_MSG</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_affine_validator</span><span class="p">(</span><span class="n">inst</span><span class="p">:</span> <span class="n">BaseDataset</span><span class="p">,</span> <span class="n">attr</span><span class="p">:</span> <span class="n">attrs</span><span class="o">.</span><span class="n">Attribute</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Strict validator for affine matrices.</span>
+
+<span class="sd">    It enforces that ``value`` is present and is a 4x4 NumPy array.</span>
+
+<span class="sd">    This function is intended for use as an attrs-style validator.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    inst : :obj:`~nifreeze.data.base.BaseDataset`</span>
+<span class="sd">        The instance being validated (unused, present for validator signature).</span>
+<span class="sd">    attr : :obj:`attrs.Attribute`</span>
+<span class="sd">        The attribute being validated (unused, present for validator signature).</span>
+<span class="sd">    value : :obj:`Any`</span>
+<span class="sd">        The value to validate.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    exc:`TypeError`</span>
+<span class="sd">        If the input cannot be converted to a float :obj:`~numpy.ndarray`.</span>
+<span class="sd">    exc:`ValueError`</span>
+<span class="sd">        If the value is ``None``, or not shaped ``(4, 4)``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">AFFINE_ABSENCE_ERROR_MSG</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">AFFINE_OBJECT_ERROR_MSG</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">_has_ndim</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">AFFINE_NDIM_ERROR_MSG</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">AFFINE_SHAPE_ERROR_MSG</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="BaseDataset">
@@ -372,9 +561,13 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">dataobj</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="n">attrs</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">))</span>
+    <span class="n">dataobj</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="n">attrs</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">),</span> <span class="n">validator</span><span class="o">=</span><span class="n">_dataobj_validator</span>
+    <span class="p">)</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A :obj:`~numpy.ndarray` object for the data array.&quot;&quot;&quot;</span>
-    <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="n">attrs</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">))</span>
+    <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="n">attrs</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">),</span> <span class="n">validator</span><span class="o">=</span><span class="n">_affine_validator</span>
+    <span class="p">)</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Best affine for RAS-to-voxel conversion of coordinates (NIfTI header).&quot;&quot;&quot;</span>
     <span class="n">brainmask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span>
         <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="n">attrs</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">)</span>
@@ -391,6 +584,22 @@
         <span class="n">eq</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A path to an HDF5 file to store the whole dataset.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__attrs_post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Enforce basic consistency of base dataset fields at instantiation</span>
+<span class="sd">        time.</span>
+
+<span class="sd">        Specifically, the brainmask (if present) must match spatial shape of</span>
+<span class="sd">        dataobj.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">brainmask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">brainmask</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">]):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="n">BRAINMASK_SHAPE_MISMATCH_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">brainmask_shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">brainmask</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">data_shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
 
 <div class="viewcode-block" id="BaseDataset.__len__">
 <a class="viewcode-back" href="../../../api/nifreeze.data.base.html#nifreeze.data.base.BaseDataset.__len__">[docs]</a>
@@ -666,7 +875,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=ca87152c"></script>
+</div><script src="../../../_static/documentation_options.js?v=59071b5f"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

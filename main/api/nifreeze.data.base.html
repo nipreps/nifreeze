@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.data.dmri module" href="nifreeze.data.dmri.html"><link rel="prev" title="nifreeze.data package" href="nifreeze.data.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.data.base module - nifreeze 25.0.0.dev680 documentation</title>
+        <title>nifreeze.data.base module - nifreeze 25.0.0.dev682 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev680 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev682 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev680</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev682</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev680</span>
+  <span class="sidebar-brand-text">25.0.0.dev682</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -302,6 +302,36 @@
           <section id="module-nifreeze.data.base">
 <span id="nifreeze-data-base-module"></span><h1>nifreeze.data.base module<a class="headerlink" href="#module-nifreeze.data.base" title="Link to this heading">¶</a></h1>
 <p>Four-dimensional data representation in hard-disk and memory.</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.base.AFFINE_ABSENCE_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.base.</span></span><span class="sig-name descname"><span class="pre">AFFINE_ABSENCE_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;BaseDataset</span> <span class="pre">'affine'</span> <span class="pre">may</span> <span class="pre">not</span> <span class="pre">be</span> <span class="pre">None&quot;</span></em><a class="headerlink" href="#nifreeze.data.base.AFFINE_ABSENCE_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>BaseDataset initialization affine absence error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.base.AFFINE_NDIM_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.base.</span></span><span class="sig-name descname"><span class="pre">AFFINE_NDIM_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;BaseDataset</span> <span class="pre">'affine'</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">a</span> <span class="pre">2D</span> <span class="pre">array&quot;</span></em><a class="headerlink" href="#nifreeze.data.base.AFFINE_NDIM_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>Affine dimensionality error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.base.AFFINE_OBJECT_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.base.</span></span><span class="sig-name descname"><span class="pre">AFFINE_OBJECT_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;BaseDataset</span> <span class="pre">'affine'</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">a</span> <span class="pre">numpy</span> <span class="pre">array.&quot;</span></em><a class="headerlink" href="#nifreeze.data.base.AFFINE_OBJECT_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>BaseDataset initialization affine object error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.base.AFFINE_SHAPE_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.base.</span></span><span class="sig-name descname"><span class="pre">AFFINE_SHAPE_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;BaseDataset</span> <span class="pre">'affine'</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">a</span> <span class="pre">2-D</span> <span class="pre">numpy</span> <span class="pre">array</span> <span class="pre">(4</span> <span class="pre">x</span> <span class="pre">4)&quot;</span></em><a class="headerlink" href="#nifreeze.data.base.AFFINE_SHAPE_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>BaseDataset initialization affine shape error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.base.BRAINMASK_SHAPE_MISMATCH_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.base.</span></span><span class="sig-name descname"><span class="pre">BRAINMASK_SHAPE_MISMATCH_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;BaseDataset</span> <span class="pre">'brainmask'</span> <span class="pre">shape</span> <span class="pre">({brainmask_shape})</span> <span class="pre">does</span> <span class="pre">not</span> <span class="pre">match</span> <span class="pre">dataset</span> <span class="pre">volumes</span> <span class="pre">({data_shape}).&quot;</span></em><a class="headerlink" href="#nifreeze.data.base.BRAINMASK_SHAPE_MISMATCH_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>BaseDataset brainmask shape mismatch error message.</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="nifreeze.data.base.BaseDataset">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.data.base.</span></span><span class="sig-name descname"><span class="pre">BaseDataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataobj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">affine</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">brainmask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">motion_affines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datahdr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'nb.Nifti1Header</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'Path'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">NOTHING</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/base.html#BaseDataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.base.BaseDataset" title="Link to this definition">¶</a></dt>
@@ -439,6 +469,24 @@ Defaults to 3 (cubic interpolation).</p></li>
 
 </dd></dl>
 
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.base.DATAOBJ_ABSENCE_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.base.</span></span><span class="sig-name descname"><span class="pre">DATAOBJ_ABSENCE_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;BaseDataset</span> <span class="pre">'dataobj'</span> <span class="pre">may</span> <span class="pre">not</span> <span class="pre">be</span> <span class="pre">None&quot;</span></em><a class="headerlink" href="#nifreeze.data.base.DATAOBJ_ABSENCE_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>BaseDataset initialization dataobj absence error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.base.DATAOBJ_NDIM_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.base.</span></span><span class="sig-name descname"><span class="pre">DATAOBJ_NDIM_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;BaseDataset</span> <span class="pre">'dataobj'</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">a</span> <span class="pre">4-D</span> <span class="pre">numpy</span> <span class="pre">array&quot;</span></em><a class="headerlink" href="#nifreeze.data.base.DATAOBJ_NDIM_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>BaseDataset initialization dataobj dimensionality error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.base.DATAOBJ_OBJECT_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.base.</span></span><span class="sig-name descname"><span class="pre">DATAOBJ_OBJECT_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;BaseDataset</span> <span class="pre">'dataobj'</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">a</span> <span class="pre">numpy</span> <span class="pre">array.&quot;</span></em><a class="headerlink" href="#nifreeze.data.base.DATAOBJ_OBJECT_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>BaseDataset initialization dataobj object error message.</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="nifreeze.data.base.ImageGrid">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.data.base.</span></span><span class="sig-name descname"><span class="pre">ImageGrid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">/</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nifreeze.data.base.ImageGrid" title="Link to this definition">¶</a></dt>
@@ -516,6 +564,11 @@ Defaults to 3 (cubic interpolation).</p></li>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">nifreeze.data.base module</a><ul>
+<li><a class="reference internal" href="#nifreeze.data.base.AFFINE_ABSENCE_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">AFFINE_ABSENCE_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.base.AFFINE_NDIM_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">AFFINE_NDIM_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.base.AFFINE_OBJECT_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">AFFINE_OBJECT_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.base.AFFINE_SHAPE_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">AFFINE_SHAPE_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.base.BRAINMASK_SHAPE_MISMATCH_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">BRAINMASK_SHAPE_MISMATCH_ERROR_MSG</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.base.BaseDataset"><code class="docutils literal notranslate"><span class="pre">BaseDataset</span></code></a><ul>
 <li><a class="reference internal" href="#nifreeze.data.base.BaseDataset.__len__"><code class="docutils literal notranslate"><span class="pre">BaseDataset.__len__()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.base.BaseDataset.affine"><code class="docutils literal notranslate"><span class="pre">BaseDataset.affine</span></code></a></li>
@@ -532,6 +585,9 @@ Defaults to 3 (cubic interpolation).</p></li>
 <li><a class="reference internal" href="#nifreeze.data.base.BaseDataset.to_nifti"><code class="docutils literal notranslate"><span class="pre">BaseDataset.to_nifti()</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#nifreeze.data.base.DATAOBJ_ABSENCE_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">DATAOBJ_ABSENCE_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.base.DATAOBJ_NDIM_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">DATAOBJ_NDIM_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.base.DATAOBJ_OBJECT_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">DATAOBJ_OBJECT_ERROR_MSG</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.base.ImageGrid"><code class="docutils literal notranslate"><span class="pre">ImageGrid</span></code></a><ul>
 <li><a class="reference internal" href="#nifreeze.data.base.ImageGrid.affine"><code class="docutils literal notranslate"><span class="pre">ImageGrid.affine</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.base.ImageGrid.shape"><code class="docutils literal notranslate"><span class="pre">ImageGrid.shape</span></code></a></li>
@@ -548,7 +604,7 @@ Defaults to 3 (cubic interpolation).</p></li>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=ca87152c"></script>
+</div><script src="../_static/documentation_options.js?v=59071b5f"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
