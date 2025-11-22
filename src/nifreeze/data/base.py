@@ -62,7 +62,7 @@ AFFINE_OBJECT_ERROR_MSG = "BaseDataset 'affine' must be a numpy array."
 AFFINE_NDIM_ERROR_MSG = "BaseDataset 'affine' must be a 2D array"
 """Affine dimensionality error message."""
 
-AFFINE_SHAPE_ERROR_MSG = "BaseDataset 'affine' must be a 2-D numpy array (4 x 4)"
+AFFINE_SHAPE_ERROR_MSG = "BaseDataset 'affine' must be a 2D numpy array (4 x 4)"
 """BaseDataset initialization affine shape error message."""
 
 BRAINMASK_SHAPE_MISMATCH_ERROR_MSG = "BaseDataset 'brainmask' shape ({brainmask_shape}) does not match dataset volumes ({data_shape})."
@@ -177,10 +177,10 @@ def _cmp(lh: Any, rh: Any) -> bool:
     return lh == rh
 
 
-def _dataobj_validator(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> None:
+def validate_dataobj(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> None:
     """Strict validator for data objects.
 
-    It enforces that ``value`` is present and is a NumPy array with exactly 4
+    Enforces that ``value`` is present and is a NumPy array with exactly 4
     dimensions (``ndim == 4``).
 
     This function is intended for use as an attrs-style validator.
@@ -189,7 +189,7 @@ def _dataobj_validator(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> 
     ----------
     inst : :obj:`~nifreeze.data.base.BaseDataset`
         The instance being validated (unused, present for validator signature).
-    attr : :obj:`attrs.Attribute`
+    attr : :obj:`~attrs.Attribute`
         The attribute being validated (unused, present for validator signature).
     value : :obj:`Any`
         The value to validate.
@@ -211,10 +211,10 @@ def _dataobj_validator(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> 
         raise ValueError(DATAOBJ_NDIM_ERROR_MSG)
 
 
-def _affine_validator(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> None:
+def validate_affine(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> None:
     """Strict validator for affine matrices.
 
-    It enforces that ``value`` is present and is a 4x4 NumPy array.
+    Enforces that ``value`` is present and is a 4x4 NumPy array.
 
     This function is intended for use as an attrs-style validator.
 
@@ -222,7 +222,7 @@ def _affine_validator(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> N
     ----------
     inst : :obj:`~nifreeze.data.base.BaseDataset`
         The instance being validated (unused, present for validator signature).
-    attr : :obj:`attrs.Attribute`
+    attr : :obj:`~attrs.Attribute`
         The attribute being validated (unused, present for validator signature).
     value : :obj:`Any`
         The value to validate.
@@ -265,11 +265,11 @@ class BaseDataset(Generic[Unpack[Ts]]):
     """
 
     dataobj: np.ndarray = attrs.field(
-        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=_dataobj_validator
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=validate_dataobj
     )
     """A :obj:`~numpy.ndarray` object for the data array."""
     affine: np.ndarray = attrs.field(
-        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=_affine_validator
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=validate_affine
     )
     """Best affine for RAS-to-voxel conversion of coordinates (NIfTI header)."""
     brainmask: np.ndarray | None = attrs.field(
