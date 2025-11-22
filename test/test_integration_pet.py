@@ -84,7 +84,7 @@ def test_pet_motion_estimator_run(random_dataset, monkeypatch):
                 return None
             return np.zeros(self.dataset.shape3d, dtype=np.float32)
 
-    monkeypatch.setattr("nifreeze.estimator.PETModel", DummyModel)
+    monkeypatch.setattr("nifreeze.estimator.BSplinePETModel", DummyModel)
 
     class DummyRegistration:
         def __init__(self, *args, **kwargs):
