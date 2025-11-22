@@ -323,22 +323,27 @@ def setup_random_pet_data(request):
 
     n_frames = 5
     vol_size = (4, 4, 4)
-    midframe = np.arange(n_frames, dtype=np.float32) + 1
-    total_duration = float(n_frames + 1)
+    uptake_stat_func = np.sum
+    frame_duration = None
     if marker:
-        n_frames, vol_size, midframe, total_duration = marker.args
+        n_frames, vol_size, uptake_stat_func, frame_duration = marker.args
 
     rng = request.node.rng
+
+    frame_time = np.arange(n_frames, dtype=np.float32) + 1
 
     pet_dataobj, affine = _generate_random_uniform_spatial_data(
         request, (*vol_size, n_frames), 0.0, 1.0
     )
     brainmask_dataobj = rng.choice([True, False], size=vol_size).astype(bool)
 
+    uptake = uptake_stat_func(pet_dataobj.reshape(-1, pet_dataobj.shape[-1]), axis=0)
+
     return (
         pet_dataobj,
         affine,
         brainmask_dataobj,
-        midframe,
-        total_duration,
+        frame_time,
+        uptake,
+        frame_duration,
     )
