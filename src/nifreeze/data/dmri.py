@@ -63,6 +63,12 @@ DEFAULT_MULTISHELL_BIN_COUNT_THR = 7
 DTI_MIN_ORIENTATIONS = 6
 """Minimum number of nonzero b-values in a DWI dataset."""
 
+GRADIENT_ABSENCE_ERROR_MSG = "Gradient table may not be None."
+"""Gradient absence error message."""
+
+GRADIENT_OBJECT_ERROR_MSG = "Gradient table must be a numeric homogeneous array-like object"
+"""Gradient object error message."""
+
 GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR = """\
 Gradient table shape does not match the number of diffusion volumes: \
 expected {n_volumes} rows, found {n_gradients}."""
@@ -141,11 +147,37 @@ def format_gradients(
         ...
         ValueError: Gradient table must be a 2D array
 
+    Gradient tables must have a regular shape::
+
+        >>> format_gradients([[1, 2], [3, 4, 5]])
+        Traceback (most recent call last):
+        ...
+        TypeError: Gradient table must be a numeric homogeneous array-like object
+
+    Gradient tables must always have two dimensions::
+
+        >>> format_gradients([0, 1, 0, 1000])
+        Traceback (most recent call last):
+        ...
+        ValueError: Gradient table must be a 2D array
+
     """
 
-    formatted = np.asarray(value)
+    if value is None:
+        raise ValueError(GRADIENT_ABSENCE_ERROR_MSG)
+
+    try:
+        formatted = np.asarray(value, dtype=float)
+    except (TypeError, ValueError) as exc:
+        # Conversion failed (e.g. nested ragged objects, non-numeric)
+        raise TypeError(GRADIENT_OBJECT_ERROR_MSG) from exc
+
     if formatted.ndim != 2:
         raise ValueError(GRADIENT_NDIM_ERROR_MSG)
+
+    # If the numeric values are all integers, preserve integer dtype
+    if np.all(np.isfinite(formatted)) and np.allclose(formatted, np.round(formatted)):
+        formatted = formatted.astype(int)
 
     # Transpose if column-major
     return formatted.T if formatted.shape[0] == 4 and formatted.shape[1] != 4 else formatted
