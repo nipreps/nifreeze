@@ -180,7 +180,7 @@ def _cmp(lh: Any, rh: Any) -> bool:
 def validate_dataobj(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> None:
     """Strict validator for data objects.
 
-    It enforces that ``value`` is present and is a NumPy array with exactly 4
+    Enforces that ``value`` is present and is a NumPy array with exactly 4
     dimensions (``ndim == 4``).
 
     This function is intended for use as an attrs-style validator.
@@ -214,7 +214,7 @@ def validate_dataobj(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> No
 def validate_affine(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> None:
     """Strict validator for affine matrices.
 
-    It enforces that ``value`` is present and is a 4x4 NumPy array.
+    Enforces that ``value`` is present and is a 4x4 NumPy array.
 
     This function is intended for use as an attrs-style validator.
 
