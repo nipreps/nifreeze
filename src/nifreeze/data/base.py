@@ -177,7 +177,7 @@ def _cmp(lh: Any, rh: Any) -> bool:
     return lh == rh
 
 
-def _dataobj_validator(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> None:
+def validate_dataobj(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> None:
     """Strict validator for data objects.
 
     It enforces that ``value`` is present and is a NumPy array with exactly 4
@@ -211,7 +211,7 @@ def _dataobj_validator(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> 
         raise ValueError(DATAOBJ_NDIM_ERROR_MSG)
 
 
-def _affine_validator(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> None:
+def validate_affine(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> None:
     """Strict validator for affine matrices.
 
     It enforces that ``value`` is present and is a 4x4 NumPy array.
@@ -265,11 +265,11 @@ class BaseDataset(Generic[Unpack[Ts]]):
     """
 
     dataobj: np.ndarray = attrs.field(
-        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=_dataobj_validator
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=validate_dataobj
     )
     """A :obj:`~numpy.ndarray` object for the data array."""
     affine: np.ndarray = attrs.field(
-        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=_affine_validator
+        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=validate_affine
     )
     """Best affine for RAS-to-voxel conversion of coordinates (NIfTI header)."""
     brainmask: np.ndarray | None = attrs.field(
