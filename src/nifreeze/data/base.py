@@ -62,7 +62,7 @@ AFFINE_OBJECT_ERROR_MSG = "BaseDataset 'affine' must be a numpy array."
 AFFINE_NDIM_ERROR_MSG = "BaseDataset 'affine' must be a 2D array"
 """Affine dimensionality error message."""
 
-AFFINE_SHAPE_ERROR_MSG = "BaseDataset 'affine' must be a 2-D numpy array (4 x 4)"
+AFFINE_SHAPE_ERROR_MSG = "BaseDataset 'affine' must be a 2D numpy array (4 x 4)"
 """BaseDataset initialization affine shape error message."""
 
 BRAINMASK_SHAPE_MISMATCH_ERROR_MSG = "BaseDataset 'brainmask' shape ({brainmask_shape}) does not match dataset volumes ({data_shape})."
