@@ -189,7 +189,7 @@ def validate_dataobj(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> No
     ----------
     inst : :obj:`~nifreeze.data.base.BaseDataset`
         The instance being validated (unused, present for validator signature).
-    attr : :obj:`attrs.Attribute`
+    attr : :obj:`~attrs.Attribute`
         The attribute being validated (unused, present for validator signature).
     value : :obj:`Any`
         The value to validate.
@@ -222,7 +222,7 @@ def validate_affine(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> Non
     ----------
     inst : :obj:`~nifreeze.data.base.BaseDataset`
         The instance being validated (unused, present for validator signature).
-    attr : :obj:`attrs.Attribute`
+    attr : :obj:`~attrs.Attribute`
         The attribute being validated (unused, present for validator signature).
     value : :obj:`Any`
         The value to validate.
