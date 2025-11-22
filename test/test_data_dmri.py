@@ -689,20 +689,48 @@ def test_equality_operator(tmp_path, setup_random_dwi_data):
         tmp_path,
     )
 
-    dwi_obj = from_nii(
+    # Read back using public API
+    dwi_obj_from_nii = from_nii(
         dwi_fname,
         gradients_file=gradients_fname,
         b0_file=b0_fname,
         brainmask_file=brainmask_fname,
     )
+
+    # Direct instantiation with the same arrays
+    dwi_obj_direct = DWI(
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        gradients=gradients,
+        bzero=b0_dataobj,
+    )
+
+    # Sanity checks (element-wise)
+    assert np.allclose(dwi_obj_direct.dataobj, dwi_obj_from_nii.dataobj)
+    assert np.allclose(dwi_obj_direct.affine, dwi_obj_from_nii.affine)
+    if dwi_obj_direct.brainmask is None or dwi_obj_from_nii.brainmask is None:
+        assert dwi_obj_direct.brainmask is None
+        assert dwi_obj_from_nii.brainmask is None
+    else:
+        assert np.array_equal(dwi_obj_direct.brainmask, dwi_obj_from_nii.brainmask)
+    assert np.allclose(dwi_obj_direct.gradients, dwi_obj_from_nii.gradients)
+    # Properties derived from gradients should also match
+    assert np.allclose(dwi_obj_direct.bvals, dwi_obj_from_nii.bvals)
+    assert np.allclose(dwi_obj_direct.bvecs, dwi_obj_from_nii.bvecs)
+
+    # Test equality operator
+    assert dwi_obj_direct == dwi_obj_from_nii
+
+    # Test equality operator against an instance from HDF5
     hdf5_filename = tmp_path / "test_dwi.h5"
-    dwi_obj.to_filename(hdf5_filename)
+    dwi_obj_from_nii.to_filename(hdf5_filename)
 
     round_trip_dwi_obj = DWI.from_filename(hdf5_filename)
 
     # Symmetric equality
-    assert dwi_obj == round_trip_dwi_obj
-    assert round_trip_dwi_obj == dwi_obj
+    assert dwi_obj_from_nii == round_trip_dwi_obj
+    assert round_trip_dwi_obj == dwi_obj_from_nii
 
 
 @pytest.mark.random_dwi_data(50, (34, 36, 24), False)

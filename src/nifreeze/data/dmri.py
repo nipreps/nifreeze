@@ -116,6 +116,7 @@ def format_gradients(
     --------
     Passing an already well-formed table returns the data unchanged::
 
+        >>> np.set_printoptions(formatter={"float_kind": lambda x: f"{int(x):4d}"})
         >>> format_gradients(
         ...     [
         ...         [1, 0, 0, 0],
@@ -161,6 +162,7 @@ def format_gradients(
         ...
         ValueError: Gradient table must be a 2D array
 
+        >>> np.set_printoptions() # reset to defaults
     """
 
     if value is None:
@@ -174,10 +176,6 @@ def format_gradients(
 
     if formatted.ndim != 2:
         raise ValueError(GRADIENT_NDIM_ERROR_MSG)
-
-    # If the numeric values are all integers, preserve integer dtype
-    if np.all(np.isfinite(formatted)) and np.allclose(formatted, np.round(formatted)):
-        formatted = formatted.astype(int)
 
     # Transpose if column-major
     return formatted.T if formatted.shape[0] == 4 and formatted.shape[1] != 4 else formatted
