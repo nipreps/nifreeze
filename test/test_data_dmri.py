@@ -24,7 +24,6 @@
 
 import re
 from pathlib import Path
-from string import Formatter
 
 import attrs
 import nibabel as nb
@@ -34,6 +33,10 @@ import pytest
 from nifreeze.data import load
 from nifreeze.data.dmri import (
     DWI,
+    from_nii,
+    validate_gradients,
+)
+from nifreeze.data.dmriutils import (
     GRADIENT_ABSENCE_ERROR_MSG,
     GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG,
     GRADIENT_DATA_MISSING_ERROR,
@@ -43,33 +46,26 @@ from nifreeze.data.dmri import (
     GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR,
     find_shelling_scheme,
     format_gradients,
-    from_nii,
     transform_fsl_bvec,
-    validate_gradients,
 )
 from nifreeze.utils.ndimage import load_api
 
-
-def _template_has_field(template: str, field_name: str | None = None) -> bool:
-    """Return True if `template` contains a format field.
-    If `field_name` is provided, return True only if that named field appears.
-
-    This uses Formatter.parse() so it recognizes real format fields and
-    ignores literal substrings that merely look like "{shape}".
-    """
-    formatter = Formatter()
-    for _literal_text, field, _format_spec, _conversion in formatter.parse(template):
-        if field is None:
-            # no field in this segment
-            continue
-        # field can be '' (positional {}), 'shape', or complex like 'shape[0]' or 'obj.attr'
-        if field_name is None:
-            return True
-        # Compare the base name before any attribute/indexing syntax
-        base = field.split(".", 1)[0].split("[", 1)[0]
-        if base == field_name:
-            return True
-    return False
+B_MATRIX = np.array(
+    [
+        [0.0, 0.0, 0.0, 0],
+        [1.0, 0.0, 0.0, 1000],
+        [0.0, 1.0, 0.0, 1000],
+        [0.0, 0.0, 1.0, 1000],
+        [1 / np.sqrt(2), 1 / np.sqrt(2), 0.0, 1000],
+        [1 / np.sqrt(2), 0.0, 1 / np.sqrt(2), 1000],
+        [0.0, 1 / np.sqrt(2), 1 / np.sqrt(2), 1000],
+        [1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3), 2000],
+        [-1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3), 2000],
+        [1 / np.sqrt(3), -1 / np.sqrt(3), 1 / np.sqrt(3), 2000],
+        [1 / np.sqrt(3), 1 / np.sqrt(3), -1 / np.sqrt(3), 2000],
+    ],
+    dtype=np.float32,
+)
 
 
 def _dwi_data_to_nifti(
@@ -150,18 +146,19 @@ def test_format_gradients_errors(value, expected_exc, expected_msg):
     "value, expect_transpose",
     [
         # 2D arrays where first dim == 4 and second dim == 4 -> NO transpose
-        (np.arange(16).reshape(4, 4), False),
+        (B_MATRIX[:4, :], False),
         # 2D arrays where first dim == 4 and second dim != 4 -> transpose
-        (np.arange(12).reshape(4, 3), True),
-        (np.arange(4).reshape(4, 1), True),
-        (np.empty((4, 0)), True),  # zero columns -> still triggers transpose
-        (np.arange(20).reshape(4, 5), True),
+        (B_MATRIX[:3, :].T, True),
+        (B_MATRIX[:5, :].T, True),
+        (B_MATRIX.T, True),
         # 2D arrays where first dim != 4 -> NO transpose
-        (np.arange(12).reshape(3, 4), False),
-        (np.arange(20).reshape(5, 4), False),
+        (B_MATRIX[:3, :], False),
+        (B_MATRIX[:5, :], False),
+        (B_MATRIX, False),
+        (np.empty((4, 0)), True),  # zero columns -> still triggers transpose
         # List of lists
-        ([[1, 2, 3, 4], [5, 6, 7, 8]], False),
-        ([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]], True),
+        ([[1, 0, 0, 100], [0, 1, 0, 100]], False),
+        ([[1, 0, 0], [0, 1, 0], [0, 0, 1], [100, 100, 100]], True),
     ],
 )
 def test_format_gradients_basic(value, expect_transpose):
@@ -188,7 +185,7 @@ def test_gradients_absence_error(setup_random_uniform_spatial_data):
 @pytest.mark.parametrize("row_major_gradients", (False, True))
 @pytest.mark.parametrize("additional_grad_columns", (-1, -2, 1))
 def test_dwi_instantiation_gradients_unexpected_columns_error(
-    request, tmp_path, setup_random_dwi_data, row_major_gradients, additional_grad_columns
+    request, setup_random_dwi_data, row_major_gradients, additional_grad_columns
 ):
     (
         dwi_dataobj,

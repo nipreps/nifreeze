@@ -28,8 +28,8 @@ import numpy as np
 from scipy.ndimage import median_filter
 from skimage.morphology import ball
 
-from nifreeze.data.dmri import DEFAULT_CLIP_PERCENTILE
-
+DEFAULT_CLIP_PERCENTILE = 75
+"""Upper percentile threshold for intensity clipping."""
 DEFAULT_DTYPE = "int16"
 """The default image's data type."""
 BVAL_ATOL = 100.0
