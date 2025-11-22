@@ -233,7 +233,7 @@ def test_dwi_instantiation_gradients_ndim_error(
     ("additional_volume_count", "additional_gradient_count"),
     [(1, 0), (2, 0), (2, 1), (0, 1), (0, 2), (1, 2)],
 )
-def test_gradient_instantiation_dwi_vol_mismatch_error(
+def test_dwi_instantiation_gradient_vol_mismatch_error(
     setup_random_dwi_data, additional_volume_count, additional_gradient_count
 ):
     (
