@@ -25,6 +25,7 @@
 import re
 from pathlib import Path
 
+import attrs
 import nibabel as nb
 import numpy as np
 import pytest
@@ -32,14 +33,18 @@ import pytest
 from nifreeze.data import load
 from nifreeze.data.dmri import (
     DWI,
+    GRADIENT_ABSENCE_ERROR_MSG,
     GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG,
     GRADIENT_DATA_MISSING_ERROR,
     GRADIENT_EXPECTED_COLUMNS_ERROR_MSG,
     GRADIENT_NDIM_ERROR_MSG,
+    GRADIENT_OBJECT_ERROR_MSG,
     GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR,
     find_shelling_scheme,
+    format_gradients,
     from_nii,
     transform_fsl_bvec,
+    validate_gradients,
 )
 from nifreeze.utils.ndimage import load_api
 
@@ -86,6 +91,73 @@ def test_main(datadir):
     input_file = datadir / "dwi.h5"
 
     assert isinstance(load(input_file), DWI)
+
+
+@pytest.mark.parametrize(
+    "value, expected_exc, expected_msg",
+    [
+        (np.array([[1], [2]], dtype=object), ValueError, GRADIENT_EXPECTED_COLUMNS_ERROR_MSG),
+        (np.zeros((2, 3)), ValueError, GRADIENT_EXPECTED_COLUMNS_ERROR_MSG),
+    ],
+)
+def test_validate_gradients(monkeypatch, value, expected_exc, expected_msg):
+    monkeypatch.setattr(DWI, "__init__", lambda self, *a, **k: None)
+    inst = DWI()
+    dummy_attr = attrs.fields(DWI).gradients
+    with pytest.raises(expected_exc, match=re.escape(str(expected_msg))):
+        validate_gradients(inst, dummy_attr, value)
+
+
+@pytest.mark.parametrize(
+    "value, expected_exc, expected_msg",
+    [
+        (None, ValueError, GRADIENT_ABSENCE_ERROR_MSG),
+        (3.14, ValueError, GRADIENT_NDIM_ERROR_MSG),
+        ([1, 2, 3, 4], ValueError, GRADIENT_NDIM_ERROR_MSG),
+        (np.arange(24).reshape(4, 3, 2), ValueError, GRADIENT_NDIM_ERROR_MSG),
+        ([[1, 2], [3, 4, 5]], (TypeError, ValueError), GRADIENT_OBJECT_ERROR_MSG),  # Ragged
+    ],
+)
+def test_format_gradients_errors(value, expected_exc, expected_msg):
+    with pytest.raises(expected_exc, match=str(expected_msg)):
+        format_gradients(value)
+
+
+@pytest.mark.parametrize(
+    "value, expect_transpose",
+    [
+        # 2D arrays where first dim == 4 and second dim == 4 -> NO transpose
+        (np.arange(16).reshape(4, 4), False),
+        # 2D arrays where first dim == 4 and second dim != 4 -> transpose
+        (np.arange(12).reshape(4, 3), True),
+        (np.arange(4).reshape(4, 1), True),
+        (np.empty((4, 0)), True),  # zero columns -> still triggers transpose
+        (np.arange(20).reshape(4, 5), True),
+        # 2D arrays where first dim != 4 -> NO transpose
+        (np.arange(12).reshape(3, 4), False),
+        (np.arange(20).reshape(5, 4), False),
+        # List of lists
+        ([[1, 2, 3, 4], [5, 6, 7, 8]], False),
+        ([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]], True),
+    ],
+)
+def test_format_gradients_basic(value, expect_transpose):
+    obtained = format_gradients(value)
+
+    assert isinstance(obtained, np.ndarray)
+    if expect_transpose:
+        assert obtained.shape == np.asarray(value).T.shape
+        assert np.allclose(obtained, np.asarray(value).T)
+    else:
+        assert obtained.shape == np.asarray(value).shape
+        assert np.allclose(obtained, np.asarray(value))
+
+
+@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
+def test_gradients_absence_error(setup_random_uniform_spatial_data):
+    data, affine = setup_random_uniform_spatial_data
+    with pytest.raises(ValueError, match=GRADIENT_ABSENCE_ERROR_MSG):
+        DWI(dataobj=data, affine=affine)
 
 
 @pytest.mark.random_gtab_data(10, (1000, 2000), 2)
