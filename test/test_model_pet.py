@@ -25,7 +25,7 @@ import numpy as np
 import pytest
 
 from nifreeze.data.pet import PET
-from nifreeze.model.pet import PETModel
+from nifreeze.model.pet import BSplinePETModel
 
 
 @pytest.fixture
@@ -49,9 +49,19 @@ def random_dataset(setup_random_pet_data) -> PET:
     )
 
 
+def test_pet_base_model():
+    from nifreeze.model.pet import BasePETModel
+
+    with pytest.raises(
+        TypeError,
+        match="Can't instantiate abstract class BasePETModel without an implementation for abstract method 'fit_predict'",
+    ):
+        BasePETModel(None)
+
+
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]), 60.0)
 def test_petmodel_fit_predict(random_dataset):
-    model = PETModel(
+    model = BSplinePETModel(
         dataset=random_dataset,
         timepoints=random_dataset.midframe,
         xlim=random_dataset.total_duration,
@@ -72,12 +82,12 @@ def test_petmodel_fit_predict(random_dataset):
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]), 60.0)
 def test_petmodel_invalid_init(random_dataset):
-    with pytest.raises(TypeError):
-        PETModel(dataset=random_dataset)
+    with pytest.raises(ValueError):
+        BSplinePETModel(dataset=random_dataset)
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]), 60.0)
 def test_petmodel_time_check(random_dataset):
     bad_times = np.array([0, 10, 20, 30, 50], dtype=np.float32)
     with pytest.raises(ValueError):
-        PETModel(dataset=random_dataset, timepoints=bad_times, xlim=60.0)
+        BSplinePETModel(dataset=random_dataset, timepoints=bad_times, xlim=60.0)
