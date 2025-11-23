@@ -36,25 +36,60 @@ jobs:
         python-version: [ '3.12' ]
 
     steps:
-    - name: Set up system
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install .[antsopt,benchmark]
-    - name: Set threading parameters for reliable benchmarking
-      run: |
-        export OPENBLAS_NUM_THREADS=1
-        export MKL_NUM_THREADS=1
-        export OMP_NUM_THREADS=1
-    - name: Run benchmarks
-      run: |
-        CONFIG_FILE="$(pwd)/benchmarks/asv.conf.json"
-        asv machine --yes --config "$CONFIG_FILE"
-        asv run --config "$CONFIG_FILE" --show-stderr
+      - name: Set up system
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[antsopt,benchmark]
+      - name: Set threading parameters for reliable benchmarking
+        run: |
+          export OPENBLAS_NUM_THREADS=1
+          export MKL_NUM_THREADS=1
+          export OMP_NUM_THREADS=1
+      - name: Run benchmarks
+        run: |
+          CONFIG_FILE="$(pwd)/benchmarks/asv.conf.json"
+          python - <<'PY'
+import json
+import os
+import platform
+
+machine_name = "github-actions"
+system, node, release, version, machine, processor = platform.uname()
+
+
+def read_sysconf(name):
+    try:
+        value = os.sysconf(name)
+    except (AttributeError, ValueError, OSError):
+        return None
+    return value
+
+
+page_size = read_sysconf("SC_PAGE_SIZE")
+phys_pages = read_sysconf("SC_PHYS_PAGES")
+ram_bytes = None
+if page_size is not None and phys_pages is not None:
+    ram_bytes = page_size * phys_pages
+
+machine_info = {
+    "machine": machine_name,
+    "os": f"{system} {release}",
+    "arch": str(platform.machine()),
+    "cpu": str(processor or platform.processor() or ""),
+    "num_cpu": str(os.cpu_count() or ""),
+    "ram": str(ram_bytes or ""),
+}
+
+path = os.path.expanduser("~/.asv-machine.json")
+with open(path, "w", encoding="utf-8") as handle:
+    json.dump({machine_name: machine_info}, handle)
+PY
+        asv run --config "$CONFIG_FILE" --machine github-actions --show-stderr
