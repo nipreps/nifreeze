@@ -37,148 +37,21 @@ from nibabel.spatialimages import SpatialImage
 from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr
-from nifreeze.utils.ndimage import get_data, load_api
-
-DEFAULT_CLIP_PERCENTILE = 75
-"""Upper percentile threshold for intensity clipping."""
-
-DEFAULT_MIN_S0 = 1e-5
-"""Minimum value when considering the :math:`S_{0}` DWI signal."""
-
-DEFAULT_MAX_S0 = 1.0
-"""Maximum value when considering the :math:`S_{0}` DWI signal."""
-
-DEFAULT_LOWB_THRESHOLD = 50
-"""The lower bound for the b-value so that the orientation is considered a DW volume."""
-
-DEFAULT_HIGHB_THRESHOLD = 8000
-"""A b-value cap for DWI data."""
-
-DEFAULT_NUM_BINS = 15
-"""Number of bins to classify b-values."""
-
-DEFAULT_MULTISHELL_BIN_COUNT_THR = 7
-"""Default bin count to consider a multishell scheme."""
-
-DTI_MIN_ORIENTATIONS = 6
-"""Minimum number of nonzero b-values in a DWI dataset."""
-
-GRADIENT_ABSENCE_ERROR_MSG = "Gradient table may not be None."
-"""Gradient absence error message."""
-
-GRADIENT_OBJECT_ERROR_MSG = "Gradient table must be a numeric homogeneous array-like object"
-"""Gradient object error message."""
-
-GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR = """\
-Gradient table shape does not match the number of diffusion volumes: \
-expected {n_volumes} rows, found {n_gradients}."""
-"""dMRI volume count vs. gradient count mismatch error message."""
-
-GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG = """\
-Both a gradients table file and b-vec/val files are defined; \
-ignoring b-vec/val files in favor of the gradients_file."""
-""""dMRI gradient file priority warning message."""
-
-GRADIENT_NDIM_ERROR_MSG = "Gradient table must be a 2D array"
-"""dMRI gradient dimensionality error message."""
-
-GRADIENT_DATA_MISSING_ERROR = "No gradient data provided."
-"""dMRI missing gradient data error message."""
-
-GRADIENT_EXPECTED_COLUMNS_ERROR_MSG = (
-    "Gradient table must have four columns (3 direction components and one b-value)."
+from nifreeze.data.dmriutils import (
+    DEFAULT_HIGHB_THRESHOLD,
+    DEFAULT_LOWB_THRESHOLD,
+    DEFAULT_MULTISHELL_BIN_COUNT_THR,
+    DEFAULT_NUM_BINS,
+    DTI_MIN_ORIENTATIONS,
+    GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG,
+    GRADIENT_DATA_MISSING_ERROR,
+    GRADIENT_EXPECTED_COLUMNS_ERROR_MSG,
+    GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR,
+    find_shelling_scheme,
+    format_gradients,
+    transform_fsl_bvec,
 )
-"""dMRI gradient expected columns error message."""
-
-
-def format_gradients(
-    value: npt.ArrayLike | None,
-) -> np.ndarray | None:
-    """
-    Validate and orient gradient tables to row-major convention.
-
-    Parameters
-    ----------
-    value : :obj:`ArrayLike`
-        The value to format.
-
-    Returns
-    -------
-    :obj:`~numpy.ndarray`
-        Row-major convention gradient table.
-
-    Raises
-    ------
-    exc:`ValueError`
-        If ``value`` is not a 2D :obj:`~numpy.ndarray` (``value.ndim != 2``).
-
-    Examples
-    --------
-    Passing an already well-formed table returns the data unchanged::
-
-        >>> np.set_printoptions(formatter={"float_kind": lambda x: f"{int(x):4d}"})
-        >>> format_gradients(
-        ...     [
-        ...         [1, 0, 0, 0],
-        ...         [0, 1, 0, 1000],
-        ...         [0, 0, 1, 2000],
-        ...         [0, 0, 0, 0],
-        ...         [0, 0, 0, 1000],
-        ...     ]
-        ... )
-        array([[   1,    0,    0,    0],
-               [   0,    1,    0, 1000],
-               [   0,    0,    1, 2000],
-               [   0,    0,    0,    0],
-               [   0,    0,    0, 1000]])
-
-    Column-major inputs are automatically transposed when an expected
-    number of diffusion volumes is provided::
-
-        >>> format_gradients(
-        ...     [[1, 0], [0, 1], [0, 0], [1000, 2000]],
-        ... )
-        array([[   1,    0,    0, 1000],
-               [   0,    1,    0, 2000]])
-
-    Gradient tables must always have two dimensions::
-
-        >>> format_gradients([0, 1, 0, 1000])
-        Traceback (most recent call last):
-        ...
-        ValueError: Gradient table must be a 2D array
-
-    Gradient tables must have a regular shape::
-
-        >>> format_gradients([[1, 2], [3, 4, 5]])
-        Traceback (most recent call last):
-        ...
-        TypeError: Gradient table must be a numeric homogeneous array-like object
-
-    Gradient tables must always have two dimensions::
-
-        >>> format_gradients([0, 1, 0, 1000])
-        Traceback (most recent call last):
-        ...
-        ValueError: Gradient table must be a 2D array
-
-        >>> np.set_printoptions() # reset to defaults
-    """
-
-    if value is None:
-        raise ValueError(GRADIENT_ABSENCE_ERROR_MSG)
-
-    try:
-        formatted = np.asarray(value, dtype=float)
-    except (TypeError, ValueError) as exc:
-        # Conversion failed (e.g. nested ragged objects, non-numeric)
-        raise TypeError(GRADIENT_OBJECT_ERROR_MSG) from exc
-
-    if formatted.ndim != 2:
-        raise ValueError(GRADIENT_NDIM_ERROR_MSG)
-
-    # Transpose if column-major
-    return formatted.T if formatted.shape[0] == 4 and formatted.shape[1] != 4 else formatted
+from nifreeze.utils.ndimage import get_data, load_api
 
 
 def validate_gradients(
@@ -200,9 +73,32 @@ def validate_gradients(
         The attribute being validated; attr.name is used in the error message.
     value : :obj:`~npt.NDArray`
         The value to validate.
+
+    Raises
+    ------
+    :exc:`ValueError`
+        If the gradient table is invalid.
+
+
+    Examples
+    --------
+    Non-finite inputs are rejected::
+
+        >>> validate_gradients(None, None, [[np.inf, 0.0, 0.0, 1000]])
+        Traceback (most recent call last):
+        ...
+        ValueError: Gradient table contains NaN or infinite values.
+        >>> validate_gradients(None, None, [[np.nan, 0.0, 0.0, 1000]])
+        Traceback (most recent call last):
+        ...
+        ValueError: Gradient table contains NaN or infinite values.
+
     """
-    if value.shape[1] != 4:
+    if np.shape(value)[1] != 4:
         raise ValueError(GRADIENT_EXPECTED_COLUMNS_ERROR_MSG)
+
+    if not np.all(np.isfinite(value)):
+        raise ValueError("Gradient table contains NaN or infinite values.")
 
 
 @attrs.define(slots=True)
@@ -551,102 +447,3 @@ def from_nii(
         bzero=b0_data,
         brainmask=brainmask_data,
     )
-
-
-def find_shelling_scheme(
-    bvals: np.ndarray,
-    num_bins: int = DEFAULT_NUM_BINS,
-    multishell_nonempty_bin_count_thr: int = DEFAULT_MULTISHELL_BIN_COUNT_THR,
-    bval_cap: float = DEFAULT_HIGHB_THRESHOLD,
-) -> tuple[str, list[npt.NDArray[np.floating]], list[np.floating]]:
-    """
-    Find the shelling scheme on the given b-values.
-
-    Computes the histogram of the b-values according to ``num_bins``
-    and depending on the nonempty bin count, classify the shelling scheme
-    as single-shell if they are 2 (low-b and a shell); multi-shell if they are
-    below the ``multishell_nonempty_bin_count_thr`` value; and DSI otherwise.
-
-    Parameters
-    ----------
-    bvals : :obj:`list` or :obj:`~numpy.ndarray`
-         List or array of b-values.
-    num_bins : :obj:`int`, optional
-        Number of bins.
-    multishell_nonempty_bin_count_thr : :obj:`int`, optional
-        Bin count to consider a multi-shell scheme.
-    bval_cap : :obj:`float`, optional
-        Maximum b-value to be considered in a multi-shell scheme.
-
-    Returns
-    -------
-    scheme : :obj:`str`
-        Shelling scheme.
-    bval_groups : :obj:`list`
-        List of grouped b-values.
-    bval_estimated : :obj:`list`
-        List of 'estimated' b-values as the median value of each b-value group.
-
-    """
-
-    # Bin the b-values: use -1 as the lower bound to be able to appropriately
-    # include b0 values
-    hist, bin_edges = np.histogram(bvals, bins=num_bins, range=(-1, min(max(bvals), bval_cap)))
-
-    # Collect values in each bin
-    bval_groups = []
-    bval_estimated = []
-    for lower, upper in zip(bin_edges[:-1], bin_edges[1:], strict=False):
-        # Add only if a nonempty b-values mask
-        if (mask := (bvals > lower) & (bvals <= upper)).sum():
-            bval_groups.append(bvals[mask])
-            bval_estimated.append(np.median(bvals[mask]))
-
-    nonempty_bins = len(bval_groups)
-
-    if nonempty_bins < 2:
-        raise ValueError("DWI must have at least one high-b shell")
-
-    if nonempty_bins == 2:
-        scheme = "single-shell"
-    elif nonempty_bins < multishell_nonempty_bin_count_thr:
-        scheme = "multi-shell"
-    else:
-        scheme = "DSI"
-
-    return scheme, bval_groups, bval_estimated
-
-
-def transform_fsl_bvec(
-    b_ijk: np.ndarray, xfm: np.ndarray, imaffine: np.ndarray, invert: bool = False
-) -> np.ndarray:
-    """
-    Transform a b-vector from the original space to the new space defined by the affine.
-
-    Parameters
-    ----------
-    b_ijk : :obj:`~numpy.ndarray`
-        The b-vector in FSL/DIPY conventions (i.e., voxel coordinates).
-    xfm : :obj:`~numpy.ndarray`
-        The affine transformation to apply.
-        Please note that this is the inverse of the head-motion-correction affine,
-        which maps coordinates from the realigned space to the moved (scan) space.
-        In this case, we want to move the b-vector from the moved (scan) space into
-        the realigned space.
-    imaffine : :obj:`~numpy.ndarray`
-        The image's affine, to convert.
-    invert : :obj:`bool`, optional
-        If ``True``, the transformation will be inverted.
-
-    Returns
-    -------
-    :obj:`~numpy.ndarray`
-        The transformed b-vector in voxel coordinates (FSL/DIPY).
-
-    """
-    xfm = np.linalg.inv(xfm) if invert else xfm.copy()
-
-    # Go from world coordinates (xfm) to voxel coordinates
-    ijk2ijk_xfm = np.linalg.inv(imaffine) @ xfm @ imaffine
-
-    return ijk2ijk_xfm[:3, :3] @ b_ijk[:3]
