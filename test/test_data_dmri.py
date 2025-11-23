@@ -816,6 +816,9 @@ def test_shells(setup_random_dwi_data):
         for arr1, arr2 in zip(list(obtained_gradients), expected_gradients, strict=True)
     )
 
+    with pytest.raises(ValueError, match=re.escape("DWI must have at least one high-b shell")):
+        find_shelling_scheme(np.zeros(10), num_bins=num_bins)
+
 
 @pytest.mark.parametrize(
     ("bvals", "exp_scheme", "exp_bval_groups", "exp_bval_estimated"),
