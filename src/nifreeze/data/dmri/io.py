@@ -29,6 +29,7 @@ import nibabel as nb
 import numpy as np
 from nibabel.spatialimages import SpatialImage
 
+from nifreeze.data.base import to_nifti as _base_to_nifti
 from nifreeze.data.dmri.base import DWI
 from nifreeze.data.dmri.utils import transform_fsl_bvec
 from nifreeze.utils.ndimage import get_data, load_api
@@ -178,7 +179,8 @@ def to_nifti(
         bvecs = dwi.bvecs
 
     # Parent's to_nifti to handle the primary NIfTI export.
-    nii = dwi.super().to_nifti(
+    nii = _base_to_nifti(
+        dwi,
         filename=filename if no_bzero else None,
         write_hmxfms=write_hmxfms,
         order=order,
