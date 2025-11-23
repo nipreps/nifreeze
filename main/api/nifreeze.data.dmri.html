@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.data.dmri.base module" href="nifreeze.data.dmri.base.html"><link rel="prev" title="nifreeze.data package" href="nifreeze.data.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.data.dmri package - nifreeze 25.0.0.dev712 documentation</title>
+        <title>nifreeze.data.dmri package - nifreeze 25.0.0.dev714 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev712 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev714 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev712</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev714</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev712</span>
+  <span class="sidebar-brand-text">25.0.0.dev714</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -318,12 +318,12 @@ Please, beware that <em>NiFreeze</em> is very opinionated about the gradients an
 data representation.</p>
 <p><strong>Gradient Table Representation</strong>.
 The <a class="reference internal" href="nifreeze.data.dmri.base.html#nifreeze.data.dmri.base.DWI" title="nifreeze.data.dmri.base.DWI"><code class="xref py py-class docutils literal notranslate"><span class="pre">DWI</span></code></a> class represents diffusion MRI data must
-be provided a gradient table, which is a <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a> of shape (N, 4), where N
-is the number of diffusion-weighted volumes.
+be provided a gradient table, which is a <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a> of shape <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">4)</span></code>, where
+<code class="docutils literal notranslate"><span class="pre">N</span></code> is the number of diffusion-weighted volumes.
 The first three columns represent the gradient directions (b-vectors), and the fourth column
 represents the b-values in s/mm².
 <em>NiFreeze</em> expects that the gradient directions are normalized to unit length for non-zero
-b-values, and that the b=0 volumes have a gradient direction of (0, 0, 0).
+b-values, and that the <span class="math notranslate nohighlight">\(b=0\)</span> volumes have a gradient direction of <span class="math notranslate nohighlight">\((0, 0, 0)\)</span>.
 When non-unit b-vectors are detected, the corresponding b-value is automatically adjusted to
 reflect the actual diffusion weighting.
 If the input gradient table does not conform to these expectations, it will be automatically
@@ -335,14 +335,15 @@ the <a class="reference internal" href="nifreeze.data.dmri.base.html#nifreeze.da
 The <a class="reference internal" href="nifreeze.data.dmri.base.html#nifreeze.data.dmri.base.DWI" title="nifreeze.data.dmri.base.DWI"><code class="xref py py-class docutils literal notranslate"><span class="pre">DWI</span></code></a> class requires a <code class="docutils literal notranslate"><span class="pre">dataobj</span></code> that can be an array-like
 object.
 The final step of the initialization process examines the data object and the gradient table,
-and removes b=0 volumes from the data <strong>AND</strong> the gradient table.
+and removes <span class="math notranslate nohighlight">\(b=0\)</span> volumes from the data <strong>AND</strong> the gradient table.
 If no <code class="docutils literal notranslate"><span class="pre">bzero</span></code> parameter is provided, a reference low-b volume is computed as the median of all
-the low-b volumes (b &lt; 50 s/mm²) and inserted in the <code class="docutils literal notranslate"><span class="pre">DWI.bzero</span></code> attribute.
+the low-b volumes (<code class="docutils literal notranslate"><span class="pre">b</span> <span class="pre">&lt;</span></code> <a class="reference internal" href="nifreeze.data.dmri.utils.html#nifreeze.data.dmri.utils.DEFAULT_LOWB_THRESHOLD" title="nifreeze.data.dmri.utils.DEFAULT_LOWB_THRESHOLD"><code class="xref py py-data docutils literal notranslate"><span class="pre">DEFAULT_LOWB_THRESHOLD</span></code></a> s/mm²) and
+inserted in the <a class="reference internal" href="nifreeze.data.dmri.base.html#nifreeze.data.dmri.base.DWI.bzero" title="nifreeze.data.dmri.base.DWI.bzero"><code class="xref py py-attr docutils literal notranslate"><span class="pre">bzero</span></code></a> attribute.
 Therefore, <strong>*NiFreeze* WILL NOT be able to reconstruct the original data organization</strong>.
 This design choice simplifies the internal representation and processing of diffusion MRI data.
-If you want to calculate a b=0 reference map in a more sophisticated way (e.g., after realignment
-of all the low-b volumes), you should handle this separately and feed your own reference through
-the <code class="docutils literal notranslate"><span class="pre">bzero</span></code> parameter.</p>
+If you want to calculate a <span class="math notranslate nohighlight">\(b=0\)</span> reference map in a more sophisticated way (e.g., after
+realignment of all the low-b volumes), you should handle this separately and feed your own
+reference through the <code class="docutils literal notranslate"><span class="pre">bzero</span></code> parameter.</p>
 </section>
 <dl class="py class">
 <dt class="sig sig-object py" id="nifreeze.data.dmri.DWI">
@@ -384,7 +385,7 @@ the <code class="docutils literal notranslate"><span class="pre">bzero</span></c
 <dd class="field-even"><p>The constructed dataset with data loaded from the file.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="#nifreeze.data.dmri.DWI" title="nifreeze.data.dmri.DWI"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DWI</span></code></a></p>
+<dd class="field-odd"><p><a class="reference internal" href="nifreeze.data.dmri.base.html#nifreeze.data.dmri.base.DWI" title="nifreeze.data.dmri.base.DWI"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DWI</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -471,7 +472,7 @@ from either a separate gradients file or from .bvec / .bval files.</p>
 <li><p><strong>brainmask_file</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>, optional) – A brainmask NIfTI file. If provided, will be loaded and
 stored in the returned dataset.</p></li>
 <li><p><strong>gradients_file</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>, optional) – A text file containing the gradients table, shape (N, C) where the last column
-stores the b-values. If provided following the column-major convention(C, N),
+stores the b-values. If provided following the column-major convention (C, N),
 it will be transposed automatically. If provided, it supersedes any .bvec / .bval
 combination.</p></li>
 <li><p><strong>bvec_file</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>, optional) – A text file containing b-vectors, shape (N, 3) or (3, N).</p></li>
@@ -485,7 +486,7 @@ If not provided, and the data contains at least one b=0 volume, one will be comp
 b-zero volume, and brainmask.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="#nifreeze.data.dmri.DWI" title="nifreeze.data.dmri.DWI"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DWI</span></code></a></p>
+<dd class="field-odd"><p><a class="reference internal" href="nifreeze.data.dmri.base.html#nifreeze.data.dmri.base.DWI" title="nifreeze.data.dmri.base.DWI"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DWI</span></code></a></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#RuntimeError" title="(in Python v3.14)"><strong>RuntimeError</strong></a> – If no gradient information is provided (neither <code class="docutils literal notranslate"><span class="pre">gradients_file</span></code> nor
@@ -588,7 +589,7 @@ b-zero volume, and brainmask.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=dc810fe0"></script>
+</div><script src="../_static/documentation_options.js?v=b3701b34"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
