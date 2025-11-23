@@ -28,7 +28,7 @@ import pytest
 
 import nifreeze.estimator
 from nifreeze.data.base import BaseDataset
-from nifreeze.data.dmri import DEFAULT_LOWB_THRESHOLD
+from nifreeze.data.dmri.utils import DEFAULT_LOWB_THRESHOLD
 from nifreeze.estimator import Estimator
 from nifreeze.model.base import BaseModel
 from nifreeze.utils import iterators
@@ -100,7 +100,6 @@ def test_estimator_init_model_instance(request):
 
 
 def test_estimator_init_model_string(request, monkeypatch):
-    rng = request.node.rng
     # Patch ModelFactory.init to return DummyModel
     monkeypatch.setattr(
         "nifreeze.model.base.ModelFactory.init",

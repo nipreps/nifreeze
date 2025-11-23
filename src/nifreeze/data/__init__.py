@@ -32,7 +32,6 @@ from nifreeze.data.pet import PET
 def load(
     filename: Path | str,
     brainmask_file: Path | str | None = None,
-    motion_file: Path | str | None = None,
     **kwargs,
 ) -> BaseDataset | DWI | PET:
     """
@@ -45,8 +44,6 @@ def load(
     brainmask_file : :obj:`os.pathlike`, optional
         A brainmask NIfTI file. If provided, will be loaded and
         stored in the returned dataset.
-    motion_file : :obj:`os.pathlike`
-        A file containing head motion affine matrices (linear).
 
     Returns
     -------
@@ -67,9 +64,6 @@ def load(
 
     from nifreeze.utils.ndimage import load_api
 
-    if motion_file:
-        raise NotImplementedError
-
     filename = Path(filename)
     if filename.name.endswith(NFDH5_EXT):
         for dataclass in (BaseDataset, PET, DWI):
@@ -81,15 +75,11 @@ def load(
     if "gradients_file" in kwargs or "bvec_file" in kwargs:
         from nifreeze.data.dmri import from_nii as dmri_from_nii
 
-        return dmri_from_nii(
-            filename, brainmask_file=brainmask_file, motion_file=motion_file, **kwargs
-        )
+        return dmri_from_nii(filename, brainmask_file=brainmask_file, **kwargs)
     elif "frame_time" in kwargs or "frame_duration" in kwargs:
         from nifreeze.data.pet import from_nii as pet_from_nii
 
-        return pet_from_nii(
-            filename, brainmask_file=brainmask_file, motion_file=motion_file, **kwargs
-        )
+        return pet_from_nii(filename, brainmask_file=brainmask_file, **kwargs)
 
     img = load_api(filename, SpatialImage)
     retval: BaseDataset = BaseDataset(dataobj=np.asanyarray(img.dataobj), affine=img.affine)

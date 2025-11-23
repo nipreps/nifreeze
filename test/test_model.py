@@ -31,12 +31,12 @@ from dipy.sims.voxel import single_tensor
 
 from nifreeze import model
 from nifreeze.data.base import BaseDataset
-from nifreeze.data.dmri import (
+from nifreeze.data.dmri import DWI
+from nifreeze.data.dmri.utils import (
     DEFAULT_LOWB_THRESHOLD,
     DEFAULT_MAX_S0,
     DEFAULT_MIN_S0,
     DTI_MIN_ORIENTATIONS,
-    DWI,
 )
 from nifreeze.model._dipy import GaussianProcessModel
 from nifreeze.model.base import (
@@ -45,6 +45,23 @@ from nifreeze.model.base import (
     UNSUPPORTED_MODEL_ERROR_MSG,
 )
 from nifreeze.testing import simulations as _sim
+
+B_MATRIX = np.array(
+    [
+        [0.0, 0.0, 0.0, 0],
+        [1.0, 0.0, 0.0, 500],
+        [0.0, 1.0, 0.0, 1000],
+        [0.0, 0.0, 1.0, 1000],
+        [1 / np.sqrt(2), 1 / np.sqrt(2), 0.0, 1000],
+        [1 / np.sqrt(2), 0.0, 1 / np.sqrt(2), 1000],
+        [0.0, 1 / np.sqrt(2), 1 / np.sqrt(2), 1000],
+        [1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3), 2000],
+        [-1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3), 2000],
+        [1 / np.sqrt(3), -1 / np.sqrt(3), 1 / np.sqrt(3), 2000],
+        [1 / np.sqrt(3), 1 / np.sqrt(3), -1 / np.sqrt(3), 2000],
+    ],
+    dtype=np.float32,
+)
 
 
 # Dummy classes to simulate model factory essential features
@@ -109,11 +126,19 @@ def test_trivial_model(request, use_mask):
         a_max=DEFAULT_MAX_S0,
     )
 
+    n_vols = 10
+
+    bvecs = rng.normal(size=(n_vols, 3))
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+    bvals = np.full((bvecs.shape[0], 1), 1000.0)
+    gradients = np.hstack((bvecs, bvals))
+
     data = DWI(
-        dataobj=rng.normal(size=(*_S0.shape, 10)),
+        dataobj=rng.normal(size=(*_S0.shape, n_vols)),
         affine=np.eye(4),
         bzero=_clipped_S0,
         brainmask=mask,
+        gradients=gradients,
     )
 
     with context:
@@ -178,22 +203,8 @@ def test_expectation_model(request):
 def test_average_model():
     """Check the implementation of the average DW model."""
 
-    gtab = np.array(
-        [
-            [0, 0, 0, 0],
-            [-0.31, 0.933, 0.785, 25],
-            [0.25, 0.565, 0.21, 500],
-            [-0.861, -0.464, 0.564, 1000],
-            [0.307, -0.766, 0.677, 1000],
-            [0.736, 0.013, 0.774, 1000],
-            [-0.31, 0.933, 0.785, 1000],
-            [0.25, 0.565, 0.21, 2000],
-            [-0.861, -0.464, 0.564, 2000],
-            [0.307, -0.766, 0.677, 2000],
-        ]
-    )
-
-    size = (100, 100, 100, gtab.shape[0])
+    gtab = B_MATRIX.copy()
+    size = (10, 10, 10, gtab.shape[0])
     data = np.ones(size, dtype=float)
     mask = np.ones(size[:3], dtype=bool)
 
@@ -205,21 +216,24 @@ def test_average_model():
     avgmodel_median = model.AverageDWIModel(dataset)
 
     # Verify that average cannot be calculated in shells with one single value
+    # The two first gradients are considered low-b orientations because of the
+    # default threshold and are pulled out (so now index is 0 for b=500).
     with pytest.raises(RuntimeError):
-        avgmodel_mean.fit_predict(2)
+        avgmodel_mean.fit_predict(0)
 
     assert np.allclose(avgmodel_mean.fit_predict(3), 1000)
     assert np.allclose(avgmodel_median.fit_predict(3), 1000)
 
-    grads = list(gtab[:, -1])
-    del grads[1]
-    assert np.allclose(avgmodel_mean_full.fit_predict(1), np.mean(grads))
+    grads = list(gtab[1:, -1])  # Exclude b0
+    del grads[3]
+    assert np.allclose(avgmodel_mean_full.fit_predict(3), np.mean(grads))
 
     avgmodel_mean_2000 = model.AverageDWIModel(dataset, stat="mean", atol_low=1100)
     avgmodel_median_2000 = model.AverageDWIModel(dataset, atol_low=1100)
 
-    assert np.allclose(avgmodel_mean_2000.fit_predict(9), gtab[3:-1, -1].mean())
-    assert np.allclose(avgmodel_median_2000.fit_predict(9), 1000)
+    last = gtab.shape[0] - 2  # Last but one index (b=2000)
+    assert np.allclose(avgmodel_mean_2000.fit_predict(last), gtab[2:-1, -1].mean())
+    assert np.allclose(avgmodel_median_2000.fit_predict(last), 1000)
 
 
 @pytest.mark.parametrize(
