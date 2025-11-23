@@ -6,6 +6,14 @@ nifreeze.data package
    :undoc-members:
    :show-inheritance:
 
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 1
+
+   nifreeze.data.dmri
+
 Submodules
 ----------
 
@@ -13,7 +21,6 @@ Submodules
    :maxdepth: 1
 
    nifreeze.data.base
-   nifreeze.data.dmri
    nifreeze.data.filtering
    nifreeze.data.pet
    nifreeze.data.splitting
