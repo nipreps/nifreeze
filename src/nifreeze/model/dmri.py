@@ -28,7 +28,8 @@ import numpy as np
 from dipy.core.gradients import gradient_table_from_bvals_bvecs
 from joblib import Parallel, delayed
 
-from nifreeze.data.dmri import DEFAULT_LOWB_THRESHOLD, DEFAULT_MIN_S0, DTI_MIN_ORIENTATIONS, DWI
+from nifreeze.data.dmri import DWI
+from nifreeze.data.dmri.utils import DEFAULT_LOWB_THRESHOLD, DEFAULT_MIN_S0, DTI_MIN_ORIENTATIONS
 from nifreeze.data.filtering import BVAL_ATOL, dwi_select_shells, grand_mean_normalization
 from nifreeze.model.base import BaseModel, ExpectationModel
 
@@ -68,7 +69,7 @@ class BaseDWIModel(BaseModel):
 
         Parameters
         ----------
-        dataset : :obj:`~nifreeze.data.dmri.DWI`
+        dataset : :obj:`~nifreeze.data.dmri.base.DWI`
             Reference to a DWI object.
 
         """
@@ -248,7 +249,7 @@ class AverageDWIModel(ExpectationModel):
 
         Parameters
         ----------
-        dataset : :obj:`~nifreeze.data.dmri.DWI`
+        dataset : :obj:`~nifreeze.data.dmri.base.DWI`
             Reference to a DWI object.
         stat : :obj:`str`, optional
             Whether the summary statistic to apply is ``"mean"`` or ``"median"``.
