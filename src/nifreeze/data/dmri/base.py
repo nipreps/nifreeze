@@ -61,7 +61,7 @@ def validate_gradients(
 
     Parameters
     ----------
-    inst : :obj:`~nifreeze.data.dmri.DWI`
+    inst : :obj:`~nifreeze.data.dmri.base.DWI`
         The instance being validated (unused; present for validator signature).
     attr : :obj:`~attrs.Attribute`
         The attribute being validated; attr.name is used in the error message.
@@ -190,7 +190,7 @@ class DWI(BaseDataset[np.ndarray]):
 
         Returns
         -------
-        :obj:`~nifreeze.data.dmri.DWI`
+        :obj:`~nifreeze.data.dmri.base.DWI`
             The constructed dataset with data loaded from the file.
 
         """

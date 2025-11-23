@@ -66,7 +66,7 @@ def from_nii(
         stored in the returned dataset.
     gradients_file : :obj:`os.pathlike`, optional
         A text file containing the gradients table, shape (N, C) where the last column
-        stores the b-values. If provided following the column-major convention(C, N),
+        stores the b-values. If provided following the column-major convention (C, N),
         it will be transposed automatically. If provided, it supersedes any .bvec / .bval
         combination.
     bvec_file : :obj:`os.pathlike`, optional
@@ -79,7 +79,7 @@ def from_nii(
 
     Returns
     -------
-    dwi : :obj:`~nifreeze.data.dmri.DWI`
+    dwi : :obj:`~nifreeze.data.dmri.base.DWI`
         A DWI object containing the loaded data, gradient table, and optional
         b-zero volume, and brainmask.
 
@@ -147,6 +147,9 @@ def to_nifti(
 
     Parameters
     ----------
+    dwi : :obj:`~nifreeze.data.dmri.base.DWI`
+        A DWI object containing the diffusion data to be written, including the
+        gradient table, and optional b-zero volume.
     filename : :obj:`os.pathlike`, optional
         The output NIfTI file path.
     write_hmxfms : :obj:`bool`, optional
@@ -163,6 +166,10 @@ def to_nifti(
     bvecs_dec_places : :obj:`int`, optional
         Decimal places to use when serializing b-vectors.
 
+    Returns
+    -------
+    nii : :obj:`~nibabel.Nifti1Image`
+        The main DWI data object.
     """
 
     no_bzero = dwi.bzero is None or not insert_b0
