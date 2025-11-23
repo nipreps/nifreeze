@@ -424,8 +424,6 @@ def from_nii(
             bvecs = bvecs.T
 
         bvals = np.loadtxt(bval_file, dtype="float32")
-        if bvals.ndim > 1:
-            bvals = np.squeeze(bvals)
         grad = np.column_stack((bvecs, bvals))
     else:
         raise RuntimeError(GRADIENT_DATA_MISSING_ERROR)
