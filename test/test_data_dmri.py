@@ -31,16 +31,18 @@ import numpy as np
 import pytest
 
 from nifreeze.data import load
-from nifreeze.data.dmri import (
+from nifreeze.data.dmri.base import (
     DWI,
-    from_nii,
     validate_gradients,
 )
-from nifreeze.data.dmriutils import (
-    DTI_MIN_ORIENTATIONS,
-    GRADIENT_ABSENCE_ERROR_MSG,
+from nifreeze.data.dmri.io import (
     GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG,
     GRADIENT_DATA_MISSING_ERROR,
+    from_nii,
+)
+from nifreeze.data.dmri.utils import (
+    DTI_MIN_ORIENTATIONS,
+    GRADIENT_ABSENCE_ERROR_MSG,
     GRADIENT_EXPECTED_COLUMNS_ERROR_MSG,
     GRADIENT_NDIM_ERROR_MSG,
     GRADIENT_OBJECT_ERROR_MSG,

@@ -51,14 +51,6 @@ DTI_MIN_ORIENTATIONS = 6
 GRADIENT_ABSENCE_ERROR_MSG = "No gradient table was provided."
 """Gradient absence error message."""
 
-GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG = """\
-Both a gradients table file and b-vec/val files are defined; \
-ignoring b-vec/val files in favor of the gradients_file."""
-""""dMRI gradient file priority warning message."""
-
-GRADIENT_DATA_MISSING_ERROR = "No gradient data provided."
-"""dMRI missing gradient data error message."""
-
 GRADIENT_EXPECTED_COLUMNS_ERROR_MSG = (
     "Gradient table must have four columns (3 direction components and one b-value)."
 )

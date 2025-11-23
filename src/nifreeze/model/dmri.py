@@ -29,7 +29,7 @@ from dipy.core.gradients import gradient_table_from_bvals_bvecs
 from joblib import Parallel, delayed
 
 from nifreeze.data.dmri import DWI
-from nifreeze.data.dmriutils import DEFAULT_LOWB_THRESHOLD, DEFAULT_MIN_S0, DTI_MIN_ORIENTATIONS
+from nifreeze.data.dmri.utils import DEFAULT_LOWB_THRESHOLD, DEFAULT_MIN_S0, DTI_MIN_ORIENTATIONS
 from nifreeze.data.filtering import BVAL_ATOL, dwi_select_shells, grand_mean_normalization
 from nifreeze.model.base import BaseModel, ExpectationModel
 

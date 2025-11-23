@@ -20,38 +20,32 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""dMRI data representation."""
+"""DWI data representation type."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from warnings import warn
 
 import attrs
 import h5py
 import nibabel as nb
 import numpy as np
 import numpy.typing as npt
-from nibabel.spatialimages import SpatialImage
 from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr
-from nifreeze.data.dmriutils import (
+from nifreeze.data.dmri.utils import (
     DEFAULT_HIGHB_THRESHOLD,
     DEFAULT_LOWB_THRESHOLD,
     DEFAULT_MULTISHELL_BIN_COUNT_THR,
     DEFAULT_NUM_BINS,
     DTI_MIN_ORIENTATIONS,
-    GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG,
-    GRADIENT_DATA_MISSING_ERROR,
     GRADIENT_EXPECTED_COLUMNS_ERROR_MSG,
     GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR,
     find_shelling_scheme,
     format_gradients,
-    transform_fsl_bvec,
 )
-from nifreeze.utils.ndimage import get_data, load_api
 
 
 def validate_gradients(
@@ -303,148 +297,14 @@ class DWI(BaseDataset[np.ndarray]):
             Decimal places to use when serializing b-vectors.
 
         """
+        from nifreeze.data.dmri.io import to_nifti
 
-        no_bzero = self.bzero is None or not insert_b0
-        bvals = self.bvals
-
-        # Rotate b-vectors if self.motion_affines is not None
-        if self.motion_affines is not None:
-            rotated = [
-                transform_fsl_bvec(bvec, affine, self.affine, invert=True)
-                for bvec, affine in zip(self.gradients[:, :3], self.motion_affines, strict=True)
-            ]
-            bvecs = np.asarray(rotated)
-        else:
-            bvecs = self.bvecs
-
-        # Parent's to_nifti to handle the primary NIfTI export.
-        nii = super().to_nifti(
-            filename=filename if no_bzero else None,
+        return to_nifti(
+            self,
+            filename=filename,
             write_hmxfms=write_hmxfms,
             order=order,
+            insert_b0=insert_b0,
+            bvals_dec_places=bvals_dec_places,
+            bvecs_dec_places=bvecs_dec_places,
         )
-
-        if no_bzero:
-            if insert_b0:
-                warn(
-                    "Ignoring ``insert_b0`` argument as the data object's bzero field is unset",
-                    stacklevel=2,
-                )
-        else:
-            data = np.concatenate((self.bzero[..., np.newaxis], self.dataobj), axis=-1)  # type: ignore
-            nii = nb.Nifti1Image(data, nii.affine, nii.header)
-
-            if filename is not None:
-                nii.to_filename(filename)
-
-            # If inserting a b0 volume is requested, add the corresponding null
-            # gradient value to the bval/bvec pair
-            bvals = np.concatenate((np.zeros(1), bvals))
-            bvecs = np.vstack((np.zeros((1, bvecs.shape[1])), bvecs))
-
-        if filename is not None:
-            # Convert filename to a Path object.
-            out_root = Path(filename).absolute()
-
-            # Get the base stem for writing .bvec / .bval.
-            out_root = out_root.parent / out_root.name.replace("".join(out_root.suffixes), "")
-
-            # Construct sidecar file paths.
-            bvecs_file = out_root.with_suffix(".bvec")
-            bvals_file = out_root.with_suffix(".bval")
-
-            # Save bvecs and bvals to text files. BIDS expects 3 rows x N columns.
-            np.savetxt(bvecs_file, bvecs.T, fmt=f"%.{bvecs_dec_places}f")
-            np.savetxt(bvals_file, bvals[np.newaxis, :], fmt=f"%.{bvals_dec_places}f")
-
-        return nii
-
-
-def from_nii(
-    filename: Path | str,
-    brainmask_file: Path | str | None = None,
-    gradients_file: Path | str | None = None,
-    bvec_file: Path | str | None = None,
-    bval_file: Path | str | None = None,
-    b0_file: Path | str | None = None,
-) -> DWI:
-    """
-    Load DWI data from NIfTI and construct a DWI object.
-
-    This function loads data from a NIfTI file, optionally loading a gradient table
-    from either a separate gradients file or from .bvec / .bval files.
-
-    Parameters
-    ----------
-    filename : :obj:`os.pathlike`
-        The main DWI data file (NIfTI).
-    brainmask_file : :obj:`os.pathlike`, optional
-        A brainmask NIfTI file. If provided, will be loaded and
-        stored in the returned dataset.
-    gradients_file : :obj:`os.pathlike`, optional
-        A text file containing the gradients table, shape (N, C) where the last column
-        stores the b-values. If provided following the column-major convention(C, N),
-        it will be transposed automatically. If provided, it supersedes any .bvec / .bval
-        combination.
-    bvec_file : :obj:`os.pathlike`, optional
-        A text file containing b-vectors, shape (N, 3) or (3, N).
-    bval_file : :obj:`os.pathlike`, optional
-        A text file containing b-values, shape (N,).
-    b0_file : :obj:`os.pathlike`, optional
-        A NIfTI file containing a b=0 volume (possibly averaged or reference).
-        If not provided, and the data contains at least one b=0 volume, one will be computed.
-
-    Returns
-    -------
-    dwi : :obj:`~nifreeze.data.dmri.DWI`
-        A DWI object containing the loaded data, gradient table, and optional
-        b-zero volume, and brainmask.
-
-    Raises
-    ------
-    :exc:`RuntimeError`
-        If no gradient information is provided (neither ``gradients_file`` nor
-        ``bvec_file`` + ``bval_file``).
-
-    """
-    filename = Path(filename)
-
-    # 1) Load a NIfTI
-    img = load_api(filename, SpatialImage)
-    fulldata = get_data(img)
-
-    # 2) Determine the gradients array from either gradients_file or bvec/bval
-    if gradients_file:
-        grad = np.loadtxt(gradients_file, dtype="float32")
-        if bvec_file and bval_file:
-            warn(GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG, stacklevel=2)
-    elif bvec_file and bval_file:
-        bvecs = np.loadtxt(bvec_file, dtype="float32")
-        if bvecs.shape[1] != 3 and bvecs.shape[0] == 3:
-            bvecs = bvecs.T
-
-        bvals = np.loadtxt(bval_file, dtype="float32")
-        grad = np.column_stack((bvecs, bvals))
-    else:
-        raise RuntimeError(GRADIENT_DATA_MISSING_ERROR)
-
-    # 3) Read b-zero volume if provided
-    b0_data = None
-    if b0_file:
-        b0img = load_api(b0_file, SpatialImage)
-        b0_data = np.asanyarray(b0img.dataobj)
-
-    # 4) If a brainmask_file was provided, load it
-    brainmask_data = None
-    if brainmask_file:
-        mask_img = load_api(brainmask_file, SpatialImage)
-        brainmask_data = np.asanyarray(mask_img.dataobj, dtype=bool)
-
-    # 5) Create and return the DWI instance.
-    return DWI(
-        dataobj=fulldata,
-        affine=img.affine,
-        gradients=grad,
-        bzero=b0_data,
-        brainmask=brainmask_data,
-    )

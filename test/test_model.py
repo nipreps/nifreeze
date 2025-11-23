@@ -32,7 +32,7 @@ from dipy.sims.voxel import single_tensor
 from nifreeze import model
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.dmri import DWI
-from nifreeze.data.dmriutils import (
+from nifreeze.data.dmri.utils import (
     DEFAULT_LOWB_THRESHOLD,
     DEFAULT_MAX_S0,
     DEFAULT_MIN_S0,
