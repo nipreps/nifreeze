@@ -29,12 +29,12 @@ data representation.
 
 **Gradient Table Representation**.
 The :class:`~nifreeze.data.dmri.base.DWI` class represents diffusion MRI data must
-be provided a gradient table, which is a :class:`numpy.ndarray` of shape (N, 4), where N
-is the number of diffusion-weighted volumes.
+be provided a gradient table, which is a :class:`numpy.ndarray` of shape ``(N, 4)``, where
+``N`` is the number of diffusion-weighted volumes.
 The first three columns represent the gradient directions (b-vectors), and the fourth column
 represents the b-values in s/mm².
 *NiFreeze* expects that the gradient directions are normalized to unit length for non-zero
-b-values, and that the b=0 volumes have a gradient direction of (0, 0, 0).
+b-values, and that the :math:`b=0` volumes have a gradient direction of :math:`(0, 0, 0)`.
 When non-unit b-vectors are detected, the corresponding b-value is automatically adjusted to
 reflect the actual diffusion weighting.
 If the input gradient table does not conform to these expectations, it will be automatically
@@ -47,14 +47,15 @@ the :class:`~nifreeze.data.dmri.base.DWI` object.
 The :class:`~nifreeze.data.dmri.base.DWI` class requires a ``dataobj`` that can be an array-like
 object.
 The final step of the initialization process examines the data object and the gradient table,
-and removes b=0 volumes from the data **AND** the gradient table.
+and removes :math:`b=0` volumes from the data **AND** the gradient table.
 If no ``bzero`` parameter is provided, a reference low-b volume is computed as the median of all
-the low-b volumes (b < 50 s/mm²) and inserted in the ``DWI.bzero`` attribute.
+the low-b volumes (``b <`` :data:`~nifreeze.data.dmri.utils.DEFAULT_LOWB_THRESHOLD` s/mm²) and
+inserted in the :attr:`~nifreeze.data.dmri.base.DWI.bzero` attribute.
 Therefore, ***NiFreeze* WILL NOT be able to reconstruct the original data organization**.
 This design choice simplifies the internal representation and processing of diffusion MRI data.
-If you want to calculate a b=0 reference map in a more sophisticated way (e.g., after realignment
-of all the low-b volumes), you should handle this separately and feed your own reference through
-the ``bzero`` parameter.
+If you want to calculate a :math:`b=0` reference map in a more sophisticated way (e.g., after
+realignment of all the low-b volumes), you should handle this separately and feed your own
+reference through the ``bzero`` parameter.
 
 """
 

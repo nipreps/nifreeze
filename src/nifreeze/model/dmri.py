@@ -69,7 +69,7 @@ class BaseDWIModel(BaseModel):
 
         Parameters
         ----------
-        dataset : :obj:`~nifreeze.data.dmri.DWI`
+        dataset : :obj:`~nifreeze.data.dmri.base.DWI`
             Reference to a DWI object.
 
         """
@@ -249,7 +249,7 @@ class AverageDWIModel(ExpectationModel):
 
         Parameters
         ----------
-        dataset : :obj:`~nifreeze.data.dmri.DWI`
+        dataset : :obj:`~nifreeze.data.dmri.base.DWI`
             Reference to a DWI object.
         stat : :obj:`str`, optional
             Whether the summary statistic to apply is ``"mean"`` or ``"median"``.
