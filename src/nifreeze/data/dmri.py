@@ -82,6 +82,12 @@ def validate_gradients(
 
     Examples
     --------
+    Non-row-major inputs are rejected::
+        >>> validate_gradients(None, None, [[0.0, 0.0], [0.0, 1000]])
+        Traceback (most recent call last):
+        ...
+        ValueError: Gradient table must have four columns (3 direction components and one b-value).
+
     Non-finite inputs are rejected::
 
         >>> validate_gradients(None, None, [[np.inf, 0.0, 0.0, 1000]])
@@ -121,9 +127,6 @@ class DWI(BaseDataset[np.ndarray]):
     """List of transforms to correct for estimated eddy current distortions."""
 
     def __attrs_post_init__(self) -> None:
-        if self.gradients is None:
-            raise ValueError(GRADIENT_DATA_MISSING_ERROR)
-
         if self.dataobj.shape[-1] != self.gradients.shape[0]:
             raise ValueError(
                 GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR.format(
