@@ -37,6 +37,7 @@ from nifreeze.data.dmri import (
     validate_gradients,
 )
 from nifreeze.data.dmriutils import (
+    DTI_MIN_ORIENTATIONS,
     GRADIENT_ABSENCE_ERROR_MSG,
     GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG,
     GRADIENT_DATA_MISSING_ERROR,
@@ -174,10 +175,16 @@ def test_format_gradients_basic(value, expect_transpose):
 
 
 @pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
-def test_gradients_absence_error(setup_random_uniform_spatial_data):
+def test_dwi_post_init_errors(setup_random_uniform_spatial_data):
     data, affine = setup_random_uniform_spatial_data
     with pytest.raises(ValueError, match=GRADIENT_ABSENCE_ERROR_MSG):
         DWI(dataobj=data, affine=affine)
+
+    with pytest.raises(
+        ValueError,
+        match=f"DWI datasets must have at least {DTI_MIN_ORIENTATIONS} diffusion-weighted",
+    ):
+        DWI(dataobj=data, affine=affine, gradients=B_MATRIX[: data.shape[-1], :])
 
 
 @pytest.mark.random_gtab_data(10, (1000, 2000), 2)
