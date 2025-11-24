@@ -389,6 +389,9 @@ class PET(BaseDataset[np.ndarray]):
             root = in_file["/0"]
             data = {k: v for k, v in root.items() if not k.startswith("_")}
             data["affine"] = np.asarray(root["affine"])  # ensure validator requirements
+            # Scalars should be read eagerly to present native Python types
+            if "total_duration" in data:
+                data["total_duration"] = float(np.asarray(data["total_duration"]))
             data["file_handle"] = in_file
             data["filepath"] = filename
             return cls(**data)
