@@ -192,26 +192,10 @@ def _cmp(lh: Any, rh: Any) -> bool:
 class _ArrayLike(Protocol):
     """Minimal protocol for array-like objects used by :class:`BaseDataset`."""
 
-    @property
-    def shape(self) -> tuple[int, ...]: ...
-
-    @property
-    def dtype(self) -> Any: ...
+    shape: tuple[int, ...]
+    dtype: Any
 
     def __getitem__(self, key: Any) -> Any:  # pragma: no cover - structural protocol
-        ...
-
-    def __setitem__(self, key: Any, value: Any) -> Any:  # pragma: no cover - structural protocol
-        ...
-
-    def __array__(
-        self, dtype: Any | None = None
-    ) -> np.ndarray:  # pragma: no cover - structural protocol
-        ...
-
-    def astype(
-        self, dtype: Any, /, *args: Any, **kwargs: Any
-    ) -> Any:  # pragma: no cover - structural protocol
         ...
 
 
@@ -364,9 +348,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
         if self._mmap_path is None and isinstance(self.dataobj, np.memmap):
             try:
-                filename = getattr(self.dataobj, "filename", None)
-                if filename:
-                    self._mmap_path = Path(filename)
+                self._mmap_path = Path(self.dataobj.filename)
             except Exception:
                 self._mmap_path = None
 
@@ -461,7 +443,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
         return np.prod(self.dataobj.shape[:3])
 
     @classmethod
-    def from_filename(cls, filename: Path | str, *, keep_file_open: bool = False) -> Self:
+    def from_filename(cls, filename: Path | str, *, keep_file_open: bool = True) -> Self:
         """
         Read an HDF5 file from disk and create a BaseDataset.
 
@@ -470,9 +452,9 @@ class BaseDataset(Generic[Unpack[Ts]]):
         filename : :obj:`os.pathlike`
             The HDF5 file path to read.
         keep_file_open : :obj:`bool`, optional
-            When ``True``, keep the HDF5 file handle open and store datasets
-            directly to enable on-demand slicing without loading the full array
-            into memory. When ``False`` (default), datasets are eagerly read
+            When ``True`` (default), keep the HDF5 file handle open and store
+            datasets directly to enable on-demand slicing without loading the
+            full array into memory. When ``False``, datasets are eagerly read
             into NumPy arrays.
 
         Returns
@@ -486,15 +468,14 @@ class BaseDataset(Generic[Unpack[Ts]]):
             in_file = h5py.File(filename, "r")
             root = in_file["/0"]
             data = {k: v for k, v in root.items() if not k.startswith("_")}
-            data["affine"] = np.asarray(root["affine"])  # ensure validator requirements
-            data["file_handle"] = in_file
-            data["filepath"] = filename
+            data["_file_handle"] = in_file
+            data["_filepath"] = filename
             return cls(**data)
 
         with h5py.File(filename, "r") as in_file:
             root = in_file["/0"]
             data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}
-            data["filepath"] = filename
+            data["_filepath"] = filename
 
         return cls(**data)
 

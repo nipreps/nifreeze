@@ -34,7 +34,7 @@ def load(
     filename: Path | str,
     brainmask_file: Path | str | None = None,
     *,
-    keep_file_open: bool = False,
+    keep_file_open: bool = True,
     **kwargs,
 ) -> BaseDataset | DWI | PET:
     """
@@ -85,9 +85,7 @@ def load(
         return pet_from_nii(filename, brainmask_file=brainmask_file, **kwargs)
 
     img = load_api(filename, SpatialImage)
-    retval: BaseDataset = BaseDataset(
-        dataobj=cast(_ArrayLike, img.dataobj), affine=np.asanyarray(img.affine)
-    )
+    retval: BaseDataset = BaseDataset(dataobj=img.dataobj, affine=np.asanyarray(img.affine))
 
     if brainmask_file:
         mask = load_api(brainmask_file, SpatialImage)
