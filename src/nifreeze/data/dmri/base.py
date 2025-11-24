@@ -179,7 +179,7 @@ class DWI(BaseDataset[np.ndarray]):
         return super().__getitem__(idx)
 
     @classmethod
-    def from_filename(cls, filename: Path | str) -> Self:
+    def from_filename(cls, filename: Path | str, *, keep_file_open: bool = True) -> Self:
         """
         Read an HDF5 file from disk and create a DWI object.
 
@@ -194,7 +194,7 @@ class DWI(BaseDataset[np.ndarray]):
             The constructed dataset with data loaded from the file.
 
         """
-        return super().from_filename(filename)
+        return super().from_filename(filename, keep_file_open=keep_file_open)
 
     @property
     def bvals(self):

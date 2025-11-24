@@ -175,11 +175,22 @@ class PET(BaseDataset[np.ndarray]):
                     )
 
     @classmethod
-    def from_filename(cls, filename: Path | str) -> Self:
+    def from_filename(cls, filename: Path | str, *, keep_file_open: bool = True) -> Self:
         """Read an HDF5 file from disk."""
+        filename = Path(filename)
+        if keep_file_open:
+            in_file = h5py.File(filename, "r")
+            root = in_file["/0"]
+            data = {k: v for k, v in root.items() if not k.startswith("_")}
+            data["_file_handle"] = in_file
+            data["_filepath"] = filename
+            return cls(**data)
+
         with h5py.File(filename, "r") as in_file:
             root = in_file["/0"]
             data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}
+            data["_filepath"] = filename
+
         return cls(**data)
 
     @classmethod
