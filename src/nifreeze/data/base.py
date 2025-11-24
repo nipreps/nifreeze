@@ -468,14 +468,15 @@ class BaseDataset(Generic[Unpack[Ts]]):
             in_file = h5py.File(filename, "r")
             root = in_file["/0"]
             data = {k: v for k, v in root.items() if not k.startswith("_")}
-            data["_file_handle"] = in_file
-            data["_filepath"] = filename
+            data["affine"] = np.asarray(root["affine"])  # ensure validator requirements
+            data["file_handle"] = in_file
+            data["filepath"] = filename
             return cls(**data)
 
         with h5py.File(filename, "r") as in_file:
             root = in_file["/0"]
             data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}
-            data["_filepath"] = filename
+            data["filepath"] = filename
 
         return cls(**data)
 
