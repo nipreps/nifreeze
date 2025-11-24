@@ -23,8 +23,9 @@
 """Four-dimensional data representation in hard-disk and memory."""
 
 from pathlib import Path
+from typing import cast
 
-from nifreeze.data.base import NFDH5_EXT, BaseDataset
+from nifreeze.data.base import NFDH5_EXT, BaseDataset, _ArrayLike
 from nifreeze.data.dmri import DWI
 from nifreeze.data.pet import PET
 
@@ -84,7 +85,9 @@ def load(
         return pet_from_nii(filename, brainmask_file=brainmask_file, **kwargs)
 
     img = load_api(filename, SpatialImage)
-    retval: BaseDataset = BaseDataset(dataobj=img.dataobj, affine=np.asanyarray(img.affine))
+    retval: BaseDataset = BaseDataset(
+        dataobj=cast(_ArrayLike, img.dataobj), affine=np.asanyarray(img.affine)
+    )
 
     if brainmask_file:
         mask = load_api(brainmask_file, SpatialImage)

@@ -86,8 +86,10 @@ class PET(BaseDataset[np.ndarray]):
         if not isinstance(other, PET):
             return False
 
-        return _cmp(self.midframe, other.midframe) and _cmp(self.uptake, other.uptake) and (
-            self.total_duration == other.total_duration
+        return (
+            _cmp(self.midframe, other.midframe)
+            and _cmp(self.uptake, other.uptake)
+            and (self.total_duration == other.total_duration)
         )
 
     def lofo_split(self, index):
