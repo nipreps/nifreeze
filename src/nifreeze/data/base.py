@@ -192,10 +192,28 @@ def _cmp(lh: Any, rh: Any) -> bool:
 class _ArrayLike(Protocol):
     """Minimal protocol for array-like objects used by :class:`BaseDataset`."""
 
-    shape: tuple[int, ...]
-    dtype: Any
+    @property
+    def shape(self) -> tuple[int, ...]:
+        ...
+
+    @property
+    def dtype(self) -> Any:
+        ...
 
     def __getitem__(self, key: Any) -> Any:  # pragma: no cover - structural protocol
+        ...
+
+    def __setitem__(self, key: Any, value: Any) -> Any:  # pragma: no cover - structural protocol
+        ...
+
+    def __array__(
+        self, dtype: Any | None = None
+    ) -> np.ndarray:  # pragma: no cover - structural protocol
+        ...
+
+    def astype(
+        self, dtype: Any, /, *args: Any, **kwargs: Any
+    ) -> Any:  # pragma: no cover - structural protocol
         ...
 
 
@@ -348,7 +366,9 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
         if self._mmap_path is None and isinstance(self.dataobj, np.memmap):
             try:
-                self._mmap_path = Path(self.dataobj.filename)
+                filename = getattr(self.dataobj, "filename", None)
+                if filename:
+                    self._mmap_path = Path(filename)
             except Exception:
                 self._mmap_path = None
 

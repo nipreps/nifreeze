@@ -192,8 +192,10 @@ class DWI(BaseDataset[np.ndarray]):
         if not isinstance(other, DWI):
             return False
 
-        return _cmp(self.gradients, other.gradients) and _cmp(self.bzero, other.bzero) and (
-            self.eddy_xfms == other.eddy_xfms
+        return (
+            _cmp(self.gradients, other.gradients)
+            and _cmp(self.bzero, other.bzero)
+            and (self.eddy_xfms == other.eddy_xfms)
         )
 
     # For the sake of the docstring
