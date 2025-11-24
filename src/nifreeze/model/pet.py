@@ -38,6 +38,13 @@ from nifreeze.model.base import BaseModel
 DEFAULT_TIMEFRAME_MIDPOINT_TOL = 1e-2
 """Time frame tolerance in seconds."""
 
+TIMEPOINT_XLIM_DATA_MISSING_ERROR_MSG = "timepoints must be provided in initialization."
+"""PET model timepoint data missing error message."""
+FIRST_MIDPOINT_VALUE_ERROR_MSG = "First frame midpoint should not be zero or negative."
+"""PET model first midpoint value error message."""
+LAST_MIDPOINT_VALUE_ERROR_MSG = "Last frame midpoint should not be equal or greater than duration."
+"""PET model last midpoint value error message."""
+
 
 class PETModel(BaseModel):
     """A PET imaging realignment model based on B-Spline approximation."""
@@ -84,7 +91,7 @@ class PETModel(BaseModel):
         super().__init__(dataset, **kwargs)
 
         if timepoints is None or xlim is None:
-            raise TypeError("timepoints must be provided in initialization")
+            raise TypeError(TIMEPOINT_XLIM_DATA_MISSING_ERROR_MSG)
 
         self._order = order
         self._x = np.array(timepoints, dtype="float32")
@@ -93,9 +100,9 @@ class PETModel(BaseModel):
         self._thresh_pct = thresh_pct
 
         if self._x[0] < DEFAULT_TIMEFRAME_MIDPOINT_TOL:
-            raise ValueError("First frame midpoint should not be zero or negative")
+            raise ValueError(FIRST_MIDPOINT_VALUE_ERROR_MSG)
         if self._x[-1] > (self._xlim - DEFAULT_TIMEFRAME_MIDPOINT_TOL):
-            raise ValueError("Last frame midpoint should not be equal or greater than duration")
+            raise ValueError(LAST_MIDPOINT_VALUE_ERROR_MSG)
 
         # Calculate index coordinates in the B-Spline grid
         self._n_ctrl = n_ctrl or (len(timepoints) // 4) + 1
