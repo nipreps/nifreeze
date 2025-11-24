@@ -463,7 +463,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
         return np.prod(self.dataobj.shape[:3])
 
     @classmethod
-    def from_filename(cls, filename: Path | str, *, keep_file_open: bool = True) -> Self:
+    def from_filename(cls, filename: Path | str, *, keep_file_open: bool = False) -> Self:
         """
         Read an HDF5 file from disk and create a BaseDataset.
 
@@ -472,9 +472,9 @@ class BaseDataset(Generic[Unpack[Ts]]):
         filename : :obj:`os.pathlike`
             The HDF5 file path to read.
         keep_file_open : :obj:`bool`, optional
-            When ``True`` (default), keep the HDF5 file handle open and store
-            datasets directly to enable on-demand slicing without loading the
-            full array into memory. When ``False``, datasets are eagerly read
+            When ``True``, keep the HDF5 file handle open and store datasets
+            directly to enable on-demand slicing without loading the full array
+            into memory. When ``False`` (default), datasets are eagerly read
             into NumPy arrays.
 
         Returns

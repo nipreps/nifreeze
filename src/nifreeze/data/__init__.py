@@ -34,7 +34,7 @@ def load(
     filename: Path | str,
     brainmask_file: Path | str | None = None,
     *,
-    keep_file_open: bool = True,
+    keep_file_open: bool = False,
     **kwargs,
 ) -> BaseDataset | DWI | PET:
     """

@@ -381,7 +381,7 @@ class PET(BaseDataset[np.ndarray]):
                     )
 
     @classmethod
-    def from_filename(cls, filename: Path | str, *, keep_file_open: bool = True) -> Self:
+    def from_filename(cls, filename: Path | str, *, keep_file_open: bool = False) -> Self:
         """Read an HDF5 file from disk."""
         filename = Path(filename)
         if keep_file_open:
