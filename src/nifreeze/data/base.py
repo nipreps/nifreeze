@@ -278,7 +278,7 @@ def validate_affine(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> Non
         raise ValueError(AFFINE_SHAPE_ERROR_MSG)
 
 
-@attrs.define(slots=True)
+@attrs.define(slots=True, eq=False)
 class BaseDataset(Generic[Unpack[Ts]]):
     """
     Base dataset representation structure.
@@ -355,6 +355,29 @@ class BaseDataset(Generic[Unpack[Ts]]):
     def __len__(self) -> int:
         """Obtain the number of volumes/frames in the dataset."""
         return self.dataobj.shape[-1]
+
+    def __eq__(self, other: object) -> bool:
+        if type(self) is not type(other):
+            return NotImplemented
+
+        assert isinstance(other, BaseDataset)
+
+        base_equal = all(
+            (
+                _cmp(self.dataobj, other.dataobj),
+                _cmp(self.affine, other.affine),
+                _cmp(self.brainmask, other.brainmask),
+                _cmp(self.motion_affines, other.motion_affines),
+                self.datahdr == other.datahdr,
+            )
+        )
+
+        return base_equal and self._eq_extras(other)
+
+    def _eq_extras(self, other: BaseDataset) -> bool:
+        """Additional equality checks implemented by subclasses."""
+
+        return True
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[Unpack[Ts]]:
         """
@@ -445,14 +468,15 @@ class BaseDataset(Generic[Unpack[Ts]]):
             in_file = h5py.File(filename, "r")
             root = in_file["/0"]
             data = {k: v for k, v in root.items() if not k.startswith("_")}
-            data["_file_handle"] = in_file
-            data["_filepath"] = filename
+            data["affine"] = np.asarray(root["affine"])  # ensure validator requirements
+            data["file_handle"] = in_file
+            data["filepath"] = filename
             return cls(**data)
 
         with h5py.File(filename, "r") as in_file:
             root = in_file["/0"]
             data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}
-            data["_filepath"] = filename
+            data["filepath"] = filename
 
         return cls(**data)
 
