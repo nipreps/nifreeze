@@ -42,7 +42,7 @@ from nifreeze.data.base import BaseDataset, _cmp, _data_repr
 from nifreeze.utils.ndimage import load_api
 
 
-@attrs.define(slots=True)
+@attrs.define(slots=True, eq=False)
 class PET(BaseDataset[np.ndarray]):
     """Data representation structure for PET data."""
 
@@ -81,6 +81,16 @@ class PET(BaseDataset[np.ndarray]):
 
         """
         return super().__getitem__(idx)
+
+    def _eq_extras(self, other: BaseDataset) -> bool:
+        if not isinstance(other, PET):
+            return False
+
+        return (
+            _cmp(self.midframe, other.midframe)
+            and _cmp(self.uptake, other.uptake)
+            and (self.total_duration == other.total_duration)
+        )
 
     def lofo_split(self, index):
         """
@@ -175,11 +185,26 @@ class PET(BaseDataset[np.ndarray]):
                     )
 
     @classmethod
-    def from_filename(cls, filename: Path | str) -> Self:
+    def from_filename(cls, filename: Path | str, *, keep_file_open: bool = False) -> Self:
         """Read an HDF5 file from disk."""
+        filename = Path(filename)
+        if keep_file_open:
+            in_file = h5py.File(filename, "r")
+            root = in_file["/0"]
+            data = {k: v for k, v in root.items() if not k.startswith("_")}
+            data["affine"] = np.asarray(root["affine"])  # ensure validator requirements
+            # Scalars should be read eagerly to present native Python types
+            if "total_duration" in data:
+                data["total_duration"] = float(np.asarray(data["total_duration"]))
+            data["file_handle"] = in_file
+            data["filepath"] = filename
+            return cls(**data)
+
         with h5py.File(filename, "r") as in_file:
             root = in_file["/0"]
             data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}
+            data["filepath"] = filename
+
         return cls(**data)
 
     @classmethod
