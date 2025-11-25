@@ -71,15 +71,15 @@ def test_get_shells_and_io(tmp_path, monkeypatch):
         "nifreeze.data.dmri.base.find_shelling_scheme",
         lambda bvals, num_bins, multishell_nonempty_bin_count_thr, bval_cap: (
             "multi-shell",
-            [bvals[:3], bvals[3:]],
-            [np.mean(bvals[:3]), np.mean(bvals[3:])],
+            [np.array([1000.0, 1100.0, 1200.0]), np.array([1300.0, 1400.0, 1500.0])],
+            [1100.0, 1400.0],
         ),
     )
     shells = dwi.get_shells(num_bins=5, multishell_nonempty_bin_count_thr=2, bval_cap=3000)
     assert len(shells) == 2
-    assert shells[0][0] == np.mean(dwi.bvals[:3])
+    assert shells[0][0] == 1100.0
     np.testing.assert_array_equal(shells[0][1], np.array([0, 1, 2]))
-    assert shells[1][0] == np.mean(dwi.bvals[3:])
+    assert shells[1][0] == 1400.0
     np.testing.assert_array_equal(shells[1][1], np.array([3, 4, 5]))
 
     out_file = tmp_path / "dwi.h5"
