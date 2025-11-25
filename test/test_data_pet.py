@@ -24,6 +24,7 @@
 import json
 from pathlib import Path
 
+import h5py
 import nibabel as nb
 import numpy as np
 import pytest
@@ -211,3 +212,18 @@ def test_pet_load(request, tmp_path, setup_random_uniform_spatial_data):
     assert pet_obj.total_duration == 2.0
     if pet_obj.brainmask is not None:
         assert pet_obj.brainmask.shape == brainmask_dataobj.shape
+
+
+def test_pet_from_filename_keeps_handle(random_dataset: PET, tmp_path: Path):
+    h5_file = tmp_path / "pet_lazy.h5"
+    random_dataset.to_filename(h5_file)
+
+    loaded = PET.from_filename(h5_file, keep_file_open=True)
+
+    try:
+        assert isinstance(loaded.dataobj, h5py.Dataset)
+        assert isinstance(loaded.total_duration, float)
+        assert loaded._file_handle is not None
+        assert loaded._file_handle.id.valid
+    finally:
+        loaded.close()

@@ -206,10 +206,14 @@ class _ArrayLike(Protocol):
     def __setitem__(self, key: Any, value: Any) -> Any:  # pragma: no cover - structural protocol
         ...
 
-    def __array__(self, dtype: Any | None = None) -> np.ndarray:  # pragma: no cover - structural protocol
+    def __array__(
+        self, dtype: Any | None = None
+    ) -> np.ndarray:  # pragma: no cover - structural protocol
         ...
 
-    def astype(self, dtype: Any, /, *args: Any, **kwargs: Any) -> Any:  # pragma: no cover - structural protocol
+    def astype(
+        self, dtype: Any, /, *args: Any, **kwargs: Any
+    ) -> Any:  # pragma: no cover - structural protocol
         ...
 
 
