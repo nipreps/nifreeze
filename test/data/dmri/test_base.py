@@ -90,4 +90,3 @@ def test_get_shells_and_io(tmp_path, monkeypatch):
     reloaded = DWI.from_filename(out_file)
     np.testing.assert_array_equal(reloaded.dataobj, dwi.dataobj)
     np.testing.assert_array_equal(reloaded.gradients, dwi.gradients)
-
