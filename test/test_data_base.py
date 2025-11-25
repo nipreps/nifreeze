@@ -376,6 +376,21 @@ def test_hdf5_dataset_pins_file_handle(tmp_path: Path):
             h5_file.close()
 
 
+def test_from_filename_keep_file_open_maintains_affine(random_dataset: BaseDataset):
+    """Loading with ``keep_file_open`` should not trip affine validation."""
+
+    with TemporaryDirectory() as tmpdir:
+        h5_file = Path(tmpdir) / f"test_dataset{NFDH5_EXT}"
+        random_dataset.to_filename(h5_file)
+
+        ds2: BaseDataset[Any] = BaseDataset.from_filename(h5_file, keep_file_open=True)
+
+        assert isinstance(ds2.dataobj, h5py.Dataset)
+        np.testing.assert_array_equal(ds2.affine, random_dataset.affine)
+
+        ds2.close()
+
+
 def test_object_to_nifti(random_dataset: BaseDataset):
     """Test writing a dataset to a NIfTI file."""
     with TemporaryDirectory() as tmpdir:
