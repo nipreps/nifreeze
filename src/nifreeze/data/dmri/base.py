@@ -118,7 +118,7 @@ def validate_gradients(
         raise ValueError("Gradient table contains NaN or infinite values.")
 
 
-@attrs.define(slots=True)
+@attrs.define(slots=True, eq=False)
 class DWI(BaseDataset[np.ndarray]):
     """Data representation structure for dMRI data."""
 
@@ -188,6 +188,16 @@ class DWI(BaseDataset[np.ndarray]):
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray]:
         return (self.gradients[idx, ...],)
 
+    def _eq_extras(self, other: BaseDataset) -> bool:
+        if not isinstance(other, DWI):
+            return False
+
+        return (
+            _cmp(self.gradients, other.gradients)
+            and _cmp(self.bzero, other.bzero)
+            and (self.eddy_xfms == other.eddy_xfms)
+        )
+
     # For the sake of the docstring
     def __getitem__(
         self, idx: int | slice | tuple | np.ndarray
@@ -217,7 +227,7 @@ class DWI(BaseDataset[np.ndarray]):
         return super().__getitem__(idx)
 
     @classmethod
-    def from_filename(cls, filename: Path | str) -> Self:
+    def from_filename(cls, filename: Path | str, *, keep_file_open: bool = False) -> Self:
         """
         Read an HDF5 file from disk and create a DWI object.
 
@@ -232,7 +242,7 @@ class DWI(BaseDataset[np.ndarray]):
             The constructed dataset with data loaded from the file.
 
         """
-        return super().from_filename(filename)
+        return super().from_filename(filename, keep_file_open=keep_file_open)
 
     @property
     def bvals(self):

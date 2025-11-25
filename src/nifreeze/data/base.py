@@ -27,7 +27,7 @@ from __future__ import annotations
 from collections import namedtuple
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Any, Generic
+from typing import Any, Generic, Protocol, runtime_checkable
 from warnings import warn
 
 import attrs
@@ -47,10 +47,10 @@ ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
 DATAOBJ_ABSENCE_ERROR_MSG = "BaseDataset 'dataobj' may not be None"
 """BaseDataset initialization dataobj absence error message."""
 
-DATAOBJ_OBJECT_ERROR_MSG = "BaseDataset 'dataobj' must be a numpy array."
+DATAOBJ_OBJECT_ERROR_MSG = "BaseDataset 'dataobj' must be an array-like object."
 """BaseDataset initialization dataobj object error message."""
 
-DATAOBJ_NDIM_ERROR_MSG = "BaseDataset 'dataobj' must be a 4-D numpy array"
+DATAOBJ_NDIM_ERROR_MSG = "BaseDataset 'dataobj' must be a 4-D array-like object"
 """BaseDataset initialization dataobj dimensionality error message."""
 
 AFFINE_ABSENCE_ERROR_MSG = "BaseDataset 'affine' may not be None"
@@ -164,24 +164,71 @@ def _has_ndim(value: Any, ndim: int) -> bool:
         return False
 
 
-def _data_repr(value: np.ndarray | None) -> str:
+def _data_repr(value: Any) -> str:
     if value is None:
         return "None"
-    return f"<{'x'.join(str(v) for v in value.shape)} ({value.dtype})>"
+
+    shape = getattr(value, "shape", None)
+    dtype = getattr(value, "dtype", None)
+    if shape is None:
+        return repr(value)
+
+    return f"<{'x'.join(str(v) for v in tuple(shape))} ({dtype})>"
 
 
 def _cmp(lh: Any, rh: Any) -> bool:
-    if isinstance(lh, np.ndarray) and isinstance(rh, np.ndarray):
-        return np.allclose(lh, rh)
+    lh_is_array = _has_ndim(lh, 0) or hasattr(lh, "shape")
+    rh_is_array = _has_ndim(rh, 0) or hasattr(rh, "shape")
+    if lh_is_array and rh_is_array:
+        try:
+            return np.allclose(np.asarray(lh), np.asarray(rh))
+        except Exception:
+            return False
 
     return lh == rh
+
+
+@runtime_checkable
+class _ArrayLike(Protocol):
+    """Minimal protocol for array-like objects used by :class:`BaseDataset`."""
+
+    @property
+    def shape(self) -> tuple[int, ...]: ...
+
+    @property
+    def dtype(self) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:  # pragma: no cover - structural protocol
+        ...
+
+    def __setitem__(self, key: Any, value: Any) -> Any:  # pragma: no cover - structural protocol
+        ...
+
+    def __array__(
+        self, dtype: Any | None = None
+    ) -> np.ndarray:  # pragma: no cover - structural protocol
+        ...
+
+    def astype(
+        self, dtype: Any, /, *args: Any, **kwargs: Any
+    ) -> Any:  # pragma: no cover - structural protocol
+        ...
+
+
+def _is_array_like(value: Any) -> bool:
+    """Return ``True`` when ``value`` looks like an array."""
+
+    if value is None:
+        return False
+
+    return hasattr(value, "__getitem__") and hasattr(value, "shape") and hasattr(value, "dtype")
 
 
 def validate_dataobj(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> None:
     """Strict validator for data objects.
 
-    Enforces that ``value`` is present and is a NumPy array with exactly 4
-    dimensions (``ndim == 4``).
+    Enforces that ``value`` is present and exposes array-like properties with
+    exactly 4 dimensions (``ndim == 4``).
 
     This function is intended for use as an attrs-style validator.
 
@@ -204,7 +251,7 @@ def validate_dataobj(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> No
     if value is None:
         raise ValueError(DATAOBJ_ABSENCE_ERROR_MSG)
 
-    if not isinstance(value, np.ndarray):
+    if not _is_array_like(value):
         raise TypeError(DATAOBJ_OBJECT_ERROR_MSG)
 
     if not _has_ndim(value, 4):
@@ -247,7 +294,7 @@ def validate_affine(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> Non
         raise ValueError(AFFINE_SHAPE_ERROR_MSG)
 
 
-@attrs.define(slots=True)
+@attrs.define(slots=True, eq=False)
 class BaseDataset(Generic[Unpack[Ts]]):
     """
     Base dataset representation structure.
@@ -264,10 +311,10 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
     """
 
-    dataobj: np.ndarray = attrs.field(
+    dataobj: _ArrayLike = attrs.field(
         default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=validate_dataobj
     )
-    """A :obj:`~numpy.ndarray` object for the data array."""
+    """A 4D array-like object for the data array."""
     affine: np.ndarray = attrs.field(
         default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=validate_affine
     )
@@ -287,6 +334,10 @@ class BaseDataset(Generic[Unpack[Ts]]):
         eq=False,
     )
     """A path to an HDF5 file to store the whole dataset."""
+    _file_handle: h5py.File | None = attrs.field(default=None, repr=False, eq=False)
+    """An open HDF5 file handle keeping :attr:`dataobj` alive when using HDF5-backed arrays."""
+    _mmap_path: Path | None = attrs.field(default=None, repr=False, eq=False)
+    """Path to a memory-mapped file backing :attr:`dataobj`, when available."""
 
     def __attrs_post_init__(self) -> None:
         """Enforce basic consistency of base dataset fields at instantiation
@@ -304,9 +355,47 @@ class BaseDataset(Generic[Unpack[Ts]]):
                     )
                 )
 
+        if self._file_handle is None and isinstance(self.dataobj, h5py.Dataset):
+            # Pin the open handle to ensure slices remain readable
+            try:
+                self._file_handle = self.dataobj.file  # type: ignore[assignment]
+            except Exception:
+                self._file_handle = None
+
+        if self._mmap_path is None and isinstance(self.dataobj, np.memmap):
+            try:
+                filename = getattr(self.dataobj, "filename", None)
+                if filename:
+                    self._mmap_path = Path(filename)
+            except Exception:
+                self._mmap_path = None
+
     def __len__(self) -> int:
         """Obtain the number of volumes/frames in the dataset."""
         return self.dataobj.shape[-1]
+
+    def __eq__(self, other: object) -> bool:
+        if type(self) is not type(other):
+            return NotImplemented
+
+        assert isinstance(other, BaseDataset)
+
+        base_equal = all(
+            (
+                _cmp(self.dataobj, other.dataobj),
+                _cmp(self.affine, other.affine),
+                _cmp(self.brainmask, other.brainmask),
+                _cmp(self.motion_affines, other.motion_affines),
+                self.datahdr == other.datahdr,
+            )
+        )
+
+        return base_equal and self._eq_extras(other)
+
+    def _eq_extras(self, other: BaseDataset) -> bool:
+        """Additional equality checks implemented by subclasses."""
+
+        return True
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[Unpack[Ts]]:
         """
@@ -372,7 +461,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
         return np.prod(self.dataobj.shape[:3])
 
     @classmethod
-    def from_filename(cls, filename: Path | str) -> Self:
+    def from_filename(cls, filename: Path | str, *, keep_file_open: bool = False) -> Self:
         """
         Read an HDF5 file from disk and create a BaseDataset.
 
@@ -380,6 +469,11 @@ class BaseDataset(Generic[Unpack[Ts]]):
         ----------
         filename : :obj:`os.pathlike`
             The HDF5 file path to read.
+        keep_file_open : :obj:`bool`, optional
+            When ``True``, keep the HDF5 file handle open and store datasets
+            directly to enable on-demand slicing without loading the full array
+            into memory. When ``False`` (default), datasets are eagerly read
+            into NumPy arrays.
 
         Returns
         -------
@@ -387,14 +481,35 @@ class BaseDataset(Generic[Unpack[Ts]]):
             The constructed dataset with data loaded from the file.
 
         """
+        filename = Path(filename)
+        if keep_file_open:
+            in_file = h5py.File(filename, "r")
+            root = in_file["/0"]
+            data = {k: v for k, v in root.items() if not k.startswith("_")}
+            data["affine"] = np.asarray(root["affine"])  # ensure validator requirements
+            data["file_handle"] = in_file
+            data["filepath"] = filename
+            return cls(**data)
+
         with h5py.File(filename, "r") as in_file:
             root = in_file["/0"]
             data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}
+            data["filepath"] = filename
+
         return cls(**data)
 
     def get_filename(self) -> Path:
         """Get the filepath of the HDF5 file."""
         return self._filepath
+
+    def close(self) -> None:
+        """Close any open backing resources held by this dataset."""
+
+        if self._file_handle is not None:
+            try:
+                self._file_handle.close()
+            finally:
+                self._file_handle = None
 
     def set_transform(self, index: int, affine: np.ndarray) -> None:
         """
@@ -528,7 +643,7 @@ def to_nifti(
 
     if dataset.motion_affines is not None:  # resampling is needed
         reference = ImageGrid(shape=dataset.dataobj.shape[:3], affine=dataset.affine)
-        resampled = np.empty_like(dataset.dataobj, dtype=dataset.dataobj.dtype)
+        resampled = np.empty(dataset.dataobj.shape, dtype=dataset.dataobj.dtype)
         xforms = LinearTransformsMapping(dataset.motion_affines, reference=reference)
 
         # This loop could be replaced by nitransforms.resampling.apply() when
@@ -548,7 +663,7 @@ def to_nifti(
                 out_root = out_root.parent / out_root.name.replace("".join(out_root.suffixes), "")
                 xform.to_filename(out_root.with_suffix(".x5"))
     else:
-        resampled = dataset.dataobj
+        resampled = np.asanyarray(dataset.dataobj)
 
         if write_hmxfms:
             warn(

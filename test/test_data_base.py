@@ -29,6 +29,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
+import h5py
 import nibabel as nb
 import numpy as np
 import pytest
@@ -339,6 +340,40 @@ def test_to_filename_and_from_filename(random_dataset: BaseDataset):
         assert ds2.affine.shape == (4, 4)
         # Ensure the data is the same
         assert np.allclose(random_dataset.dataobj, ds2.dataobj)
+
+
+def test_from_filename_keep_file_open(random_dataset: BaseDataset, tmp_path: Path):
+    h5_file = tmp_path / f"lazy_dataset{NFDH5_EXT}"
+    random_dataset.to_filename(h5_file)
+
+    dataset = BaseDataset.from_filename(h5_file, keep_file_open=True)
+
+    try:
+        assert isinstance(dataset.dataobj, h5py.Dataset)
+        assert dataset._file_handle is not None
+        assert dataset._file_handle.id.valid
+        assert dataset.get_filename() == h5_file
+    finally:
+        dataset.close()
+
+
+def test_hdf5_dataset_pins_file_handle(tmp_path: Path):
+    h5_path = tmp_path / "backed.h5"
+    h5_file = h5py.File(h5_path, "w")
+
+    try:
+        dset = h5_file.create_dataset("dataobj", data=np.zeros((2, 2, 2, 1), dtype=np.float32))
+        dataset = BaseDataset(dataobj=dset, affine=np.eye(4))
+
+        assert dataset._file_handle is not None
+        assert dataset._file_handle.filename == h5_file.filename
+
+        dataset.close()
+        assert dataset._file_handle is None
+        assert not h5_file.id.valid
+    finally:
+        if h5_file.id.valid:
+            h5_file.close()
 
 
 def test_object_to_nifti(random_dataset: BaseDataset):
