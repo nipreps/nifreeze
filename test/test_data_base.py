@@ -27,6 +27,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
+import h5py
 import nibabel as nb
 import numpy as np
 import pytest
@@ -241,6 +242,20 @@ def test_to_filename_and_from_filename(random_dataset: BaseDataset):
         # Ensure the data is the same
         assert np.allclose(random_dataset.dataobj, ds2.dataobj)
 
+
+def test_from_filename_keep_file_open_maintains_affine(random_dataset: BaseDataset):
+    """Loading with ``keep_file_open`` should not trip affine validation."""
+
+    with TemporaryDirectory() as tmpdir:
+        h5_file = Path(tmpdir) / f"test_dataset{NFDH5_EXT}"
+        random_dataset.to_filename(h5_file)
+
+        ds2: BaseDataset[Any] = BaseDataset.from_filename(h5_file, keep_file_open=True)
+
+        assert isinstance(ds2.dataobj, h5py.Dataset)
+        np.testing.assert_array_equal(ds2.affine, random_dataset.affine)
+
+        ds2.close()
 
 def test_to_nifti(random_dataset: BaseDataset):
     """Test writing a dataset to a NIfTI file."""
