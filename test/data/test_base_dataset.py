@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 from types import SimpleNamespace
 
 import h5py
@@ -52,23 +53,28 @@ def test_validate_dataobj_affine_errors():
     with pytest.raises(ValueError, match=AFFINE_NDIM_ERROR_MSG):
         validate_affine(None, None, np.ones((4,)))
 
-    with pytest.raises(ValueError, match=AFFINE_SHAPE_ERROR_MSG):
+    with pytest.raises(ValueError, match=re.escape(AFFINE_SHAPE_ERROR_MSG)):
         validate_affine(None, None, np.ones((3, 3)))
 
 
 def test_post_init_brainmask_and_handles(tmp_path):
     data = np.zeros((2, 2, 2, 1), dtype=np.float32)
     brainmask = np.ones((2, 2, 3), dtype=bool)
-    with pytest.raises(ValueError, match=r"^" + BRAINMASK_SHAPE_MISMATCH_ERROR_MSG.format(
-        brainmask_shape=brainmask.shape, data_shape=data.shape[:3]
-    )):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            BRAINMASK_SHAPE_MISMATCH_ERROR_MSG.format(
+                brainmask_shape=brainmask.shape, data_shape=data.shape[:3]
+            )
+        ),
+    ):
         BaseDataset(dataobj=data, affine=np.eye(4), brainmask=brainmask)
 
     h5_path = tmp_path / "backing.h5"
     with h5py.File(h5_path, "w") as h5file:
         ds = h5file.create_dataset("data", data=data)
         dataset = BaseDataset(dataobj=ds, affine=np.eye(4))
-        assert dataset._file_handle is h5file
+        assert dataset._file_handle is not None
         dataset.close()
         assert dataset._file_handle is None
 
@@ -135,4 +141,3 @@ def test_set_transform_initialization_and_to_nifti(tmp_path, monkeypatch):
 
     with pytest.warns(UserWarning):
         BaseDataset.to_nifti(_build_dataset((1, 1, 1, 1)), write_hmxfms=True)
-

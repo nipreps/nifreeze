@@ -65,7 +65,8 @@ AFFINE_NDIM_ERROR_MSG = "BaseDataset 'affine' must be a 2D array"
 AFFINE_SHAPE_ERROR_MSG = "BaseDataset 'affine' must be a 2D numpy array (4 x 4)"
 """BaseDataset initialization affine shape error message."""
 
-BRAINMASK_SHAPE_MISMATCH_ERROR_MSG = "BaseDataset 'brainmask' shape ({brainmask_shape}) does not match dataset volumes ({data_shape})."
+BRAINMASK_SHAPE_MISMATCH_ERROR_MSG = """BaseDataset 'brainmask' shape \
+({brainmask_shape}) does not match dataset volumes ({data_shape})."""
 """BaseDataset brainmask shape mismatch error message."""
 
 
@@ -193,12 +194,10 @@ class _ArrayLike(Protocol):
     """Minimal protocol for array-like objects used by :class:`BaseDataset`."""
 
     @property
-    def shape(self) -> tuple[int, ...]:
-        ...
+    def shape(self) -> tuple[int, ...]: ...
 
     @property
-    def dtype(self) -> Any:
-        ...
+    def dtype(self) -> Any: ...
 
     def __getitem__(self, key: Any) -> Any:  # pragma: no cover - structural protocol
         ...
