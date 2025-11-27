@@ -663,15 +663,25 @@ def test_equality_operator(tmp_path, setup_random_dwi_data):
         bzero=b0_dataobj,
     )
 
+    # Get all user-defined, named attributes
+    attrs_to_check = [
+        a.name for a in attrs.fields(DWI) if not a.name.startswith("_") and not a.name.isdigit()
+    ]
+
     # Sanity checks (element-wise)
-    assert np.allclose(dwi_obj_direct.dataobj, dwi_obj_from_nii.dataobj)
-    assert np.allclose(dwi_obj_direct.affine, dwi_obj_from_nii.affine)
-    if dwi_obj_direct.brainmask is None or dwi_obj_from_nii.brainmask is None:
-        assert dwi_obj_direct.brainmask is None
-        assert dwi_obj_from_nii.brainmask is None
-    else:
-        assert np.array_equal(dwi_obj_direct.brainmask, dwi_obj_from_nii.brainmask)
-    assert np.allclose(dwi_obj_direct.gradients, dwi_obj_from_nii.gradients)
+    for attr_name in attrs_to_check:
+        val_direct = getattr(dwi_obj_direct, attr_name)
+        val_from_nii = getattr(dwi_obj_from_nii, attr_name)
+
+        if val_direct is None or val_from_nii is None:
+            assert val_direct is None and val_from_nii is None, f"{attr_name} mismatch"
+        else:
+            if isinstance(val_direct, np.ndarray):
+                assert val_direct.shape == val_from_nii.shape
+                assert np.allclose(val_direct, val_from_nii), f"{attr_name} arrays differ"
+            else:
+                assert val_direct == val_from_nii, f"{attr_name} values differ"
+
     # Properties derived from gradients should also match
     assert np.allclose(dwi_obj_direct.bvals, dwi_obj_from_nii.bvals)
     assert np.allclose(dwi_obj_direct.bvecs, dwi_obj_from_nii.bvecs)
