@@ -83,7 +83,7 @@ class DummyPETDataset(BaseDataset):
         self.affine = affine
         self.brainmask = brainmask_dataobj
         self.midrame = midrame
-        self.gradients = total_duration
+        self.total_duration = total_duration
         self.uptake = np.sum(pet_dataobj.reshape(-1, pet_dataobj.shape[-1]), axis=0)
 
     def __len__(self):
