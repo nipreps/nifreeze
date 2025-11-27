@@ -72,11 +72,11 @@ def load(
 
         raise TypeError("Could not read data")
 
-    if "gradients_file" in kwargs or "bvec_file" in kwargs:
+    if {"gradients_file", "bvec_file"} & set(kwargs):
         from nifreeze.data.dmri import from_nii as dmri_from_nii
 
         return dmri_from_nii(filename, brainmask_file=brainmask_file, **kwargs)
-    elif "frame_time" in kwargs or "frame_duration" in kwargs:
+    elif {"frame_time", "frame_duration"} & set(kwargs):
         from nifreeze.data.pet import from_nii as pet_from_nii
 
         return pet_from_nii(filename, brainmask_file=brainmask_file, **kwargs)
