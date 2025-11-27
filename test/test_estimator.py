@@ -78,19 +78,19 @@ class DummyDWIDataset(BaseDataset):
 
 
 class DummyPETDataset(BaseDataset):
-    def __init__(self, pet_dataobj, affine, brainmask_dataobj, midrame, total_duration):
+    def __init__(self, pet_dataobj, affine, brainmask_dataobj, midframe, total_duration):
         self.dataobj = pet_dataobj
         self.affine = affine
         self.brainmask = brainmask_dataobj
-        self.midrame = midrame
-        self.gradients = total_duration
+        self.midframe = midframe
+        self.total_duration = total_duration
         self.uptake = np.sum(pet_dataobj.reshape(-1, pet_dataobj.shape[-1]), axis=0)
 
     def __len__(self):
         return self.dataobj.shape[-1]
 
     def __getitem__(self, idx):
-        return self.dataobj[..., idx], None, self.midrame[idx]
+        return self.dataobj[..., idx], None, self.midframe[idx]
 
 
 def test_estimator_init_model_instance(request):
