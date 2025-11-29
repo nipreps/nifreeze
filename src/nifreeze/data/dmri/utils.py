@@ -106,7 +106,7 @@ def find_shelling_scheme(
 
     # Bin the b-values: use -1 as the lower bound to be able to appropriately
     # include b0 values
-    hist, bin_edges = np.histogram(bvals, bins=num_bins, range=(-1, min(max(bvals), bval_cap)))
+    _, bin_edges = np.histogram(bvals, bins=num_bins, range=(-1, min(max(bvals), bval_cap)))
 
     # Collect values in each bin
     bval_groups = []
