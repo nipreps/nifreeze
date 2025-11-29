@@ -23,6 +23,7 @@
 """Unit tests exercising the dMRI data structure."""
 
 import re
+import warnings
 from pathlib import Path
 
 import attrs
@@ -40,6 +41,7 @@ from nifreeze.data.dmri.io import (
     GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG,
     GRADIENT_DATA_MISSING_ERROR,
     from_nii,
+    to_nifti,
 )
 from nifreeze.data.dmri.utils import (
     DEFAULT_LOWB_THRESHOLD,
@@ -604,6 +606,164 @@ def test_load_gradients_missing(tmp_path, setup_random_dwi_data):
 
     with pytest.raises(RuntimeError, match=re.escape(GRADIENT_DATA_MISSING_ERROR)):
         from_nii(dwi_fname)
+
+
+@pytest.mark.parametrize("vol_size", [(4, 4, 5)])
+@pytest.mark.parametrize("b0_count", [0, 1])
+@pytest.mark.parametrize("bval_min, bval_max", [(800.0, 1200.0)])
+@pytest.mark.parametrize("provide_bzero", [False, True])
+@pytest.mark.parametrize("insert_b0", [False, True])
+@pytest.mark.parametrize("motion_affines", [None, 2 * np.eye(4)])
+@pytest.mark.parametrize("bvals_dec_places, bvecs_dec_places", [(2, 6), (1, 4)])
+@pytest.mark.parametrize("file_basename", [None, "dwi.nii.gz"])
+def test_to_nifti(
+    request,
+    tmp_path,
+    monkeypatch,
+    vol_size,
+    b0_count,
+    bval_min,
+    bval_max,
+    provide_bzero,
+    insert_b0,
+    motion_affines,
+    bvals_dec_places,
+    bvecs_dec_places,
+    file_basename,
+):
+    rng = request.node.rng
+
+    # Choose n_vols safely above the minimum DTI orientations
+    n_vols = max(10, DTI_MIN_ORIENTATIONS + 2)
+
+    # Build b-values array: first b0_count are zeros
+    non_b0_count = n_vols - b0_count
+    # Sample non-b0 bvals between min and max values
+    rest_bvals = rng.uniform(bval_min, bval_max, size=non_b0_count)
+    bvals = np.concatenate((np.zeros(b0_count), rest_bvals)).astype(int)
+
+    # Create bvecs and assemble gradients
+    bzeros = np.zeros((b0_count, 3))
+    bvecs = normalized_vector(rng.random((3, non_b0_count)), axis=0).T
+    bvecs = np.vstack((bzeros, bvecs))
+    gradients = np.column_stack((bvecs, bvals))
+
+    # Create random dataobj with shape
+    dataobj = rng.standard_normal((*vol_size, n_vols)).astype(float)
+
+    # Optionally supply a bzero
+    provided = None
+    affine = np.eye(4)
+    _motion_affines = (
+        np.stack([motion_affines] * non_b0_count) if motion_affines is not None else None
+    )
+    if provide_bzero:
+        # Use a constant map so it's easy to assert equality
+        provided = np.full((*vol_size, max(1, b0_count)), 42.0, dtype=float).squeeze()
+        dwi_obj = DWI(
+            dataobj=dataobj,
+            affine=affine,
+            motion_affines=_motion_affines,
+            gradients=gradients,
+            bzero=provided,
+        )
+    else:
+        dwi_obj = DWI(
+            dataobj=dataobj, affine=affine, motion_affines=_motion_affines, gradients=gradients
+        )
+
+    _filename = tmp_path / file_basename if file_basename is not None else file_basename
+
+    # Monkeypatch the to_nifti alias to only perform essential operations for
+    # the purpose of this test
+    def simple_to_nifti(_dataset, filename=None, write_hmxfms=None, order=None):
+        _ = write_hmxfms
+        _ = order
+        _nii = nb.Nifti1Image(_dataset.dataobj, _dataset.affine)
+        if filename is not None:
+            _nii.to_filename(filename)
+        return _nii
+
+    monkeypatch.setattr("nifreeze.data.dmri.io._base_to_nifti", simple_to_nifti)
+
+    with warnings.catch_warnings(record=True) as caught:
+        nii = to_nifti(
+            dwi_obj,
+            _filename,
+            write_hmxfms=False,
+            order=3,
+            insert_b0=insert_b0,
+            bvals_dec_places=bvals_dec_places,
+            bvecs_dec_places=bvecs_dec_places,
+        )
+
+    no_bzero = dwi_obj.bzero is None or not insert_b0
+
+    # Check the warning
+    if no_bzero:
+        if insert_b0:
+            assert (
+                str(caught[0].message)
+                == "Ignoring ``insert_b0`` argument as the data object's bzero field is unset"
+            )
+
+    bvecs_dwi = dwi_obj.bvecs
+    bvals_dwi = dwi_obj.bvals
+    # Transform bvecs if motion affines are present
+    if dwi_obj.motion_affines is not None:
+        rotated = [
+            transform_fsl_bvec(_bvec, _affine, dwi_obj.affine, invert=True)
+            for _bvec, _affine in zip(bvecs_dwi, dwi_obj.motion_affines, strict=True)
+        ]
+        bvecs_dwi = np.asarray(rotated)
+
+    # Check the primary NIfTI output
+    _dataobj = dwi_obj.dataobj
+    # Concatenate the b0 if the primary data has a b0 volume or if it was
+    # requested to do so
+    if not no_bzero:
+        assert dwi_obj.bzero is not None
+        # ToDo
+        # The code will concatenate as many zeros as they exist to the data
+        _dataobj = np.concatenate((dwi_obj.bzero[..., np.newaxis], dwi_obj.dataobj), axis=-1)
+        # But when inserting b0 data to the gradients, it inserts a single b0.
+        # Here I will insert as many values as b0 volumes to make the test fail
+        dwi_b0_count = dwi_obj.bzero.shape[-1] if dwi_obj.bzero.ndim == 4 else 1
+        bvals_dwi = np.concatenate((np.zeros(dwi_b0_count), bvals_dwi))
+        bvecs_dwi = np.vstack((np.zeros((dwi_b0_count, bvecs_dwi.shape[1])), bvecs_dwi))
+
+    assert isinstance(nii, nb.Nifti1Image)
+    assert np.allclose(nii.get_fdata(), _dataobj)
+    assert np.allclose(nii.affine, dwi_obj.affine)
+
+    # Check the written files, if any
+    if _filename is None:
+        assert not any(tmp_path.iterdir()), "Directory is not empty"
+    else:
+        # Check the written NIfTI file
+        assert _filename.is_file()
+
+        _nii_load = load_api(_filename, nb.Nifti1Image)
+
+        # Build a NIfTI file with the data object that potentially contains
+        # concatenated b0 data
+        _nii_dataobj = nb.Nifti1Image(_dataobj, nii.affine, nii.header)
+
+        np.allclose(_nii_dataobj.get_fdata(), _nii_load.get_fdata())
+        np.allclose(_nii_dataobj.affine, _nii_load.affine)
+
+        # Check gradients
+        bvecs_file = _filename.with_suffix("").with_suffix(".bvec")
+        bvals_file = _filename.with_suffix("").with_suffix(".bval")
+        assert bvals_file.is_file()
+        assert bvecs_file.is_file()
+
+        # Read the files
+        bvals_from_file = np.loadtxt(bvals_file)
+        bvecs_from_file = np.loadtxt(bvecs_file).T
+
+        assert np.allclose(bvals_from_file, bvals_dwi, rtol=0, atol=10**-bvals_dec_places)
+        assert np.allclose(bvecs_from_file, bvecs_dwi, rtol=0, atol=10**-bvecs_dec_places)
 
 
 @pytest.mark.skip(reason="to_nifti takes absurdly long")
