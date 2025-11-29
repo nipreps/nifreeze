@@ -29,6 +29,7 @@ import attrs
 import nibabel as nb
 import numpy as np
 import pytest
+from dipy.core.geometry import normalized_vector
 
 from nifreeze.data import load
 from nifreeze.data.dmri.base import (
@@ -41,6 +42,7 @@ from nifreeze.data.dmri.io import (
     from_nii,
 )
 from nifreeze.data.dmri.utils import (
+    DEFAULT_LOWB_THRESHOLD,
     DTI_MIN_ORIENTATIONS,
     GRADIENT_ABSENCE_ERROR_MSG,
     GRADIENT_EXPECTED_COLUMNS_ERROR_MSG,
@@ -176,8 +178,20 @@ def test_format_gradients_basic(value, expect_transpose):
         assert np.allclose(obtained, np.asarray(value))
 
 
-@pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
-def test_dwi_post_init_errors(setup_random_uniform_spatial_data):
+@pytest.mark.parametrize(
+    "case_mark",
+    [
+        pytest.param(
+            None,
+            marks=pytest.mark.random_uniform_spatial_data((2, 2, 2, 6), 0.0, 1.0),
+        ),
+        pytest.param(
+            None,
+            marks=pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0),
+        ),
+    ],
+)
+def test_dwi_post_init_errors(setup_random_uniform_spatial_data, case_mark):
     data, affine = setup_random_uniform_spatial_data
     with pytest.raises(ValueError, match=GRADIENT_ABSENCE_ERROR_MSG):
         DWI(dataobj=data, affine=affine)
@@ -187,6 +201,89 @@ def test_dwi_post_init_errors(setup_random_uniform_spatial_data):
         match=f"DWI datasets must have at least {DTI_MIN_ORIENTATIONS} diffusion-weighted",
     ):
         DWI(dataobj=data, affine=affine, gradients=B_MATRIX[: data.shape[-1], :])
+
+
+@pytest.mark.parametrize("vol_size", [(11, 11, 7)])
+@pytest.mark.parametrize("b0_count", [0, 1])
+@pytest.mark.parametrize("bval_min, bval_max", [(800.0, 1200.0)])
+@pytest.mark.parametrize("provide_bzero", [False, True])
+def test_dwi_post_init_b0_handling(request, vol_size, b0_count, bval_min, bval_max, provide_bzero):
+    """Check b0 handling when instantiating the DWI class.
+
+    For each parameter combination:
+      - Build a gradient table whose first `b0_count` volumes have b=0
+        and the rest have b-values in the range (bvalmin, bvalmax);
+      - Build a random dataobj of shape (**vol_size, N) where N is the number
+        of DWI volumes;
+      - If `provide_bzero` is True, pass explicit bzero data that must be
+        preserved; else, rely on the bzero computed at instantiation, i.e.
+        if a single bzero is provided, set the attribute to that value; if there
+        are multiple bzeros, set the attribute to the median value.
+    """
+    rng = request.node.rng
+
+    # Choose n_vols safely above the minimum DTI orientations
+    n_vols = max(10, DTI_MIN_ORIENTATIONS + 2)
+
+    # Build b-values array: first b0_count are zeros
+    non_b0_count = n_vols - b0_count
+    # Sample non-b0 bvals between min and max values
+    rest_bvals = rng.uniform(bval_min, bval_max, size=non_b0_count)
+    bvals = np.concatenate((np.zeros(b0_count), rest_bvals)).astype(int)
+
+    # Create bvecs and assemble gradients
+    bzeros = np.zeros((b0_count, 3))
+    bvecs = normalized_vector(rng.random((3, non_b0_count)), axis=0).T
+    bvecs = np.vstack((bzeros, bvecs))
+    gradients = np.column_stack((bvecs, bvals))
+
+    # Create random dataobj with shape
+    dataobj = rng.standard_normal((*vol_size, n_vols)).astype(float)
+
+    # Optionally supply a bzero
+    provided = None
+    affine = np.eye(4)
+    if provide_bzero:
+        # Use a constant map so it's easy to assert equality
+        provided = np.full((*vol_size, max(1, b0_count)), 42.0, dtype=float).squeeze()
+        dwi_obj = DWI(dataobj=dataobj, affine=affine, gradients=gradients, bzero=provided)
+    else:
+        dwi_obj = DWI(dataobj=dataobj, affine=affine, gradients=gradients)
+
+    # Count expected b0 frames according to the same threshold used by the code
+    b0_mask = bvals <= DEFAULT_LOWB_THRESHOLD
+    expected_b0_num = int(np.sum(b0_mask))
+    # In all cases where b0 frames existed (whether provided externally or not),
+    # they should have been removed from the DWI object's internal gradients and
+    # dataobj arrays
+    expected_non_b0_count = n_vols - expected_b0_num
+
+    # If no b0 frames expected, bzero should be None (unless user provided one)
+    if expected_b0_num == 0 and not provide_bzero:
+        assert dwi_obj.bzero is None, (
+            "Expected bzero to be None when no low-b frames and no provided bzero"
+        )
+    else:
+        assert dwi_obj.bzero is not None
+        # If provided_bzero is True, it must be preserved exactly
+        if provide_bzero:
+            assert provided is not None
+            assert np.allclose(dwi_obj.bzero, provided)
+        else:
+            # When there are b0 frames and no provided bzero:
+            #  - If exactly one b0 frame, the stored bzero should be the 3D volume
+            #  - If multiple b0 frames, the stored bzero should be the median along last axis
+            b0_vols = dataobj[
+                ..., b0_mask
+            ].squeeze()  # shape (X,Y,Z,expected_b0_num) or (X,Y,Z) if 1
+            expected_bzero = b0_vols if b0_vols.ndim == 3 else np.median(b0_vols, axis=-1)
+            assert np.allclose(dwi_obj.bzero, expected_bzero)
+
+    assert dwi_obj.gradients.shape[0] == expected_non_b0_count
+    assert dwi_obj.dataobj.shape[-1] == expected_non_b0_count
+
+    assert np.allclose(dwi_obj.gradients, gradients[~b0_mask])
+    assert np.allclose(dwi_obj.dataobj, dataobj[..., ~b0_mask])
 
 
 @pytest.mark.random_gtab_data(10, (1000, 2000), 2)
