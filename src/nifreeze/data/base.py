@@ -501,6 +501,8 @@ def to_nifti(
 
     Parameters
     ----------
+    dataset : :obj:`~nifreeze.data.base.BaseDataset`
+        The dataset to serialize.
     filename : :obj:`os.pathlike`, optional
         The output NIfTI file path.
     write_hmxfms : :obj:`bool`, optional
