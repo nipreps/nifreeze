@@ -48,9 +48,18 @@ The :class:`~nifreeze.data.dmri.base.DWI` class requires a ``dataobj`` that can 
 object.
 The final step of the initialization process examines the data object and the gradient table,
 and removes :math:`b=0` volumes from the data **AND** the gradient table.
+If a ``bzero`` parameter is provided, the :attr:`~nifreeze.data.dmri.base.DWI.bzero` attribute
+is set to its value. Note that a 3D volume is accepted.
 If no ``bzero`` parameter is provided, a reference low-b volume is computed as the median of all
 the low-b volumes (``b <`` :data:`~nifreeze.data.dmri.utils.DEFAULT_LOWB_THRESHOLD` s/mm²) and
 inserted in the :attr:`~nifreeze.data.dmri.base.DWI.bzero` attribute.
+If :math:`b=0` values are detected in the gradient table the :attr:`~nifreeze.data.dmri.base.DWI.dataobj`
+and :attr:`~nifreeze.data.dmri.base.DWI.gradients` attributes will have their :math:`b=0` indices
+data removed.
+If both a ``bzero`` value is provided and :math:`b=0` values are detected in the gradient
+table, the `:math:`b=0` volumes will be discarded, and the corresponding
+:attr:`~nifreeze.data.dmri.base.DWI.dataobj` and :attr:`~nifreeze.data.dmri.base.DWI.gradients`
+indices data will be removed.
 Therefore, ***NiFreeze* WILL NOT be able to reconstruct the original data organization**.
 This design choice simplifies the internal representation and processing of diffusion MRI data.
 If you want to calculate a :math:`b=0` reference map in a more sophisticated way (e.g., after

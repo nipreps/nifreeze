@@ -23,6 +23,7 @@
 """Unit tests exercising models."""
 
 import contextlib
+import warnings
 from typing import List
 
 import numpy as np
@@ -32,6 +33,7 @@ from dipy.sims.voxel import single_tensor
 from nifreeze import model
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.dmri import DWI
+from nifreeze.data.dmri.base import DWI_REDUNDANT_B0_WARN_MSG
 from nifreeze.data.dmri.utils import (
     DEFAULT_LOWB_THRESHOLD,
     DEFAULT_MAX_S0,
@@ -282,13 +284,16 @@ def test_dti_model(setup_random_dwi_data):
         _,
     ) = setup_random_dwi_data
 
-    dataset = DWI(
-        dataobj=dwi_dataobj,
-        affine=affine,
-        brainmask=brainmask_dataobj,
-        bzero=b0_dataobj,
-        gradients=gradients,
-    )
+    # Ignore warning due to redundant b0 volumes
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=DWI_REDUNDANT_B0_WARN_MSG, category=UserWarning)
+        dataset = DWI(
+            dataobj=dwi_dataobj,
+            affine=affine,
+            brainmask=brainmask_dataobj,
+            bzero=b0_dataobj,
+            gradients=gradients,
+        )
 
     dtimodel = model.DTIModel(dataset)
     predicted = dtimodel.fit_predict(4)
@@ -349,13 +354,16 @@ def test_factory_avgdwi_variants(monkeypatch, name, setup_random_dwi_data):
         _,
     ) = setup_random_dwi_data
 
-    dataset = DWI(
-        dataobj=dwi_dataobj,
-        affine=affine,
-        brainmask=brainmask_dataobj,
-        bzero=b0_dataobj,
-        gradients=gradients,
-    )
+    # Ignore warning due to redundant b0 volumes
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=DWI_REDUNDANT_B0_WARN_MSG, category=UserWarning)
+        dataset = DWI(
+            dataobj=dwi_dataobj,
+            affine=affine,
+            brainmask=brainmask_dataobj,
+            bzero=b0_dataobj,
+            gradients=gradients,
+        )
 
     # Dummy class to simulate AverageDWIModel
     class DummyAvgDWI:

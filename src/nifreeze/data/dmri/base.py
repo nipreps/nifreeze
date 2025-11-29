@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from warnings import warn
 
 import attrs
 import h5py
@@ -46,6 +47,22 @@ from nifreeze.data.dmri.utils import (
     find_shelling_scheme,
     format_gradients,
 )
+
+BZERO_SHAPE_MISMATCH_ERROR_MSG = """\
+DWI 'bzero' shape ({bzero_shape}) does not match dataset volumes ({data_shape}). \
+If you have multiple b0 volumes, either provide one of them or provide a single, \
+representative b0."""
+"""DWI bzero shape mismatch error message."""
+
+DWI_B0_MULTIPLE_VOLUMES_WARN_MSG = """\
+The DWI data contains multiple b0 volumes; computing median across them."""
+"""DWI bzero shape mismatch warning message."""
+
+DWI_REDUNDANT_B0_WARN_MSG = """\
+The DWI data contains b0 volumes, but the 'bzero' attribute was set. DWI b0 "
+volumes will be discarded, and the corresponding 'dataobj' and 'gradient' data \
+removed."""
+"""DWI b0 and bzero provided warning message."""
 
 
 def validate_gradients(
@@ -128,12 +145,33 @@ class DWI(BaseDataset[np.ndarray]):
                     n_gradients=self.gradients.shape[0],
                 )
             )
+        # Ensure that if b0 data were provided, it is a 3D array with the same
+        # shape as the DWI data object
+        if self.bzero is not None:
+            if self.bzero.shape != tuple(self.dataobj.shape[:3]):
+                raise ValueError(
+                    BZERO_SHAPE_MISMATCH_ERROR_MSG.format(
+                        bzero_shape=self.bzero.shape, data_shape=self.dataobj.shape[:3]
+                    )
+                )
 
         b0_mask = self.gradients[:, -1] <= DEFAULT_LOWB_THRESHOLD
         b0_num = np.sum(b0_mask)
 
+        bzeros = None
+        # Warn the user if multiple b0 volumes were found in the DWI data and
+        # no bzero attribute was provided; warn the user if both the DWI
+        # contained b0 values and the bzero attribute was provided
         if b0_num > 0 and self.bzero is None:
+            warn(DWI_B0_MULTIPLE_VOLUMES_WARN_MSG, UserWarning) if b0_num > 1 else None
             bzeros = self.dataobj[..., b0_mask]
+            bzeros = bzeros.squeeze(axis=-1) if bzeros.shape[-1] == 1 else bzeros
+        elif b0_num > 0 and self.bzero is not None:
+            warn(DWI_REDUNDANT_B0_WARN_MSG, UserWarning)
+            bzeros = self.bzero
+
+        # Set the bzero attribute to the median if necessary
+        if bzeros is not None:
             self.bzero = bzeros if bzeros.ndim == 3 else np.median(bzeros, axis=-1)
 
         if b0_num > 0:
