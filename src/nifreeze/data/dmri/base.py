@@ -133,7 +133,7 @@ class DWI(BaseDataset[np.ndarray]):
         b0_num = np.sum(b0_mask)
 
         if b0_num > 0 and self.bzero is None:
-            bzeros = self.dataobj[..., b0_mask]
+            bzeros = self.dataobj[..., b0_mask].squeeze()
             self.bzero = bzeros if bzeros.ndim == 3 else np.median(bzeros, axis=-1)
 
         if b0_num > 0:
