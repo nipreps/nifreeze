@@ -22,6 +22,7 @@
 #
 """Test dataset base class."""
 
+import itertools
 import re
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -43,11 +44,92 @@ from nifreeze.data.base import (
     DATAOBJ_OBJECT_ERROR_MSG,
     _has_dim_size,
     _has_ndim,
+    to_nifti,
 )
-from nifreeze.utils.ndimage import get_data
+from nifreeze.utils.ndimage import get_data, load_api
 
 DEFAULT_RANDOM_DATASET_SHAPE = (32, 32, 32, 5)
 DEFAULT_RANDOM_DATASET_SIZE = int(np.prod(DEFAULT_RANDOM_DATASET_SHAPE[:3]))
+
+
+# Dummy transform classes and functions to monkeypatch into the real module
+class DummyTransform:
+    def __init__(self, idx):
+        self.idx = idx
+
+    def to_filename(self, path):
+        # Create a tiny marker file so tests can check it was written and its
+        # contents
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"transform-{self.idx}")
+
+
+class DummyLinearTransformsMapping:
+    """A class that mimics the iterable mapping of linear transforms.
+
+    Yields DummyTransform instances when iterated. Also supports len()
+    and indexing to be interchangeable with sequence-like expectations.
+    """
+
+    def __init__(self, transforms, reference=None):
+        # Determine number of transforms in an explicit, non-broad-except way.
+        if transforms is None:
+            n = 0
+        elif hasattr(transforms, "__len__"):
+            # len() may raise TypeError for objects that do not support it
+            try:
+                n = len(transforms)
+            except TypeError:
+                # Treat non-sized objects as zero-length for this test helper
+                n = 0
+        else:
+            # Explicitly raise for unexpected types to fail fast and be explicit
+            raise TypeError("transforms must be a sequence or None")
+
+        # Return one DummyTransform per motion_affine
+        self._xforms = [DummyTransform(i) for i in range(n)]
+
+    def __iter__(self):
+        return iter(self._xforms)
+
+    def __len__(self):
+        return len(self._xforms)
+
+    def __getitem__(self, idx):
+        return self._xforms[idx]
+
+
+def dummy_apply(transforms, spatialimage, order=3):
+    """A deterministic 'resampling' that modifies the data so tests can verify
+    that apply() and the transforms mapping were actually used.
+
+    It returns a new Nifti1Image whose data is the original frame plus
+    the transform index (transforms.idx). This makes each frame distinct and
+    easily predictable.
+    """
+    data = np.asanyarray(spatialimage.dataobj).copy()
+    # Mutate in a simple, deterministic way that depends on transform index
+    data = data + int(getattr(transforms, "idx", 0))
+    return nb.Nifti1Image(data, spatialimage.affine, spatialimage.header)
+
+
+class DummyImageGrid:
+    def __init__(self, shape, affine):
+        self.shape = shape
+        self.affine = affine
+
+
+class DummyDataset(BaseDataset):
+    def __init__(self, shape, datahdr=None, motion_affines=None, dtype=np.int16):
+        self.dataobj = np.arange(np.prod(shape), dtype=dtype).reshape(shape)
+        self.affine = np.eye(4)
+        self.datahdr = datahdr
+        self.motion_affines = motion_affines
+
+    def __getitem__(self, idx):
+        # to_nifti expects dataset[idx] to return a sequence whose first item is the 3D frame
+        return (self.dataobj[..., idx],)
 
 
 @pytest.mark.parametrize(
@@ -242,7 +324,7 @@ def test_to_filename_and_from_filename(random_dataset: BaseDataset):
         assert np.allclose(random_dataset.dataobj, ds2.dataobj)
 
 
-def test_to_nifti(random_dataset: BaseDataset):
+def test_object_to_nifti(random_dataset: BaseDataset):
     """Test writing a dataset to a NIfTI file."""
     with TemporaryDirectory() as tmpdir:
         nifti_file = Path(tmpdir) / "test_dataset.nii.gz"
@@ -256,6 +338,139 @@ def test_to_nifti(random_dataset: BaseDataset):
         data = img.get_fdata(dtype=np.float32)
         assert data.shape == (32, 32, 32, 5)
         assert np.allclose(data, random_dataset.dataobj)
+
+
+import warnings
+
+
+@pytest.mark.parametrize(
+    "filename_is_none, motion_affines_present, write_hmxfms, expected_message",
+    [
+        # write_hmxfms True but no filename
+        (True, True, True, "write_hmxfms is set to True, but no filename was provided."),
+        # write_hmxfms True, filename given, but no motion affines
+        (
+            False,
+            False,
+            True,
+            "write_hmxfms is set to True, but no motion affines were found. Skipping.",
+        ),
+    ],
+)
+def test_to_nifti_warnings(
+    tmp_path, monkeypatch, filename_is_none, motion_affines_present, write_hmxfms, expected_message
+):
+    # Monkeypatch the helpers in the module where to_nifti is defined
+    import nifreeze.data.base as base_mod
+
+    monkeypatch.setattr(base_mod, "LinearTransformsMapping", DummyLinearTransformsMapping)
+    monkeypatch.setattr(base_mod, "apply", dummy_apply)
+    monkeypatch.setattr(base_mod, "ImageGrid", DummyImageGrid)
+
+    n_frames = 3
+    shape = (4, 4, 2, n_frames)
+
+    motion_affines = [np.eye(4) for _ in range(n_frames)] if motion_affines_present else None
+
+    dataset = DummyDataset(shape, datahdr=None, motion_affines=motion_affines)
+
+    filename = None
+    if not filename_is_none:
+        filename = tmp_path / "data.nii.gz"
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        _ = to_nifti(dataset, filename=filename, write_hmxfms=write_hmxfms, order=1)
+
+    assert any(expected_message in str(x.message) for x in w)
+
+
+@pytest.mark.parametrize(
+    "filename_is_none, write_hmxfms, motion_affines_present, datahdr_present",
+    list(itertools.product([True, False], repeat=4)),
+)
+def test_to_nifti(
+    tmp_path, monkeypatch, filename_is_none, write_hmxfms, motion_affines_present, datahdr_present
+):
+    # Monkeypatch the helpers in the module where to_nifti is defined
+    import nifreeze.data.base as base_mod
+
+    monkeypatch.setattr(base_mod, "LinearTransformsMapping", DummyLinearTransformsMapping)
+    monkeypatch.setattr(base_mod, "apply", dummy_apply)
+    monkeypatch.setattr(base_mod, "ImageGrid", DummyImageGrid)
+
+    n_frames = 3
+    shape = (4, 4, 2, n_frames)
+    dtype = np.int16
+
+    datahdr = None
+    if datahdr_present:
+        hdr = nb.Nifti1Header()
+        hdr.set_data_dtype(dtype)
+        datahdr = hdr
+
+    motion_affines = None
+    if motion_affines_present:
+        motion_affines = [np.eye(4) for _ in range(n_frames)]
+
+    dataset = DummyDataset(shape, datahdr=datahdr, motion_affines=motion_affines, dtype=dtype)
+
+    filename = None
+    if not filename_is_none:
+        filename = tmp_path / "data.nii.gz"
+
+    # Suppress warnings in this test
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        nii = to_nifti(dataset, filename=filename, write_hmxfms=write_hmxfms, order=1)
+
+    # Check returned data
+    assert isinstance(nii, nb.Nifti1Image)
+    assert nii.shape == dataset.dataobj.shape
+
+    expected = dataset.dataobj.copy()
+    if motion_affines_present:
+        # If motion affines are present, fake_apply adds the frame index to each
+        # frame
+        for i in range(n_frames):
+            expected[..., i] = expected[..., i] + i
+        assert np.array_equal(nii.dataobj, expected), (
+            "Resampled data should reflect fake_apply modifications"
+        )
+    else:
+        # No resampling; data should be identical to original
+        assert np.array_equal(nii.dataobj, dataset.dataobj)
+
+    # Header behavior
+    if datahdr_present:
+        assert datahdr is not None
+        assert nii.header.get_data_dtype() == datahdr.get_data_dtype()
+    else:
+        xyzt = nii.header.get_xyzt_units()
+        assert xyzt[0].lower() == "mm"
+
+    # If filename was provided, file should exist and equal to transformed data
+    if filename is not None:
+        assert filename.is_file()
+        nii_load = load_api(filename, nb.Nifti1Image)
+        assert np.array_equal(nii_load.get_fdata(), expected)
+    else:
+        assert not any(tmp_path.iterdir()), "Directory is not empty"
+
+    # When motion_affines present and write_hmxfms True and filename provided,
+    # x5 files should be written
+    if motion_affines_present and write_hmxfms and filename is not None:
+        # The same file is written at every iteration, so earlier transforms are
+        # overwritten and only the last transform remains on disk
+        found_x5 = list(tmp_path.glob("*.x5"))
+        assert len(found_x5) == 1
+        x5_path = filename.with_suffix("").with_suffix(".x5")
+        assert x5_path.is_file()
+        content = x5_path.read_text()
+        assert content == f"transform-{n_frames - 1}"
+    else:
+        found_x5 = list(tmp_path.glob("*.x5"))
+        assert len(found_x5) == 0
 
 
 def test_load_hdf5(random_dataset: BaseDataset):
