@@ -21,8 +21,10 @@
 #     https://www.nipreps.org/community/licensing/
 #
 
+import math
 import types
 
+import attrs
 import numpy as np
 import pytest
 
@@ -30,19 +32,11 @@ from nifreeze.data.pet import PET
 from nifreeze.estimator import PETMotionEstimator
 
 
-@pytest.fixture
-def random_dataset(setup_random_pet_data) -> PET:
-    """Create a PET dataset with random data for testing."""
+@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 13.0, 17.0, 30.0, 33.0]))
+def test_lofo_split_shapes(tmp_path, setup_random_pet_data):
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
 
-    (
-        pet_dataobj,
-        affine,
-        brainmask_dataobj,
-        midframe,
-        total_duration,
-    ) = setup_random_pet_data
-
-    return PET(
+    pet_obj = PET(
         dataobj=pet_dataobj,
         affine=affine,
         brainmask=brainmask_dataobj,
@@ -50,31 +44,63 @@ def random_dataset(setup_random_pet_data) -> PET:
         total_duration=total_duration,
     )
 
-
-@pytest.mark.random_pet_data(4, (2, 2, 2), np.asarray([1.0, 2.0, 3.0, 4.0]), 5.0)
-def test_lofo_split_shapes(random_dataset, tmp_path):
     idx = 2
-    (train_data, train_times), (test_data, test_time) = random_dataset.lofo_split(idx)
-    assert train_data.shape[-1] == random_dataset.dataobj.shape[-1] - 1
-    np.testing.assert_array_equal(test_data, random_dataset.dataobj[..., idx])
-    np.testing.assert_array_equal(train_times, np.delete(random_dataset.midframe, idx))
-    assert test_time == random_dataset.midframe[idx]
+    (train_data, train_times), (test_data, test_time) = pet_obj.lofo_split(idx)
+    assert train_data.shape[-1] == pet_obj.dataobj.shape[-1] - 1
+    np.testing.assert_array_equal(test_data, pet_obj.dataobj[..., idx])
+    np.testing.assert_array_equal(train_times, np.delete(pet_obj.midframe, idx))
+    assert test_time == pet_obj.midframe[idx]
 
 
-@pytest.mark.random_pet_data(3, (2, 2, 2), np.asarray([1.0, 2.0, 3.0]), 4.0)
-def test_to_from_filename_roundtrip(random_dataset, tmp_path):
+@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
+def test_to_from_filename_roundtrip(tmp_path, setup_random_pet_data):
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+
+    pet_obj = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+
     out_file = tmp_path / "petdata"
-    random_dataset.to_filename(out_file)
+    pet_obj.to_filename(out_file)
     assert (tmp_path / "petdata.h5").exists()
     loaded = PET.from_filename(tmp_path / "petdata.h5")
-    np.testing.assert_allclose(loaded.dataobj, random_dataset.dataobj)
-    np.testing.assert_allclose(loaded.affine, random_dataset.affine)
-    np.testing.assert_allclose(loaded.midframe, random_dataset.midframe)
-    assert loaded.total_duration == random_dataset.total_duration
+
+    # Get all user-defined, named attributes
+    attrs_to_check = [
+        a.name for a in attrs.fields(PET) if not a.name.startswith("_") and not a.name.isdigit()
+    ]
+
+    # Sanity checks (element-wise)
+    for attr_name in attrs_to_check:
+        val_direct = getattr(pet_obj, attr_name)
+        val_loaded = getattr(loaded, attr_name)
+
+        if val_direct is None or val_loaded is None:
+            assert val_direct is None and val_loaded is None, f"{attr_name} mismatch"
+        else:
+            if isinstance(val_direct, np.ndarray):
+                assert val_direct.shape == val_loaded.shape
+                assert np.allclose(val_direct, val_loaded), f"{attr_name} arrays differ"
+            else:
+                assert math.isclose(val_direct, val_loaded), f"{attr_name} values differ"
 
 
-@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]), 60.0)
-def test_pet_motion_estimator_run(random_dataset, monkeypatch):
+@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 15.0, 20.0, 25.0, 30.0]))
+def test_pet_motion_estimator_run(monkeypatch, setup_random_pet_data):
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+
+    pet_obj = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+
     class DummyModel:
         def __init__(self, dataset, timepoints, xlim):
             self.dataset = dataset
@@ -96,7 +122,7 @@ def test_pet_motion_estimator_run(random_dataset, monkeypatch):
     monkeypatch.setattr("nifreeze.estimator.Registration", DummyRegistration)
 
     estimator = PETMotionEstimator(None)
-    affines = estimator.run(random_dataset)
-    assert len(affines) == len(random_dataset)
+    affines = estimator.run(pet_obj)
+    assert len(affines) == len(pet_obj)
     for mat in affines:
         np.testing.assert_array_equal(mat, np.eye(4))
