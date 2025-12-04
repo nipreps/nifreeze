@@ -37,7 +37,7 @@ from nifreeze.utils.ndimage import get_data, load_api
 GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG = """\
 Both a gradients table file and b-vec/val files are defined; \
 ignoring b-vec/val files in favor of the gradients_file."""
-""""dMRI gradient file priority warning message."""
+"""dMRI gradient file priority warning message."""
 
 GRADIENT_DATA_MISSING_ERROR = "No gradient data provided."
 """dMRI missing gradient data error message."""
