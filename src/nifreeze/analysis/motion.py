@@ -22,6 +22,8 @@
 #
 """Motion analysis."""
 
+from typing import Tuple
+
 import numpy as np
 from scipy.stats import zscore
 
@@ -61,7 +63,7 @@ def compute_percentage_change(
     return rel_diff
 
 
-def identify_spikes(fd: np.ndarray, threshold: float = 2.0):
+def identify_spikes(fd: np.ndarray, threshold: float = 2.0) -> Tuple[np.ndarray, np.ndarray]:
     """Identify motion spikes in framewise displacement data.
 
     Identifies high-motion frames as timepoint exceeding a given threshold value
