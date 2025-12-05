@@ -25,7 +25,7 @@
 import numpy as np
 
 
-def normalize(x: np.ndarray):
+def normalize(x: np.ndarray) -> np.ndarray:
     r"""Normalize data using the z-score.
 
     The z-score normalization is computed as:
