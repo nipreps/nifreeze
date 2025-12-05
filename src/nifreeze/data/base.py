@@ -459,7 +459,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
         filename: Path | str | None = None,
         write_hmxfms: bool = False,
         order: int = 3,
-    ) -> nb.Nifti1Image:
+    ) -> nb.nifti1.Nifti1Image:
         """
         Write a NIfTI file to disk.
 
@@ -477,6 +477,10 @@ class BaseDataset(Generic[Unpack[Ts]]):
             The interpolation order to use when resampling the data.
             Defaults to 3 (cubic interpolation).
 
+        Returns
+        -------
+        :obj:`~nibabel.nifti1.Nifti1Image`
+            NIfTI image written to disk.
         """
 
         return to_nifti(
@@ -492,7 +496,7 @@ def to_nifti(
     filename: Path | str | None = None,
     write_hmxfms: bool = False,
     order: int = 3,
-) -> nb.Nifti1Image:
+) -> nb.nifti1.Nifti1Image:
     """
     Write a NIfTI file to disk.
 
@@ -512,6 +516,10 @@ def to_nifti(
         The interpolation order to use when resampling the data.
         Defaults to 3 (cubic interpolation).
 
+    Returns
+    -------
+    :obj:`~nibabel.nifti1.Nifti1Image`
+        NIfTI image written to disk.
     """
 
     if filename is None and write_hmxfms:

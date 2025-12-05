@@ -141,7 +141,7 @@ def to_nifti(
     insert_b0: bool = False,
     bvals_dec_places: int = 2,
     bvecs_dec_places: int = 6,
-) -> nb.Nifti1Image:
+) -> nb.nifti1.Nifti1Image:
     """
     Export the dMRI object to disk (NIfTI, b-vecs, & b-vals files).
 
@@ -168,7 +168,7 @@ def to_nifti(
 
     Returns
     -------
-    nii : :obj:`~nibabel.Nifti1Image`
+    nii : :obj:`~nibabel.nifti1.Nifti1Image`
         The main DWI data object.
     """
 

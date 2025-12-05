@@ -5,13 +5,13 @@ import nitransforms as nt
 import numpy as np
 
 
-def apply_affines(nii, em_affines, output_filename=None):
+def apply_affines(nii, em_affines, output_filename=None) -> nb.nifti1.Nifti1Image:
     """
     Apply affines to supplied nii data
 
     Parameters
     ----------
-    nii : :obj:`Nifti1Image`
+    nii : :obj:`~nibabel.nifti1.Nifti1Image`
         Nifti1Image data to be transformed
     em_affines : :obj:`ndarray`
         Nx4x4 array
@@ -20,7 +20,7 @@ def apply_affines(nii, em_affines, output_filename=None):
 
     Returns
     -------
-    nii_t_img : :obj:`Nifti1Image`
+    nii_t_img : :obj:`~nibabel.nifti1.Nifti1Image`
         Transformed Nifti1Image data
 
     """
