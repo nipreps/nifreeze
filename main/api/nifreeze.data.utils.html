@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.estimator module" href="nifreeze.estimator.html"><link rel="prev" title="nifreeze.data.splitting module" href="nifreeze.data.splitting.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.data.utils module - nifreeze 25.0.0.dev747 documentation</title>
+        <title>nifreeze.data.utils module - nifreeze 25.0.0.dev749 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev747 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev749 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev747</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev749</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev747</span>
+  <span class="sidebar-brand-text">25.0.0.dev749</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -313,12 +313,12 @@
 <span id="nifreeze-data-utils-module"></span><h1>nifreeze.data.utils module<a class="headerlink" href="#module-nifreeze.data.utils" title="Link to this heading">¶</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.data.utils.apply_affines">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.data.utils.</span></span><span class="sig-name descname"><span class="pre">apply_affines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nii</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">em_affines</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/data/utils.html#apply_affines"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.utils.apply_affines" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.utils.</span></span><span class="sig-name descname"><span class="pre">apply_affines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nii</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">em_affines</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://nipy.org/nibabel/reference/nibabel.nifti1.html#nibabel.nifti1.Nifti1Image" title="(in NiBabel v5.4.0.dev1+g3b1c7b37)"><span class="pre">nibabel.nifti1.Nifti1Image</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/utils.html#apply_affines"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.utils.apply_affines" title="Link to this definition">¶</a></dt>
 <dd><p>Apply affines to supplied nii data</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>nii</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">Nifti1Image</span></code>) – Nifti1Image data to be transformed</p></li>
+<li><p><strong>nii</strong> (<a class="reference external" href="https://nipy.org/nibabel/reference/nibabel.nifti1.html#nibabel.nifti1.Nifti1Image" title="(in NiBabel v5.4.0.dev1+g3b1c7b37)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Nifti1Image</span></code></a>) – Nifti1Image data to be transformed</p></li>
 <li><p><strong>em_affines</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code>) – Nx4x4 array</p></li>
 <li><p><strong>output_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, optional) – String specifying filepath to which to save transformed Nifti1Image data</p></li>
 </ul>
@@ -327,7 +327,7 @@
 <dd class="field-even"><p><strong>nii_t_img</strong> – Transformed Nifti1Image data</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">Nifti1Image</span></code></p>
+<dd class="field-odd"><p><a class="reference external" href="https://nipy.org/nibabel/reference/nibabel.nifti1.html#nibabel.nifti1.Nifti1Image" title="(in NiBabel v5.4.0.dev1+g3b1c7b37)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Nifti1Image</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -402,7 +402,7 @@
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=a809064b"></script>
+</div><script src="../_static/documentation_options.js?v=e46b2190"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
