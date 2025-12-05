@@ -274,7 +274,7 @@ class DWI(BaseDataset[np.ndarray]):
         insert_b0: bool = False,
         bvals_dec_places: int = 2,
         bvecs_dec_places: int = 6,
-    ) -> nb.Nifti1Image:
+    ) -> nb.nifti1.Nifti1Image:
         """
         Export the dMRI object to disk (NIfTI, b-vecs, & b-vals files).
 
@@ -296,6 +296,10 @@ class DWI(BaseDataset[np.ndarray]):
         bvecs_dec_places : :obj:`int`, optional
             Decimal places to use when serializing b-vectors.
 
+        Returns
+        -------
+        :obj:`~nibabel.nifti1.Nifti1Image`
+            NIfTI image written to disk.
         """
         from nifreeze.data.dmri.io import to_nifti
 
