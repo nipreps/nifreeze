@@ -76,7 +76,7 @@ def load(
         from nifreeze.data.dmri import from_nii as dmri_from_nii
 
         return dmri_from_nii(filename, brainmask_file=brainmask_file, **kwargs)
-    elif {"frame_time", "frame_duration"} & set(kwargs):
+    elif {"temporal_file"} & set(kwargs):
         from nifreeze.data.pet import from_nii as pet_from_nii
 
         return pet_from_nii(filename, brainmask_file=brainmask_file, **kwargs)
