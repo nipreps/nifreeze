@@ -34,7 +34,10 @@ from dipy.core.geometry import normalized_vector
 
 from nifreeze.data import load
 from nifreeze.data.dmri.base import (
+    BZERO_SHAPE_MISMATCH_ERROR_MSG,
     DWI,
+    DWI_B0_MULTIPLE_VOLUMES_WARN_MSG,
+    DWI_REDUNDANT_B0_WARN_MSG,
     validate_gradients,
 )
 from nifreeze.data.dmri.io import (
@@ -193,7 +196,7 @@ def test_format_gradients_basic(value, expect_transpose):
         ),
     ],
 )
-def test_dwi_post_init_errors(setup_random_uniform_spatial_data, case_mark):
+def test_dwi_post_init_orientation_count_errors(setup_random_uniform_spatial_data, case_mark):
     data, affine = setup_random_uniform_spatial_data
     with pytest.raises(ValueError, match=GRADIENT_ABSENCE_ERROR_MSG):
         DWI(dataobj=data, affine=affine)
@@ -205,16 +208,75 @@ def test_dwi_post_init_errors(setup_random_uniform_spatial_data, case_mark):
         DWI(dataobj=data, affine=affine, gradients=B_MATRIX[: data.shape[-1], :])
 
 
+@pytest.mark.parametrize(
+    "extra_b0_axis, extra_b0_count, extra_b0_slice_axis, extra_b0_slice_count",
+    [(1, 0, 0, 0), (1, 1, 0, 0), (1, 2, 0, 0), (0, 0, 0, 1), (0, 0, 1, 2), (0, 0, 2, 1)],
+)
+def test_dwi_post_init_bzero_errors(
+    request,
+    setup_random_dwi_data,
+    extra_b0_axis,
+    extra_b0_count,
+    extra_b0_slice_axis,
+    extra_b0_slice_count,
+):
+    """Check bzero attribute shape errors when instantiating the DWI class.
+
+    An error is raised if the provided bzero's shape does not match the first
+    three values of the DWI data object, i.e. if
+      - the bzero volume has one extra axis;
+      - there are more than one bzero volumes;
+      - there are more slabs with respect to those in a single 3D volume.
+    """
+    rng = request.node.rng
+    dwi_dataobj, affine, _, b0_dataobj, gradients, _ = setup_random_dwi_data
+    _b0_dataobj = b0_dataobj
+    # Add a new axis if requested
+    if extra_b0_axis > 0:
+        _b0_dataobj = _b0_dataobj[..., np.newaxis]
+    # Add new b0 volumes if requested
+    if extra_b0_count >= 1:
+        extra_bvols = rng.random((*b0_dataobj.shape, extra_b0_count))
+        _b0_dataobj = np.concatenate((b0_dataobj[..., np.newaxis], extra_bvols), axis=-1)
+    # Add new slices along the requested axis
+    if extra_b0_slice_count >= 1:
+        # Create extra slices with the same spatial shape as b0_dataobj except
+        # along the chosen axis
+        extra_slab_shape = list(_b0_dataobj.shape[:3])
+        extra_slab_shape[extra_b0_slice_axis] = extra_b0_slice_count
+        extra_slab = rng.random(tuple(extra_slab_shape))
+
+        # If the b0 data object is 4D, make slices 4D with a singleton fourth
+        # axis so they can be concatenated spatially
+        if _b0_dataobj.ndim == 4:
+            extra_slab = extra_slab[..., np.newaxis]
+
+        # Concatenate along the chosen spatial axis to make spatial dims differ
+        # from dataobj
+        _b0_dataobj = np.concatenate((_b0_dataobj, extra_slab), axis=extra_b0_slice_axis)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            BZERO_SHAPE_MISMATCH_ERROR_MSG.format(
+                bzero_shape=_b0_dataobj.shape, data_shape=dwi_dataobj.shape[:3]
+            )
+        ),
+    ):
+        DWI(dataobj=dwi_dataobj, affine=affine, gradients=gradients, bzero=_b0_dataobj)
+
+
 @pytest.mark.parametrize("vol_size", [(11, 11, 7)])
-@pytest.mark.parametrize("b0_count", [0, 1])
+@pytest.mark.parametrize(
+    "b0_count, provide_bzero", [(0, False), (0, True), (1, False), (1, True), (2, False)]
+)
 @pytest.mark.parametrize("bval_min, bval_max", [(800.0, 1200.0)])
-@pytest.mark.parametrize("provide_bzero", [False, True])
-def test_dwi_post_init_b0_handling(request, vol_size, b0_count, bval_min, bval_max, provide_bzero):
+def test_dwi_post_init_b0_handling(request, vol_size, b0_count, provide_bzero, bval_min, bval_max):
     """Check b0 handling when instantiating the DWI class.
 
     For each parameter combination:
       - Build a gradient table whose first `b0_count` volumes have b=0
-        and the rest have b-values in the range (bvalmin, bvalmax);
+        and the rest have b-values in the range (bval_min, bval_max);
       - Build a random dataobj of shape (**vol_size, N) where N is the number
         of DWI volumes;
       - If `provide_bzero` is True, pass explicit bzero data that must be
@@ -248,9 +310,21 @@ def test_dwi_post_init_b0_handling(request, vol_size, b0_count, bval_min, bval_m
     if provide_bzero:
         # Use a constant map so it's easy to assert equality
         provided = np.full((*vol_size, max(1, b0_count)), 42.0, dtype=float).squeeze()
-        dwi_obj = DWI(dataobj=dataobj, affine=affine, gradients=gradients, bzero=provided)
+        with warnings.catch_warnings(record=True) as caught:
+            dwi_obj = DWI(dataobj=dataobj, affine=affine, gradients=gradients, bzero=provided)
+
+        # If the DWI gradients contained null values (i.e. b0 volumes) and bzero
+        # data was provided, a warning must have been raised
+        if b0_count >= 1 and provide_bzero:
+            assert str(caught[0].message) == DWI_REDUNDANT_B0_WARN_MSG
     else:
-        dwi_obj = DWI(dataobj=dataobj, affine=affine, gradients=gradients)
+        with warnings.catch_warnings(record=True) as caught:
+            dwi_obj = DWI(dataobj=dataobj, affine=affine, gradients=gradients)
+
+        # If the DWI gradients contained more than a single null value (i.e.
+        # multiple b0 volumes), a warning must have been raised
+        if b0_count > 1:
+            assert str(caught[0].message) == DWI_B0_MULTIPLE_VOLUMES_WARN_MSG
 
     # Count expected b0 frames according to the same threshold used by the code
     b0_mask = bvals <= DEFAULT_LOWB_THRESHOLD
@@ -489,13 +563,18 @@ def test_load_gradients_bval_bvec_warn(tmp_path, setup_random_dwi_data):
     np.savetxt(bval_fname, bvals, fmt="%.6f")
 
     with pytest.warns(UserWarning, match=re.escape(GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG)):
-        _ = from_nii(
-            dwi_fname,
-            gradients_file=grads_fname,
-            bvec_file=bvec_fname,
-            bval_file=bval_fname,
-            b0_file=b0_fname,
-        )
+        # Ignore warning due to redundant b0 volumes
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", message=DWI_REDUNDANT_B0_WARN_MSG, category=UserWarning
+            )
+            _ = from_nii(
+                dwi_fname,
+                gradients_file=grads_fname,
+                bvec_file=bvec_fname,
+                bval_file=bval_fname,
+                b0_file=b0_fname,
+            )
 
 
 @pytest.mark.random_gtab_data(10, (1000, 2000), 2)
@@ -527,7 +606,13 @@ def test_load_gradients(tmp_path, setup_random_dwi_data, row_major_gradients):
     grads_fname = tmp_path / "grads.txt"
     np.savetxt(grads_fname, gradients, fmt="%.6f")
 
-    dwi_obj = from_nii(dwi_fname, gradients_file=grads_fname)
+    # Ignore warning due to multiple b0 volumes
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", message=DWI_B0_MULTIPLE_VOLUMES_WARN_MSG, category=UserWarning
+        )
+        dwi_obj = from_nii(dwi_fname, gradients_file=grads_fname)
+
     if not row_major_gradients:
         gradmask = gradients.T[:, -1] > b0_thres
     else:
@@ -580,7 +665,13 @@ def test_load_bvecs_bvals(tmp_path, setup_random_dwi_data, transpose_bvals, tran
     np.savetxt(bvec_fname, bvecs, fmt="%.6f")
     np.savetxt(bval_fname, bvals, fmt="%.6f")
 
-    dwi_obj = from_nii(dwi_fname, bvec_file=bvec_fname, bval_file=bval_fname)
+    # Ignore warning due to multiple b0 volumes
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", message=DWI_B0_MULTIPLE_VOLUMES_WARN_MSG, category=UserWarning
+        )
+        dwi_obj = from_nii(dwi_fname, bvec_file=bvec_fname, bval_file=bval_fname)
+
     gradmask = gradients[:, -1] > b0_thres
 
     expected_nonzero_grads = gradients[gradmask]
@@ -660,13 +751,18 @@ def test_to_nifti(
     if provide_bzero:
         # Use a constant map so it's easy to assert equality
         provided = np.full((*vol_size, max(1, b0_count)), 42.0, dtype=float).squeeze()
-        dwi_obj = DWI(
-            dataobj=dataobj,
-            affine=affine,
-            motion_affines=_motion_affines,
-            gradients=gradients,
-            bzero=provided,
-        )
+        # Ignore warning due to redundant b0 volumes
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", message=DWI_REDUNDANT_B0_WARN_MSG, category=UserWarning
+            )
+            dwi_obj = DWI(
+                dataobj=dataobj,
+                affine=affine,
+                motion_affines=_motion_affines,
+                gradients=gradients,
+                bzero=provided,
+            )
     else:
         dwi_obj = DWI(
             dataobj=dataobj, affine=affine, motion_affines=_motion_affines, gradients=gradients
@@ -904,21 +1000,25 @@ def test_equality_operator(tmp_path, setup_random_dwi_data):
     ) = _serialize_dwi_data(dwi_nii, brainmask, b0, gradients, tmp_path)
 
     # Read back using public API
-    dwi_obj_from_nii = from_nii(
-        dwi_fname,
-        gradients_file=gradients_fname,
-        b0_file=b0_fname,
-        brainmask_file=brainmask_fname,
-    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=DWI_REDUNDANT_B0_WARN_MSG, category=UserWarning)
+        dwi_obj_from_nii = from_nii(
+            dwi_fname,
+            gradients_file=gradients_fname,
+            b0_file=b0_fname,
+            brainmask_file=brainmask_fname,
+        )
 
     # Direct instantiation with the same arrays
-    dwi_obj_direct = DWI(
-        dataobj=dwi_dataobj,
-        affine=affine,
-        brainmask=brainmask_dataobj,
-        gradients=gradients,
-        bzero=b0_dataobj,
-    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=DWI_REDUNDANT_B0_WARN_MSG, category=UserWarning)
+        dwi_obj_direct = DWI(
+            dataobj=dwi_dataobj,
+            affine=affine,
+            brainmask=brainmask_dataobj,
+            gradients=gradients,
+            bzero=b0_dataobj,
+        )
 
     # Get all user-defined, named attributes
     attrs_to_check = [
@@ -961,13 +1061,16 @@ def test_equality_operator(tmp_path, setup_random_dwi_data):
 def test_shells(setup_random_dwi_data):
     dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients, _ = setup_random_dwi_data
 
-    dwi_obj = DWI(
-        dataobj=dwi_dataobj,
-        affine=affine,
-        brainmask=brainmask_dataobj,
-        bzero=b0_dataobj,
-        gradients=gradients,
-    )
+    # Ignore warning due to redundant b0 volumes
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=DWI_REDUNDANT_B0_WARN_MSG, category=UserWarning)
+        dwi_obj = DWI(
+            dataobj=dwi_dataobj,
+            affine=affine,
+            brainmask=brainmask_dataobj,
+            bzero=b0_dataobj,
+            gradients=gradients,
+        )
 
     num_bins = 3
     _, expected_bval_groups, expected_bval_est = find_shelling_scheme(
