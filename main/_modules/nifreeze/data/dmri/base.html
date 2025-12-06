@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../../genindex.html"><link rel="search" title="Search" href="../../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.data.dmri.base - nifreeze 25.0.0.dev749 documentation</title>
+        <title>nifreeze.data.dmri.base - nifreeze 25.0.0.dev751 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../../index.html"><div class="brand">nifreeze 25.0.0.dev749 documentation</div></a>
+      <a href="../../../../index.html"><div class="brand">nifreeze 25.0.0.dev751 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev749</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev751</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev749</span>
+  <span class="sidebar-brand-text">25.0.0.dev751</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -331,6 +331,7 @@
 
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
+<span class="kn">from</span> <span class="nn">warnings</span> <span class="kn">import</span> <span class="n">warn</span>
 
 <span class="kn">import</span> <span class="nn">attrs</span>
 <span class="kn">import</span> <span class="nn">h5py</span>
@@ -351,6 +352,22 @@
     <span class="n">find_shelling_scheme</span><span class="p">,</span>
     <span class="n">format_gradients</span><span class="p">,</span>
 <span class="p">)</span>
+
+<span class="n">BZERO_SHAPE_MISMATCH_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">DWI &#39;bzero&#39; shape (</span><span class="si">{bzero_shape}</span><span class="s2">) does not match dataset volumes (</span><span class="si">{data_shape}</span><span class="s2">). </span><span class="se">\</span>
+<span class="s2">If you have multiple b0 volumes, either provide one of them or provide a single, </span><span class="se">\</span>
+<span class="s2">representative b0.&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;DWI bzero shape mismatch error message.&quot;&quot;&quot;</span>
+
+<span class="n">DWI_B0_MULTIPLE_VOLUMES_WARN_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">The DWI data contains multiple b0 volumes; computing median across them.&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;DWI bzero shape mismatch warning message.&quot;&quot;&quot;</span>
+
+<span class="n">DWI_REDUNDANT_B0_WARN_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">The DWI data contains b0 volumes, but the &#39;bzero&#39; attribute was set. DWI b0 &quot;</span>
+<span class="s2">volumes will be discarded, and the corresponding &#39;dataobj&#39; and &#39;gradient&#39; data </span><span class="se">\</span>
+<span class="s2">removed.&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;DWI b0 and bzero provided warning message.&quot;&quot;&quot;</span>
 
 
 <div class="viewcode-block" id="validate_gradients">
@@ -438,12 +455,33 @@
                     <span class="n">n_gradients</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                 <span class="p">)</span>
             <span class="p">)</span>
+        <span class="c1"># Ensure that if b0 data were provided, it is a 3D array with the same</span>
+        <span class="c1"># shape as the DWI data object</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bzero</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bzero</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">]):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="n">BZERO_SHAPE_MISMATCH_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">bzero_shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bzero</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">data_shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
 
         <span class="n">b0_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradients</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">DEFAULT_LOWB_THRESHOLD</span>
         <span class="n">b0_num</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">b0_mask</span><span class="p">)</span>
 
+        <span class="n">bzeros</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="c1"># Warn the user if multiple b0 volumes were found in the DWI data and</span>
+        <span class="c1"># no bzero attribute was provided; warn the user if both the DWI</span>
+        <span class="c1"># contained b0 values and the bzero attribute was provided</span>
         <span class="k">if</span> <span class="n">b0_num</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">bzero</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warn</span><span class="p">(</span><span class="n">DWI_B0_MULTIPLE_VOLUMES_WARN_MSG</span><span class="p">,</span> <span class="ne">UserWarning</span><span class="p">)</span> <span class="k">if</span> <span class="n">b0_num</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="kc">None</span>
             <span class="n">bzeros</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">b0_mask</span><span class="p">]</span>
+            <span class="n">bzeros</span> <span class="o">=</span> <span class="n">bzeros</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">bzeros</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">bzeros</span>
+        <span class="k">elif</span> <span class="n">b0_num</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">bzero</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warn</span><span class="p">(</span><span class="n">DWI_REDUNDANT_B0_WARN_MSG</span><span class="p">,</span> <span class="ne">UserWarning</span><span class="p">)</span>
+            <span class="n">bzeros</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bzero</span>
+
+        <span class="c1"># Set the bzero attribute to the median if necessary</span>
+        <span class="k">if</span> <span class="n">bzeros</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">bzero</span> <span class="o">=</span> <span class="n">bzeros</span> <span class="k">if</span> <span class="n">bzeros</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">bzeros</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">b0_num</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -667,7 +705,7 @@
       
     </aside>
   </div>
-</div><script src="../../../../_static/documentation_options.js?v=e46b2190"></script>
+</div><script src="../../../../_static/documentation_options.js?v=a337c2db"></script>
     <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../../_static/scripts/furo.js?v=46bd48cc"></script>

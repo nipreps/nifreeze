@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.data.dmri.io module" href="nifreeze.data.dmri.io.html"><link rel="prev" title="nifreeze.data.dmri package" href="nifreeze.data.dmri.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.data.dmri.base module - nifreeze 25.0.0.dev749 documentation</title>
+        <title>nifreeze.data.dmri.base module - nifreeze 25.0.0.dev751 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev749 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev751 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev749</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev751</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev749</span>
+  <span class="sidebar-brand-text">25.0.0.dev751</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -312,6 +312,12 @@
           <section id="module-nifreeze.data.dmri.base">
 <span id="nifreeze-data-dmri-base-module"></span><h1>nifreeze.data.dmri.base module<a class="headerlink" href="#module-nifreeze.data.dmri.base" title="Link to this heading">¶</a></h1>
 <p>DWI data representation type.</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.dmri.base.BZERO_SHAPE_MISMATCH_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.dmri.base.</span></span><span class="sig-name descname"><span class="pre">BZERO_SHAPE_MISMATCH_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;DWI</span> <span class="pre">'bzero'</span> <span class="pre">shape</span> <span class="pre">({bzero_shape})</span> <span class="pre">does</span> <span class="pre">not</span> <span class="pre">match</span> <span class="pre">dataset</span> <span class="pre">volumes</span> <span class="pre">({data_shape}).</span> <span class="pre">If</span> <span class="pre">you</span> <span class="pre">have</span> <span class="pre">multiple</span> <span class="pre">b0</span> <span class="pre">volumes,</span> <span class="pre">either</span> <span class="pre">provide</span> <span class="pre">one</span> <span class="pre">of</span> <span class="pre">them</span> <span class="pre">or</span> <span class="pre">provide</span> <span class="pre">a</span> <span class="pre">single,</span> <span class="pre">representative</span> <span class="pre">b0.&quot;</span></em><a class="headerlink" href="#nifreeze.data.dmri.base.BZERO_SHAPE_MISMATCH_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>DWI bzero shape mismatch error message.</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="nifreeze.data.dmri.base.DWI">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.data.dmri.base.</span></span><span class="sig-name descname"><span class="pre">DWI</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataobj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">affine</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">brainmask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">motion_affines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datahdr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'nb.Nifti1Header</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'Path'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">NOTHING</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gradients</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'npt.ArrayLike</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bzero</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eddy_xfms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'list'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/dmri/base.html#DWI"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.dmri.base.DWI" title="Link to this definition">¶</a></dt>
@@ -432,6 +438,18 @@ null gradient value to the output bval/bvec files.</p></li>
 
 </dd></dl>
 
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.dmri.base.DWI_B0_MULTIPLE_VOLUMES_WARN_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.dmri.base.</span></span><span class="sig-name descname"><span class="pre">DWI_B0_MULTIPLE_VOLUMES_WARN_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'The</span> <span class="pre">DWI</span> <span class="pre">data</span> <span class="pre">contains</span> <span class="pre">multiple</span> <span class="pre">b0</span> <span class="pre">volumes;</span> <span class="pre">computing</span> <span class="pre">median</span> <span class="pre">across</span> <span class="pre">them.'</span></em><a class="headerlink" href="#nifreeze.data.dmri.base.DWI_B0_MULTIPLE_VOLUMES_WARN_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>DWI bzero shape mismatch warning message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.dmri.base.DWI_REDUNDANT_B0_WARN_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.dmri.base.</span></span><span class="sig-name descname"><span class="pre">DWI_REDUNDANT_B0_WARN_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'The</span> <span class="pre">DWI</span> <span class="pre">data</span> <span class="pre">contains</span> <span class="pre">b0</span> <span class="pre">volumes,</span> <span class="pre">but</span> <span class="pre">the</span> <span class="pre">\'bzero\'</span> <span class="pre">attribute</span> <span class="pre">was</span> <span class="pre">set.</span> <span class="pre">DWI</span> <span class="pre">b0</span> <span class="pre">&quot;\nvolumes</span> <span class="pre">will</span> <span class="pre">be</span> <span class="pre">discarded,</span> <span class="pre">and</span> <span class="pre">the</span> <span class="pre">corresponding</span> <span class="pre">\'dataobj\'</span> <span class="pre">and</span> <span class="pre">\'gradient\'</span> <span class="pre">data</span> <span class="pre">removed.'</span></em><a class="headerlink" href="#nifreeze.data.dmri.base.DWI_REDUNDANT_B0_WARN_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>DWI b0 and bzero provided warning message.</p>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.data.dmri.base.validate_gradients">
 <span class="sig-prename descclassname"><span class="pre">nifreeze.data.dmri.base.</span></span><span class="sig-name descname"><span class="pre">validate_gradients</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inst</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#nifreeze.data.dmri.base.DWI" title="nifreeze.data.dmri.base.DWI"><span class="pre">DWI</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">attr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Attribute</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v2.3)"><span class="pre">dtype</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.floating" title="(in NumPy v2.3)"><span class="pre">floating</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/dmri/base.html#validate_gradients"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.dmri.base.validate_gradients" title="Link to this definition">¶</a></dt>
@@ -531,6 +549,7 @@ null gradient value to the output bval/bvec files.</p></li>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">nifreeze.data.dmri.base module</a><ul>
+<li><a class="reference internal" href="#nifreeze.data.dmri.base.BZERO_SHAPE_MISMATCH_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">BZERO_SHAPE_MISMATCH_ERROR_MSG</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.dmri.base.DWI"><code class="docutils literal notranslate"><span class="pre">DWI</span></code></a><ul>
 <li><a class="reference internal" href="#nifreeze.data.dmri.base.DWI.bvals"><code class="docutils literal notranslate"><span class="pre">DWI.bvals</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.dmri.base.DWI.bvecs"><code class="docutils literal notranslate"><span class="pre">DWI.bvecs</span></code></a></li>
@@ -543,6 +562,8 @@ null gradient value to the output bval/bvec files.</p></li>
 <li><a class="reference internal" href="#nifreeze.data.dmri.base.DWI.to_nifti"><code class="docutils literal notranslate"><span class="pre">DWI.to_nifti()</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#nifreeze.data.dmri.base.DWI_B0_MULTIPLE_VOLUMES_WARN_MSG"><code class="docutils literal notranslate"><span class="pre">DWI_B0_MULTIPLE_VOLUMES_WARN_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.dmri.base.DWI_REDUNDANT_B0_WARN_MSG"><code class="docutils literal notranslate"><span class="pre">DWI_REDUNDANT_B0_WARN_MSG</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.dmri.base.validate_gradients"><code class="docutils literal notranslate"><span class="pre">validate_gradients()</span></code></a></li>
 </ul>
 </li>
@@ -555,7 +576,7 @@ null gradient value to the output bval/bvec files.</p></li>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=e46b2190"></script>
+</div><script src="../_static/documentation_options.js?v=a337c2db"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
