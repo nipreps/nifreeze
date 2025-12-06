@@ -39,6 +39,7 @@ from nitransforms.resampling import apply
 from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr, _has_ndim
+from nifreeze.data.base import to_nifti as _base_to_nifti
 from nifreeze.utils.ndimage import get_data, load_api
 
 ATTRIBUTE_ABSENCE_ERROR_MSG = "PET '{attribute}' may not be None"
@@ -566,3 +567,50 @@ def compute_uptake_statistic(data: np.ndarray, stat_func: Callable[..., np.ndarr
     """
 
     return stat_func(data.reshape(-1, data.shape[-1]), axis=0)
+
+
+def reconstruct_frame_time(midframe: np.ndarray, total_duration: float) -> np.ndarray:
+    """
+    Reconstruct frame_time (start times) from midframe and total_duration,
+    assuming:
+      - mid[i] = t[i] + d[i]/2
+      - d[-1] == d[-2] (last duration is duplicate of previous)
+      - returned frame_time uses t[0] == 0 convention
+
+    No input verification / no loops.
+    """
+    mid = np.asarray(midframe).ravel()
+    N = mid.size
+    if N <= 1:
+        return np.zeros(N, dtype=float)
+
+    # Adjacent midpoint differences give half the sum of durations
+    s = 2.0 * np.diff(mid)          # shape (N-1,)
+
+    # Solve durations: d[0] = 2*mid[0]; d[i] = s[i-1] - d[i-1]
+    d0 = 2.0 * mid[0]
+    signs = (-1.0) ** np.arange(N-1)
+    d_prefix = d0 + signs * np.cumsum(signs * s)
+
+    d = np.empty(N, float)
+    d[:-1] = d_prefix
+    d[-1] = d[-2]
+
+    # optional consistency check using total_duration (not needed to compute)
+    implied_total = mid[-1] + d[-1] / 2.0
+    assert abs(implied_total - float(total_duration)) < 1e-12
+
+    starts = np.cumsum(np.concatenate(([0.0], d[:-1])))
+    return starts
+
+
+#def test_reconstruct_frame_time():
+#    # example
+#    t = np.array([0.0, 1.0, 2.5, 4.0])
+#    d = np.diff(np.append(t, t[
+#        -1] + 1.0))  # last duration duplicates previous: [1.0,1.5,1.5,1.5]
+#    mid = t + d / 2
+#    total = float(t[-1] + d[-1])
+#
+#    recovered = reconstruct_frame_time_vectorized(mid, total)
+#    # recovered -> array([0. , 1. , 2.5, 4. ])
