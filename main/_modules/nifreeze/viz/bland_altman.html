@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.viz.bland_altman - nifreeze 25.0.0.dev753 documentation</title>
+        <title>nifreeze.viz.bland_altman - nifreeze 25.0.0.dev755 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev753 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev755 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev753</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev755</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev753</span>
+  <span class="sidebar-brand-text">25.0.0.dev755</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -331,6 +331,7 @@
 
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">matplotlib.figure</span> <span class="kn">import</span> <span class="n">Figure</span>
 
 <span class="kn">from</span> <span class="nn">nifreeze.analysis.measure_agreement</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">BASalientEntity</span><span class="p">,</span>
@@ -356,7 +357,7 @@
     <span class="n">ci</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.95</span><span class="p">,</span>
     <span class="n">salient_data</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">figsize</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">plt</span><span class="o">.</span><span class="n">Figure</span><span class="p">:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Figure</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a Bland-Altman plot.</span>
 
 <span class="sd">    Create a Bland-Altman plot :footcite:p:`bland_statistical_1986` and</span>
@@ -364,9 +365,9 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    data1 : :obj:`numpy.ndarray`</span>
+<span class="sd">    data1 : :obj:`~numpy.ndarray`</span>
 <span class="sd">        Data values.</span>
-<span class="sd">    data2 : :obj:`numpy.ndarray`</span>
+<span class="sd">    data2 : :obj:`~numpy.ndarray`</span>
 <span class="sd">        Data values.</span>
 <span class="sd">    ci : :obj:`float`, optional</span>
 <span class="sd">        Confidence interval value. Must be in the [0, 1] range.</span>
@@ -380,7 +381,7 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    fig : :obj:`matplotlib.pyplot.Figure`</span>
+<span class="sd">    fig : :obj:`~matplotlib.figure.Figure`</span>
 <span class="sd">        Matplotlib figure.</span>
 
 <span class="sd">    References</span>
@@ -514,7 +515,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=30b7cca8"></script>
+</div><script src="../../../_static/documentation_options.js?v=5f46d87c"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

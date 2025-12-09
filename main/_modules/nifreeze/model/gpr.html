@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.model.gpr - nifreeze 25.0.0.dev753 documentation</title>
+        <title>nifreeze.model.gpr - nifreeze 25.0.0.dev755 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev753 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev755 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev753</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev755</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev753</span>
+  <span class="sidebar-brand-text">25.0.0.dev755</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -622,7 +622,7 @@
 <span class="sd">        eval_gradient : :obj:`bool`, optional</span>
 <span class="sd">            Determines whether the gradient with respect to the log of</span>
 <span class="sd">            the kernel hyperparameter is computed.</span>
-<span class="sd">            Only supported when Y is ``None``.</span>
+<span class="sd">            Only supported when Y is :obj:`None`.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -633,7 +633,7 @@
 <span class="sd">                optional</span>
 <span class="sd">            The gradient of the kernel k(X, X) with respect to the log of the</span>
 <span class="sd">            hyperparameter of the kernel. Only returned when `eval_gradient`</span>
-<span class="sd">            is True.</span>
+<span class="sd">            is :obj:`True`.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">thetas</span> <span class="o">=</span> <span class="n">compute_pairwise_angles</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">)</span>
@@ -739,7 +739,7 @@
 <span class="sd">        eval_gradient : :obj:`bool`, optional</span>
 <span class="sd">            Determines whether the gradient with respect to the log of</span>
 <span class="sd">            the kernel hyperparameter is computed.</span>
-<span class="sd">            Only supported when Y is ``None``.</span>
+<span class="sd">            Only supported when Y is :obj:`None`.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -750,7 +750,7 @@
 <span class="sd">                optional</span>
 <span class="sd">            The gradient of the kernel k(X, X) with respect to the log of the</span>
 <span class="sd">            hyperparameter of the kernel. Only returned when ``eval_gradient``</span>
-<span class="sd">            is True.</span>
+<span class="sd">            is :obj:`True`.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">thetas</span> <span class="o">=</span> <span class="n">compute_pairwise_angles</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">)</span>
@@ -898,7 +898,7 @@
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Compute pairwise angles across diffusion gradient encoding directions.</span>
 
 <span class="sd">    Following :footcite:p:`andersson_non-parametric_2015`:, it computes the smallest of the angles between</span>
-<span class="sd">    each pair if ``closest_polarity`` is ``True``, i.e.,</span>
+<span class="sd">    each pair if ``closest_polarity`` is :obj:`True`, i.e.,</span>
 
 <span class="sd">    .. math::</span>
 
@@ -909,14 +909,14 @@
 <span class="sd">    X : {array-like, sparse matrix} of shape (n_samples_X, n_features)</span>
 <span class="sd">        Input data.</span>
 <span class="sd">    Y : {array-like, sparse matrix} of shape (n_samples_Y, n_features), optional</span>
-<span class="sd">        Input data. If ``None``, the output will be the pairwise</span>
+<span class="sd">        Input data. If :obj:`None`, the output will be the pairwise</span>
 <span class="sd">        similarities between all samples in ``X``.</span>
 <span class="sd">    dense_output : :obj:`bool`, optional</span>
 <span class="sd">        Whether to return dense output even when the input is sparse. If</span>
-<span class="sd">        ``False``, the output is sparse if both input arrays are sparse.</span>
+<span class="sd">        :obj:`False`, the output is sparse if both input arrays are sparse.</span>
 <span class="sd">    closest_polarity : :obj:`bool`, optional</span>
-<span class="sd">        ``True`` to consider the smallest of the two angles between the crossing</span>
-<span class="sd">         lines resulting from reversing each vector pair.</span>
+<span class="sd">        :obj:`True` to consider the smallest of the two angles between the</span>
+<span class="sd">        crossing lines resulting from reversing each vector pair.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -985,7 +985,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=30b7cca8"></script>
+</div><script src="../../../_static/documentation_options.js?v=5f46d87c"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

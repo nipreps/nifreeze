@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.data.filtering module" href="nifreeze.data.filtering.html"><link rel="prev" title="nifreeze.data.dmri.utils module" href="nifreeze.data.dmri.utils.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.data.base module - nifreeze 25.0.0.dev753 documentation</title>
+        <title>nifreeze.data.base module - nifreeze 25.0.0.dev755 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev753 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev755 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev753</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev755</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev753</span>
+  <span class="sidebar-brand-text">25.0.0.dev755</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -423,7 +423,7 @@ specification).</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>) – The volume index to transform.</p></li>
-<li><p><strong>affine</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a>) – The 4x4 affine matrix to be applied.</p></li>
+<li><p><strong>affine</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – The 4x4 affine matrix to be applied.</p></li>
 </ul>
 </dd>
 </dl>
@@ -468,8 +468,8 @@ been set, otherwise the original data are written.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>filename</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>, optional) – The output NIfTI file path.</p></li>
-<li><p><strong>write_hmxfms</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a>, optional) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the head motion affines will be written out to filesystem
-with BIDS’ X5 format.</p></li>
+<li><p><strong>write_hmxfms</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a>, optional) – If <a class="reference external" href="https://docs.python.org/3/library/constants.html#True" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">True</span></code></a>, the head motion affines will be written out to
+filesystem with BIDS’ X5 format.</p></li>
 <li><p><strong>order</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – The interpolation order to use when resampling the data.
 Defaults to 3 (cubic interpolation).</p></li>
 </ul>
@@ -533,7 +533,7 @@ been set, otherwise the original data are written.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dataset</strong> (<a class="reference internal" href="#nifreeze.data.base.BaseDataset" title="nifreeze.data.base.BaseDataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BaseDataset</span></code></a>) – The dataset to serialize.</p></li>
 <li><p><strong>filename</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>, optional) – The output NIfTI file path.</p></li>
-<li><p><strong>write_hmxfms</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a>, optional) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the head motion affines will be written out to filesystem
+<li><p><strong>write_hmxfms</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a>, optional) – If <a class="reference external" href="https://docs.python.org/3/library/constants.html#True" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">True</span></code></a>, the head motion affines will be written out to filesystem
 with BIDS’ X5 format.</p></li>
 <li><p><strong>order</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – The interpolation order to use when resampling the data.
 Defaults to 3 (cubic interpolation).</p></li>
@@ -550,7 +550,7 @@ Defaults to 3 (cubic interpolation).</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.data.base.validate_affine">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.data.base.</span></span><span class="sig-name descname"><span class="pre">validate_affine</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inst</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#nifreeze.data.base.BaseDataset" title="nifreeze.data.base.BaseDataset"><span class="pre">BaseDataset</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">attr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Attribute</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/base.html#validate_affine"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.base.validate_affine" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.base.</span></span><span class="sig-name descname"><span class="pre">validate_affine</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inst</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#nifreeze.data.base.BaseDataset" title="nifreeze.data.base.BaseDataset"><span class="pre">BaseDataset</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">attr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://www.attrs.org/en/stable/api.html#attrs.Attribute" title="(in attrs v25.4)"><span class="pre">Attribute</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/base.html#validate_affine"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.base.validate_affine" title="Link to this definition">¶</a></dt>
 <dd><p>Strict validator for affine matrices.</p>
 <p>Enforces that <code class="docutils literal notranslate"><span class="pre">value</span></code> is present and is a 4x4 NumPy array.</p>
 <p>This function is intended for use as an attrs-style validator.</p>
@@ -558,18 +558,18 @@ Defaults to 3 (cubic interpolation).</p></li>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>inst</strong> (<a class="reference internal" href="#nifreeze.data.base.BaseDataset" title="nifreeze.data.base.BaseDataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BaseDataset</span></code></a>) – The instance being validated (unused, present for validator signature).</p></li>
-<li><p><strong>attr</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">Attribute</span></code>) – The attribute being validated (unused, present for validator signature).</p></li>
+<li><p><strong>attr</strong> (<a class="reference external" href="https://www.attrs.org/en/stable/api.html#attrs.Attribute" title="(in attrs v25.4)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Attribute</span></code></a>) – The attribute being validated (unused, present for validator signature).</p></li>
 <li><p><strong>value</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code>) – The value to validate.</p></li>
 </ul>
 </dd>
 </dl>
 <p>:raises exc:<cite>TypeError</cite>: If the input cannot be converted to a float <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>.
-:raises exc:<cite>ValueError</cite>: If the value is <code class="docutils literal notranslate"><span class="pre">None</span></code>, or not shaped <code class="docutils literal notranslate"><span class="pre">(4,</span> <span class="pre">4)</span></code>.</p>
+:raises exc:<cite>ValueError</cite>: If the value is <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, or not shaped <code class="docutils literal notranslate"><span class="pre">(4,</span> <span class="pre">4)</span></code>.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.data.base.validate_dataobj">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.data.base.</span></span><span class="sig-name descname"><span class="pre">validate_dataobj</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inst</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#nifreeze.data.base.BaseDataset" title="nifreeze.data.base.BaseDataset"><span class="pre">BaseDataset</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">attr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Attribute</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/base.html#validate_dataobj"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.base.validate_dataobj" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.base.</span></span><span class="sig-name descname"><span class="pre">validate_dataobj</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inst</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#nifreeze.data.base.BaseDataset" title="nifreeze.data.base.BaseDataset"><span class="pre">BaseDataset</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">attr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://www.attrs.org/en/stable/api.html#attrs.Attribute" title="(in attrs v25.4)"><span class="pre">Attribute</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/base.html#validate_dataobj"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.base.validate_dataobj" title="Link to this definition">¶</a></dt>
 <dd><p>Strict validator for data objects.</p>
 <p>Enforces that <code class="docutils literal notranslate"><span class="pre">value</span></code> is present and is a NumPy array with exactly 4
 dimensions (<code class="docutils literal notranslate"><span class="pre">ndim</span> <span class="pre">==</span> <span class="pre">4</span></code>).</p>
@@ -578,13 +578,13 @@ dimensions (<code class="docutils literal notranslate"><span class="pre">ndim</s
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>inst</strong> (<a class="reference internal" href="#nifreeze.data.base.BaseDataset" title="nifreeze.data.base.BaseDataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BaseDataset</span></code></a>) – The instance being validated (unused, present for validator signature).</p></li>
-<li><p><strong>attr</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">Attribute</span></code>) – The attribute being validated (unused, present for validator signature).</p></li>
+<li><p><strong>attr</strong> (<a class="reference external" href="https://www.attrs.org/en/stable/api.html#attrs.Attribute" title="(in attrs v25.4)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Attribute</span></code></a>) – The attribute being validated (unused, present for validator signature).</p></li>
 <li><p><strong>value</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code>) – The value to validate.</p></li>
 </ul>
 </dd>
 </dl>
 <p>:raises exc:<cite>TypeError</cite>: If the input cannot be converted to a float <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>.
-:raises exc:<cite>ValueError</cite>: If the value is <code class="docutils literal notranslate"><span class="pre">None</span></code>, or not 4-dimensional.</p>
+:raises exc:<cite>ValueError</cite>: If the value is <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, or not 4-dimensional.</p>
 </dd></dl>
 
 </section>
@@ -688,7 +688,7 @@ dimensions (<code class="docutils literal notranslate"><span class="pre">ndim</s
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=30b7cca8"></script>
+</div><script src="../_static/documentation_options.js?v=5f46d87c"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
