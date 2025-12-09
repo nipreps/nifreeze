@@ -70,15 +70,15 @@ def advanced_clip(
         The desired data type for the output array. Supported types are "uint8"
         and "int16".
     invert : :obj:`bool`, optional
-        If ``True``, inverts the intensity values after scaling (1.0 - ``data``).
+        If :obj:`True`, inverts the intensity values after scaling (1.0 - ``data``).
     inplace : :obj:`bool`, optional
-        If ``True``, the normalization is performed on the original data.
+        If :obj:`True`, the normalization is performed on the original data.
 
     Returns
     -------
-    :obj:`~numpy.ndarray` or None
+    :obj:`~numpy.ndarray` or :obj:`None`
         The clipped and scaled data array with the specified data type or
-        ``None`` if ``inplace`` is ``True``.
+        :obj:`None` if ``inplace`` is :obj:`True`.
 
     """
 
@@ -151,12 +151,12 @@ def robust_minmax_normalization(
     p_max : :obj:`float`, optional
         The upper percentile value for normalization.
     inplace : :obj:`bool`, optional
-        If ``False``, the normalization is performed on the original data.
+        If :obj:`False`, the normalization is performed on the original data.
 
     Returns
     -------
-    data : :obj:`~numpy.ndarray` or None
-        Normalized data or ``None`` if ``inplace`` is ``True``.
+    data : :obj:`~numpy.ndarray` or :obj:`None`
+        Normalized data or :obj:`None` if ``inplace`` is :obj:`True`.
     """
 
     normalized = data if inplace else data.copy()
@@ -197,12 +197,12 @@ def grand_mean_normalization(
     center : float, optional
         Central value around which to normalize the data.
     inplace : :obj:`bool`, optional
-        If ``False``, the normalization is performed on the original data.
+        If :obj:`False`, the normalization is performed on the original data.
 
     Returns
     -------
-    data : :obj:`~numpy.ndarray` or None
-        Normalized data or ``None`` if ``inplace`` is ``True``.
+    data : :obj:`~numpy.ndarray` or :obj:`None`
+        Normalized data or :obj:`None` if ``inplace`` is :obj:`True`.
     """
 
     normalized = data if inplace else data.copy()
@@ -234,7 +234,7 @@ def dwi_select_shells(
     Computes a boolean mask of the DWI shells around the given index with the
     provided lower and upper bound b-values.
 
-    If ``atol_low`` and ``atol_high`` are both ``None``, the returned shell mask
+    If ``atol_low`` and ``atol_high`` are both :obj:`None`, the returned shell mask
     corresponds to the lengths of the diffusion-sensitizing gradients.
 
     Parameters

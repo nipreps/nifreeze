@@ -112,16 +112,16 @@ class BaseModel(ABC):
         """
         Fit and predict the indicated index of the dataset (abstract signature).
 
-        If ``index`` is ``None``, then the model is executed in *single-fit mode* meaning
+        If ``index`` is :obj:`None`, then the model is executed in *single-fit mode* meaning
         that it will be run only once in all the data available.
         Please note that all the predictions of this model will suffer from data leakage
         from the original volume.
 
         Parameters
         ----------
-        index : :obj:`int` or ``None``
+        index : :obj:`int`, optional
             The index to predict.
-            If ``None``, no prediction will be executed.
+            If :obj:`None`, no prediction will be executed.
 
         """
         return None

@@ -177,7 +177,7 @@ def _determine_single_fit_mode(model_name: str) -> bool:
     Returns
     -------
     :obj:`bool`
-        ``True`` if the model is to be run in *single-fit mode*, ``False``
+        :obj:`True` if the model is to be run in *single-fit mode*, :obj:`False`
         otherwise.
     """
 

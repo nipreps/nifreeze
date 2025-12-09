@@ -80,18 +80,18 @@ def plot_framewise_displacement(
 
     Parameters
     ----------
-    fd : :obj:`~pd.DataFrame`
+    fd : :obj:`~pandas.DataFrame`
         Framewise displacement values.
     labels : :obj:`list`
         Labels for legend.
     cmap_name : :obj:`str`, optional
         Colormap name.
-    ax : :obj:`Axes`, optional
+    ax : :obj:`~matplotlib.axes.Axes`, optional
         Figure axes.
 
     Returns
     -------
-    ax : :obj:`Axes`
+    ax : :obj:`~matplotlib.axes.Axes`
         Figure plot axis.
     """
 
@@ -201,13 +201,13 @@ def plot_motion_overlay(
     slice_idx : :obj:`int`
         Slice index to plot.
     smooth : :obj:`bool`, optional
-        ``True`` to smooth the motion relative difference.
-    ax : :obj:`Axes`, optional
+        :obj:`True` to smooth the motion relative difference.
+    ax : :obj:`~matplotlib.axes.Axes`, optional
         Figure axis.
 
     Returns
     -------
-    ax : :obj:`Axes`
+    ax : :obj:`~matplotlib.axes.Axes`
         Figure plot axis.
     """
 

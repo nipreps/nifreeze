@@ -294,7 +294,7 @@ class DWI(BaseDataset[np.ndarray]):
         compression : :obj:`str`, optional
             Compression strategy.
             See :obj:`~h5py.Group.create_dataset` documentation.
-        compression_opts : :obj:`typing.Any`, optional
+        compression_opts : :obj:`~typing.Any`, optional
             Parameters for compression
             `filters <https://docs.h5py.org/en/stable/high/dataset.html#dataset-compression>`__.
 

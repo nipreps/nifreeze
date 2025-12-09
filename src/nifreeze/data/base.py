@@ -70,7 +70,7 @@ BRAINMASK_SHAPE_MISMATCH_ERROR_MSG = "BaseDataset 'brainmask' shape ({brainmask_
 
 
 def _has_dim_size(value: Any, size: int) -> bool:
-    """Return ``True`` if ``value`` has a ``.shape`` attribute and one of its
+    """Return :obj:`True` if ``value`` has a ``.shape`` attribute and one of its
      dimensions equals ``size``.
 
     This is useful for checks where at least one axis must match an expected
@@ -79,17 +79,17 @@ def _has_dim_size(value: Any, size: int) -> bool:
 
     Parameters
     ----------
-     value : :obj:`Any`
+    value : :obj:`Any`
         Object to inspect. Typical inputs are NumPy arrays or objects exposing
         ``.shape``.
-     size : :obj:`int`
+    size : :obj:`int`
         The required dimension size to look for in ``value.shape``.
 
     Returns
     -------
      :obj:`bool`
-        ``True`` if ``.shape`` exists and any of its integers equals ``size``,
-        ``False`` otherwise.
+        :obj:`True` if ``.shape`` exists and any of its integers equals ``size``,
+        :obj:`False` otherwise.
 
     Examples
     --------
@@ -112,8 +112,8 @@ def _has_dim_size(value: Any, size: int) -> bool:
 def _has_ndim(value: Any, ndim: int) -> bool:
     """Check if ``value`` has ``ndim`` dimensionality.
 
-    Returns ``True`` if `value` has an ``.ndim`` attribute equal to ``ndim``, or
-    if it has a ``.shape`` attribute whose length equals ``ndim``.
+    Returns :obj:`True` if `value` has an ``.ndim`` attribute equal to ``ndim``,
+    or if it has a ``.shape`` attribute whose length equals ``ndim``.
 
     This helper is tolerant: it accepts objects that either:
     - expose an integer ``.ndim`` attribute (e.g., NumPy arrays), or
@@ -131,8 +131,8 @@ def _has_ndim(value: Any, ndim: int) -> bool:
     Returns
     -------
     :obj:`bool`
-        ``True`` if ``value`` appears to have ``ndim`` dimensions, ``False``
-        otherwise.
+        :obj:`True` if ``value`` appears to have ``ndim`` dimensions,
+        :obj:`False` otherwise.
 
     Examples
     --------
@@ -199,7 +199,7 @@ def validate_dataobj(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> No
     exc:`TypeError`
         If the input cannot be converted to a float :obj:`~numpy.ndarray`.
     exc:`ValueError`
-        If the value is ``None``, or not 4-dimensional.
+        If the value is :obj:`None`, or not 4-dimensional.
     """
     if value is None:
         raise ValueError(DATAOBJ_ABSENCE_ERROR_MSG)
@@ -232,7 +232,7 @@ def validate_affine(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> Non
     exc:`TypeError`
         If the input cannot be converted to a float :obj:`~numpy.ndarray`.
     exc:`ValueError`
-        If the value is ``None``, or not shaped ``(4, 4)``.
+        If the value is :obj:`None`, or not shaped ``(4, 4)``.
     """
     if value is None:
         raise ValueError(AFFINE_ABSENCE_ERROR_MSG)
@@ -343,8 +343,8 @@ class BaseDataset(Generic[Unpack[Ts]]):
             The selected data subset.
             If ``idx`` is a single integer, this will have shape ``(X, Y, Z)``,
             otherwise it may have shape ``(X, Y, Z, k)``.
-        affine : :obj:`~numpy.ndarray` or ``None``
-            The corresponding per-volume motion affine(s) or ``None`` if identity transform(s).
+        affine : :obj:`~numpy.ndarray` or :obj:`None`
+            The corresponding per-volume motion affine(s) or :obj:`None` if identity transform(s).
         Unpack[:obj:`~nifreeze.data.base.Ts`]
             Zero or more additional per-volume fields returned as unpacked
             trailing elements. The exact number, order, and types of elements
@@ -404,7 +404,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
         ----------
         index : :obj:`int`
             The volume index to transform.
-        affine : :obj:`numpy.ndarray`
+        affine : :obj:`~numpy.ndarray`
             The 4x4 affine matrix to be applied.
 
         """
@@ -471,8 +471,8 @@ class BaseDataset(Generic[Unpack[Ts]]):
         filename : :obj:`os.pathlike`, optional
             The output NIfTI file path.
         write_hmxfms : :obj:`bool`, optional
-            If ``True``, the head motion affines will be written out to filesystem
-            with BIDS' X5 format.
+            If :obj:`True`, the head motion affines will be written out to
+            filesystem with BIDS' X5 format.
         order : :obj:`int`, optional
             The interpolation order to use when resampling the data.
             Defaults to 3 (cubic interpolation).
@@ -510,7 +510,7 @@ def to_nifti(
     filename : :obj:`os.pathlike`, optional
         The output NIfTI file path.
     write_hmxfms : :obj:`bool`, optional
-        If ``True``, the head motion affines will be written out to filesystem
+        If :obj:`True`, the head motion affines will be written out to filesystem
         with BIDS' X5 format.
     order : :obj:`int`, optional
         The interpolation order to use when resampling the data.

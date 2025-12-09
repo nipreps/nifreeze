@@ -53,7 +53,7 @@ def get_affine_matrix(translation: tuple, rotation: tuple, voxel_sizes: tuple):
 
     Returns
     -------
-    affine_matrix : :obj:`numpy.ndarray`
+    affine_matrix : :obj:`~numpy.ndarray`
         Affine matrix.
     """
 

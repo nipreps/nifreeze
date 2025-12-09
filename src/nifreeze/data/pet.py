@@ -75,8 +75,8 @@ class PET(BaseDataset[np.ndarray]):
             The selected data subset.
             If ``idx`` is a single integer, this will have shape ``(X, Y, Z)``,
             otherwise it may have shape ``(X, Y, Z, k)``.
-        motion_affine : :obj:`~numpy.ndarray` or ``None``
-            The corresponding per-volume motion affine(s) or ``None`` if identity transform(s).
+        motion_affine : :obj:`~numpy.ndarray` or :obj:`None`
+            The corresponding per-volume motion affine(s) or :obj:`None` if identity transform(s).
         time : :obj:`~numpy.ndarray`
             The frame time corresponding to the index(es).
 
@@ -231,14 +231,14 @@ def from_nii(
     ----------
     filename : :obj:`os.pathlike`
         The NIfTI file.
-    frame_time : :obj:`numpy.ndarray` or :obj:`list` of :obj:`float`
+    frame_time : :obj:`~numpy.ndarray` or :obj:`list` of :obj:`float`
         The start times of each frame relative to the beginning of the acquisition.
     brainmask_file : :obj:`os.pathlike`, optional
         A brainmask NIfTI file. If provided, will be loaded and
         stored in the returned dataset.
-    frame_duration : :obj:`numpy.ndarray` or :obj:`list` of :obj:`float`, optional
+    frame_duration : :obj:`~numpy.ndarray` or :obj:`list` of :obj:`float`, optional
         The duration of each frame.
-        If ``None``, it is derived by the difference of consecutive frame times,
+        If :obj:`None`, it is derived by the difference of consecutive frame times,
         defaulting the last frame to match the second-last.
 
     Returns
@@ -320,8 +320,8 @@ def _compute_uptake_statistic(data: np.ndarray, stat_func: Callable = np.sum):
     data : :obj:`~numpy.ndarray`
         PET data.
     stat_func : :obj:`~collections.abc.Callable`, optional
-        Function to apply over voxels (e.g., :obj:`~numpy.sum`,
-        :obj:`~numpy.mean`, :obj:`~numpy.np.std`)
+        Function to apply over voxels (e.g., :func:`numpy.sum`,
+        :func:`numpy.mean`, :func:`numpy.std`)
 
     Returns
     -------
