@@ -26,8 +26,9 @@ from __future__ import annotations
 
 import json
 from collections import namedtuple
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import attrs
 import h5py
@@ -318,7 +319,7 @@ def _compute_uptake_statistic(data: np.ndarray, stat_func: Callable = np.sum):
     ----------
     data : :obj:`~numpy.ndarray`
         PET data.
-    stat_func : :obj:`Callable`, optional
+    stat_func : :obj:`~collections.abc.Callable`, optional
         Function to apply over voxels (e.g., :obj:`~numpy.sum`,
         :obj:`~numpy.mean`, :obj:`~numpy.np.std`)
 
