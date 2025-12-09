@@ -114,15 +114,17 @@ def _prepare_registration_data(
         Current volume for which a transformation is to be estimated.
     predicted : :obj:`~numpy.ndarray`
         Predicted volume's data array (that is, spatial reference).
-    affine : :obj:`numpy.ndarray`
+    affine : :obj:`~numpy.ndarray`
         Orientation affine from the original NIfTI.
     vol_idx : :obj:`int`
         Volume index.
     dirname : :obj:`os.pathlike`
         Directory name where the data is saved.
-    clip : :obj:`str` or ``None``
+    clip : :obj:`str`, optional
         Clip intensity of ``"sample"``, ``"predicted"``, ``"both"``,
         or ``"none"`` of the images.
+    init_affine : :obj:`~numpy.ndarray`, optional
+        Initial affine transform.
 
     Returns
     -------
@@ -130,7 +132,7 @@ def _prepare_registration_data(
         Predicted image filename.
     sample_path : :obj:`~pathlib.Path`
         Current volume's filename.
-    init_path : :obj:`~pathlib.Path` or ``None``
+    init_path : :obj:`~pathlib.Path` or :obj:`None`
         An initialization affine (for second and further estimators).
 
     """

@@ -36,7 +36,7 @@ correspond to properties that distinguish one imaging modality from another, and
 are part of the 4th axis (e.g. diffusion gradients in DWI or update in PET)."""
 
 SIZE_KEYS_DOC = """
-size : obj:`int`, optional
+size : :obj:`int`, optional
     Size of the structure to iterate over.
 bvals : :obj:`list`, optional
     List of b-values corresponding to all orientations of a DWI dataset.
@@ -131,15 +131,15 @@ Traverse the dataset volumes randomly.
 
 If the ``seed`` key is present in the keyword arguments, initializes the seed
 of Python's ``random`` pseudo-random number generator library with the given
-value. Specifically, if ``False``, ``None`` is used as the seed; if ``True``, a
-default seed value is used.
+value. Specifically, if :obj:`False`, :obj:`None` is used as the seed;
+if :obj:`True`, a default seed value is used.
 
 Other Parameters
 ----------------
-seed : :obj:`int`, :obj:`bool`, :obj:`str`, or ``None``
-    If :obj:`int` or :obj:`str` or ``None``, initializes the seed of Python's random generator
-    with the given value. If ``False``, the random generator is passed ``None``.
-    If ``True``, a default seed value is set.
+seed : :obj:`int`, :obj:`bool`, :obj:`str`, or :obj:`None`
+    If :obj:`int` or :obj:`str` or :obj:`None`, initializes the seed of Python's
+    random generator with the given value. If :obj:`False`, the random generator
+    is passed :obj:`None`. If :obj:`True`, a default seed value is set.
 
 {SIZE_KEYS_DOC}
 
@@ -182,7 +182,7 @@ def _value_iterator(
     values : :obj:`Sequence`
         List of values to traverse.
     ascending : :obj:`bool`
-        If ``True``, traverse in ascending order; traverse in descending order
+        If :obj:`True`, traverse in ascending order; traverse in descending order
         otherwise.
     round_decimals : :obj:`int`, optional
         Number of decimals to round values for sorting.

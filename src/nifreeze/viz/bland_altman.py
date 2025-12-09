@@ -26,6 +26,7 @@ import enum
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.figure import Figure
 
 from nifreeze.analysis.measure_agreement import (
     BASalientEntity,
@@ -46,7 +47,7 @@ def plot_bland_altman(
     ci: float = 0.95,
     salient_data: dict | None = None,
     figsize: tuple | None = (15, 10),
-) -> plt.Figure:
+) -> Figure:
     """Create a Bland-Altman plot.
 
     Create a Bland-Altman plot :footcite:p:`bland_statistical_1986` and
@@ -54,9 +55,9 @@ def plot_bland_altman(
 
     Parameters
     ----------
-    data1 : :obj:`numpy.ndarray`
+    data1 : :obj:`~numpy.ndarray`
         Data values.
-    data2 : :obj:`numpy.ndarray`
+    data2 : :obj:`~numpy.ndarray`
         Data values.
     ci : :obj:`float`, optional
         Confidence interval value. Must be in the [0, 1] range.
@@ -70,7 +71,7 @@ def plot_bland_altman(
 
     Returns
     -------
-    fig : :obj:`matplotlib.pyplot.Figure`
+    fig : :obj:`~matplotlib.figure.Figure`
         Matplotlib figure.
 
     References

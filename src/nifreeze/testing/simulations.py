@@ -422,7 +422,7 @@ def serialize_dwi(dwi_data, dwi_data_fname, affine: np.ndarray | None = None):
     dwi_data_fname : :obj:`str`
         Filename of NIfTI file to save the DWI signal.
     affine : :obj:`~numpy.ndarray`, optional
-        Affine matrix. If ``None`` an identity affine matrix is used.
+        Affine matrix. If :obj:`None` an identity affine matrix is used.
     """
 
     if affine is None:
@@ -475,7 +475,7 @@ def serialize_dmri(
     bvec_data_fname : :obj:`str`
         Filename of NIfTI file to save the diffusion-encoding gradient b-vecs.
     affine : :obj:`~numpy.ndarray`, optional
-        Affine matrix. If ``None`` an identity affine matrix is used.
+        Affine matrix. If :obj:`None` an identity affine matrix is used.
     """
 
     serialize_dwi(dwi_data, dwi_data_fname, affine=affine)

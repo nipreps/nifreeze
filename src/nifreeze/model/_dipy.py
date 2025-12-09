@@ -69,14 +69,14 @@ def gp_prediction(
         A fitted GaussianProcessRegressor model.
     gtab : :obj:`~dipy.core.gradients.GradientTable` or :obj:`~np.ndarray`
         Gradient table with one or more orientations at which the GP will be evaluated.
-    mask : :obj:`numpy.ndarray`, optional
+    mask : :obj:`~numpy.ndarray`, optional
         A boolean mask indicating which voxels to use (optional).
     return_std : bool, optional
         Whether to return the standard deviation of the predicted signal.
 
     Returns
     -------
-    :obj:`numpy.ndarray`
+    :obj:`~numpy.ndarray`
         A 3D or 4D array with the simulated gradient(s).
 
     """
@@ -221,7 +221,7 @@ class GaussianProcessModel(ReconstModel):
 
         Returns
         -------
-        :obj:`numpy.ndarray`
+        :obj:`~numpy.ndarray`
             A 3D or 4D array with the simulated gradient(s).
 
         """
@@ -240,7 +240,7 @@ class GPFit:
     model : :obj:`~sklearn.gaussian_process.GaussianProcessRegressor`
         The fitted Gaussian process regressor object.
     mask : :obj:`~numpy.ndarray`
-        The boolean mask used during fitting (can be ``None``).
+        The boolean mask used during fitting (can be :obj:`None`).
 
     """
 
@@ -277,7 +277,7 @@ class GPFit:
 
         Returns
         -------
-        :obj:`numpy.ndarray`
+        :obj:`~numpy.ndarray`
             A 3D or 4D array with the simulated gradient(s).
 
         """

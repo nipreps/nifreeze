@@ -25,6 +25,7 @@
 import matplotlib.gridspec as gridspec
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.figure import Figure
 from scipy.spatial import ConvexHull, KDTree
 from scipy.stats import pearsonr
 
@@ -38,7 +39,7 @@ def plot_error(
     title: str,
     color: str = "orange",
     figsize: tuple[float, float] = (19.2, 10.8),
-) -> plt.Figure:
+) -> Figure:
     """
     Plot the error and standard deviation.
 
@@ -63,7 +64,7 @@ def plot_error(
 
     Returns
     -------
-    :obj:`~matplotlib.pyplot.Figure`
+    :obj:`~matplotlib.figure.Figure`
         Matplotlib figure object.
 
     """

@@ -310,7 +310,7 @@ class ExponentialKriging(Kernel):
         eval_gradient : :obj:`bool`, optional
             Determines whether the gradient with respect to the log of
             the kernel hyperparameter is computed.
-            Only supported when Y is ``None``.
+            Only supported when Y is :obj:`None`.
 
         Returns
         -------
@@ -321,7 +321,7 @@ class ExponentialKriging(Kernel):
                 optional
             The gradient of the kernel k(X, X) with respect to the log of the
             hyperparameter of the kernel. Only returned when `eval_gradient`
-            is True.
+            is :obj:`True`.
 
         """
         thetas = compute_pairwise_angles(X, Y)
@@ -415,7 +415,7 @@ class SphericalKriging(Kernel):
         eval_gradient : :obj:`bool`, optional
             Determines whether the gradient with respect to the log of
             the kernel hyperparameter is computed.
-            Only supported when Y is ``None``.
+            Only supported when Y is :obj:`None`.
 
         Returns
         -------
@@ -426,7 +426,7 @@ class SphericalKriging(Kernel):
                 optional
             The gradient of the kernel k(X, X) with respect to the log of the
             hyperparameter of the kernel. Only returned when ``eval_gradient``
-            is True.
+            is :obj:`True`.
 
         """
         thetas = compute_pairwise_angles(X, Y)
@@ -558,7 +558,7 @@ def compute_pairwise_angles(
     r"""Compute pairwise angles across diffusion gradient encoding directions.
 
     Following :footcite:p:`andersson_non-parametric_2015`:, it computes the smallest of the angles between
-    each pair if ``closest_polarity`` is ``True``, i.e.,
+    each pair if ``closest_polarity`` is :obj:`True`, i.e.,
 
     .. math::
 
@@ -569,14 +569,14 @@ def compute_pairwise_angles(
     X : {array-like, sparse matrix} of shape (n_samples_X, n_features)
         Input data.
     Y : {array-like, sparse matrix} of shape (n_samples_Y, n_features), optional
-        Input data. If ``None``, the output will be the pairwise
+        Input data. If :obj:`None`, the output will be the pairwise
         similarities between all samples in ``X``.
     dense_output : :obj:`bool`, optional
         Whether to return dense output even when the input is sparse. If
-        ``False``, the output is sparse if both input arrays are sparse.
+        :obj:`False`, the output is sparse if both input arrays are sparse.
     closest_polarity : :obj:`bool`, optional
-        ``True`` to consider the smallest of the two angles between the crossing
-         lines resulting from reversing each vector pair.
+        :obj:`True` to consider the smallest of the two angles between the
+        crossing lines resulting from reversing each vector pair.
 
     Returns
     -------

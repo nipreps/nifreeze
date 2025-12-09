@@ -59,7 +59,7 @@ def displacements_within_mask(
         The transformation to test. This transformation is applied to the
         voxel coordinates.
     reference_xfm : :obj:`~nitransforms.base.TransformBase`, optional
-        A reference transformation to compare with. If ``None``, the identity
+        A reference transformation to compare with. If :obj:`None`, the identity
         transformation is assumed (no transformation).
 
     Returns
@@ -126,14 +126,14 @@ def compute_fd_from_motion(motion_parameters: np.ndarray, radius: float = RADIUS
 
     Parameters
     ----------
-    motion_parameters : :obj:`numpy.ndarray`
+    motion_parameters : :obj:`~numpy.ndarray`
         Motion parameters.
     radius : :obj:`float`, optional
         Radius (in mm) of a sphere mimicking the size of a typical human brain.
 
     Returns
     -------
-    :obj:`numpy.ndarray`
+    :obj:`~numpy.ndarray`
         The framewise displacement (FD) as the sum of absolute differences
         between consecutive frames.
     """

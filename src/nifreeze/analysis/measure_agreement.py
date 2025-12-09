@@ -60,9 +60,9 @@ def _check_bland_altman_data(data1: np.ndarray, data2: np.ndarray) -> None:
 
     Parameters
     ----------
-    data1 : :obj:`numpy.ndarray`
+    data1 : :obj:`~numpy.ndarray`
         Data values.
-    data2 : :obj:`numpy.ndarray`
+    data2 : :obj:`~numpy.ndarray`
         Data values.
     """
 
@@ -103,18 +103,18 @@ def compute_bland_altman_features(
 
     Parameters
     ----------
-    data1 : :obj:`numpy.ndarray`
+    data1 : :obj:`~numpy.ndarray`
         Data values.
-    data2 : :obj:`numpy.ndarray`
+    data2 : :obj:`~numpy.ndarray`
         Data values.
     ci : :obj:`float`
         Confidence interval size. Must be in the [0, 1] range.
 
     Returns
     -------
-    diff : :obj:`numpy.ndarray`
+    diff : :obj:`~numpy.ndarray`
         Differences.
-    mean : :obj:`numpy.ndarray`
+    mean : :obj:`~numpy.ndarray`
         Mean values (across both data arrays).
     mean_diff : :obj:`float`
         Mean differences.
@@ -181,7 +181,7 @@ def get_reliability_mask(diff: np.ndarray, loa_lower: float, loa_upper: float) -
 
     Parameters
     ----------
-    diff : :obj:`numpy.ndarray`
+    diff : :obj:`~numpy.ndarray`
         Differences data.
     loa_lower : :obj:`float`
         Lower limit of agreement.
@@ -190,7 +190,7 @@ def get_reliability_mask(diff: np.ndarray, loa_lower: float, loa_upper: float) -
 
     Returns
     -------
-    :obj:`numpy.ndarray`
+    :obj:`~numpy.ndarray`
         Reliability mask.
     """
 
@@ -212,9 +212,9 @@ def identify_bland_altman_salient_data(
 
     Parameters
     ----------
-    data1 : :obj:`numpy.ndarray`
+    data1 : :obj:`~numpy.ndarray`
         Data array 1.
-    data2 : :obj:`numpy.ndarray`
+    data2 : :obj:`~numpy.ndarray`
         Data array 2.
     ci : :obj:`float`
         Confidence interval.
@@ -227,7 +227,7 @@ def identify_bland_altman_salient_data(
     -------
     :obj:`dict`
         Reliability, left- and right-most data point indices, and corresponding
-        data masks as specified by the `:obj:`~nifreeze.analysis.measure_agreement.BASalientEntity`
+        data masks as specified by the :obj:`~nifreeze.analysis.measure_agreement.BASalientEntity`
         keys.
     """
 

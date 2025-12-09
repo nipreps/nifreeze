@@ -241,6 +241,7 @@ autoclass_content = "both"
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
+    "attrs": ("https://www.attrs.org/en/stable/", None),
     "bids": ("https://bids-standard.github.io/pybids/", None),
     "dipy": ("https://docs.dipy.org/stable", None),
     "matplotlib": ("https://matplotlib.org/stable", None),
