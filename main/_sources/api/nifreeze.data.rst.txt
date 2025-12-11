@@ -13,6 +13,7 @@ Subpackages
    :maxdepth: 1
 
    nifreeze.data.dmri
+   nifreeze.data.pet
 
 Submodules
 ----------
@@ -22,6 +23,5 @@ Submodules
 
    nifreeze.data.base
    nifreeze.data.filtering
-   nifreeze.data.pet
    nifreeze.data.splitting
    nifreeze.data.utils

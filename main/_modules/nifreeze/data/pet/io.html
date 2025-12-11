@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../../genindex.html"><link rel="search" title="Search" href="../../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.data.dmri.io - nifreeze 25.0.0.dev766 documentation</title>
+        <title>nifreeze.data.pet.io - nifreeze 25.0.0.dev766 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -307,7 +307,7 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <h1>Source code for nifreeze.data.dmri.io</h1><div class="highlight"><pre>
+          <h1>Source code for nifreeze.data.pet.io</h1><div class="highlight"><pre>
 <span></span><span class="c1"># emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-</span>
 <span class="c1"># vi: set ft=python sts=4 ts=4 sw=4 et:</span>
 <span class="c1">#</span>
@@ -330,225 +330,89 @@
 <span class="c1">#</span>
 <span class="c1">#     https://www.nipreps.org/community/licensing/</span>
 <span class="c1">#</span>
-<span class="sd">&quot;&quot;&quot;Input/Output utilities for DWI objects.&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;Input/Output utilities for PET objects.&quot;&quot;&quot;</span>
 
+<span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span> <span class="nn">warnings</span> <span class="kn">import</span> <span class="n">warn</span>
 
-<span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nb</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">nibabel.spatialimages</span> <span class="kn">import</span> <span class="n">SpatialImage</span>
 
-<span class="kn">from</span> <span class="nn">nifreeze.data.base</span> <span class="kn">import</span> <span class="n">to_nifti</span> <span class="k">as</span> <span class="n">_base_to_nifti</span>
-<span class="kn">from</span> <span class="nn">nifreeze.data.dmri.base</span> <span class="kn">import</span> <span class="n">DWI</span>
-<span class="kn">from</span> <span class="nn">nifreeze.data.dmri.utils</span> <span class="kn">import</span> <span class="n">transform_fsl_bvec</span>
+<span class="kn">from</span> <span class="nn">nifreeze.data.pet.base</span> <span class="kn">import</span> <span class="n">PET</span>
+<span class="kn">from</span> <span class="nn">nifreeze.data.pet.utils</span> <span class="kn">import</span> <span class="n">compute_temporal_markers</span>
 <span class="kn">from</span> <span class="nn">nifreeze.utils.ndimage</span> <span class="kn">import</span> <span class="n">get_data</span><span class="p">,</span> <span class="n">load_api</span>
 
-<span class="n">GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
-<span class="s2">Both a gradients table file and b-vec/val files are defined; </span><span class="se">\</span>
-<span class="s2">ignoring b-vec/val files in favor of the gradients_file.&quot;&quot;&quot;</span>
-<span class="sd">&quot;&quot;&quot;dMRI gradient file priority warning message.&quot;&quot;&quot;</span>
+<span class="n">TEMPORAL_FILE_KEY_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{key}</span><span class="s2"> key not found in temporal file&quot;</span>
+<span class="sd">&quot;&quot;&quot;PET temporal file key error message.&quot;&quot;&quot;</span>
 
-<span class="n">GRADIENT_DATA_MISSING_ERROR</span> <span class="o">=</span> <span class="s2">&quot;No gradient data provided.&quot;</span>
-<span class="sd">&quot;&quot;&quot;dMRI missing gradient data error message.&quot;&quot;&quot;</span>
+<span class="n">FRAME_TIME_START_KEY</span> <span class="o">=</span> <span class="s2">&quot;FrameTimesStart&quot;</span>
+<span class="sd">&quot;&quot;&quot;PET frame time start key.&quot;&quot;&quot;</span>
 
 
 <div class="viewcode-block" id="from_nii">
-<a class="viewcode-back" href="../../../../api/nifreeze.data.dmri.io.html#nifreeze.data.dmri.from_nii">[docs]</a>
+<a class="viewcode-back" href="../../../../api/nifreeze.data.pet.io.html#nifreeze.data.pet.from_nii">[docs]</a>
 <span class="k">def</span> <span class="nf">from_nii</span><span class="p">(</span>
     <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">temporal_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">brainmask_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">gradients_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">bvec_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">bval_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">b0_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DWI</span><span class="p">:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PET</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Load DWI data from NIfTI and construct a DWI object.</span>
-
-<span class="sd">    This function loads data from a NIfTI file, optionally loading a gradient table</span>
-<span class="sd">    from either a separate gradients file or from .bvec / .bval files.</span>
+<span class="sd">    Load PET data from NIfTI, creating a PET object with appropriate metadata.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    filename : :obj:`os.pathlike`</span>
-<span class="sd">        The main DWI data file (NIfTI).</span>
+<span class="sd">        The NIfTI file.</span>
+<span class="sd">    temporal_file : :obj:`os.pathlike`</span>
+<span class="sd">        A JSON file containing temporal data. It must at least contain</span>
+<span class="sd">        ``FrameTimesStart`` data.</span>
 <span class="sd">    brainmask_file : :obj:`os.pathlike`, optional</span>
 <span class="sd">        A brainmask NIfTI file. If provided, will be loaded and</span>
 <span class="sd">        stored in the returned dataset.</span>
-<span class="sd">    gradients_file : :obj:`os.pathlike`, optional</span>
-<span class="sd">        A text file containing the gradients table, shape (N, C) where the last column</span>
-<span class="sd">        stores the b-values. If provided following the column-major convention (C, N),</span>
-<span class="sd">        it will be transposed automatically. If provided, it supersedes any .bvec / .bval</span>
-<span class="sd">        combination.</span>
-<span class="sd">    bvec_file : :obj:`os.pathlike`, optional</span>
-<span class="sd">        A text file containing b-vectors, shape (N, 3) or (3, N).</span>
-<span class="sd">    bval_file : :obj:`os.pathlike`, optional</span>
-<span class="sd">        A text file containing b-values, shape (N,).</span>
-<span class="sd">    b0_file : :obj:`os.pathlike`, optional</span>
-<span class="sd">        A NIfTI file containing a b=0 volume (possibly averaged or reference).</span>
-<span class="sd">        If not provided, and the data contains at least one b=0 volume, one will be computed.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    dwi : :obj:`~nifreeze.data.dmri.base.DWI`</span>
-<span class="sd">        A DWI object containing the loaded data, gradient table, and optional</span>
-<span class="sd">        b-zero volume, and brainmask.</span>
+<span class="sd">    :obj:`~nifreeze.data.pet.PET`</span>
+<span class="sd">        A PET object storing the data, metadata, and any optional mask.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    :exc:`RuntimeError`</span>
-<span class="sd">        If no gradient information is provided (neither ``gradients_file`` nor</span>
-<span class="sd">        ``bvec_file`` + ``bval_file``).</span>
+<span class="sd">        If ``FrameTimesStart`` is not provided (BIDS requires it).</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="n">filename</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
 
     <span class="c1"># 1) Load a NIfTI</span>
     <span class="n">img</span> <span class="o">=</span> <span class="n">load_api</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">SpatialImage</span><span class="p">)</span>
     <span class="n">fulldata</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
 
-    <span class="c1"># 2) Determine the gradients array from either gradients_file or bvec/bval</span>
-    <span class="k">if</span> <span class="n">gradients_file</span><span class="p">:</span>
-        <span class="n">grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">gradients_file</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">bvec_file</span> <span class="ow">and</span> <span class="n">bval_file</span><span class="p">:</span>
-            <span class="n">warn</span><span class="p">(</span><span class="n">GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="n">bvec_file</span> <span class="ow">and</span> <span class="n">bval_file</span><span class="p">:</span>
-        <span class="n">bvecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">bvec_file</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">bvecs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">bvecs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
-            <span class="n">bvecs</span> <span class="o">=</span> <span class="n">bvecs</span><span class="o">.</span><span class="n">T</span>
+    <span class="c1"># 2) Load the temporal data</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">temporal_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">temporal_attrs</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
 
-        <span class="n">bvals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">bval_file</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
-        <span class="n">grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">((</span><span class="n">bvecs</span><span class="p">,</span> <span class="n">bvals</span><span class="p">))</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">GRADIENT_DATA_MISSING_ERROR</span><span class="p">)</span>
+    <span class="n">frame_time</span> <span class="o">=</span> <span class="n">temporal_attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">FRAME_TIME_START_KEY</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">frame_time</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">TEMPORAL_FILE_KEY_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">FRAME_TIME_START_KEY</span><span class="p">))</span>
 
-    <span class="c1"># 3) Read b-zero volume if provided</span>
-    <span class="n">b0_data</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="k">if</span> <span class="n">b0_file</span><span class="p">:</span>
-        <span class="n">b0img</span> <span class="o">=</span> <span class="n">load_api</span><span class="p">(</span><span class="n">b0_file</span><span class="p">,</span> <span class="n">SpatialImage</span><span class="p">)</span>
-        <span class="n">b0_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">b0img</span><span class="o">.</span><span class="n">dataobj</span><span class="p">)</span>
-
-    <span class="c1"># 4) If a brainmask_file was provided, load it</span>
+    <span class="c1"># 3) If a brainmask_file was provided, load it</span>
     <span class="n">brainmask_data</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="k">if</span> <span class="n">brainmask_file</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">brainmask_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">mask_img</span> <span class="o">=</span> <span class="n">load_api</span><span class="p">(</span><span class="n">brainmask_file</span><span class="p">,</span> <span class="n">SpatialImage</span><span class="p">)</span>
         <span class="n">brainmask_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">mask_img</span><span class="o">.</span><span class="n">dataobj</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
 
-    <span class="c1"># 5) Create and return the DWI instance.</span>
-    <span class="k">return</span> <span class="n">DWI</span><span class="p">(</span>
+    <span class="c1"># 4) Compute temporal attributes</span>
+    <span class="n">midframe</span><span class="p">,</span> <span class="n">total_duration</span> <span class="o">=</span> <span class="n">compute_temporal_markers</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">frame_time</span><span class="p">))</span>
+
+    <span class="c1"># 5) Create and return the PET instance</span>
+    <span class="k">return</span> <span class="n">PET</span><span class="p">(</span>
         <span class="n">dataobj</span><span class="o">=</span><span class="n">fulldata</span><span class="p">,</span>
         <span class="n">affine</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span>
-        <span class="n">gradients</span><span class="o">=</span><span class="n">grad</span><span class="p">,</span>
-        <span class="n">bzero</span><span class="o">=</span><span class="n">b0_data</span><span class="p">,</span>
         <span class="n">brainmask</span><span class="o">=</span><span class="n">brainmask_data</span><span class="p">,</span>
+        <span class="n">midframe</span><span class="o">=</span><span class="n">midframe</span><span class="p">,</span>
+        <span class="n">total_duration</span><span class="o">=</span><span class="n">total_duration</span><span class="p">,</span>
     <span class="p">)</span></div>
-
-
-
-<div class="viewcode-block" id="to_nifti">
-<a class="viewcode-back" href="../../../../api/nifreeze.data.dmri.io.html#nifreeze.data.dmri.to_nifti">[docs]</a>
-<span class="k">def</span> <span class="nf">to_nifti</span><span class="p">(</span>
-    <span class="n">dwi</span><span class="p">,</span>
-    <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">write_hmxfms</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-    <span class="n">insert_b0</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="n">bvals_dec_places</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
-    <span class="n">bvecs_dec_places</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nb</span><span class="o">.</span><span class="n">nifti1</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Export the dMRI object to disk (NIfTI data, and gradients, if applicable).</span>
-
-<span class="sd">    Gradients (b-vecs &amp; b-vals files) are only serialized if the DWI object has</span>
-<span class="sd">    non-null :attr:`~nifreeze.data.base.BaseDataset.motion_affine` data (i.e. if</span>
-<span class="sd">    b-vectors need to be rotated following the motion estimation).</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    dwi : :obj:`~nifreeze.data.dmri.base.DWI`</span>
-<span class="sd">        A DWI object containing the diffusion data to be written, including the</span>
-<span class="sd">        gradient table, and optional b-zero volume.</span>
-<span class="sd">    filename : :obj:`os.pathlike`, optional</span>
-<span class="sd">        The output NIfTI file path.</span>
-<span class="sd">    write_hmxfms : :obj:`bool`, optional</span>
-<span class="sd">        If ``True``, the head motion affines will be written out to filesystem</span>
-<span class="sd">        with BIDS&#39; X5 format.</span>
-<span class="sd">    order : :obj:`int`, optional</span>
-<span class="sd">        The interpolation order to use when resampling the data.</span>
-<span class="sd">        Defaults to 3 (cubic interpolation).</span>
-<span class="sd">    insert_b0 : :obj:`bool`, optional</span>
-<span class="sd">        Insert a :math:`b=0` at the front of the output NIfTI and add the corresponding</span>
-<span class="sd">        null gradient value to the output bval/bvec files.</span>
-<span class="sd">    bvals_dec_places : :obj:`int`, optional</span>
-<span class="sd">        Decimal places to use when serializing b-values.</span>
-<span class="sd">    bvecs_dec_places : :obj:`int`, optional</span>
-<span class="sd">        Decimal places to use when serializing b-vectors.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    nii : :obj:`~nibabel.nifti1.Nifti1Image`</span>
-<span class="sd">        The main DWI data object.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="n">no_bzero</span> <span class="o">=</span> <span class="n">dwi</span><span class="o">.</span><span class="n">bzero</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">insert_b0</span>
-
-    <span class="n">bvals</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">bvecs</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="c1"># Rotate b-vectors if dwi.motion_affines is not None</span>
-    <span class="k">if</span> <span class="n">dwi</span><span class="o">.</span><span class="n">motion_affines</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">bvals</span> <span class="o">=</span> <span class="n">dwi</span><span class="o">.</span><span class="n">bvals</span>
-        <span class="n">rotated</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">transform_fsl_bvec</span><span class="p">(</span><span class="n">bvec</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="n">dwi</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">bvec</span><span class="p">,</span> <span class="n">affine</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">dwi</span><span class="o">.</span><span class="n">gradients</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">3</span><span class="p">],</span> <span class="n">dwi</span><span class="o">.</span><span class="n">motion_affines</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="p">]</span>
-        <span class="n">bvecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">rotated</span><span class="p">)</span>
-
-    <span class="c1"># Parent&#39;s to_nifti to handle the primary NIfTI export.</span>
-    <span class="n">nii</span> <span class="o">=</span> <span class="n">_base_to_nifti</span><span class="p">(</span>
-        <span class="n">dwi</span><span class="p">,</span>
-        <span class="n">filename</span><span class="o">=</span><span class="n">filename</span> <span class="k">if</span> <span class="n">no_bzero</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">write_hmxfms</span><span class="o">=</span><span class="n">write_hmxfms</span><span class="p">,</span>
-        <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span>
-    <span class="p">)</span>
-
-    <span class="k">if</span> <span class="n">no_bzero</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">insert_b0</span><span class="p">:</span>
-            <span class="n">warn</span><span class="p">(</span>
-                <span class="s2">&quot;Ignoring ``insert_b0`` argument as the data object&#39;s bzero field is unset&quot;</span><span class="p">,</span>
-                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-            <span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">dwi</span><span class="o">.</span><span class="n">bzero</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="n">dwi</span><span class="o">.</span><span class="n">dataobj</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
-        <span class="n">nii</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">nii</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">nii</span><span class="o">.</span><span class="n">header</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">nii</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-
-        <span class="c1"># If inserting a b0 volume is requested, add the corresponding null</span>
-        <span class="c1"># gradient value to the bval/bvec pair</span>
-        <span class="k">if</span> <span class="n">bvecs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">bvals</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">bvals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">bvals</span><span class="p">))</span>
-            <span class="n">bvecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">bvecs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])),</span> <span class="n">bvecs</span><span class="p">))</span>
-
-    <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="c1"># Convert filename to a Path object.</span>
-        <span class="n">out_root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span><span class="o">.</span><span class="n">absolute</span><span class="p">()</span>
-
-        <span class="c1"># Get the base stem for writing .bvec / .bval.</span>
-        <span class="n">out_root</span> <span class="o">=</span> <span class="n">out_root</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="n">out_root</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_root</span><span class="o">.</span><span class="n">suffixes</span><span class="p">),</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-
-        <span class="c1"># Construct sidecar file paths.</span>
-        <span class="n">bvecs_file</span> <span class="o">=</span> <span class="n">out_root</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.bvec&quot;</span><span class="p">)</span>
-        <span class="n">bvals_file</span> <span class="o">=</span> <span class="n">out_root</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.bval&quot;</span><span class="p">)</span>
-
-        <span class="c1"># Save bvecs and bvals to text files. BIDS expects 3 rows x N columns.</span>
-        <span class="k">if</span> <span class="n">bvecs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">bvals</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">bvecs_file</span><span class="p">,</span> <span class="n">bvecs</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;%.</span><span class="si">{</span><span class="n">bvecs_dec_places</span><span class="si">}</span><span class="s2">f&quot;</span><span class="p">)</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">bvals_file</span><span class="p">,</span> <span class="n">bvals</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">fmt</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;%.</span><span class="si">{</span><span class="n">bvals_dec_places</span><span class="si">}</span><span class="s2">f&quot;</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">nii</span></div>
 
 </pre></div>
         </article>
