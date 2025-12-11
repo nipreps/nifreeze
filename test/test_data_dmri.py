@@ -849,17 +849,18 @@ def test_to_nifti(
         np.allclose(_nii_dataobj.affine, _nii_load.affine)
 
         # Check gradients
-        bvecs_file = _filename.with_suffix("").with_suffix(".bvec")
-        bvals_file = _filename.with_suffix("").with_suffix(".bval")
-        assert bvals_file.is_file()
-        assert bvecs_file.is_file()
+        if motion_affines is not None:
+            bvecs_file = _filename.with_suffix("").with_suffix(".bvec")
+            bvals_file = _filename.with_suffix("").with_suffix(".bval")
+            assert bvals_file.is_file()
+            assert bvecs_file.is_file()
 
-        # Read the files
-        bvals_from_file = np.loadtxt(bvals_file)
-        bvecs_from_file = np.loadtxt(bvecs_file).T
+            # Read the files
+            bvals_from_file = np.loadtxt(bvals_file)
+            bvecs_from_file = np.loadtxt(bvecs_file).T
 
-        assert np.allclose(bvals_from_file, bvals_dwi, rtol=0, atol=10**-bvals_dec_places)
-        assert np.allclose(bvecs_from_file, bvecs_dwi, rtol=0, atol=10**-bvecs_dec_places)
+            assert np.allclose(bvals_from_file, bvals_dwi, rtol=0, atol=10**-bvals_dec_places)
+            assert np.allclose(bvecs_from_file, bvecs_dwi, rtol=0, atol=10**-bvecs_dec_places)
 
 
 @pytest.mark.skip(reason="to_nifti takes absurdly long")

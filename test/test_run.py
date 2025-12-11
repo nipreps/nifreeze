@@ -74,12 +74,14 @@ def test_run_call(tmp_path, monkeypatch, write_hdf5):
             cli_run.main(argv)
 
     assert Path(tmp_path / out_filename).is_file()
-    out_bval_filename = Path(Path(input_file).name).stem + ".bval"
-    out_bval_path: Path = Path(tmp_path) / out_bval_filename
-    out_bvec_filename = Path(Path(input_file).name).stem + ".bvec"
-    out_bvec_path: Path = Path(tmp_path) / out_bvec_filename
-    assert out_bval_path.is_file()
-    assert out_bvec_path.is_file()
+    if called["dataset"].motion_affines is not None:
+        assert Path(tmp_path / out_filename).is_file()
+        out_bval_filename = Path(Path(input_file).name).stem + ".bval"
+        out_bval_path: Path = Path(tmp_path) / out_bval_filename
+        out_bvec_filename = Path(Path(input_file).name).stem + ".bvec"
+        out_bvec_path: Path = Path(tmp_path) / out_bvec_filename
+        assert out_bval_path.is_file()
+        assert out_bvec_path.is_file()
     if write_hdf5:
         out_h5_filename = Path(Path(input_file).name).stem + ".h5"
         out_h5_path: Path = Path(tmp_path) / out_h5_filename
