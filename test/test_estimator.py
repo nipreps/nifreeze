@@ -29,6 +29,7 @@ import pytest
 import nifreeze.estimator
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.dmri.utils import DEFAULT_LOWB_THRESHOLD
+from nifreeze.data.pet import compute_uptake_statistic
 from nifreeze.estimator import Estimator
 from nifreeze.model.base import BaseModel
 from nifreeze.utils import iterators
@@ -78,13 +79,19 @@ class DummyDWIDataset(BaseDataset):
 
 
 class DummyPETDataset(BaseDataset):
-    def __init__(self, pet_dataobj, affine, brainmask_dataobj, midframe, total_duration):
+    def __init__(
+        self,
+        pet_dataobj,
+        affine,
+        brainmask_dataobj,
+        midframe,
+        total_duration,
+    ):
         self.dataobj = pet_dataobj
         self.affine = affine
         self.brainmask = brainmask_dataobj
         self.midframe = midframe
         self.total_duration = total_duration
-        self.uptake = np.sum(pet_dataobj.reshape(-1, pet_dataobj.shape[-1]), axis=0)
 
     def __len__(self):
         return self.dataobj.shape[-1]
@@ -155,12 +162,19 @@ def test_estimator_iterator_index_match(
             pet_dataobj,
             affine,
             brainmask_dataobj,
+            _,
             midframe,
             total_duration,
         ) = setup_random_pet_data
 
-        dataset = DummyPETDataset(pet_dataobj, affine, brainmask_dataobj, midframe, total_duration)
-        uptake = dataset.uptake
+        dataset = DummyPETDataset(
+            pet_dataobj,
+            affine,
+            brainmask_dataobj,
+            midframe,
+            total_duration,
+        )
+        uptake = compute_uptake_statistic(pet_dataobj, stat_func=np.sum)
         kwargs = {"uptake": uptake}
     else:
         raise NotImplementedError(f"{modality} not implemented")

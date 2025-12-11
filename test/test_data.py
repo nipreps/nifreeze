@@ -21,6 +21,7 @@
 #     https://www.nipreps.org/community/licensing/
 #
 
+import json
 import os
 from typing import Optional
 
@@ -279,6 +280,11 @@ def test_load_pet_from_nii(monkeypatch, tmp_path):
     nb.save(img, fname)
     nb.save(mask_img, mask)
 
+    temporal_fname = tmp_path / "temporal.json"
+    temporal_data = {"frame_time": np.ones(4).tolist()}
+    with temporal_fname.open("w", encoding="utf-8") as f:
+        json.dump(temporal_data, f, ensure_ascii=False, indent=2, sort_keys=True)
+
     called = {}
     sentinel = object()
 
@@ -290,9 +296,9 @@ def test_load_pet_from_nii(monkeypatch, tmp_path):
 
     monkeypatch.setattr(pet, "from_nii", dummy_from_nii)
 
-    retval = data.load(fname, brainmask_file=mask, frame_time=np.zeros((4,)))
+    retval = data.load(fname, brainmask_file=mask, temporal_file=temporal_fname)
 
     assert retval is sentinel
     assert called["filename"] == fname
     assert called["brainmask_file"] == mask
-    assert "frame_time" in called["kwargs"]
+    assert "temporal_file" in called["kwargs"]
