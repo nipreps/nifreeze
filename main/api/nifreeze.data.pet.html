@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.data.splitting module" href="nifreeze.data.splitting.html"><link rel="prev" title="nifreeze.data.filtering module" href="nifreeze.data.filtering.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.data.pet module - nifreeze 25.0.0.dev757 documentation</title>
+        <title>nifreeze.data.pet module - nifreeze 25.0.0.dev759 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev757 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev759 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev757</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev759</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev757</span>
+  <span class="sidebar-brand-text">25.0.0.dev759</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -312,9 +312,39 @@
           <section id="module-nifreeze.data.pet">
 <span id="nifreeze-data-pet-module"></span><h1>nifreeze.data.pet module<a class="headerlink" href="#module-nifreeze.data.pet" title="Link to this heading">¶</a></h1>
 <p>PET data representation.</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.pet.ARRAY_ATTRIBUTE_NDIM_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.</span></span><span class="sig-name descname"><span class="pre">ARRAY_ATTRIBUTE_NDIM_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;PET</span> <span class="pre">'{attribute}'</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">a</span> <span class="pre">1D</span> <span class="pre">numpy</span> <span class="pre">array.&quot;</span></em><a class="headerlink" href="#nifreeze.data.pet.ARRAY_ATTRIBUTE_NDIM_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>PET initialization array attribute ndim error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.pet.ARRAY_ATTRIBUTE_OBJECT_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.</span></span><span class="sig-name descname"><span class="pre">ARRAY_ATTRIBUTE_OBJECT_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;PET</span> <span class="pre">'{attribute}'</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">a</span> <span class="pre">numeric</span> <span class="pre">homogeneous</span> <span class="pre">array-like</span> <span class="pre">object.&quot;</span></em><a class="headerlink" href="#nifreeze.data.pet.ARRAY_ATTRIBUTE_OBJECT_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>PET initialization array attribute object error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.pet.ATTRIBUTE_ABSENCE_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.</span></span><span class="sig-name descname"><span class="pre">ATTRIBUTE_ABSENCE_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;PET</span> <span class="pre">'{attribute}'</span> <span class="pre">may</span> <span class="pre">not</span> <span class="pre">be</span> <span class="pre">None&quot;</span></em><a class="headerlink" href="#nifreeze.data.pet.ATTRIBUTE_ABSENCE_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>PET initialization array attribute absence error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.pet.ATTRIBUTE_VOLUME_DIMENSIONALITY_MISMATCH_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.</span></span><span class="sig-name descname"><span class="pre">ATTRIBUTE_VOLUME_DIMENSIONALITY_MISMATCH_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;PET</span> <span class="pre">'{attribute}'</span> <span class="pre">length</span> <span class="pre">does</span> <span class="pre">not</span> <span class="pre">match</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">frames:</span> <span class="pre">expected</span> <span class="pre">{n_frames}</span> <span class="pre">values,</span> <span class="pre">found</span> <span class="pre">{attr_len}.&quot;</span></em><a class="headerlink" href="#nifreeze.data.pet.ATTRIBUTE_VOLUME_DIMENSIONALITY_MISMATCH_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>PET attribute shape mismatch error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.pet.FRAME_TIME_START_KEY">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.</span></span><span class="sig-name descname"><span class="pre">FRAME_TIME_START_KEY</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'FrameTimesStart'</span></em><a class="headerlink" href="#nifreeze.data.pet.FRAME_TIME_START_KEY" title="Link to this definition">¶</a></dt>
+<dd><p>PET frame time start key.</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="nifreeze.data.pet.PET">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.</span></span><span class="sig-name descname"><span class="pre">PET</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataobj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">affine</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">brainmask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">motion_affines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datahdr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'nb.Nifti1Header</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'Path'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">NOTHING</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">midframe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total_duration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uptake</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/pet.html#PET"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.pet.PET" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.</span></span><span class="sig-name descname"><span class="pre">PET</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataobj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">affine</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">brainmask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">motion_affines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datahdr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'nb.Nifti1Header</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'Path'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">NOTHING</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">midframe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'Any'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total_duration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'Any'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/pet.html#PET"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.pet.PET" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="nifreeze.data.base.html#nifreeze.data.base.BaseDataset" title="nifreeze.data.base.BaseDataset"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseDataset</span></code></a>[<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>]</p>
 <p>Data representation structure for PET data.</p>
 <p>Method generated by attrs for class PET.</p>
@@ -322,12 +352,6 @@
 <dt class="sig sig-object py" id="nifreeze.data.pet.PET.from_filename">
 <em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_filename</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Self" title="(in Python v3.14)"><span class="pre">Self</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/pet.html#PET.from_filename"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.pet.PET.from_filename" title="Link to this definition">¶</a></dt>
 <dd><p>Read an HDF5 file from disk.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="nifreeze.data.pet.PET.load">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">json_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">brainmask_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Self" title="(in Python v3.14)"><span class="pre">Self</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/pet.html#PET.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.pet.PET.load" title="Link to this definition">¶</a></dt>
-<dd><p>Load PET data.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -372,28 +396,116 @@
 <dd><p>A float representing the total duration of the dataset.</p>
 </dd></dl>
 
-<dl class="py attribute">
-<dt class="sig sig-object py" id="nifreeze.data.pet.PET.uptake">
-<span class="sig-name descname"><span class="pre">uptake</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">np.ndarray</span></em><a class="headerlink" href="#nifreeze.data.pet.PET.uptake" title="Link to this definition">¶</a></dt>
-<dd><p>A (N,) numpy array specifying the uptake value of each sample or frame.</p>
 </dd></dl>
 
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.pet.SCALAR_ATTRIBUTE_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.</span></span><span class="sig-name descname"><span class="pre">SCALAR_ATTRIBUTE_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;PET</span> <span class="pre">'{attribute}'</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">a</span> <span class="pre">numeric</span> <span class="pre">or</span> <span class="pre">single-element</span> <span class="pre">sequence</span> <span class="pre">object.&quot;</span></em><a class="headerlink" href="#nifreeze.data.pet.SCALAR_ATTRIBUTE_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>PET initialization scalar attribute object error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.pet.TEMPORAL_ATTRIBUTE_INCONSISTENCY_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.</span></span><span class="sig-name descname"><span class="pre">TEMPORAL_ATTRIBUTE_INCONSISTENCY_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;PET</span> <span class="pre">'total_duration'</span> <span class="pre">cannot</span> <span class="pre">be</span> <span class="pre">smaller</span> <span class="pre">than</span> <span class="pre">last</span> <span class="pre">'midframe'</span> <span class="pre">value:</span> <span class="pre">found</span> <span class="pre">{total_duration}</span> <span class="pre">and</span> <span class="pre">{last_midframe}.&quot;</span></em><a class="headerlink" href="#nifreeze.data.pet.TEMPORAL_ATTRIBUTE_INCONSISTENCY_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>PET attribute inconsistency error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.pet.TEMPORAL_FILE_KEY_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.</span></span><span class="sig-name descname"><span class="pre">TEMPORAL_FILE_KEY_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'{key}</span> <span class="pre">key</span> <span class="pre">not</span> <span class="pre">found</span> <span class="pre">in</span> <span class="pre">temporal</span> <span class="pre">file'</span></em><a class="headerlink" href="#nifreeze.data.pet.TEMPORAL_FILE_KEY_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>PET temporal file key error message.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nifreeze.data.pet.compute_uptake_statistic">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.</span></span><span class="sig-name descname"><span class="pre">compute_uptake_statistic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">data:</span> <span class="pre">~numpy.ndarray,</span> <span class="pre">stat_func:</span> <span class="pre">~collections.abc.Callable[[...],</span> <span class="pre">~numpy.ndarray]</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">sum&gt;</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/data/pet.html#compute_uptake_statistic"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.pet.compute_uptake_statistic" title="Link to this definition">¶</a></dt>
+<dd><p>Compute a statistic over all voxels for each frame on a PET sequence.</p>
+<p>Assumes the last dimension corresponds to the number of frames in the
+sequence.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – PET data.</p></li>
+<li><p><strong>stat_func</strong> (<a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Callable</span></code></a>, optional) – Function to apply over voxels (e.g., <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.sum.html#numpy.sum" title="(in NumPy v2.3)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.sum()</span></code></a>,
+<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.mean.html#numpy.mean" title="(in NumPy v2.3)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.mean()</span></code></a>, <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.std.html#numpy.std" title="(in NumPy v2.3)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.std()</span></code></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>1D array of statistic values for each frame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nifreeze.data.pet.format_array_like">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.</span></span><span class="sig-name descname"><span class="pre">format_array_like</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">attr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://www.attrs.org/en/stable/api.html#attrs.Attribute" title="(in attrs v25.4)"><span class="pre">Attribute</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><span class="pre">ndarray</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/pet.html#format_array_like"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.pet.format_array_like" title="Link to this definition">¶</a></dt>
+<dd><p>Convert <code class="docutils literal notranslate"><span class="pre">value</span></code> to a <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>.</p>
+<p>This function is intended for use as an attrs-style formatter.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code>) – The value to format.</p></li>
+<li><p><strong>attr</strong> (<a class="reference external" href="https://www.attrs.org/en/stable/api.html#attrs.Attribute" title="(in attrs v25.4)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Attribute</span></code></a>) – The attribute being initialized; <code class="docutils literal notranslate"><span class="pre">attr.name</span></code> is used in the error message.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>formatted</strong> – The formatted value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></p>
+</dd>
+</dl>
+<p>:raises exc:<cite>TypeError</cite>: If the input cannot be converted to a float <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>.
+:raises exc:<cite>ValueError</cite>: If the value is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nifreeze.data.pet.format_scalar_like">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.</span></span><span class="sig-name descname"><span class="pre">format_scalar_like</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">attr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://www.attrs.org/en/stable/api.html#attrs.Attribute" title="(in attrs v25.4)"><span class="pre">Attribute</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/pet.html#format_scalar_like"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.pet.format_scalar_like" title="Link to this definition">¶</a></dt>
+<dd><p>Convert <code class="docutils literal notranslate"><span class="pre">value</span></code> to a scalar.</p>
+<dl class="simple">
+<dt>Accepts:</dt><dd><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> (but rejects <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a>)</p></li>
+<li><p>Numpy scalar (<a class="reference external" href="https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.generic" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generic</span></code></a>, e.g. <a class="reference external" href="https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.floating" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">floating</span></code></a>, <a class="reference external" href="https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.integer" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">integer</span></code></a>)</p></li>
+<li><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a> of size 1</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>/<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tuple</span></code></a> of length 1</p></li>
+</ul>
+</dd>
+</dl>
+<p>This function is intended for use as an attrs-style formatter.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code>) – The value to format.</p></li>
+<li><p><strong>attr</strong> (<a class="reference external" href="https://www.attrs.org/en/stable/api.html#attrs.Attribute" title="(in attrs v25.4)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Attribute</span></code></a>) – The attribute being initialized; <code class="docutils literal notranslate"><span class="pre">attr.name</span></code> is used in the error message.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>formatted</strong> – The formatted value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></p>
+</dd>
+</dl>
+<p>:raises exc:<cite>TypeError</cite>: If the input cannot be converted to a scalar.
+:raises exc:<cite>ValueError</cite>: If the value is <code class="docutils literal notranslate"><span class="pre">None</span></code>, is of type <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a> or has not size/length 1.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.data.pet.from_nii">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.</span></span><span class="sig-name descname"><span class="pre">from_nii</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><span class="pre">ndarray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">brainmask_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_duration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><span class="pre">ndarray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#nifreeze.data.pet.PET" title="nifreeze.data.pet.PET"><span class="pre">PET</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/pet.html#from_nii"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.pet.from_nii" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.</span></span><span class="sig-name descname"><span class="pre">from_nii</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">temporal_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">brainmask_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#nifreeze.data.pet.PET" title="nifreeze.data.pet.PET"><span class="pre">PET</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/pet.html#from_nii"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.pet.from_nii" title="Link to this definition">¶</a></dt>
 <dd><p>Load PET data from NIfTI, creating a PET object with appropriate metadata.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>filename</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>) – The NIfTI file.</p></li>
-<li><p><strong>frame_time</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a> of <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>) – The start times of each frame relative to the beginning of the acquisition.</p></li>
+<li><p><strong>temporal_file</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>) – A JSON file containing temporal data. It must at least contain
+<code class="docutils literal notranslate"><span class="pre">frame_time</span></code> data.</p></li>
 <li><p><strong>brainmask_file</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>, optional) – A brainmask NIfTI file. If provided, will be loaded and
 stored in the returned dataset.</p></li>
-<li><p><strong>frame_duration</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a> of <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional) – The duration of each frame.
-If <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, it is derived by the difference of consecutive frame times,
-defaulting the last frame to match the second-last.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -406,6 +518,24 @@ defaulting the last frame to match the second-last.</p></li>
 <dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#RuntimeError" title="(in Python v3.14)"><strong>RuntimeError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">frame_time</span></code> is not provided (BIDS requires it).</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nifreeze.data.pet.validate_1d_array">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.</span></span><span class="sig-name descname"><span class="pre">validate_1d_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inst</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#nifreeze.data.pet.PET" title="nifreeze.data.pet.PET"><span class="pre">PET</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">attr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://www.attrs.org/en/stable/api.html#attrs.Attribute" title="(in attrs v25.4)"><span class="pre">Attribute</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/pet.html#validate_1d_array"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.pet.validate_1d_array" title="Link to this definition">¶</a></dt>
+<dd><p>Strict validator to ensure an attribute is a 1D NumPy array.</p>
+<p>Enforces that <code class="docutils literal notranslate"><span class="pre">value</span></code> has exactly one dimension (<code class="docutils literal notranslate"><span class="pre">value.ndim</span> <span class="pre">==</span> <span class="pre">1</span></code>).</p>
+<p>This function is intended for use as an attrs-style validator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>inst</strong> (<a class="reference internal" href="#nifreeze.data.pet.PET" title="nifreeze.data.pet.PET"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PET</span></code></a>) – The instance being validated (unused; present for validator signature).</p></li>
+<li><p><strong>attr</strong> (<a class="reference external" href="https://www.attrs.org/en/stable/api.html#attrs.Attribute" title="(in attrs v25.4)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Attribute</span></code></a>) – The attribute being validated; <code class="docutils literal notranslate"><span class="pre">attr.name</span></code> is used in the error message.</p></li>
+<li><p><strong>value</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code>) – The value to validate.</p></li>
+</ul>
+</dd>
+</dl>
+<p>:raises exc:<cite>ValueError</cite>: If the value is  not 1D.</p>
 </dd></dl>
 
 </section>
@@ -466,18 +596,28 @@ defaulting the last frame to match the second-last.</p></li>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">nifreeze.data.pet module</a><ul>
+<li><a class="reference internal" href="#nifreeze.data.pet.ARRAY_ATTRIBUTE_NDIM_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">ARRAY_ATTRIBUTE_NDIM_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.pet.ARRAY_ATTRIBUTE_OBJECT_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">ARRAY_ATTRIBUTE_OBJECT_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.pet.ATTRIBUTE_ABSENCE_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">ATTRIBUTE_ABSENCE_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.pet.ATTRIBUTE_VOLUME_DIMENSIONALITY_MISMATCH_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">ATTRIBUTE_VOLUME_DIMENSIONALITY_MISMATCH_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.pet.FRAME_TIME_START_KEY"><code class="docutils literal notranslate"><span class="pre">FRAME_TIME_START_KEY</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.pet.PET"><code class="docutils literal notranslate"><span class="pre">PET</span></code></a><ul>
 <li><a class="reference internal" href="#nifreeze.data.pet.PET.from_filename"><code class="docutils literal notranslate"><span class="pre">PET.from_filename()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.data.pet.PET.load"><code class="docutils literal notranslate"><span class="pre">PET.load()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.pet.PET.lofo_split"><code class="docutils literal notranslate"><span class="pre">PET.lofo_split()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.pet.PET.midframe"><code class="docutils literal notranslate"><span class="pre">PET.midframe</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.pet.PET.set_transform"><code class="docutils literal notranslate"><span class="pre">PET.set_transform()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.pet.PET.to_filename"><code class="docutils literal notranslate"><span class="pre">PET.to_filename()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.pet.PET.total_duration"><code class="docutils literal notranslate"><span class="pre">PET.total_duration</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.data.pet.PET.uptake"><code class="docutils literal notranslate"><span class="pre">PET.uptake</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#nifreeze.data.pet.SCALAR_ATTRIBUTE_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">SCALAR_ATTRIBUTE_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.pet.TEMPORAL_ATTRIBUTE_INCONSISTENCY_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">TEMPORAL_ATTRIBUTE_INCONSISTENCY_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.pet.TEMPORAL_FILE_KEY_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">TEMPORAL_FILE_KEY_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.pet.compute_uptake_statistic"><code class="docutils literal notranslate"><span class="pre">compute_uptake_statistic()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.pet.format_array_like"><code class="docutils literal notranslate"><span class="pre">format_array_like()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.pet.format_scalar_like"><code class="docutils literal notranslate"><span class="pre">format_scalar_like()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.pet.from_nii"><code class="docutils literal notranslate"><span class="pre">from_nii()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.pet.validate_1d_array"><code class="docutils literal notranslate"><span class="pre">validate_1d_array()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -489,7 +629,7 @@ defaulting the last frame to match the second-last.</p></li>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=ccc6d60f"></script>
+</div><script src="../_static/documentation_options.js?v=80a4f1d4"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

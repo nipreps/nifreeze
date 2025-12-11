@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.data.pet - nifreeze 25.0.0.dev757 documentation</title>
+        <title>nifreeze.data.pet - nifreeze 25.0.0.dev759 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev757 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev759 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev757</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev759</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev757</span>
+  <span class="sidebar-brand-text">25.0.0.dev759</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -333,7 +333,7 @@
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
 <span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Callable</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Tuple</span>
 
 <span class="kn">import</span> <span class="nn">attrs</span>
 <span class="kn">import</span> <span class="nn">h5py</span>
@@ -344,8 +344,181 @@
 <span class="kn">from</span> <span class="nn">nitransforms.resampling</span> <span class="kn">import</span> <span class="n">apply</span>
 <span class="kn">from</span> <span class="nn">typing_extensions</span> <span class="kn">import</span> <span class="n">Self</span>
 
-<span class="kn">from</span> <span class="nn">nifreeze.data.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span><span class="p">,</span> <span class="n">_cmp</span><span class="p">,</span> <span class="n">_data_repr</span>
-<span class="kn">from</span> <span class="nn">nifreeze.utils.ndimage</span> <span class="kn">import</span> <span class="n">load_api</span>
+<span class="kn">from</span> <span class="nn">nifreeze.data.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span><span class="p">,</span> <span class="n">_cmp</span><span class="p">,</span> <span class="n">_data_repr</span><span class="p">,</span> <span class="n">_has_ndim</span>
+<span class="kn">from</span> <span class="nn">nifreeze.utils.ndimage</span> <span class="kn">import</span> <span class="n">get_data</span><span class="p">,</span> <span class="n">load_api</span>
+
+<span class="n">ATTRIBUTE_ABSENCE_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;PET &#39;</span><span class="si">{attribute}</span><span class="s2">&#39; may not be None&quot;</span>
+<span class="sd">&quot;&quot;&quot;PET initialization array attribute absence error message.&quot;&quot;&quot;</span>
+
+<span class="n">ARRAY_ATTRIBUTE_OBJECT_ERROR_MSG</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">&quot;PET &#39;</span><span class="si">{attribute}</span><span class="s2">&#39; must be a numeric homogeneous array-like object.&quot;</span>
+<span class="p">)</span>
+<span class="sd">&quot;&quot;&quot;PET initialization array attribute object error message.&quot;&quot;&quot;</span>
+
+<span class="n">ARRAY_ATTRIBUTE_NDIM_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;PET &#39;</span><span class="si">{attribute}</span><span class="s2">&#39; must be a 1D numpy array.&quot;</span>
+<span class="sd">&quot;&quot;&quot;PET initialization array attribute ndim error message.&quot;&quot;&quot;</span>
+
+<span class="n">ATTRIBUTE_VOLUME_DIMENSIONALITY_MISMATCH_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">PET &#39;</span><span class="si">{attribute}</span><span class="s2">&#39; length does not match number of frames: </span><span class="se">\</span>
+<span class="s2">expected </span><span class="si">{n_frames}</span><span class="s2"> values, found </span><span class="si">{attr_len}</span><span class="s2">.&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;PET attribute shape mismatch error message.&quot;&quot;&quot;</span>
+
+<span class="n">TEMPORAL_ATTRIBUTE_INCONSISTENCY_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">PET &#39;total_duration&#39; cannot be smaller than last &#39;midframe&#39; value: </span><span class="se">\</span>
+<span class="s2">found </span><span class="si">{total_duration}</span><span class="s2"> and </span><span class="si">{last_midframe}</span><span class="s2">.&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;PET attribute inconsistency error message.&quot;&quot;&quot;</span>
+
+<span class="n">SCALAR_ATTRIBUTE_ERROR_MSG</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">&quot;PET &#39;</span><span class="si">{attribute}</span><span class="s2">&#39; must be a numeric or single-element sequence object.&quot;</span>
+<span class="p">)</span>
+<span class="sd">&quot;&quot;&quot;PET initialization scalar attribute object error message.&quot;&quot;&quot;</span>
+
+<span class="n">TEMPORAL_FILE_KEY_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{key}</span><span class="s2"> key not found in temporal file&quot;</span>
+<span class="sd">&quot;&quot;&quot;PET temporal file key error message.&quot;&quot;&quot;</span>
+
+<span class="n">FRAME_TIME_START_KEY</span> <span class="o">=</span> <span class="s2">&quot;FrameTimesStart&quot;</span>
+<span class="sd">&quot;&quot;&quot;PET frame time start key.&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="format_scalar_like">
+<a class="viewcode-back" href="../../../api/nifreeze.data.pet.html#nifreeze.data.pet.format_scalar_like">[docs]</a>
+<span class="k">def</span> <span class="nf">format_scalar_like</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">attr</span><span class="p">:</span> <span class="n">attrs</span><span class="o">.</span><span class="n">Attribute</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert ``value`` to a scalar.</span>
+
+<span class="sd">    Accepts:</span>
+<span class="sd">      - :obj:`float` or :obj:`int` (but rejects :obj:`bool`)</span>
+<span class="sd">      - Numpy scalar (:obj:`~numpy.generic`, e.g. :obj:`~numpy.floating`, :obj:`~numpy.integer`)</span>
+<span class="sd">      - :obj:`~numpy.ndarray` of size 1</span>
+<span class="sd">      - :obj:`list`/:obj:`tuple` of length 1</span>
+
+<span class="sd">    This function is intended for use as an attrs-style formatter.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    value : :obj:`Any`</span>
+<span class="sd">        The value to format.</span>
+<span class="sd">    attr : :obj:`~attrs.Attribute`</span>
+<span class="sd">        The attribute being initialized; ``attr.name`` is used in the error message.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    formatted : :obj:`float`</span>
+<span class="sd">        The formatted value.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    exc:`TypeError`</span>
+<span class="sd">        If the input cannot be converted to a scalar.</span>
+<span class="sd">    exc:`ValueError`</span>
+<span class="sd">        If the value is ``None``, is of type :obj:`bool` or has not size/length 1.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">ATTRIBUTE_ABSENCE_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">attribute</span><span class="o">=</span><span class="n">attr</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+
+    <span class="c1"># Reject bool explicitly (bool is subclass of int)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">SCALAR_ATTRIBUTE_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">attribute</span><span class="o">=</span><span class="n">attr</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+
+    <span class="c1"># Numpy scalar (np.generic) or numpy 0-d array</span>
+    <span class="k">if</span> <span class="n">np</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">generic</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+
+    <span class="c1"># Numpy ndarray (ndarray)</span>
+    <span class="k">if</span> <span class="n">np</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">SCALAR_ATTRIBUTE_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">attribute</span><span class="o">=</span><span class="n">attr</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">ravel</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="c1"># List/tuple with single element</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">SCALAR_ATTRIBUTE_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">attribute</span><span class="o">=</span><span class="n">attr</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="c1"># Plain int/float (but not bool)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="c1"># Fallback: try to use .item() if present</span>
+    <span class="n">item</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s2">&quot;item&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">item</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="p">())</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot convert </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> to float&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="format_array_like">
+<a class="viewcode-back" href="../../../api/nifreeze.data.pet.html#nifreeze.data.pet.format_array_like">[docs]</a>
+<span class="k">def</span> <span class="nf">format_array_like</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">attr</span><span class="p">:</span> <span class="n">attrs</span><span class="o">.</span><span class="n">Attribute</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert ``value`` to a :obj:`~numpy.ndarray`.</span>
+
+<span class="sd">    This function is intended for use as an attrs-style formatter.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    value : :obj:`Any`</span>
+<span class="sd">        The value to format.</span>
+<span class="sd">    attr : :obj:`~attrs.Attribute`</span>
+<span class="sd">        The attribute being initialized; ``attr.name`` is used in the error message.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    formatted : :obj:`~numpy.ndarray`</span>
+<span class="sd">        The formatted value.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    exc:`TypeError`</span>
+<span class="sd">        If the input cannot be converted to a float :obj:`~numpy.ndarray`.</span>
+<span class="sd">    exc:`ValueError`</span>
+<span class="sd">        If the value is ``None``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">ATTRIBUTE_ABSENCE_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">attribute</span><span class="o">=</span><span class="n">attr</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">formatted</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="c1"># Conversion failed (e.g. nested ragged objects, non-numeric)</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">ARRAY_ATTRIBUTE_OBJECT_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">attribute</span><span class="o">=</span><span class="n">attr</span><span class="o">.</span><span class="n">name</span><span class="p">))</span> <span class="kn">from</span> <span class="nn">exc</span>
+
+    <span class="k">return</span> <span class="n">formatted</span></div>
+
+
+
+<div class="viewcode-block" id="validate_1d_array">
+<a class="viewcode-back" href="../../../api/nifreeze.data.pet.html#nifreeze.data.pet.validate_1d_array">[docs]</a>
+<span class="k">def</span> <span class="nf">validate_1d_array</span><span class="p">(</span><span class="n">inst</span><span class="p">:</span> <span class="n">PET</span><span class="p">,</span> <span class="n">attr</span><span class="p">:</span> <span class="n">attrs</span><span class="o">.</span><span class="n">Attribute</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Strict validator to ensure an attribute is a 1D NumPy array.</span>
+
+<span class="sd">    Enforces that ``value`` has exactly one dimension (``value.ndim == 1``).</span>
+
+<span class="sd">    This function is intended for use as an attrs-style validator.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    inst : :obj:`~nifreeze.data.pet.PET`</span>
+<span class="sd">        The instance being validated (unused; present for validator signature).</span>
+<span class="sd">    attr : :obj:`~attrs.Attribute`</span>
+<span class="sd">        The attribute being validated; ``attr.name`` is used in the error message.</span>
+<span class="sd">    value : :obj:`Any`</span>
+<span class="sd">        The value to validate.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    exc:`ValueError`</span>
+<span class="sd">        If the value is  not 1D.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">_has_ndim</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">ARRAY_ATTRIBUTE_NDIM_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">attribute</span><span class="o">=</span><span class="n">attr</span><span class="o">.</span><span class="n">name</span><span class="p">))</span></div>
+
 
 
 <div class="viewcode-block" id="PET">
@@ -354,12 +527,55 @@
 <span class="k">class</span> <span class="nc">PET</span><span class="p">(</span><span class="n">BaseDataset</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Data representation structure for PET data.&quot;&quot;&quot;</span>
 
-    <span class="n">midframe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="n">attrs</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">))</span>
+    <span class="n">midframe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">,</span>
+        <span class="n">eq</span><span class="o">=</span><span class="n">attrs</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">),</span>
+        <span class="n">converter</span><span class="o">=</span><span class="n">attrs</span><span class="o">.</span><span class="n">Converter</span><span class="p">(</span><span class="n">format_array_like</span><span class="p">,</span> <span class="n">takes_field</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>  <span class="c1"># type: ignore</span>
+        <span class="n">validator</span><span class="o">=</span><span class="n">validate_1d_array</span><span class="p">,</span>
+    <span class="p">)</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A (N,) numpy array specifying the midpoint timing of each sample or frame.&quot;&quot;&quot;</span>
-    <span class="n">total_duration</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">total_duration</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="nb">repr</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">converter</span><span class="o">=</span><span class="n">attrs</span><span class="o">.</span><span class="n">Converter</span><span class="p">(</span><span class="n">format_scalar_like</span><span class="p">,</span> <span class="n">takes_field</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>  <span class="c1"># type: ignore</span>
+        <span class="n">validator</span><span class="o">=</span><span class="n">attrs</span><span class="o">.</span><span class="n">validators</span><span class="o">.</span><span class="n">optional</span><span class="p">(</span><span class="n">attrs</span><span class="o">.</span><span class="n">validators</span><span class="o">.</span><span class="n">instance_of</span><span class="p">(</span><span class="nb">float</span><span class="p">)),</span>
+    <span class="p">)</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A float representing the total duration of the dataset.&quot;&quot;&quot;</span>
-    <span class="n">uptake</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="n">_data_repr</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="n">attrs</span><span class="o">.</span><span class="n">cmp_using</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="n">_cmp</span><span class="p">))</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A (N,) numpy array specifying the uptake value of each sample or frame.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__attrs_post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Enforce presence and basic consistency of PET data fields at</span>
+<span class="sd">        instantiation time.</span>
+
+<span class="sd">        Specifically, the length of the frame_time and uptake attributes must</span>
+<span class="sd">        match the last dimension of the data (number of frames).</span>
+
+<span class="sd">        Computes the values for the private attributes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">_check_attr_vol_length_match</span><span class="p">(</span>
+            <span class="n">_attr_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">_value</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">_n_frames</span><span class="p">:</span> <span class="nb">int</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">_value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">_value</span><span class="p">)</span> <span class="o">!=</span> <span class="n">_n_frames</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="n">ATTRIBUTE_VOLUME_DIMENSIONALITY_MISMATCH_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">attribute</span><span class="o">=</span><span class="n">_attr_name</span><span class="p">,</span>
+                        <span class="n">n_frames</span><span class="o">=</span><span class="n">_n_frames</span><span class="p">,</span>
+                        <span class="n">attr_len</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">_value</span><span class="p">),</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+
+        <span class="n">n_frames</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">_check_attr_vol_length_match</span><span class="p">(</span><span class="s2">&quot;midframe&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">midframe</span><span class="p">,</span> <span class="n">n_frames</span><span class="p">)</span>
+
+        <span class="c1"># Ensure that the total duration is larger than last midframe</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_duration</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">midframe</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="n">TEMPORAL_ATTRIBUTE_INCONSISTENCY_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">total_duration</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">total_duration</span><span class="p">,</span>
+                    <span class="n">last_midframe</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">midframe</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_getextra</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">slice</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
         <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">midframe</span><span class="p">[</span><span class="n">idx</span><span class="p">],)</span>
@@ -500,43 +716,6 @@
             <span class="n">root</span> <span class="o">=</span> <span class="n">in_file</span><span class="p">[</span><span class="s2">&quot;/0&quot;</span><span class="p">]</span>
             <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)}</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="n">data</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="PET.load">
-<a class="viewcode-back" href="../../../api/nifreeze.data.pet.html#nifreeze.data.pet.PET.load">[docs]</a>
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span>
-        <span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span> <span class="n">json_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span> <span class="n">brainmask_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load PET data.&quot;&quot;&quot;</span>
-        <span class="n">filename</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">filename</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.h5&quot;</span><span class="p">):</span>
-            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">from_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-
-        <span class="n">img</span> <span class="o">=</span> <span class="n">load_api</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">SpatialImage</span><span class="p">)</span>
-        <span class="n">retval</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span>
-            <span class="n">dataobj</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">get_fdata</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">),</span>
-            <span class="n">affine</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span>
-        <span class="p">)</span>
-
-        <span class="c1"># Load metadata</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">json_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">metadata</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-
-        <span class="n">frame_duration</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;FrameDuration&quot;</span><span class="p">])</span>
-        <span class="n">frame_times_start</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;FrameTimesStart&quot;</span><span class="p">])</span>
-        <span class="n">midframe</span> <span class="o">=</span> <span class="n">frame_times_start</span> <span class="o">+</span> <span class="n">frame_duration</span> <span class="o">/</span> <span class="mi">2</span>
-
-        <span class="n">retval</span><span class="o">.</span><span class="n">midframe</span> <span class="o">=</span> <span class="n">midframe</span>
-        <span class="n">retval</span><span class="o">.</span><span class="n">total_duration</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">frame_times_start</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">frame_duration</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-
-        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">retval</span><span class="o">.</span><span class="n">midframe</span><span class="p">)</span> <span class="o">==</span> <span class="n">retval</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="n">brainmask_file</span><span class="p">:</span>
-            <span class="n">mask</span> <span class="o">=</span> <span class="n">load_api</span><span class="p">(</span><span class="n">brainmask_file</span><span class="p">,</span> <span class="n">SpatialImage</span><span class="p">)</span>
-            <span class="n">retval</span><span class="o">.</span><span class="n">brainmask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">mask</span><span class="o">.</span><span class="n">dataobj</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">retval</span></div>
 </div>
 
 
@@ -545,9 +724,8 @@
 <a class="viewcode-back" href="../../../api/nifreeze.data.pet.html#nifreeze.data.pet.from_nii">[docs]</a>
 <span class="k">def</span> <span class="nf">from_nii</span><span class="p">(</span>
     <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">frame_time</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+    <span class="n">temporal_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">brainmask_file</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">frame_duration</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PET</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Load PET data from NIfTI, creating a PET object with appropriate metadata.</span>
@@ -556,15 +734,12 @@
 <span class="sd">    ----------</span>
 <span class="sd">    filename : :obj:`os.pathlike`</span>
 <span class="sd">        The NIfTI file.</span>
-<span class="sd">    frame_time : :obj:`~numpy.ndarray` or :obj:`list` of :obj:`float`</span>
-<span class="sd">        The start times of each frame relative to the beginning of the acquisition.</span>
+<span class="sd">    temporal_file : :obj:`os.pathlike`</span>
+<span class="sd">        A JSON file containing temporal data. It must at least contain</span>
+<span class="sd">        ``frame_time`` data.</span>
 <span class="sd">    brainmask_file : :obj:`os.pathlike`, optional</span>
 <span class="sd">        A brainmask NIfTI file. If provided, will be loaded and</span>
 <span class="sd">        stored in the returned dataset.</span>
-<span class="sd">    frame_duration : :obj:`~numpy.ndarray` or :obj:`list` of :obj:`float`, optional</span>
-<span class="sd">        The duration of each frame.</span>
-<span class="sd">        If :obj:`None`, it is derived by the difference of consecutive frame times,</span>
-<span class="sd">        defaulting the last frame to match the second-last.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -579,63 +754,108 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">filename</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-    <span class="c1"># Load from NIfTI</span>
+
+    <span class="c1"># 1) Load a NIfTI</span>
     <span class="n">img</span> <span class="o">=</span> <span class="n">load_api</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">SpatialImage</span><span class="p">)</span>
-    <span class="n">data</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">get_fdata</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-    <span class="n">pet_obj</span> <span class="o">=</span> <span class="n">PET</span><span class="p">(</span>
-        <span class="n">dataobj</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
-        <span class="n">affine</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span>
-    <span class="p">)</span>
+    <span class="n">fulldata</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
 
-    <span class="n">pet_obj</span><span class="o">.</span><span class="n">uptake</span> <span class="o">=</span> <span class="n">_compute_uptake_statistic</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">stat_func</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">)</span>
+    <span class="c1"># 2) Load the temporal data</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">temporal_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">temporal_attrs</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
 
-    <span class="c1"># Convert to a float32 numpy array and zero out the earliest time</span>
-    <span class="n">frame_time_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">frame_time</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-    <span class="n">frame_time_arr</span> <span class="o">-=</span> <span class="n">frame_time_arr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="n">pet_obj</span><span class="o">.</span><span class="n">midframe</span> <span class="o">=</span> <span class="n">frame_time_arr</span>
+    <span class="n">frame_time</span> <span class="o">=</span> <span class="n">temporal_attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">FRAME_TIME_START_KEY</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">frame_time</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">TEMPORAL_FILE_KEY_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">FRAME_TIME_START_KEY</span><span class="p">))</span>
 
-    <span class="c1"># If the user doesn&#39;t provide frame_duration, we derive it:</span>
-    <span class="k">if</span> <span class="n">frame_duration</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">durations</span> <span class="o">=</span> <span class="n">_compute_frame_duration</span><span class="p">(</span><span class="n">pet_obj</span><span class="o">.</span><span class="n">midframe</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">durations</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">frame_duration</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-
-    <span class="c1"># Set total_duration and shift frame_time to the midpoint</span>
-    <span class="n">pet_obj</span><span class="o">.</span><span class="n">total_duration</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">frame_time_arr</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">durations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-    <span class="n">pet_obj</span><span class="o">.</span><span class="n">midframe</span> <span class="o">=</span> <span class="n">frame_time_arr</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">durations</span>
-
-    <span class="c1"># If a brain mask is provided, load and attach</span>
+    <span class="c1"># 3) If a brainmask_file was provided, load it</span>
+    <span class="n">brainmask_data</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">brainmask_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">mask_img</span> <span class="o">=</span> <span class="n">load_api</span><span class="p">(</span><span class="n">brainmask_file</span><span class="p">,</span> <span class="n">SpatialImage</span><span class="p">)</span>
-        <span class="n">pet_obj</span><span class="o">.</span><span class="n">brainmask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">mask_img</span><span class="o">.</span><span class="n">dataobj</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="n">brainmask_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">mask_img</span><span class="o">.</span><span class="n">dataobj</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">pet_obj</span></div>
+    <span class="c1"># 4) Compute temporal attributes</span>
+    <span class="n">midframe</span><span class="p">,</span> <span class="n">total_duration</span> <span class="o">=</span> <span class="n">_compute_temporal_markers</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">frame_time</span><span class="p">))</span>
+
+    <span class="c1"># 5) Create and return the PET instance</span>
+    <span class="k">return</span> <span class="n">PET</span><span class="p">(</span>
+        <span class="n">dataobj</span><span class="o">=</span><span class="n">fulldata</span><span class="p">,</span>
+        <span class="n">affine</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span>
+        <span class="n">brainmask</span><span class="o">=</span><span class="n">brainmask_data</span><span class="p">,</span>
+        <span class="n">midframe</span><span class="o">=</span><span class="n">midframe</span><span class="p">,</span>
+        <span class="n">total_duration</span><span class="o">=</span><span class="n">total_duration</span><span class="p">,</span>
+    <span class="p">)</span></div>
 
 
 
-<span class="k">def</span> <span class="nf">_compute_frame_duration</span><span class="p">(</span><span class="n">midframe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the frame duration from the midframe values.</span>
+<span class="k">def</span> <span class="nf">_compute_temporal_markers</span><span class="p">(</span><span class="n">frame_time</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the frame temporal markers from the frame time values.</span>
+
+<span class="sd">    Computes the midframe times and the total duration following the principles</span>
+<span class="sd">    detailed below.</span>
+
+<span class="sd">    Let :math:`K` be the number of frames and :math:`t_{k}` be the :math:`k`-th</span>
+<span class="sd">    (start) frame time. For each frame :math:`k`, the frame duration</span>
+<span class="sd">    :math:`d_{k}` is defined as the difference between consecutive frame times:</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">       d_{k} = t_{k+1} - t_{k}</span>
+
+<span class="sd">    If necessary, the last frame duration is set to the value of the second to</span>
+<span class="sd">    last frame to match the appropriate dimensionality in this implementation.</span>
+
+<span class="sd">    Per-frame midpoints :math:`m_{k}` are computed as:</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">       m_{k} = t_{k} + \\frac{d_k}{2}</span>
+
+<span class="sd">    The total duration :math:`D` of the acquisition is a scalar computed as the</span>
+<span class="sd">    sum of the frame durations:</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">       D = \\sum_{k=1}^{K} d_{k}</span>
+
+<span class="sd">    or, equivalently, the difference between the last frame start and its</span>
+<span class="sd">    duration once the frame times have been time-origin shifted:</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">       D = t_{K} - d_{K}</span>
+
+<span class="sd">    Frame times are time-origin shifted (i.e. the earliest time is zeroed out)</span>
+<span class="sd">    if not already done at the beginning of the process for the sake of</span>
+<span class="sd">    simplicity.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    midframe : :obj:`~numpy.ndarray`</span>
-<span class="sd">        Midframe time values.</span>
+<span class="sd">    frame_time : :obj:`~numpy.ndarray`</span>
+<span class="sd">        Frame time values.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    durations : :obj:`~numpy.ndarray`</span>
-<span class="sd">        Frame duration.</span>
+<span class="sd">    :obj:`tuple`</span>
+<span class="sd">        Midpoint timing of each frame and total duration</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="c1"># Time-origin shift: zero out the earliest time if necessary</span>
+    <span class="c1"># Flatten the array in case it is not a 1D array</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">frame_time</span><span class="o">.</span><span class="n">ravel</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="n">frame_time</span> <span class="o">-=</span> <span class="n">frame_time</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
     <span class="c1"># If shape is e.g. (N,), then we can do</span>
-    <span class="n">durations</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">midframe</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">durations</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">midframe</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
-        <span class="n">durations</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">durations</span><span class="p">,</span> <span class="n">durations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>  <span class="c1"># last frame same as second-last</span>
+    <span class="n">frame_duration</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">frame_time</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">frame_duration</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">frame_time</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">frame_duration</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">frame_duration</span><span class="p">,</span> <span class="n">frame_duration</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="p">)</span>  <span class="c1"># last frame same as second-last</span>
 
-    <span class="k">return</span> <span class="n">durations</span>
+    <span class="n">midframe</span> <span class="o">=</span> <span class="n">frame_time</span> <span class="o">+</span> <span class="n">frame_duration</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">total_duration</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">frame_time</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">frame_duration</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">midframe</span><span class="p">,</span> <span class="n">total_duration</span>
 
 
-<span class="k">def</span> <span class="nf">_compute_uptake_statistic</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">stat_func</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">):</span>
+<div class="viewcode-block" id="compute_uptake_statistic">
+<a class="viewcode-back" href="../../../api/nifreeze.data.pet.html#nifreeze.data.pet.compute_uptake_statistic">[docs]</a>
+<span class="k">def</span> <span class="nf">compute_uptake_statistic</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">stat_func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute a statistic over all voxels for each frame on a PET sequence.</span>
 
 <span class="sd">    Assumes the last dimension corresponds to the number of frames in the</span>
@@ -655,7 +875,8 @@
 <span class="sd">        1D array of statistic values for each frame.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">return</span> <span class="n">stat_func</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">stat_func</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></div>
+
 </pre></div>
         </article>
       </div>
@@ -688,7 +909,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=ccc6d60f"></script>
+</div><script src="../../../_static/documentation_options.js?v=80a4f1d4"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
