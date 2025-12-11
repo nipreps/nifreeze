@@ -33,23 +33,20 @@ import pytest
 from nitransforms.linear import Affine
 
 from nifreeze.data import load as nifreeze_load
-from nifreeze.data.pet import (
+from nifreeze.data.pet.base import (
     ARRAY_ATTRIBUTE_NDIM_ERROR_MSG,
     ARRAY_ATTRIBUTE_OBJECT_ERROR_MSG,
     ATTRIBUTE_ABSENCE_ERROR_MSG,
     ATTRIBUTE_VOLUME_DIMENSIONALITY_MISMATCH_ERROR_MSG,
-    FRAME_TIME_START_KEY,
     PET,
     SCALAR_ATTRIBUTE_ERROR_MSG,
     TEMPORAL_ATTRIBUTE_INCONSISTENCY_ERROR_MSG,
-    TEMPORAL_FILE_KEY_ERROR_MSG,
-    _compute_temporal_markers,
-    compute_uptake_statistic,
     format_array_like,
     format_scalar_like,
-    from_nii,
     validate_1d_array,
 )
+from nifreeze.data.pet.io import FRAME_TIME_START_KEY, TEMPORAL_FILE_KEY_ERROR_MSG, from_nii
+from nifreeze.data.pet.utils import compute_temporal_markers, compute_uptake_statistic
 from nifreeze.utils.ndimage import load_api
 
 
@@ -369,7 +366,7 @@ def test_pet_instantiation_attribute_inconsistency_error(
 def test_compute_temporal_markers(frame_time, expected_midframe, expected_total_duration):
     frame_time = np.array(frame_time)
     expected_midframe = np.array(expected_midframe)
-    midframe, total_duration = _compute_temporal_markers(frame_time)
+    midframe, total_duration = compute_temporal_markers(frame_time)
     np.testing.assert_allclose(midframe, expected_midframe)
     assert np.isclose(total_duration, expected_total_duration)
 

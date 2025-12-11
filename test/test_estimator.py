@@ -29,7 +29,7 @@ import pytest
 import nifreeze.estimator
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.dmri.utils import DEFAULT_LOWB_THRESHOLD
-from nifreeze.data.pet import compute_uptake_statistic
+from nifreeze.data.pet.utils import compute_uptake_statistic
 from nifreeze.estimator import Estimator
 from nifreeze.model.base import BaseModel
 from nifreeze.utils import iterators
