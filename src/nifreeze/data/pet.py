@@ -217,6 +217,7 @@ class PET(BaseDataset[np.ndarray]):
         eq=attrs.cmp_using(eq=_cmp),
         converter=attrs.Converter(format_array_like, takes_field=True),  # type: ignore
         validator=validate_1d_array,
+        on_setattr=attrs.setters.frozen,
     )
     """A (N,) numpy array specifying the midpoint timing of each sample or frame."""
     total_duration: float = attrs.field(
@@ -224,6 +225,7 @@ class PET(BaseDataset[np.ndarray]):
         repr=True,
         converter=attrs.Converter(format_scalar_like, takes_field=True),  # type: ignore
         validator=attrs.validators.optional(attrs.validators.instance_of(float)),
+        on_setattr=attrs.setters.frozen,
     )
     """A float representing the total duration of the dataset."""
 

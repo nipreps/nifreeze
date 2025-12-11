@@ -128,10 +128,14 @@ class DWI(BaseDataset[np.ndarray]):
         eq=attrs.cmp_using(eq=_cmp),
         converter=format_gradients,
         validator=validate_gradients,
+        on_setattr=attrs.setters.frozen,
     )
     """A 2D numpy array of the gradient table (``N`` orientations x ``C`` components)."""
     bzero: np.ndarray | None = attrs.field(
-        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp)
+        default=None,
+        repr=_data_repr,
+        eq=attrs.cmp_using(eq=_cmp),
+        on_setattr=attrs.setters.frozen,
     )
     """A *b=0* reference map, computed automatically when low-b frames are present."""
     eddy_xfms: list = attrs.field(default=None)
