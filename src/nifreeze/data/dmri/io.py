@@ -143,7 +143,11 @@ def to_nifti(
     bvecs_dec_places: int = 6,
 ) -> nb.nifti1.Nifti1Image:
     """
-    Export the dMRI object to disk (NIfTI, b-vecs, & b-vals files).
+    Export the dMRI object to disk (NIfTI data, and gradients, if applicable).
+
+    Gradients (b-vecs & b-vals files) are only serialized if the DWI object has
+    non-null :attr:`~nifreeze.data.base.BaseDataset.motion_affine` data (i.e. if
+    b-vectors need to be rotated following the motion estimation).
 
     Parameters
     ----------
@@ -173,17 +177,18 @@ def to_nifti(
     """
 
     no_bzero = dwi.bzero is None or not insert_b0
-    bvals = dwi.bvals
+
+    bvals = None
+    bvecs = None
 
     # Rotate b-vectors if dwi.motion_affines is not None
     if dwi.motion_affines is not None:
+        bvals = dwi.bvals
         rotated = [
             transform_fsl_bvec(bvec, affine, dwi.affine, invert=True)
             for bvec, affine in zip(dwi.gradients[:, :3], dwi.motion_affines, strict=True)
         ]
         bvecs = np.asarray(rotated)
-    else:
-        bvecs = dwi.bvecs
 
     # Parent's to_nifti to handle the primary NIfTI export.
     nii = _base_to_nifti(
@@ -208,8 +213,9 @@ def to_nifti(
 
         # If inserting a b0 volume is requested, add the corresponding null
         # gradient value to the bval/bvec pair
-        bvals = np.concatenate((np.zeros(1), bvals))
-        bvecs = np.vstack((np.zeros((1, bvecs.shape[1])), bvecs))
+        if bvecs is not None and bvals is not None:
+            bvals = np.concatenate((np.zeros(1), bvals))
+            bvecs = np.vstack((np.zeros((1, bvecs.shape[1])), bvecs))
 
     if filename is not None:
         # Convert filename to a Path object.
@@ -223,7 +229,8 @@ def to_nifti(
         bvals_file = out_root.with_suffix(".bval")
 
         # Save bvecs and bvals to text files. BIDS expects 3 rows x N columns.
-        np.savetxt(bvecs_file, bvecs.T, fmt=f"%.{bvecs_dec_places}f")
-        np.savetxt(bvals_file, bvals[np.newaxis, :], fmt=f"%.{bvals_dec_places}f")
+        if bvecs is not None and bvals is not None:
+            np.savetxt(bvecs_file, bvecs.T, fmt=f"%.{bvecs_dec_places}f")
+            np.savetxt(bvals_file, bvals[np.newaxis, :], fmt=f"%.{bvals_dec_places}f")
 
     return nii
