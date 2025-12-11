@@ -405,7 +405,7 @@ def from_nii(
         The NIfTI file.
     temporal_file : :obj:`os.pathlike`
         A JSON file containing temporal data. It must at least contain
-        ``frame_time`` data.
+        ``FrameTimesStart`` data.
     brainmask_file : :obj:`os.pathlike`, optional
         A brainmask NIfTI file. If provided, will be loaded and
         stored in the returned dataset.
@@ -418,7 +418,7 @@ def from_nii(
     Raises
     ------
     :exc:`RuntimeError`
-        If ``frame_time`` is not provided (BIDS requires it).
+        If ``FrameTimesStart`` is not provided (BIDS requires it).
 
     """
 

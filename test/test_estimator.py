@@ -79,14 +79,7 @@ class DummyDWIDataset(BaseDataset):
 
 
 class DummyPETDataset(BaseDataset):
-    def __init__(
-        self,
-        pet_dataobj,
-        affine,
-        brainmask_dataobj,
-        midframe,
-        total_duration,
-    ):
+    def __init__(self, pet_dataobj, affine, brainmask_dataobj, midframe, total_duration):
         self.dataobj = pet_dataobj
         self.affine = affine
         self.brainmask = brainmask_dataobj
@@ -167,13 +160,7 @@ def test_estimator_iterator_index_match(
             total_duration,
         ) = setup_random_pet_data
 
-        dataset = DummyPETDataset(
-            pet_dataobj,
-            affine,
-            brainmask_dataobj,
-            midframe,
-            total_duration,
-        )
+        dataset = DummyPETDataset(pet_dataobj, affine, brainmask_dataobj, midframe, total_duration)
         uptake = compute_uptake_statistic(pet_dataobj, stat_func=np.sum)
         kwargs = {"uptake": uptake}
     else:
