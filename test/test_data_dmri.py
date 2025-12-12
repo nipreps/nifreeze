@@ -42,7 +42,7 @@ from nifreeze.data.dmri.base import (
 )
 from nifreeze.data.dmri.io import (
     GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG,
-    GRADIENT_DATA_MISSING_ERROR,
+    GRADIENT_DATA_MISSING_ERROR_MSG,
     from_nii,
     to_nifti,
 )
@@ -695,7 +695,7 @@ def test_load_gradients_missing(tmp_path, setup_random_dwi_data):
     dwi_fname = tmp_path / "dwi.nii.gz"
     nb.save(dwi_nii, dwi_fname)
 
-    with pytest.raises(RuntimeError, match=re.escape(GRADIENT_DATA_MISSING_ERROR)):
+    with pytest.raises(RuntimeError, match=re.escape(GRADIENT_DATA_MISSING_ERROR_MSG)):
         from_nii(dwi_fname)
 
 

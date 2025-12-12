@@ -39,7 +39,7 @@ Both a gradients table file and b-vec/val files are defined; \
 ignoring b-vec/val files in favor of the gradients_file."""
 """dMRI gradient file priority warning message."""
 
-GRADIENT_DATA_MISSING_ERROR = "No gradient data provided."
+GRADIENT_DATA_MISSING_ERROR_MSG = "No gradient data provided."
 """dMRI missing gradient data error message."""
 
 
@@ -109,7 +109,7 @@ def from_nii(
         bvals = np.loadtxt(bval_file, dtype="float32")
         grad = np.column_stack((bvecs, bvals))
     else:
-        raise RuntimeError(GRADIENT_DATA_MISSING_ERROR)
+        raise RuntimeError(GRADIENT_DATA_MISSING_ERROR_MSG)
 
     # 3) Read b-zero volume if provided
     b0_data = None
