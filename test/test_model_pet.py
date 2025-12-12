@@ -30,9 +30,9 @@ import pytest
 from nifreeze.data.pet import PET
 from nifreeze.model.pet import (
     DEFAULT_TIMEPOINT_TOL,
-    PET_MODEL_PARAMETER_CONSISTENCY_ERROR_MSG,
-    PET_MODEL_PARAMETERS_ERROR_MSG,
-    PET_MODEL_TIMEPOINT_VALUE_ERROR_MSG,
+    FIRST_TIMEPOINT_VALUE_ERROR_MSG,
+    LAST_TIMEPOINT_CONSISTENCY_ERROR_MSG,
+    TIMEPOINT_XLIM_DATA_MISSING_ERROR_MSG,
     PETModel,
 )
 
@@ -58,7 +58,9 @@ def test_petmodel_init_parameters_error(request, setup_random_pet_data, none_par
 
     with pytest.raises(
         ValueError,
-        match=re.escape(PET_MODEL_PARAMETERS_ERROR_MSG.format(timepoints=timepoints, xlim=xlim)),
+        match=re.escape(
+            TIMEPOINT_XLIM_DATA_MISSING_ERROR_MSG.format(timepoints=timepoints, xlim=xlim)
+        ),
     ):
         PETModel(dataset=pet_obj, timepoints=timepoints, xlim=xlim)  # type: ignore[arg-type]
 
@@ -82,7 +84,7 @@ def test_petmodel_init_timepoint_value_error(request, setup_random_pet_data):
     timepoints[0] = DEFAULT_TIMEPOINT_TOL - sys.float_info.epsilon
 
     with pytest.raises(
-        ValueError, match=PET_MODEL_TIMEPOINT_VALUE_ERROR_MSG.format(timepoints=timepoints)
+        ValueError, match=FIRST_TIMEPOINT_VALUE_ERROR_MSG.format(timepoints=timepoints)
     ):
         PETModel(dataset=pet_obj, timepoints=timepoints, xlim=xlim)
 
@@ -107,7 +109,7 @@ def test_petmodel_parameter_consistency_error(request, setup_random_pet_data):
     with pytest.raises(
         ValueError,
         match=re.escape(
-            PET_MODEL_PARAMETER_CONSISTENCY_ERROR_MSG.format(timepoints=timepoints, xlim=xlim)
+            LAST_TIMEPOINT_CONSISTENCY_ERROR_MSG.format(timepoints=timepoints, xlim=xlim)
         ),
     ):
         PETModel(dataset=pet_obj, timepoints=timepoints, xlim=xlim)
