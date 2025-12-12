@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.model.pet - nifreeze 25.0.0.dev770 documentation</title>
+        <title>nifreeze.model.pet - nifreeze 25.0.0.dev772 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev770 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev772 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev770</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev772</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev770</span>
+  <span class="sidebar-brand-text">25.0.0.dev772</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -345,15 +345,15 @@
 <span class="kn">from</span> <span class="nn">nifreeze.data.pet</span> <span class="kn">import</span> <span class="n">PET</span>
 <span class="kn">from</span> <span class="nn">nifreeze.model.base</span> <span class="kn">import</span> <span class="n">BaseModel</span>
 
-<span class="n">PET_MODEL_PARAMETERS_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="n">TIMEPOINT_XLIM_DATA_MISSING_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
 <span class="s2">&#39;timepoints&#39; and &#39;xlim&#39; must be specified, found: </span><span class="si">{timepoints}</span><span class="s2"> and </span><span class="si">{xlim}</span><span class="s2">.&quot;&quot;&quot;</span>
 <span class="sd">&quot;&quot;&quot;PET model underspecification error.&quot;&quot;&quot;</span>
 
-<span class="n">PET_MODEL_TIMEPOINT_VALUE_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="n">FIRST_TIMEPOINT_VALUE_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
 <span class="s2">First frame &#39;timepoint&#39; should not be zero or negative, found: </span><span class="si">{timepoints}</span><span class="s2">.&quot;&quot;&quot;</span>
 <span class="sd">&quot;&quot;&quot;PET model timepoint value error message.&quot;&quot;&quot;</span>
 
-<span class="n">PET_MODEL_PARAMETER_CONSISTENCY_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="n">LAST_TIMEPOINT_CONSISTENCY_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
 <span class="s2">Last frame &#39;timepoints&#39; value should not be equal or greater than &#39;xlim&#39; </span><span class="se">\</span>
 <span class="s2">duration, found: </span><span class="si">{timepoints}</span><span class="s2"> and </span><span class="si">{xlim}</span><span class="s2">.&quot;&quot;&quot;</span>
 <span class="sd">&quot;&quot;&quot;PET model parameter consistency error message.&quot;&quot;&quot;</span>
@@ -410,15 +410,15 @@
 
         <span class="k">if</span> <span class="n">timepoints</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">xlim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="n">PET_MODEL_PARAMETERS_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">timepoints</span><span class="o">=</span><span class="n">timepoints</span><span class="p">,</span> <span class="n">xlim</span><span class="o">=</span><span class="n">xlim</span><span class="p">)</span>
+                <span class="n">TIMEPOINT_XLIM_DATA_MISSING_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">timepoints</span><span class="o">=</span><span class="n">timepoints</span><span class="p">,</span> <span class="n">xlim</span><span class="o">=</span><span class="n">xlim</span><span class="p">)</span>
             <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">timepoints</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">DEFAULT_TIMEPOINT_TOL</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">PET_MODEL_TIMEPOINT_VALUE_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">timepoints</span><span class="o">=</span><span class="n">timepoints</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">FIRST_TIMEPOINT_VALUE_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">timepoints</span><span class="o">=</span><span class="n">timepoints</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
 
         <span class="k">if</span> <span class="n">timepoints</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">xlim</span> <span class="o">-</span> <span class="n">DEFAULT_TIMEPOINT_TOL</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="n">PET_MODEL_PARAMETER_CONSISTENCY_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">timepoints</span><span class="o">=</span><span class="n">timepoints</span><span class="p">,</span> <span class="n">xlim</span><span class="o">=</span><span class="n">xlim</span><span class="p">)</span>
+                <span class="n">LAST_TIMEPOINT_CONSISTENCY_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">timepoints</span><span class="o">=</span><span class="n">timepoints</span><span class="p">,</span> <span class="n">xlim</span><span class="o">=</span><span class="n">xlim</span><span class="p">)</span>
             <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_order</span> <span class="o">=</span> <span class="n">order</span>
@@ -547,7 +547,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=ced0e64a"></script>
+</div><script src="../../../_static/documentation_options.js?v=5d50e839"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
