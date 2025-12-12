@@ -35,7 +35,20 @@ from scipy.sparse.linalg import cg
 from nifreeze.data.pet import PET
 from nifreeze.model.base import BaseModel
 
-DEFAULT_TIMEFRAME_MIDPOINT_TOL = 1e-2
+PET_MODEL_PARAMETERS_ERROR_MSG = """\
+'timepoints' and 'xlim' must be specified, found: {timepoints} and {xlim}."""
+"""PET model underspecification error."""
+
+PET_MODEL_TIMEPOINT_VALUE_ERROR_MSG = """\
+First frame 'timepoint' should not be zero or negative, found: {timepoints}."""
+"""PET model timepoint value error message."""
+
+PET_MODEL_PARAMETER_CONSISTENCY_ERROR_MSG = """\
+Last frame 'timepoints' value should not be equal or greater than 'xlim' \
+duration, found: {timepoints} and {xlim}."""
+"""PET model parameter consistency error message."""
+
+DEFAULT_TIMEPOINT_TOL = 1e-2
 """Time frame tolerance in seconds."""
 
 
@@ -57,8 +70,8 @@ class PETModel(BaseModel):
     def __init__(
         self,
         dataset: PET,
-        timepoints: list | np.ndarray | None = None,
-        xlim: float | None = None,
+        timepoints: list | np.ndarray,
+        xlim: float,
         n_ctrl: int | None = None,
         order: int = 3,
         smooth_fwhm: float = 10.0,
@@ -84,18 +97,23 @@ class PETModel(BaseModel):
         super().__init__(dataset, **kwargs)
 
         if timepoints is None or xlim is None:
-            raise TypeError("timepoints must be provided in initialization")
+            raise ValueError(
+                PET_MODEL_PARAMETERS_ERROR_MSG.format(timepoints=timepoints, xlim=xlim)
+            )
+
+        if timepoints[0] < DEFAULT_TIMEPOINT_TOL:
+            raise ValueError(PET_MODEL_TIMEPOINT_VALUE_ERROR_MSG.format(timepoints=timepoints[0]))
+
+        if timepoints[-1] > xlim - DEFAULT_TIMEPOINT_TOL:
+            raise ValueError(
+                PET_MODEL_PARAMETER_CONSISTENCY_ERROR_MSG.format(timepoints=timepoints, xlim=xlim)
+            )
 
         self._order = order
         self._x = np.array(timepoints, dtype="float32")
         self._xlim = xlim
         self._smooth_fwhm = smooth_fwhm
         self._thresh_pct = thresh_pct
-
-        if self._x[0] < DEFAULT_TIMEFRAME_MIDPOINT_TOL:
-            raise ValueError("First frame midpoint should not be zero or negative")
-        if self._x[-1] > (self._xlim - DEFAULT_TIMEFRAME_MIDPOINT_TOL):
-            raise ValueError("Last frame midpoint should not be equal or greater than duration")
 
         # Calculate index coordinates in the B-Spline grid
         self._n_ctrl = n_ctrl or (len(timepoints) // 4) + 1
