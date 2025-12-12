@@ -35,15 +35,15 @@ from scipy.sparse.linalg import cg
 from nifreeze.data.pet import PET
 from nifreeze.model.base import BaseModel
 
-PET_MODEL_PARAMETERS_ERROR_MSG = """\
+TIMEPOINT_XLIM_DATA_MISSING_ERROR_MSG = """\
 'timepoints' and 'xlim' must be specified, found: {timepoints} and {xlim}."""
 """PET model underspecification error."""
 
-PET_MODEL_TIMEPOINT_VALUE_ERROR_MSG = """\
+FIRST_TIMEPOINT_VALUE_ERROR_MSG = """\
 First frame 'timepoint' should not be zero or negative, found: {timepoints}."""
 """PET model timepoint value error message."""
 
-PET_MODEL_PARAMETER_CONSISTENCY_ERROR_MSG = """\
+LAST_TIMEPOINT_CONSISTENCY_ERROR_MSG = """\
 Last frame 'timepoints' value should not be equal or greater than 'xlim' \
 duration, found: {timepoints} and {xlim}."""
 """PET model parameter consistency error message."""
@@ -98,15 +98,15 @@ class PETModel(BaseModel):
 
         if timepoints is None or xlim is None:
             raise ValueError(
-                PET_MODEL_PARAMETERS_ERROR_MSG.format(timepoints=timepoints, xlim=xlim)
+                TIMEPOINT_XLIM_DATA_MISSING_ERROR_MSG.format(timepoints=timepoints, xlim=xlim)
             )
 
         if timepoints[0] < DEFAULT_TIMEPOINT_TOL:
-            raise ValueError(PET_MODEL_TIMEPOINT_VALUE_ERROR_MSG.format(timepoints=timepoints[0]))
+            raise ValueError(FIRST_TIMEPOINT_VALUE_ERROR_MSG.format(timepoints=timepoints[0]))
 
         if timepoints[-1] > xlim - DEFAULT_TIMEPOINT_TOL:
             raise ValueError(
-                PET_MODEL_PARAMETER_CONSISTENCY_ERROR_MSG.format(timepoints=timepoints, xlim=xlim)
+                LAST_TIMEPOINT_CONSISTENCY_ERROR_MSG.format(timepoints=timepoints, xlim=xlim)
             )
 
         self._order = order
