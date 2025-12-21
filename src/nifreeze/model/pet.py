@@ -80,9 +80,9 @@ class BasePETModel(BaseModel, ABC):
 
         Parameters
         ----------
-        smooth_fwhm : obj:`float`
+        smooth_fwhm : obj:`float`, optional
             FWHM in mm over which to smooth the signal.
-        thresh_pct : obj:`float`
+        thresh_pct : obj:`float`, optional
             Thresholding percentile for the signal.
         """
 
@@ -154,11 +154,11 @@ class BSplinePETModel(BasePETModel):
 
         Parameters
         ----------
-        n_ctrl : :obj:`int`
-            Number of B-Spline control points. If `None`, then one control point every
-            six timepoints will be used. The less control points, the smoother is the
-            model.
-        order : :obj:`int`
+        n_ctrl : :obj:`int`, optional
+            Number of B-Spline control points. If :obj:`None`, then one control
+            point every six timepoints will be used. The less control points,
+            the smoother is the model.
+        order : :obj:`int`, optional
             Order of the B-Spline approximation.
         """
 
