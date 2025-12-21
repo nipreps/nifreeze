@@ -33,7 +33,7 @@ from nifreeze.model.dmri import (
     DTIModel,
     GPModel,
 )
-from nifreeze.model.pet import PETModel
+from nifreeze.model.pet import BSplinePETModel
 
 __all__ = (
     "ModelFactory",
@@ -43,5 +43,5 @@ __all__ = (
     "DTIModel",
     "GPModel",
     "TrivialModel",
-    "PETModel",
+    "BSplinePETModel",
 )

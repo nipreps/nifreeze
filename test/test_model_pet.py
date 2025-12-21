@@ -22,97 +22,91 @@
 #
 
 import re
-import sys
 
 import numpy as np
 import pytest
 
+from nifreeze.data.base import BaseDataset
 from nifreeze.data.pet import PET
 from nifreeze.model.pet import (
-    DEFAULT_TIMEPOINT_TOL,
-    FIRST_TIMEPOINT_VALUE_ERROR_MSG,
-    LAST_TIMEPOINT_CONSISTENCY_ERROR_MSG,
-    TIMEPOINT_XLIM_DATA_MISSING_ERROR_MSG,
-    PETModel,
+    PET_MIDFRAME_ERROR_MSG,
+    PET_OBJECT_ERROR_MSG,
+    BSplinePETModel,
 )
 
 
-@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]))
-@pytest.mark.parametrize(
-    "none_params", [("timepoints",), ("xlim",), ("timepoints=timepoints", "xlim")]
-)
-def test_petmodel_init_parameters_error(request, setup_random_pet_data, none_params):
-    rng = request.node.rng
-    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
-
-    pet_obj = PET(
-        dataobj=pet_dataobj,
-        affine=affine,
-        brainmask=brainmask_dataobj,
-        midframe=midframe,
-        total_duration=total_duration,
-    )
-
-    timepoints = rng.random(len(pet_obj)) if "timepoints" in none_params else None
-    xlim = rng.random(1).item() if "xlim" in none_params else None
+def test_pet_base_model():
+    from nifreeze.model.pet import BasePETModel
 
     with pytest.raises(
-        ValueError,
+        TypeError,
         match=re.escape(
-            TIMEPOINT_XLIM_DATA_MISSING_ERROR_MSG.format(timepoints=timepoints, xlim=xlim)
+            "Can't instantiate abstract class BasePETModel without an implementation "
+            "for abstract method 'fit_predict'"
         ),
     ):
-        PETModel(dataset=pet_obj, timepoints=timepoints, xlim=xlim)  # type: ignore[arg-type]
+        BasePETModel(None, xlim=None)  # type: ignore[abstract, arg-type]
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]))
-def test_petmodel_init_timepoint_value_error(request, setup_random_pet_data):
+def test_petmodel_init_dataset_error(request, setup_random_pet_data, monkeypatch):
     rng = request.node.rng
-    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+    pet_dataobj, _affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
 
-    pet_obj = PET(
-        dataobj=pet_dataobj,
-        affine=affine,
-        brainmask=brainmask_dataobj,
-        midframe=midframe,
-        total_duration=total_duration,
+    xlim = rng.random(pet_dataobj.shape[-1])
+
+    # Create a dummy dataset class without attributes
+    class AttributelessPETDataset(BaseDataset[np.ndarray]):
+        def __init__(self, dataobj, affine, brainmask):
+            self.dataobj = dataobj
+            self.affine = affine
+            self.brainmask = brainmask
+
+    # Monkeypatch the PET dataset
+    monkeypatch.setattr("nifreeze.data.pet.PET", AttributelessPETDataset)
+
+    pet_obj_attless = AttributelessPETDataset(
+        dataobj=pet_dataobj, affine=_affine, brainmask=brainmask_dataobj
     )
 
-    timepoints = rng.random(len(pet_obj))
-    xlim = rng.random(1).item()
+    with pytest.raises(TypeError, match=PET_OBJECT_ERROR_MSG):
+        BSplinePETModel(dataset=pet_obj_attless, xlim=xlim)  # type:ignore[arg-type]
 
-    timepoints[0] = DEFAULT_TIMEPOINT_TOL - sys.float_info.epsilon
+    # Create a dummy dataset class without total_duration data
+    class MidframePETDataset(BaseDataset[np.ndarray]):
+        def __init__(self, dataobj, affine, brainmask):
+            self.dataobj = dataobj
+            self.affine = affine
+            self.brainmask = brainmask
+            self.midframe = np.ones_like(dataobj.shape[-1])
 
-    with pytest.raises(
-        ValueError, match=FIRST_TIMEPOINT_VALUE_ERROR_MSG.format(timepoints=timepoints)
-    ):
-        PETModel(dataset=pet_obj, timepoints=timepoints, xlim=xlim)
+    # Monkeypatch the PET dataset
+    monkeypatch.setattr("nifreeze.data.pet.PET", MidframePETDataset)
 
-
-@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]))
-def test_petmodel_parameter_consistency_error(request, setup_random_pet_data):
-    rng = request.node.rng
-    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
-
-    pet_obj = PET(
-        dataobj=pet_dataobj,
-        affine=affine,
-        brainmask=brainmask_dataobj,
-        midframe=midframe,
-        total_duration=total_duration,
+    pet_obj_midf = MidframePETDataset(
+        dataobj=pet_dataobj, affine=_affine, brainmask=brainmask_dataobj
     )
 
-    xlim = rng.random(1).item()
-    timepoints = np.ones(len(pet_obj)) * DEFAULT_TIMEPOINT_TOL
-    timepoints[-1] = xlim - DEFAULT_TIMEPOINT_TOL + sys.float_info.epsilon
+    with pytest.raises(TypeError, match=PET_OBJECT_ERROR_MSG):
+        BSplinePETModel(dataset=pet_obj_midf, xlim=xlim)  # type:ignore[arg-type]
 
-    with pytest.raises(
-        ValueError,
-        match=re.escape(
-            LAST_TIMEPOINT_CONSISTENCY_ERROR_MSG.format(timepoints=timepoints, xlim=xlim)
-        ),
-    ):
-        PETModel(dataset=pet_obj, timepoints=timepoints, xlim=xlim)
+    # Create a dummy dataset class without midframe data
+    class TotalDurationPETDataset(BaseDataset[np.ndarray]):
+        def __init__(self, dataobj, affine, brainmask):
+            self.dataobj = dataobj
+            self.affine = affine
+            self.brainmask = brainmask
+            self.total_duration = np.ones_like(dataobj.shape[-1])
+
+    # Monkeypatch the PET dataset
+    monkeypatch.setattr("nifreeze.data.pet.PET", TotalDurationPETDataset)
+
+    pet_obj_totald = TotalDurationPETDataset(
+        dataobj=pet_dataobj, affine=_affine, brainmask=brainmask_dataobj
+    )
+
+    with pytest.raises(ValueError, match=PET_MIDFRAME_ERROR_MSG):
+        BSplinePETModel(dataset=pet_obj_totald, xlim=xlim)  # type:ignore[arg-type]
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
@@ -127,20 +121,15 @@ def test_petmodel_fit_predict(setup_random_pet_data):
         total_duration=total_duration,
     )
 
-    model = PETModel(
-        dataset=pet_obj,
-        timepoints=pet_obj.midframe,
-        xlim=pet_obj.total_duration,
-        smooth_fwhm=0,
-        thresh_pct=0,
-    )
+    model = BSplinePETModel(dataset=pet_obj, smooth_fwhm=0, thresh_pct=0)
 
     # Fit on all data
     model.fit_predict(None)
     assert model.is_fitted
 
     # Predict at a specific timepoint
-    vol = model.fit_predict(pet_obj.midframe[2])
+    index = 2
+    vol = model.fit_predict(index)
     assert vol is not None
     assert vol.shape == pet_obj.shape3d
     assert vol.dtype == pet_obj.dataobj.dtype
