@@ -4,10 +4,10 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
-    <!-- Generated with Sphinx 7.4.7 and Furo 2025.09.25 -->
-        <title>nifreeze.model.pet - nifreeze 25.0.0.dev772 documentation</title>
+    <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
+        <title>nifreeze.model.pet - nifreeze 25.0.0.dev774 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=580074bf" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/css/version-switch.css?v=45d66e8a" />
     
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev772 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 25.0.0.dev774 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev772</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev774</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev772</span>
+  <span class="sidebar-brand-text">25.0.0.dev774</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -332,6 +332,7 @@
 <span class="c1">#</span>
 <span class="sd">&quot;&quot;&quot;Models for nuclear imaging.&quot;&quot;&quot;</span>
 
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
 <span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">cpu_count</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span>
 
@@ -345,115 +346,83 @@
 <span class="kn">from</span> <span class="nn">nifreeze.data.pet</span> <span class="kn">import</span> <span class="n">PET</span>
 <span class="kn">from</span> <span class="nn">nifreeze.model.base</span> <span class="kn">import</span> <span class="n">BaseModel</span>
 
-<span class="n">TIMEPOINT_XLIM_DATA_MISSING_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
-<span class="s2">&#39;timepoints&#39; and &#39;xlim&#39; must be specified, found: </span><span class="si">{timepoints}</span><span class="s2"> and </span><span class="si">{xlim}</span><span class="s2">.&quot;&quot;&quot;</span>
-<span class="sd">&quot;&quot;&quot;PET model underspecification error.&quot;&quot;&quot;</span>
+<span class="n">PET_OBJECT_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;Dataset MUST be a PET object.&quot;</span>
+<span class="sd">&quot;&quot;&quot;PET object error message.&quot;&quot;&quot;</span>
 
-<span class="n">FIRST_TIMEPOINT_VALUE_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
-<span class="s2">First frame &#39;timepoint&#39; should not be zero or negative, found: </span><span class="si">{timepoints}</span><span class="s2">.&quot;&quot;&quot;</span>
-<span class="sd">&quot;&quot;&quot;PET model timepoint value error message.&quot;&quot;&quot;</span>
-
-<span class="n">LAST_TIMEPOINT_CONSISTENCY_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
-<span class="s2">Last frame &#39;timepoints&#39; value should not be equal or greater than &#39;xlim&#39; </span><span class="se">\</span>
-<span class="s2">duration, found: </span><span class="si">{timepoints}</span><span class="s2"> and </span><span class="si">{xlim}</span><span class="s2">.&quot;&quot;&quot;</span>
-<span class="sd">&quot;&quot;&quot;PET model parameter consistency error message.&quot;&quot;&quot;</span>
+<span class="n">PET_MIDFRAME_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;Dataset MUST have a &#39;midframe&#39;.&quot;</span>
+<span class="sd">&quot;&quot;&quot;PET midframe error message.&quot;&quot;&quot;</span>
 
 <span class="n">DEFAULT_TIMEPOINT_TOL</span> <span class="o">=</span> <span class="mf">1e-2</span>
 <span class="sd">&quot;&quot;&quot;Time frame tolerance in seconds.&quot;&quot;&quot;</span>
 
 
-<div class="viewcode-block" id="PETModel">
-<a class="viewcode-back" href="../../../api/nifreeze.model.pet.html#nifreeze.model.PETModel">[docs]</a>
-<span class="k">class</span> <span class="nc">PETModel</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A PET imaging realignment model based on B-Spline approximation.&quot;&quot;&quot;</span>
+<span class="k">def</span> <span class="nf">_exec_fit</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">chunk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">),</span> <span class="n">chunk</span>
 
-    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="s2">&quot;_t&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;_x&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;_xlim&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;_order&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;_n_ctrl&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;_datashape&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;_mask&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;_smooth_fwhm&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;_thresh_pct&quot;</span><span class="p">,</span>
-    <span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_exec_predict</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">chunk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Propagate model parameters and call predict.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)),</span> <span class="n">chunk</span>
+
+
+<div class="viewcode-block" id="BasePETModel">
+<a class="viewcode-back" href="../../../api/nifreeze.model.pet.html#nifreeze.model.BasePETModel">[docs]</a>
+<span class="k">class</span> <span class="nc">BasePETModel</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">,</span> <span class="n">ABC</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Interface and default methods for PET models.&quot;&quot;&quot;</span>
+
+    <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">ABCMeta</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;_data_mask&quot;</span><span class="p">:</span> <span class="s2">&quot;A mask for the voxels that will be fitted and predicted&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_smooth_fwhm&quot;</span><span class="p">:</span> <span class="s2">&quot;FWHM in mm over which to smooth&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_thresh_pct&quot;</span><span class="p">:</span> <span class="s2">&quot;Thresholding percentile for the signal&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_model_class&quot;</span><span class="p">:</span> <span class="s2">&quot;Defining a model class&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_modelargs&quot;</span><span class="p">:</span> <span class="s2">&quot;Arguments acceptable by the underlying model&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_models&quot;</span><span class="p">:</span> <span class="s2">&quot;List with one or more (if parallel execution) model instances&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">dataset</span><span class="p">:</span> <span class="n">PET</span><span class="p">,</span>
-        <span class="n">timepoints</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-        <span class="n">xlim</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-        <span class="n">n_ctrl</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
         <span class="n">smooth_fwhm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
         <span class="n">thresh_pct</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">20.0</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Create the B-Spline interpolating matrix.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialization.</span>
 
-<span class="sd">        Parameters:</span>
-<span class="sd">        -----------</span>
-<span class="sd">        timepoints : :obj:`list`</span>
-<span class="sd">            The timing (in sec) of each PET volume.</span>
-<span class="sd">            E.g., ``[15.,   45.,   75.,  105.,  135.,  165.,  210.,  270.,  330.,</span>
-<span class="sd">            420.,  540.,  750., 1050., 1350., 1650., 1950., 2250., 2550.]``</span>
-
-<span class="sd">        n_ctrl : :obj:`int`</span>
-<span class="sd">            Number of B-Spline control points. If `None`, then one control point every</span>
-<span class="sd">            six timepoints will be used. The less control points, the smoother is the</span>
-<span class="sd">            model.</span>
-
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        smooth_fwhm : obj:`float`</span>
+<span class="sd">            FWHM in mm over which to smooth the signal.</span>
+<span class="sd">        thresh_pct : obj:`float`</span>
+<span class="sd">            Thresholding percentile for the signal.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">timepoints</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">xlim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="n">TIMEPOINT_XLIM_DATA_MISSING_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">timepoints</span><span class="o">=</span><span class="n">timepoints</span><span class="p">,</span> <span class="n">xlim</span><span class="o">=</span><span class="n">xlim</span><span class="p">)</span>
-            <span class="p">)</span>
+        <span class="c1"># Duck typing, instead of explicitly testing for PET type</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="s2">&quot;total_duration&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">PET_OBJECT_ERROR_MSG</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">timepoints</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">DEFAULT_TIMEPOINT_TOL</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">FIRST_TIMEPOINT_VALUE_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">timepoints</span><span class="o">=</span><span class="n">timepoints</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="s2">&quot;midframe&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">PET_MIDFRAME_ERROR_MSG</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">timepoints</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">xlim</span> <span class="o">-</span> <span class="n">DEFAULT_TIMEPOINT_TOL</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="n">LAST_TIMEPOINT_CONSISTENCY_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">timepoints</span><span class="o">=</span><span class="n">timepoints</span><span class="p">,</span> <span class="n">xlim</span><span class="o">=</span><span class="n">xlim</span><span class="p">)</span>
-            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data_mask</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">dataset</span><span class="o">.</span><span class="n">brainmask</span>
+            <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="n">brainmask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_order</span> <span class="o">=</span> <span class="n">order</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">timepoints</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_xlim</span> <span class="o">=</span> <span class="n">xlim</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_smooth_fwhm</span> <span class="o">=</span> <span class="n">smooth_fwhm</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_thresh_pct</span> <span class="o">=</span> <span class="n">thresh_pct</span>
 
-        <span class="c1"># Calculate index coordinates in the B-Spline grid</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_n_ctrl</span> <span class="o">=</span> <span class="n">n_ctrl</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">timepoints</span><span class="p">)</span> <span class="o">//</span> <span class="mi">4</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
-
-        <span class="c1"># B-Spline knots</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_ctrl</span><span class="p">)</span> <span class="o">+</span> <span class="mi">4</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_datashape</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_mask</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-
-    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fit the model.&quot;&quot;&quot;</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">n_jobs</span>
-
-        <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Fitting with held-out data is not supported&quot;</span><span class="p">)</span>
-        <span class="n">timepoints</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;timepoints&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_x</span>
-        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">timepoints</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_xlim</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_ctrl</span><span class="p">)</span>
-
+    <span class="k">def</span> <span class="nf">_preprocess_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="c1"># ToDo</span>
+        <span class="c1"># data, _, gtab = self._dataset[idxmask]  ### This needs the PET data model to be changed</span>
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">dataobj</span>
         <span class="n">brainmask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">brainmask</span>
 
+        <span class="c1"># Preprocess the data</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_smooth_fwhm</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">smoothed_img</span> <span class="o">=</span> <span class="n">smooth_image</span><span class="p">(</span>
                 <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">affine</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_smooth_fwhm</span>
@@ -465,7 +434,80 @@
             <span class="n">data</span><span class="p">[</span><span class="n">data</span> <span class="o">&lt;</span> <span class="n">thresh_val</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
 
         <span class="c1"># Convert data into V (voxels) x T (timepoints)</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span> <span class="k">if</span> <span class="n">brainmask</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">data</span><span class="p">[</span><span class="n">brainmask</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span> <span class="k">if</span> <span class="n">brainmask</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">data</span><span class="p">[</span><span class="n">brainmask</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="BasePETModel.fit_predict">
+<a class="viewcode-back" href="../../../api/nifreeze.model.pet.html#nifreeze.model.BasePETModel.fit_predict">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Predict the corrected volume.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="BSplinePETModel">
+<a class="viewcode-back" href="../../../api/nifreeze.model.pet.html#nifreeze.model.BSplinePETModel">[docs]</a>
+<span class="k">class</span> <span class="nc">BSplinePETModel</span><span class="p">(</span><span class="n">BasePETModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A PET imaging realignment model based on B-Spline approximation.&quot;&quot;&quot;</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s2">&quot;_t&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_order&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_n_ctrl&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">dataset</span><span class="p">:</span> <span class="n">PET</span><span class="p">,</span>
+        <span class="n">n_ctrl</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create the B-Spline interpolating matrix.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_ctrl : :obj:`int`</span>
+<span class="sd">            Number of B-Spline control points. If `None`, then one control point every</span>
+<span class="sd">            six timepoints will be used. The less control points, the smoother is the</span>
+<span class="sd">            model.</span>
+<span class="sd">        order : :obj:`int`</span>
+<span class="sd">            Order of the B-Spline approximation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_order</span> <span class="o">=</span> <span class="n">order</span>
+
+        <span class="c1"># Calculate index coordinates in the B-Spline grid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_n_ctrl</span> <span class="o">=</span> <span class="n">n_ctrl</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">midframe</span><span class="p">)</span> <span class="o">//</span> <span class="mi">4</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="c1"># B-Spline knots</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_ctrl</span> <span class="o">+</span> <span class="mi">4</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fit the model.&quot;&quot;&quot;</span>
+
+        <span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span> <span class="ow">or</span> <span class="nb">min</span><span class="p">(</span><span class="n">cpu_count</span><span class="p">()</span> <span class="ow">or</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">n_jobs</span>
+
+        <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Fitting with held-out data is not supported&quot;</span><span class="p">)</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preprocess_data</span><span class="p">()</span>
+
+        <span class="n">x</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">midframe</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
+            <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">total_duration</span>
+            <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_ctrl</span>
+        <span class="p">)</span>
 
         <span class="c1"># A.shape = (T, K - 4); T= n. timepoints, K= n. knots (with padding)</span>
         <span class="n">A</span> <span class="o">=</span> <span class="n">BSpline</span><span class="o">.</span><span class="n">design_matrix</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_t</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_order</span><span class="p">)</span>
@@ -473,17 +515,23 @@
         <span class="n">ATdotA</span> <span class="o">=</span> <span class="n">AT</span> <span class="o">@</span> <span class="n">A</span>
 
         <span class="c1"># Parallelize process with joblib</span>
-        <span class="k">with</span> <span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span> <span class="ow">or</span> <span class="nb">min</span><span class="p">(</span><span class="n">cpu_count</span><span class="p">()</span> <span class="ow">or</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
             <span class="n">results</span> <span class="o">=</span> <span class="n">executor</span><span class="p">(</span><span class="n">delayed</span><span class="p">(</span><span class="n">cg</span><span class="p">)(</span><span class="n">ATdotA</span><span class="p">,</span> <span class="n">AT</span> <span class="o">@</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">data</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">])</span>
 
         <span class="k">return</span> <span class="n">n_jobs</span>
 
-<div class="viewcode-block" id="PETModel.fit_predict">
-<a class="viewcode-back" href="../../../api/nifreeze.model.pet.html#nifreeze.model.PETModel.fit_predict">[docs]</a>
+<div class="viewcode-block" id="BSplinePETModel.fit_predict">
+<a class="viewcode-back" href="../../../api/nifreeze.model.pet.html#nifreeze.model.BSplinePETModel.fit_predict">[docs]</a>
     <span class="k">def</span> <span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the corrected volume using B-spline interpolation.&quot;&quot;&quot;</span>
+
+        <span class="c1"># ToDo</span>
+        <span class="c1"># Does the below apply to PET ? Martin has the return None statement</span>
+        <span class="c1"># if index is None:</span>
+        <span class="c1">#    raise RuntimeError(</span>
+        <span class="c1">#        f&quot;Model {self.__class__.__name__} does not allow locking.&quot;)</span>
 
         <span class="c1"># Fit the BSpline basis on all data</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -497,7 +545,10 @@
             <span class="k">return</span> <span class="kc">None</span>
 
         <span class="c1"># Project sample timing into B-Spline coordinates</span>
-        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">((</span><span class="n">index</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_xlim</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_ctrl</span><span class="p">)</span>
+        <span class="c1"># ToDo: x is not really a matrix ...</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">midframe</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">total_duration</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_ctrl</span>
+        <span class="p">)</span>
         <span class="n">A</span> <span class="o">=</span> <span class="n">BSpline</span><span class="o">.</span><span class="n">design_matrix</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_t</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_order</span><span class="p">)</span>
 
         <span class="c1"># A is 1 (num. timepoints) x C (num. coeff)</span>
@@ -547,7 +598,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=5d50e839"></script>
+</div><script src="../../../_static/documentation_options.js?v=32a1fced"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
