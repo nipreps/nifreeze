@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.data.base module" href="nifreeze.data.base.html"><link rel="prev" title="nifreeze.data.pet.io module" href="nifreeze.data.pet.io.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.data.pet.utils module - nifreeze 25.0.0.dev774 documentation</title>
+        <title>nifreeze.data.pet.utils module - nifreeze 25.0.0.dev776 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev774 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 25.0.0.dev776 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev774</span>
+    <span id="version-slug" class="sidebar-brand-text">25.0.0.dev776</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">25.0.0.dev774</span>
+  <span class="sidebar-brand-text">25.0.0.dev776</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -319,7 +319,7 @@
 <p>Utilities for handling PET temporal and activity attributes.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.data.pet.utils.compute_temporal_markers">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.utils.</span></span><span class="sig-name descname"><span class="pre">compute_temporal_markers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame_time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><span class="pre">ndarray</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/data/pet/utils.html#compute_temporal_markers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.pet.utils.compute_temporal_markers" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.utils.</span></span><span class="sig-name descname"><span class="pre">compute_temporal_markers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame_time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.4)"><span class="pre">ndarray</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.4)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/data/pet/utils.html#compute_temporal_markers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.pet.utils.compute_temporal_markers" title="Link to this definition">¶</a></dt>
 <dd><p>Compute the frame temporal markers from the frame time values.</p>
 <p>Computes the midframe times and the total duration following the principles
 detailed below.</p>
@@ -354,7 +354,7 @@ if not already done at the beginning of the process for the sake of
 simplicity.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>frame_time</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – Frame time values.</p>
+<dd class="field-odd"><p><strong>frame_time</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.4)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – Frame time values.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Midpoint timing of each frame and total duration</p>
@@ -374,16 +374,16 @@ sequence.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – PET data.</p></li>
-<li><p><strong>stat_func</strong> (<a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Callable</span></code></a>, optional) – Function to apply over voxels (e.g., <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.sum.html#numpy.sum" title="(in NumPy v2.3)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.sum()</span></code></a>,
-<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.mean.html#numpy.mean" title="(in NumPy v2.3)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.mean()</span></code></a>, <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.std.html#numpy.std" title="(in NumPy v2.3)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.std()</span></code></a>)</p></li>
+<li><p><strong>data</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.4)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – PET data.</p></li>
+<li><p><strong>stat_func</strong> (<a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Callable</span></code></a>, optional) – Function to apply over voxels (e.g., <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.sum.html#numpy.sum" title="(in NumPy v2.4)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.sum()</span></code></a>,
+<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.mean.html#numpy.mean" title="(in NumPy v2.4)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.mean()</span></code></a>, <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.std.html#numpy.std" title="(in NumPy v2.4)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.std()</span></code></a>)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>1D array of statistic values for each frame.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.4)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -459,7 +459,7 @@ sequence.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=32a1fced"></script>
+</div><script src="../_static/documentation_options.js?v=a121f29e"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
