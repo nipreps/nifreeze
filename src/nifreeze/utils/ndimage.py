@@ -84,9 +84,4 @@ def get_data(img: ImgT, dtype: np.dtype | str | None = None) -> np.ndarray:
     ):
         return np.asanyarray(img.dataobj, dtype=header.get_data_dtype())
 
-    if is_float:
-        dtype_to_use = np.dtype(dtype)
-    else:
-        dtype_to_use = np.dtype(np.float32)
-
-    return img.get_fdata(dtype=dtype_to_use)
+    return img.get_fdata(dtype=np.dtype(dtype) if is_float else np.dtype(np.float32))
