@@ -220,8 +220,8 @@ class BaseDWIModel(BaseModel):
                     )
                     for i, model in enumerate(self._models)
                 )
-            for subprediction, index in results:
-                predicted[index] = subprediction
+            for subprediction, rindex in results:
+                predicted[rindex] = subprediction
 
             predicted = np.hstack(predicted)
 
