@@ -23,6 +23,8 @@
 """Unit tests exercising models."""
 
 import contextlib
+import re
+import sys
 import warnings
 from typing import List
 
@@ -92,11 +94,17 @@ class DummyDatasetNoRef:
 def test_base_model():
     from nifreeze.model.base import BaseModel
 
-    with pytest.raises(
-        TypeError,
-        match="Can't instantiate abstract class BaseModel without an implementation "
-        "for abstract method 'fit_predict'",
-    ):
+    if sys.version_info >= (3, 12):
+        expected_message = re.escape(
+            "Can't instantiate abstract class BaseModel without an implementation "
+            "for abstract method 'fit_predict'"
+        )
+    else:
+        expected_message = (
+            "Can't instantiate abstract class BaseModel with abstract method fit_predict"
+        )
+
+    with pytest.raises(TypeError, match=expected_message):
         BaseModel(None)  # type: ignore[abstract]
 
 

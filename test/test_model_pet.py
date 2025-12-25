@@ -22,6 +22,7 @@
 #
 
 import re
+import sys
 
 import numpy as np
 import pytest
@@ -38,14 +39,18 @@ from nifreeze.model.pet import (
 def test_pet_base_model():
     from nifreeze.model.pet import BasePETModel
 
-    with pytest.raises(
-        TypeError,
-        match=re.escape(
+    if sys.version_info >= (3, 12):
+        expected_message = re.escape(
             "Can't instantiate abstract class BasePETModel without an implementation "
             "for abstract method 'fit_predict'"
-        ),
-    ):
-        BasePETModel(None, xlim=None)  # type: ignore[abstract, arg-type]
+        )
+    else:
+        expected_message = (
+            "Can't instantiate abstract class BasePETModel with abstract method fit_predict"
+        )
+
+    with pytest.raises(TypeError, match=expected_message):
+        BasePETModel(None)  # type: ignore[abstract, arg-type]
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]))
