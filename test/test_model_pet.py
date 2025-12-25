@@ -58,8 +58,6 @@ def test_petmodel_init_dataset_error(request, setup_random_pet_data, monkeypatch
     rng = request.node.rng
     pet_dataobj, _affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
 
-    xlim = rng.random(pet_dataobj.shape[-1])
-
     # Create a dummy dataset class without attributes
     class AttributelessPETDataset(BaseDataset[np.ndarray]):
         def __init__(self, dataobj, affine, brainmask):
@@ -75,7 +73,7 @@ def test_petmodel_init_dataset_error(request, setup_random_pet_data, monkeypatch
     )
 
     with pytest.raises(TypeError, match=PET_OBJECT_ERROR_MSG):
-        BSplinePETModel(dataset=pet_obj_attless, xlim=xlim)  # type:ignore[arg-type]
+        BSplinePETModel(dataset=pet_obj_attless)  # type:ignore[arg-type]
 
     # Create a dummy dataset class without total_duration data
     class MidframePETDataset(BaseDataset[np.ndarray]):
@@ -93,7 +91,7 @@ def test_petmodel_init_dataset_error(request, setup_random_pet_data, monkeypatch
     )
 
     with pytest.raises(TypeError, match=PET_OBJECT_ERROR_MSG):
-        BSplinePETModel(dataset=pet_obj_midf, xlim=xlim)  # type:ignore[arg-type]
+        BSplinePETModel(dataset=pet_obj_midf)  # type:ignore[arg-type]
 
     # Create a dummy dataset class without midframe data
     class TotalDurationPETDataset(BaseDataset[np.ndarray]):
@@ -111,7 +109,7 @@ def test_petmodel_init_dataset_error(request, setup_random_pet_data, monkeypatch
     )
 
     with pytest.raises(ValueError, match=PET_MIDFRAME_ERROR_MSG):
-        BSplinePETModel(dataset=pet_obj_totald, xlim=xlim)  # type:ignore[arg-type]
+        BSplinePETModel(dataset=pet_obj_totald)  # type:ignore[arg-type]
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
