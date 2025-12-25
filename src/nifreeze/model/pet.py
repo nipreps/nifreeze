@@ -45,6 +45,10 @@ PET_MIDFRAME_ERROR_MSG = "Dataset MUST have a 'midframe'."
 DEFAULT_TIMEPOINT_TOL = 1e-2
 """Time frame tolerance in seconds."""
 
+START_INDEX_RANGE_ERROR_MSG = """\
+'start_index' must be within the range of the dataset 'midframe' length."""
+"""PET model fitting start index allowed values error."""
+
 
 def _exec_fit(model, data, chunk=None, **kwargs):
     return model.fit(data, **kwargs), chunk
@@ -62,6 +66,7 @@ class BasePETModel(BaseModel, ABC):
 
     __slots__ = {
         "_data_mask": "A mask for the voxels that will be fitted and predicted",
+        "_start_index": "Start index frame for fitting",
         "_smooth_fwhm": "FWHM in mm over which to smooth",
         "_thresh_pct": "Thresholding percentile for the signal",
         "_model_class": "Defining a model class",
@@ -72,6 +77,7 @@ class BasePETModel(BaseModel, ABC):
     def __init__(
         self,
         dataset: PET,
+        start_index: int | None = None,
         smooth_fwhm: float = 10.0,
         thresh_pct: float = 20.0,
         **kwargs,
@@ -80,6 +86,13 @@ class BasePETModel(BaseModel, ABC):
 
         Parameters
         ----------
+        start_index : :obj:`int`, optional
+            If provided, the model will be fitted using only timepoints starting
+            from this index (inclusive). Predictions for timepoints earlier than
+            the specified start will reuse the predicted volume for the start
+            timepoint. This is useful, for example, to discard a number of
+            frames at the beginning of the sequence, which due to their little
+            SNR may impact registration negatively.
         smooth_fwhm : obj:`float`, optional
             FWHM in mm over which to smooth the signal.
         thresh_pct : obj:`float`, optional
@@ -103,6 +116,14 @@ class BasePETModel(BaseModel, ABC):
 
         self._smooth_fwhm = smooth_fwhm
         self._thresh_pct = thresh_pct
+
+        # Validate start index / time
+        if start_index is None:
+            self._start_index = 0
+        else:
+            if start_index < 0 or start_index >= len(dataset.midframe):
+                raise ValueError(START_INDEX_RANGE_ERROR_MSG)
+            self._start_index = start_index
 
     def _preprocess_data(self) -> np.ndarray:
         # ToDo
@@ -185,11 +206,19 @@ class BSplinePETModel(BasePETModel):
 
         data = self._preprocess_data()
 
+        timepoints_to_fit = np.asarray(self._dataset.midframe, dtype="float32")[
+            self._start_index :
+        ]
         x = (
-            np.asarray(self._dataset.midframe, dtype="float32")
+            np.asarray(timepoints_to_fit, dtype="float32")
             / self._dataset.total_duration
             * self._n_ctrl
         )
+
+        # If fitting started later than the first frame, drop early columns so the
+        # temporal length matches timepoints_to_fit
+        if self._start_index > 0:
+            data = data[:, self._start_index :]
 
         # A.shape = (T, K - 4); T= n. timepoints, K= n. knots (with padding)
         A = BSpline.design_matrix(x, self._t, k=self._order)
@@ -205,7 +234,11 @@ class BSplinePETModel(BasePETModel):
         return n_jobs
 
     def fit_predict(self, index: int | None = None, **kwargs) -> Union[np.ndarray, None]:
-        """Return the corrected volume using B-spline interpolation."""
+        """Return the corrected volume using B-spline interpolation.
+
+        Predictions for times earlier than the configured start time will return
+        the prediction for the start time.
+        """
 
         # ToDo
         # Does the below apply to PET ? Martin has the return None statement
@@ -224,11 +257,17 @@ class BSplinePETModel(BasePETModel):
         if index is None:  # If no index, just fit the data.
             return None
 
+        # If the requested time is earlier than the configured start time, use the
+        # start time's prediction (reuse the transforms estimated for start)
+        midframe = (
+            self._dataset.midframe[self._start_index]
+            if index < self._start_index
+            else self._dataset.midframe[index]
+        )
+
         # Project sample timing into B-Spline coordinates
         # ToDo: x is not really a matrix ...
-        x = np.asarray(
-            (self._dataset.midframe[index] / self._dataset.total_duration) * self._n_ctrl
-        )
+        x = np.asarray((midframe / self._dataset.total_duration) * self._n_ctrl)
         A = BSpline.design_matrix(x, self._t, k=self._order)
 
         # A is 1 (num. timepoints) x C (num. coeff)
