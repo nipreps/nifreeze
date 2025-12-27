@@ -56,6 +56,59 @@ B_MATRIX = np.array(
 )
 
 
+def test_base_model_exceptions():
+    import re
+
+    class DummyDWI(DWI):
+        def __init__(
+            self, bzero=True, gradients=True, data_shape=(10, 10, 10, 35), brainmask=None
+        ):
+            if bzero:
+                self.bzero = np.ones(data_shape[:3])
+            if gradients:
+                self.gradients = np.ones((data_shape[-1], 4))
+            self.dataobj = np.ones(data_shape)
+            self.brainmask = brainmask
+
+        def __len__(self):
+            if hasattr(self, "gradients") and self.gradients is not None:
+                return self.gradients.shape[0]
+            return 0
+
+    dwi = DummyDWI(bzero=False)
+    with pytest.raises(TypeError, match=model.dmri.DWI_OBJECT_ERROR_MSG):
+        model.dmri.BaseDWIModel(dwi)
+
+    dwi = DummyDWI(gradients=False)
+    with pytest.raises(ValueError, match=model.dmri.DWI_GTAB_ERROR_MSG):
+        model.dmri.BaseDWIModel(dwi)
+
+    min_dir = DTI_MIN_ORIENTATIONS - 1
+    dwi = DummyDWI(data_shape=(10, 10, 10, min_dir))
+    with pytest.raises(
+        ValueError, match=re.escape(model.dmri.DWI_SIZE_ERROR_MSG.format(directions=min_dir))
+    ):
+        model.dmri.BaseDWIModel(dwi)
+
+
+def test_base_max_b_attribute():
+    class DummyDWI(DWI):
+        def __init__(self, data_shape=(10, 10, 10, 35)):
+            self.bzero = np.ones(data_shape[:3])
+            self.gradients = np.ones((data_shape[-1], 4))
+            self.dataobj = np.ones(data_shape)
+            self.brainmask = np.ones(data_shape[:-1]).astype(bool)
+
+        def __len__(self):
+            return self.gradients.shape[0]
+
+    dwi = DummyDWI()
+    max_b = DEFAULT_LOWB_THRESHOLD + 10
+    dwi_base_model = model.dmri.BaseDWIModel(dwi, max_b=max_b)
+    assert hasattr(dwi_base_model, "_max_b")
+    assert dwi_base_model._max_b == max_b
+
+
 def test_average_model():
     """Check the implementation of the average DW model."""
 
@@ -153,56 +206,3 @@ def test_dti_model(setup_random_dwi_data):
     predicted = dtimodel.fit_predict(4)
     assert predicted is not None
     assert predicted.shape == dwi_dataobj.shape[:-1]
-
-
-def test_dmri_exceptions():
-    import re
-
-    class DummyDWI(DWI):
-        def __init__(
-            self, bzero=True, gradients=True, data_shape=(10, 10, 10, 35), brainmask=None
-        ):
-            if bzero:
-                self.bzero = np.ones(data_shape[:3])
-            if gradients:
-                self.gradients = np.ones((data_shape[-1], 4))
-            self.dataobj = np.ones(data_shape)
-            self.brainmask = brainmask
-
-        def __len__(self):
-            if hasattr(self, "gradients") and self.gradients is not None:
-                return self.gradients.shape[0]
-            return 0
-
-    dwi = DummyDWI(bzero=False)
-    with pytest.raises(TypeError, match=model.dmri.DWI_OBJECT_ERROR_MSG):
-        model.dmri.BaseDWIModel(dwi)
-
-    dwi = DummyDWI(gradients=False)
-    with pytest.raises(ValueError, match=model.dmri.DWI_GTAB_ERROR_MSG):
-        model.dmri.BaseDWIModel(dwi)
-
-    min_dir = DTI_MIN_ORIENTATIONS - 1
-    dwi = DummyDWI(data_shape=(10, 10, 10, min_dir))
-    with pytest.raises(
-        ValueError, match=re.escape(model.dmri.DWI_SIZE_ERROR_MSG.format(directions=min_dir))
-    ):
-        model.dmri.BaseDWIModel(dwi)
-
-
-def test_dmri_max_b_attribute():
-    class DummyDWI(DWI):
-        def __init__(self, data_shape=(10, 10, 10, 35)):
-            self.bzero = np.ones(data_shape[:3])
-            self.gradients = np.ones((data_shape[-1], 4))
-            self.dataobj = np.ones(data_shape)
-            self.brainmask = np.ones(data_shape[:-1]).astype(bool)
-
-        def __len__(self):
-            return self.gradients.shape[0]
-
-    dwi = DummyDWI()
-    max_b = DEFAULT_LOWB_THRESHOLD + 10
-    dwi_base_model = model.dmri.BaseDWIModel(dwi, max_b=max_b)
-    assert hasattr(dwi_base_model, "_max_b")
-    assert dwi_base_model._max_b == max_b
