@@ -41,6 +41,9 @@ DWI_GTAB_ERROR_MSG = "Dataset MUST have a gradient table."
 """dMRI gradient table error message."""
 DWI_SIZE_ERROR_MSG = "DWI dataset is too small ({directions} directions)."
 """dMRI dataset size error message."""
+DWI_DKI_NULL_GRADIENT_ERROR_MSG = """\
+No 'bzero' found on dataset. DIPY's DKI requires a null gradient."""
+"""dMRI dataset missing 'bzero' DKI model error message."""
 
 
 def _exec_fit(model, data, chunk=None, **kwargs):
@@ -125,13 +128,25 @@ class BaseDWIModel(BaseModel):
             self._locked_fit = True
 
         data, _, gtab = self._dataset[idxmask]
-        # Select voxels within mask or just unravel 3D if no mask
-        data = data[brainmask, ...] if brainmask is not None else data.reshape(-1, data.shape[-1])
 
         # DIPY models (or one with a fully-compliant interface)
         model_str = getattr(self, "_model_class", "")
         if "dipy" in model_str or "GeneralizedQSamplingModel" in model_str:
             gtab = gradient_table_from_bvals_bvecs(gtab[:, -1], gtab[:, :-1])
+
+        # Prepend the b=0 to the gradients and the data for the kurtosis model
+        if "DiffusionKurtosisModel" in model_str:
+            if self._dataset.bzero is None:
+                raise ValueError(DWI_DKI_NULL_GRADIENT_ERROR_MSG)
+            else:
+                gtab = gradient_table_from_bvals_bvecs(
+                    np.concatenate([np.asarray([0]), gtab.bvals]),
+                    np.concatenate([np.zeros([1, 3]), gtab.bvecs]),
+                )
+                data = np.concatenate([self._dataset.bzero[..., np.newaxis], data], axis=-1)
+
+        # Select voxels within mask or just unravel 3D if no mask
+        data = data[brainmask, ...] if brainmask is not None else data.reshape(-1, data.shape[-1])
 
         if model_str:
             module_name, class_name = model_str.rsplit(".", 1)
