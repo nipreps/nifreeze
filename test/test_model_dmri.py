@@ -749,3 +749,214 @@ def test_gp_model(evals, S0, snr, hsph_dirs, bval_shell):
     prediction = gpfit.predict(gtab.bvecs[-2:])
 
     assert prediction.shape == (2,)
+
+
+@pytest.mark.random_dwi_data(50, (14, 16, 8), True)
+def test_dti_model_essentials(setup_random_dwi_data):
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
+
+    dataset = DWI(
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        gradients=gradients,
+    )
+
+    dtimodel = model.DTIModel(dataset)
+    predicted = dtimodel.fit_predict(4)
+    assert predicted is not None
+    assert predicted.shape == dwi_dataobj.shape[:-1]
+
+
+@pytest.mark.random_gtab_data(6, (1000,), 1)
+@pytest.mark.random_dwi_data(50, (2, 2, 1), True)
+@pytest.mark.parametrize("index", (None, 3, 5))
+@pytest.mark.parametrize("use_mask", (False, True))
+def test_dti_model_correctness(setup_random_dwi_data, index, use_mask):
+    """Ensure that we get the same result obtained through the DTI model
+    implemented in DIPY."""
+
+    # ToDo
+    # Create some data that makes sense for the DTI fit
+
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
+
+    if not use_mask:
+        brainmask_dataobj = None
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
+        dataset = DWI(
+            dataobj=dwi_dataobj,
+            affine=affine,
+            brainmask=brainmask_dataobj,
+            gradients=gradients,
+        )
+
+    # Fit & predict using NiFreeze
+    dtimodel_nf = model.DTIModel(dataset)
+    predicted_nf = dtimodel_nf.fit_predict(index)
+
+    # Fit & predict using the DIPY DTI model directly
+    data = dataset.dataobj
+    gtab = gradient_table_from_bvals_bvecs(gradients[..., -1], gradients[..., :-1])
+
+    idxmask = np.ones(data.shape[-1], dtype=bool)
+    if index is not None:
+        idxmask[index] = False
+
+    # ToDo
+    # Note that we fit without the b0 data in NiFreeze.
+    # ToDo
+    # Do the brainmask and clipping manipulation of the DWI model initialization
+    # Tests are passing without doing that, though...
+    dtimodel_dp = dti.TensorModel(gtab[~gtab.b0s_mask][idxmask])
+    dtifit_dp = dtimodel_dp.fit(data=data[..., idxmask], mask=brainmask_dataobj)
+
+    assert _compare_instance_attributes(dtimodel_nf._models[0], dtifit_dp)
+
+    if index is not None:
+        predicted_dp = dtifit_dp.predict(gtab[~gtab.b0s_mask][index], S0=dataset.bzero)
+
+        assert predicted_nf is not None
+        # ToDo
+        # Use the mask since DIPY's .fit model mask parameter appears to be
+        # unused (i.e. values outside the mask are nonzero)
+        assert np.allclose(
+            predicted_nf[brainmask_dataobj], predicted_dp[brainmask_dataobj][..., 0]
+        )
+
+
+@pytest.mark.random_gtab_data(10, (1000, 2000), 0)
+@pytest.mark.random_dwi_data(50, (14, 16, 8), True)
+def test_dki_model_bzero_exception(setup_random_dwi_data):
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
+
+    dataset = DWI(
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        gradients=gradients,
+    )
+
+    dkimodel = model.DKIModel(dataset)
+
+    with pytest.raises(ValueError, match=model.dmri.DWI_DKI_NULL_GRADIENT_ERROR_MSG):
+        dkimodel.fit_predict(4)
+
+
+@pytest.mark.random_gtab_data(10, (1000, 2000), 1)
+@pytest.mark.random_dwi_data(50, (14, 16, 8), True)
+def test_dki_model_essentials(setup_random_dwi_data):
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
+
+    dataset = DWI(
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        gradients=gradients,
+    )
+
+    dkimodel_nf = model.DKIModel(dataset)
+    predicted_nf = dkimodel_nf.fit_predict(4)
+    assert predicted_nf is not None
+    assert predicted_nf.shape == dwi_dataobj.shape[:-1]
+
+
+@pytest.mark.random_gtab_data(10, (1000, 2000), 1)
+@pytest.mark.random_dwi_data(50, (2, 2, 1), True)
+@pytest.mark.parametrize("index", (None, 4, 9))
+@pytest.mark.parametrize("use_mask", (False, True))
+def test_dki_model_correctness(setup_random_dwi_data, index, use_mask):
+    """Ensure that we get the same result obtained through the DKI model
+    implemented in DIPY."""
+
+    # ToDo
+    # Create some data that makes sense for the DKI fit
+
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
+
+    if not use_mask:
+        brainmask_dataobj = np.ones(dwi_dataobj.shape[:3], dtype=bool)
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
+        dataset = DWI(
+            dataobj=dwi_dataobj,
+            affine=affine,
+            brainmask=brainmask_dataobj,
+            gradients=gradients,
+        )
+
+    # Fit & predict using NiFreeze
+    dkimodel_nf = model.DKIModel(dataset)
+    predicted_nf = dkimodel_nf.fit_predict(index)
+
+    # Fit & predict using the DIPY DKI model directly
+    data = dataset.dataobj
+
+    # Account for the b0 value being prepended to the data/gtab
+    idxmask = np.ones(data.shape[-1] + 1, dtype=bool)
+    if index is not None:
+        index += 1
+        idxmask[index] = False
+
+    # Insert the b0 data into the DWI data
+    assert dataset.bzero is not None
+    data = np.concatenate([dataset.bzero[..., np.newaxis], data], axis=-1)
+    gtab = gradient_table_from_bvals_bvecs(
+        gradients[idxmask][..., -1], gradients[idxmask][..., :-1]
+    )
+
+    from nifreeze.model.dmri import DEFAULT_MIN_S0  # , DEFAULT_S0_CLIP_PERCENTILE
+
+    # ToDo
+    # The below would be for the case where we have e.g. b1000, b2000, b3000
+    # and we are not using b0
+    #
+    # By default, set S0 to the q-th percentile of the DWI data within mask
+    # S0 = np.where(
+    #     brainmask_dataobj,
+    #     np.round(
+    #         np.percentile(
+    #             dwi_dataobj[brainmask_dataobj, ...],
+    #             DEFAULT_S0_CLIP_PERCENTILE,
+    #         )
+    #     ),
+    #     0,
+    # )
+    # If b=0 is present and not to be ignored, update brain mask and set
+    brainmask_dataobj[dataset.bzero < DEFAULT_MIN_S0] = False
+    S0 = np.broadcast_to(dataset.bzero, brainmask_dataobj.shape) * brainmask_dataobj
+
+    dkimodel_dp = dki.DiffusionKurtosisModel(gtab)
+    dkifit_dp = dkimodel_dp.fit(data=data[..., idxmask], mask=brainmask_dataobj)
+
+    if not use_mask:
+        assert _compare_instance_attributes(
+            dkimodel_nf._models[0].fit_array[0], dkifit_dp.fit_array[0][0][0]
+        )
+    else:
+        assert _compare_instance_attributes(
+            dkimodel_nf._models[0].fit_array[0], dkifit_dp.fit_array[0][1][0]
+        )
+
+    if index is not None:
+        _gtab = gradient_table_from_bvals_bvecs(
+            gradients[~idxmask][..., -1], gradients[~idxmask][..., :-1]
+        )
+        predicted_dp = dkifit_dp.predict(_gtab, S0=S0)
+
+        # ToDo
+        # For the use_mask=True, and a non-null index, DIPY returns only 2
+        # non-null values, but the mask contains only 1 False value. If I do
+        # dkifit_dp.predict(_gtab)[...,0]
+        # I get three non-null values. Is this some issue in DIPY ?
+        # Note that this also happens for the DTI model, but in the tests I am
+        # only checking the values where the mask is true. Is this another bug?
+        # If I remove the brainmask from the dkimodel_dp.fit call, values
+        # outside the mask are zero (due to the S0 being masked surely), and
+        # tests pass, but passing the mask and not masking the S0 brings us back
+        # to the issue
+        assert predicted_nf is not None
+        assert np.allclose(predicted_nf, predicted_dp[..., 0])
