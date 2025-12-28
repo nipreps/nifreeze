@@ -270,14 +270,7 @@ def test_factory_variants(name, expected_cls, setup_random_base_data, particular
 
 @pytest.mark.parametrize("name", ["avgdwi", "averagedwi", "meandwi"])
 def test_factory_avgdwi_variants(monkeypatch, name, setup_random_dwi_data):
-    (
-        dwi_dataobj,
-        affine,
-        brainmask_dataobj,
-        _,
-        gradients,
-        _,
-    ) = setup_random_dwi_data
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
 
     dataset = DWI(
         dataobj=dwi_dataobj,

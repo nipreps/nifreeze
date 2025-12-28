@@ -82,12 +82,13 @@ def _dwi_data_to_nifti(
     dwi_dataobj,
     affine,
     brainmask_dataobj,
-    b0_dataobj,
+    b0_dataobj=None,
 ):
     dwi = nb.Nifti1Image(dwi_dataobj, affine)
     brainmask = nb.Nifti1Image(brainmask_dataobj, affine)
-    b0 = nb.Nifti1Image(b0_dataobj, affine)
-
+    b0 = None
+    if b0_dataobj is not None:
+        b0 = nb.Nifti1Image(b0_dataobj, affine)
     return dwi, brainmask, b0
 
 
@@ -229,41 +230,42 @@ def test_dwi_post_init_bzero_errors(
       - there are more slabs with respect to those in a single 3D volume.
     """
     rng = request.node.rng
-    dwi_dataobj, affine, _, b0_dataobj, gradients, _ = setup_random_dwi_data
-    _b0_dataobj = b0_dataobj
+    dwi_dataobj, affine, _, gradients, b0_thres = setup_random_dwi_data
+    b0s_mask = gradients[:, -1] <= b0_thres
+    b0_dataobj = dwi_dataobj[..., b0s_mask]
     # Add a new axis if requested
     if extra_b0_axis > 0:
-        _b0_dataobj = _b0_dataobj[..., np.newaxis]
+        b0_dataobj = b0_dataobj[..., np.newaxis]
     # Add new b0 volumes if requested
     if extra_b0_count >= 1:
         extra_bvols = rng.random((*b0_dataobj.shape, extra_b0_count))
-        _b0_dataobj = np.concatenate((b0_dataobj[..., np.newaxis], extra_bvols), axis=-1)
+        b0_dataobj = np.concatenate((b0_dataobj[..., np.newaxis], extra_bvols), axis=-1)
     # Add new slices along the requested axis
     if extra_b0_slice_count >= 1:
         # Create extra slices with the same spatial shape as b0_dataobj except
         # along the chosen axis
-        extra_slab_shape = list(_b0_dataobj.shape[:3])
+        extra_slab_shape = list(b0_dataobj.shape[:3])
         extra_slab_shape[extra_b0_slice_axis] = extra_b0_slice_count
         extra_slab = rng.random(tuple(extra_slab_shape))
 
         # If the b0 data object is 4D, make slices 4D with a singleton fourth
         # axis so they can be concatenated spatially
-        if _b0_dataobj.ndim == 4:
+        if b0_dataobj.ndim == 4:
             extra_slab = extra_slab[..., np.newaxis]
 
         # Concatenate along the chosen spatial axis to make spatial dims differ
         # from dataobj
-        _b0_dataobj = np.concatenate((_b0_dataobj, extra_slab), axis=extra_b0_slice_axis)
+        b0_dataobj = np.concatenate((b0_dataobj, extra_slab), axis=extra_b0_slice_axis)
 
     with pytest.raises(
         ValueError,
         match=re.escape(
             BZERO_SHAPE_MISMATCH_ERROR_MSG.format(
-                bzero_shape=_b0_dataobj.shape, data_shape=dwi_dataobj.shape[:3]
+                bzero_shape=b0_dataobj.shape, data_shape=dwi_dataobj.shape[:3]
             )
         ),
     ):
-        DWI(dataobj=dwi_dataobj, affine=affine, gradients=gradients, bzero=_b0_dataobj)
+        DWI(dataobj=dwi_dataobj, affine=affine, gradients=gradients, bzero=b0_dataobj)
 
 
 @pytest.mark.parametrize("vol_size", [(11, 11, 7)])
@@ -369,7 +371,7 @@ def test_dwi_post_init_b0_handling(request, vol_size, b0_count, provide_bzero, b
 def test_dwi_instantiation_gradients_unexpected_columns_error(
     request, setup_random_dwi_data, row_major_gradients, additional_grad_columns
 ):
-    dwi_dataobj, affine, _, b0_dataobj, gradients, _ = setup_random_dwi_data
+    dwi_dataobj, affine, _, gradients, _ = setup_random_dwi_data
 
     # Remove/prepend columns. At this point, it is irrelevant whether the
     # potential N-dimensional vector is normalized or not
@@ -387,7 +389,6 @@ def test_dwi_instantiation_gradients_unexpected_columns_error(
         DWI(
             dataobj=dwi_dataobj,
             affine=affine,
-            bzero=b0_dataobj,
             gradients=gradients,
         )
 
@@ -398,7 +399,7 @@ def test_dwi_instantiation_gradients_unexpected_columns_error(
 def test_dwi_instantiation_gradients_ndim_error(
     tmp_path, setup_random_dwi_data, row_major_gradients
 ):
-    dwi_dataobj, affine, _, b0_dataobj, gradients, _ = setup_random_dwi_data
+    dwi_dataobj, affine, _, gradients, _ = setup_random_dwi_data
 
     # Store a single column from gradients to try loading a 1D-array. Transpose
     # depending on whether to follow the row-major convention or not
@@ -410,7 +411,6 @@ def test_dwi_instantiation_gradients_ndim_error(
         DWI(
             dataobj=dwi_dataobj,
             affine=affine,
-            bzero=b0_dataobj,
             gradients=gradients,
         )
 
@@ -424,7 +424,7 @@ def test_dwi_instantiation_gradients_ndim_error(
 def test_gradient_instantiation_dwi_vol_mismatch_error(
     setup_random_dwi_data, additional_volume_count, additional_gradient_count
 ):
-    dwi_dataobj, affine, _, b0_dataobj, gradients, _ = setup_random_dwi_data
+    dwi_dataobj, affine, _, gradients, _ = setup_random_dwi_data
 
     # Add additional volumes: simply concatenate the last volume
     if additional_volume_count:
@@ -446,7 +446,6 @@ def test_gradient_instantiation_dwi_vol_mismatch_error(
         DWI(
             dataobj=dwi_dataobj,
             affine=affine,
-            bzero=b0_dataobj,
             gradients=gradients,
         )
 
@@ -463,7 +462,6 @@ def test_gradient_instantiation_dwi_vol_mismatch_error(
         DWI(
             dataobj=dwi_dataobj,
             affine=affine,
-            bzero=b0_dataobj,
             gradients=gradients,
         )
 
@@ -472,11 +470,9 @@ def test_gradient_instantiation_dwi_vol_mismatch_error(
 @pytest.mark.random_dwi_data(50, (34, 36, 24), True)
 @pytest.mark.parametrize("row_major_gradients", (False, True))
 def test_load_gradients_ndim_error(tmp_path, setup_random_dwi_data, row_major_gradients):
-    dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients, b0_thres = setup_random_dwi_data
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
 
-    dwi_nii, _, _ = _dwi_data_to_nifti(
-        dwi_dataobj, affine, brainmask_dataobj.astype(np.uint8), b0_dataobj
-    )
+    dwi_nii, _, _ = _dwi_data_to_nifti(dwi_dataobj, affine, brainmask_dataobj.astype(np.uint8))
 
     dwi_fname = tmp_path / "dwi.nii.gz"
     nb.save(dwi_nii, dwi_fname)
@@ -502,14 +498,9 @@ def test_load_gradients_ndim_error(tmp_path, setup_random_dwi_data, row_major_gr
 def test_load_gradients_expected_columns_error(
     request, tmp_path, setup_random_dwi_data, row_major_gradients, additional_grad_columns
 ):
-    dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients, b0_thres = setup_random_dwi_data
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
 
-    dwi_nii, _, _ = _dwi_data_to_nifti(
-        dwi_dataobj,
-        affine,
-        brainmask_dataobj.astype(np.uint8),
-        b0_dataobj,
-    )
+    dwi_nii, _, _ = _dwi_data_to_nifti(dwi_dataobj, affine, brainmask_dataobj.astype(np.uint8))
 
     dwi_fname = tmp_path / "dwi.nii.gz"
     nb.save(dwi_nii, dwi_fname)
@@ -533,29 +524,27 @@ def test_load_gradients_expected_columns_error(
         from_nii(dwi_fname, gradients_file=grads_fname)
 
 
-@pytest.mark.random_gtab_data(10, (1000, 2000), 2)
+@pytest.mark.random_gtab_data(10, (1000, 2000), 1)
 @pytest.mark.random_dwi_data(50, (34, 36, 24), True)
 def test_load_gradients_bval_bvec_warn(tmp_path, setup_random_dwi_data):
-    dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients, _ = setup_random_dwi_data
+    dwi_dataobj, affine, brainmask_dataobj, gradients, b0_thres = setup_random_dwi_data
 
-    dwi_nii, _, _ = _dwi_data_to_nifti(
-        dwi_dataobj,
-        affine,
-        brainmask_dataobj.astype(np.uint8),
-        b0_dataobj,
-    )
+    dwi_nii, _, _ = _dwi_data_to_nifti(dwi_dataobj, affine, brainmask_dataobj.astype(np.uint8))
 
     dwi_fname = tmp_path / "dwi.nii.gz"
     nb.save(dwi_nii, dwi_fname)
+
+    bvals = gradients[:, -1]
+    bvecs = gradients[:, :-1]
+
+    b0s_mask = bvals <= b0_thres
+    b0_dataobj = dwi_dataobj[..., b0s_mask].squeeze()
 
     b0_fname = tmp_path / "b0.nii.gz"
     nb.Nifti1Image(b0_dataobj, np.eye(4), None).to_filename(b0_fname)
 
     grads_fname = tmp_path / "grads.txt"
     np.savetxt(grads_fname, gradients, fmt="%.6f")
-
-    bvals = gradients[:, -1]
-    bvecs = gradients[:, :-1]
 
     bval_fname = tmp_path / "dwi.bval"
     bvec_fname = tmp_path / "dwi.bvec"
@@ -577,25 +566,13 @@ def test_load_gradients_bval_bvec_warn(tmp_path, setup_random_dwi_data):
             )
 
 
-@pytest.mark.random_gtab_data(10, (1000, 2000), 2)
+@pytest.mark.random_gtab_data(10, (1000, 2000), 1)
 @pytest.mark.random_dwi_data(50, (34, 36, 24), True)
 @pytest.mark.parametrize("row_major_gradients", (False, True))
 def test_load_gradients(tmp_path, setup_random_dwi_data, row_major_gradients):
-    (
-        dwi_dataobj,
-        affine,
-        brainmask_dataobj,
-        b0_dataobj,
-        gradients,
-        b0_thres,
-    ) = setup_random_dwi_data
+    dwi_dataobj, affine, brainmask_dataobj, gradients, b0_thres = setup_random_dwi_data
 
-    dwi_nii, _, _ = _dwi_data_to_nifti(
-        dwi_dataobj,
-        affine,
-        brainmask_dataobj.astype(np.uint8),
-        b0_dataobj,
-    )
+    dwi_nii, _, _ = _dwi_data_to_nifti(dwi_dataobj, affine, brainmask_dataobj.astype(np.uint8))
 
     dwi_fname = tmp_path / "dwi.nii.gz"
     nb.save(dwi_nii, dwi_fname)
@@ -628,7 +605,7 @@ def test_load_gradients(tmp_path, setup_random_dwi_data, row_major_gradients):
     assert np.allclose(dwi_obj.gradients, expected_nonzero_grads)
 
 
-@pytest.mark.random_gtab_data(10, (1000, 2000), 2)
+@pytest.mark.random_gtab_data(10, (1000, 2000), 1)
 @pytest.mark.random_dwi_data(50, (34, 36, 24), True)
 @pytest.mark.parametrize(
     ("transpose_bvals", "transpose_bvecs"),
@@ -640,20 +617,15 @@ def test_load_gradients(tmp_path, setup_random_dwi_data, row_major_gradients):
     ],
 )
 def test_load_bvecs_bvals(tmp_path, setup_random_dwi_data, transpose_bvals, transpose_bvecs):
-    dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients, b0_thres = setup_random_dwi_data
+    dwi_dataobj, affine, brainmask_dataobj, gradients, b0_thres = setup_random_dwi_data
 
-    bvals = gradients[:, -1]
-    bvecs = gradients[:, :-1]
-
-    dwi_nii, _, _ = _dwi_data_to_nifti(
-        dwi_dataobj,
-        affine,
-        brainmask_dataobj.astype(np.uint8),
-        b0_dataobj,
-    )
+    dwi_nii, _, _ = _dwi_data_to_nifti(dwi_dataobj, affine, brainmask_dataobj.astype(np.uint8))
 
     dwi_fname = tmp_path / "dwi.nii.gz"
     nb.save(dwi_nii, dwi_fname)
+
+    bvals = gradients[:, -1]
+    bvecs = gradients[:, :-1]
 
     if transpose_bvals:
         bvals = bvals.T
@@ -680,17 +652,12 @@ def test_load_bvecs_bvals(tmp_path, setup_random_dwi_data, transpose_bvals, tran
     assert np.allclose(dwi_obj.gradients, expected_nonzero_grads)
 
 
-@pytest.mark.random_gtab_data(10, (1000, 2000), 2)
+@pytest.mark.random_gtab_data(10, (1000, 2000), 1)
 @pytest.mark.random_dwi_data(50, (34, 36, 24), True)
 def test_load_gradients_missing(tmp_path, setup_random_dwi_data):
-    dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, _, _ = setup_random_dwi_data
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
 
-    dwi_nii, _, _ = _dwi_data_to_nifti(
-        dwi_dataobj,
-        affine,
-        brainmask_dataobj.astype(np.uint8),
-        b0_dataobj,
-    )
+    dwi_nii, _, _ = _dwi_data_to_nifti(dwi_dataobj, affine, brainmask_dataobj.astype(np.uint8))
 
     dwi_fname = tmp_path / "dwi.nii.gz"
     nb.save(dwi_nii, dwi_fname)
@@ -984,13 +951,13 @@ def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
 @pytest.mark.random_gtab_data(10, (1000,), 1)
 @pytest.mark.random_dwi_data(50, (34, 36, 24), True)
 def test_equality_operator(tmp_path, setup_random_dwi_data):
-    dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients, b0_thres = setup_random_dwi_data
+    dwi_dataobj, affine, brainmask_dataobj, gradients, b0_thres = setup_random_dwi_data
+
+    b0s_mask = gradients[:, -1] <= b0_thres
+    b0_dataobj = dwi_dataobj[..., b0s_mask].squeeze()
 
     dwi_nii, brainmask, b0 = _dwi_data_to_nifti(
-        dwi_dataobj,
-        affine,
-        brainmask_dataobj.astype(np.uint8),
-        b0_dataobj,
+        dwi_dataobj, affine, brainmask_dataobj.astype(np.uint8), b0_dataobj=b0_dataobj
     )
 
     (
@@ -1060,16 +1027,17 @@ def test_equality_operator(tmp_path, setup_random_dwi_data):
 
 @pytest.mark.random_dwi_data(50, (34, 36, 24), False)
 def test_shells(setup_random_dwi_data):
-    dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients, _ = setup_random_dwi_data
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
 
     # Ignore warning due to redundant b0 volumes
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message=DWI_REDUNDANT_B0_WARN_MSG, category=UserWarning)
+        warnings.filterwarnings(
+            "ignore", message=DWI_B0_MULTIPLE_VOLUMES_WARN_MSG, category=UserWarning
+        )
         dwi_obj = DWI(
             dataobj=dwi_dataobj,
             affine=affine,
             brainmask=brainmask_dataobj,
-            bzero=b0_dataobj,
             gradients=gradients,
         )
 

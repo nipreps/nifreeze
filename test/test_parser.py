@@ -241,14 +241,7 @@ def test_parsed_dwimodel_instatiation(setup_random_dwi_data, datadir, models):
     from nifreeze.data.dmri import DWI
     from nifreeze.model import DKIModel, DTIModel
 
-    (
-        dwi_dataobj,
-        affine,
-        brainmask_dataobj,
-        b0_dataobj,
-        gradients,
-        b0_thres,
-    ) = setup_random_dwi_data
+    dwi_dataobj, affine, brainmask_dataobj, gradients, b0_thres = setup_random_dwi_data
 
     input_file = datadir / "dwi.h5"
     argv = [
