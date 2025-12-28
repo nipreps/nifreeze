@@ -24,6 +24,8 @@
 
 import numpy as np
 import pytest
+from dipy.core.gradients import gradient_table_from_bvals_bvecs
+from dipy.reconst import dki, dti
 from dipy.sims.voxel import single_tensor
 
 from nifreeze import model
@@ -199,3 +201,136 @@ def test_dti_model_essentials(setup_random_dwi_data):
     predicted = dtimodel.fit_predict(4)
     assert predicted is not None
     assert predicted.shape == dwi_dataobj.shape[:-1]
+
+
+@pytest.mark.random_dwi_data(50, (14, 16, 8), True)
+def test_dti_model_correctness(setup_random_dwi_data):
+    """Ensure that we get the same result obtained through the DTI model
+    implemented in DIPY."""
+
+    # ToDo
+    # Create some data that makes sense for the DTI fit
+
+    (
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj,
+        _,
+        gradients,
+        _,
+    ) = setup_random_dwi_data
+
+    dataset = DWI(
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        gradients=gradients,
+    )
+
+    index = 4
+    dtimodel_nf = model.DTIModel(dataset)
+    predicted_nf = dtimodel_nf.fit_predict(index)
+
+    # Insert the b0 data into the DWI gradients and the data
+    gtab = gradient_table_from_bvals_bvecs(gradients[..., -1], gradients[..., :-1])
+    assert dataset.bzero is not None
+    data = np.concatenate([dataset.bzero[..., np.newaxis], dataset.dataobj], axis=-1)
+
+    dtimodel_dp = dti.TensorModel(gtab)
+    dtifit_dp = dtimodel_dp.fit(data)
+    predicted_dp = dtifit_dp.predict(gtab[index], S0=dataset.bzero)
+
+    assert predicted_nf is not None
+    assert np.allclose(predicted_nf, predicted_dp.squeeze())
+
+
+@pytest.mark.random_gtab_data(10, (1000, 2000), 0)
+@pytest.mark.random_dwi_data(50, (14, 16, 8), True)
+def test_dki_model_bzero_exception(setup_random_dwi_data):
+    (
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj,
+        _,
+        gradients,
+        _,
+    ) = setup_random_dwi_data
+
+    dataset = DWI(
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        gradients=gradients,
+    )
+
+    dkimodel = model.DKIModel(dataset)
+
+    with pytest.raises(ValueError, match=model.dmri.DWI_DKI_NULL_GRADIENT_ERROR_MSG):
+        dkimodel.fit_predict(4)
+
+
+@pytest.mark.random_gtab_data(10, (1000, 2000), 2)
+@pytest.mark.random_dwi_data(50, (14, 16, 8), True)
+def test_dki_model_essentials(setup_random_dwi_data):
+    (
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj,
+        _,
+        gradients,
+        _,
+    ) = setup_random_dwi_data
+
+    dataset = DWI(
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        gradients=gradients,
+    )
+
+    dkimodel_nf = model.DKIModel(dataset)
+    predicted_nf = dkimodel_nf.fit_predict(4)
+    assert predicted_nf is not None
+    assert predicted_nf.shape == dwi_dataobj.shape[:-1]
+
+
+@pytest.mark.random_gtab_data(10, (1000, 2000), 2)
+@pytest.mark.random_dwi_data(50, (14, 16, 8), True)
+def test_dki_model_correctness(setup_random_dwi_data):
+    """Ensure that we get the same result obtained through the DKI model
+    implemented in DIPY."""
+
+    # ToDo
+    # Create some data that makes sense for the DKI fit
+
+    (
+        dwi_dataobj,
+        affine,
+        brainmask_dataobj,
+        _,
+        gradients,
+        _,
+    ) = setup_random_dwi_data
+
+    dataset = DWI(
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        gradients=gradients,
+    )
+
+    index = 4
+    dkimodel_nf = model.DKIModel(dataset)
+    predicted_nf = dkimodel_nf.fit_predict(index)
+
+    # Insert the b0 data into the DWI gradients and the data
+    gtab = gradient_table_from_bvals_bvecs(gradients[1:, -1], gradients[1:, :-1])
+    assert dataset.bzero is not None
+    data = np.concatenate([dataset.bzero[..., np.newaxis], dataset.dataobj], axis=-1)
+
+    dkimodel_dp = dki.DiffusionKurtosisModel(gtab)
+    dkifit_dp = dkimodel_dp.fit(data)
+    predicted_dp = dkifit_dp.predict(gtab[index], S0=dataset.bzero)
+
+    assert predicted_nf is not None
+    assert np.allclose(predicted_nf, predicted_dp.squeeze())
