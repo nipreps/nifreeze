@@ -25,7 +25,6 @@
 import contextlib
 import re
 import sys
-import warnings
 from typing import List, Union
 
 import numpy as np
@@ -34,7 +33,6 @@ import pytest
 from nifreeze import model
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.dmri import DWI
-from nifreeze.data.dmri.base import DWI_REDUNDANT_B0_WARN_MSG
 from nifreeze.data.dmri.utils import (
     DEFAULT_MAX_S0,
     DEFAULT_MIN_S0,
@@ -276,21 +274,17 @@ def test_factory_avgdwi_variants(monkeypatch, name, setup_random_dwi_data):
         dwi_dataobj,
         affine,
         brainmask_dataobj,
-        b0_dataobj,
+        _,
         gradients,
         _,
     ) = setup_random_dwi_data
 
-    # Ignore warning due to redundant b0 volumes
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message=DWI_REDUNDANT_B0_WARN_MSG, category=UserWarning)
-        dataset = DWI(
-            dataobj=dwi_dataobj,
-            affine=affine,
-            brainmask=brainmask_dataobj,
-            bzero=b0_dataobj,
-            gradients=gradients,
-        )
+    dataset = DWI(
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        gradients=gradients,
+    )
 
     # Dummy class to simulate AverageDWIModel
     class DummyAvgDWI:
