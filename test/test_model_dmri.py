@@ -179,14 +179,7 @@ def test_gp_model(evals, S0, snr, hsph_dirs, bval_shell):
 
 @pytest.mark.random_dwi_data(50, (14, 16, 8), True)
 def test_dti_model_essentials(setup_random_dwi_data):
-    (
-        dwi_dataobj,
-        affine,
-        brainmask_dataobj,
-        _,
-        gradients,
-        _,
-    ) = setup_random_dwi_data
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
 
     dataset = DWI(
         dataobj=dwi_dataobj,

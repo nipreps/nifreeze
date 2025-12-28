@@ -303,14 +303,12 @@ def setup_random_dwi_data(request, setup_random_gtab_data):
         request, (*vol_size, volumes), 0.0, 1.0
     )
     brainmask_dataobj = rng.choice([True, False], size=vol_size).astype(bool)
-    b0_dataobj = rng.random(vol_size, dtype="float32")
     gradients = np.column_stack((bvecs, bvals)).astype("float32")
 
     return (
         dwi_dataobj,
         affine,
         brainmask_dataobj,
-        b0_dataobj,
         gradients,
         b0_thres,
     )

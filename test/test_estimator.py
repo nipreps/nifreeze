@@ -138,14 +138,10 @@ def test_estimator_iterator_index_match(
 ):
     dataset: Union["DummyDWIDataset", "DummyPETDataset"]  # Avoids type annotation errors
     if modality == "dwi":
-        (
-            dwi_dataobj,
-            affine,
-            brainmask_dataobj,
-            b0_dataobj,
-            gradients,
-            _,
-        ) = setup_random_dwi_data
+        dwi_dataobj, affine, brainmask_dataobj, gradients, b0_thres = setup_random_dwi_data
+
+        b0s_mask = gradients[:, -1] <= b0_thres
+        b0_dataobj = dwi_dataobj[..., b0s_mask].squeeze()
 
         dataset = DummyDWIDataset(dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients)
         bvals = gradients[:, -1][gradients[:, -1] > DEFAULT_LOWB_THRESHOLD]
