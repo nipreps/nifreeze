@@ -215,10 +215,14 @@ def test_petmodel_simulated_correlation_motion_free():
     spatial_map = np.prod(grid, axis=0)
 
     t = np.linspace(0, 2 * np.pi, n_timepoints, dtype="float32")
-    temporal_basis = 1.0 + 0.3 * np.sin(t) + 0.2 * np.cos(2 * t)
+    spatial_norm = spatial_map / spatial_map.max()
+    weight_sin = 0.2 + 0.1 * spatial_norm
+    weight_cos = 0.1 + 0.05 * spatial_norm
+    temporal_basis = (
+        1.0 + weight_sin[..., np.newaxis] * np.sin(t) + weight_cos[..., np.newaxis] * np.cos(2 * t)
+    )
 
-    dataobj = spatial_map[..., np.newaxis] * temporal_basis
-    dataobj = dataobj.astype("float32")
+    dataobj = (spatial_map[..., np.newaxis] * temporal_basis).astype("float32")
 
     brainmask = spatial_map > 0.9
     midframe = np.arange(n_timepoints, dtype="float32")
@@ -233,9 +237,12 @@ def test_petmodel_simulated_correlation_motion_free():
     )
 
     model = BSplinePETModel(dataset=pet_obj, smooth_fwhm=0, thresh_pct=0)
-    model.fit_predict(None)
 
-    predicted_volumes = [model.fit_predict(t_index) for t_index in range(n_timepoints)]
+    predicted_volumes = []
+    for t_index in range(n_timepoints):
+        vol = model.fit_predict(t_index)
+        assert vol is not None
+        predicted_volumes.append(vol)
     predicted = np.stack(predicted_volumes, axis=-1)
 
     original = dataobj[brainmask]
