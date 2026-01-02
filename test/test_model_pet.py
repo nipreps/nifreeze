@@ -201,3 +201,52 @@ def test_petmodel_start_index_reuses_start_prediction(setup_random_pet_data):
     assert pred_start.shape == pet_dataobj.shape[:3]
     assert pred_early.shape == pet_dataobj.shape[:3]
     assert pred_late.shape == pet_dataobj.shape[:3]
+
+
+def test_petmodel_simulated_correlation_motion_free():
+    shape = (8, 8, 8)
+    n_timepoints = 16
+    grid = np.meshgrid(
+        np.linspace(0.5, 1.5, shape[0]),
+        np.linspace(0.5, 1.5, shape[1]),
+        np.linspace(0.5, 1.5, shape[2]),
+        indexing="ij",
+    )
+    spatial_map = np.prod(grid, axis=0)
+
+    t = np.linspace(0, 2 * np.pi, n_timepoints, dtype="float32")
+    temporal_basis = 1.0 + 0.3 * np.sin(t) + 0.2 * np.cos(2 * t)
+
+    dataobj = spatial_map[..., np.newaxis] * temporal_basis
+    dataobj = dataobj.astype("float32")
+
+    brainmask = spatial_map > 0.9
+    midframe = np.arange(n_timepoints, dtype="float32")
+    total_duration = float(n_timepoints)
+
+    pet_obj = PET(
+        dataobj=dataobj,
+        affine=np.eye(4),
+        brainmask=brainmask,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+
+    model = BSplinePETModel(dataset=pet_obj, smooth_fwhm=0, thresh_pct=0)
+    model.fit_predict(None)
+
+    predicted_volumes = [model.fit_predict(t_index) for t_index in range(n_timepoints)]
+    predicted = np.stack(predicted_volumes, axis=-1)
+
+    original = dataobj[brainmask]
+    predicted_masked = predicted[brainmask]
+
+    original_demean = original - original.mean(axis=1, keepdims=True)
+    predicted_demean = predicted_masked - predicted_masked.mean(axis=1, keepdims=True)
+    numerator = np.sum(original_demean * predicted_demean, axis=1)
+    denominator = np.linalg.norm(original_demean, axis=1) * np.linalg.norm(
+        predicted_demean, axis=1
+    )
+    correlations = numerator / denominator
+
+    assert np.all(correlations > 0.95)
