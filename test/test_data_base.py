@@ -204,7 +204,7 @@ def test_memmap_dataobj_preserved():
 
         assert isinstance(dataset.dataobj, np.memmap)
 
-        frame, _, *_ = dataset[..., 0]
+        frame, _, *_ = dataset[0]
         assert np.shares_memory(frame, dataset.dataobj)
 
 
