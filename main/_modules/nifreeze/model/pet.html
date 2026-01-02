@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.pet - nifreeze 26.0.0.dev808 documentation</title>
+        <title>nifreeze.model.pet - nifreeze 26.0.0.dev810 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev808 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev810 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev808</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev810</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev808</span>
+  <span class="sidebar-brand-text">26.0.0.dev810</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -355,6 +355,10 @@
 <span class="n">DEFAULT_TIMEPOINT_TOL</span> <span class="o">=</span> <span class="mf">1e-2</span>
 <span class="sd">&quot;&quot;&quot;Time frame tolerance in seconds.&quot;&quot;&quot;</span>
 
+<span class="n">START_INDEX_RANGE_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">&#39;start_index&#39; must be within the range of the dataset &#39;midframe&#39; length.&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;PET model fitting start index allowed values error.&quot;&quot;&quot;</span>
+
 
 <span class="k">def</span> <span class="nf">_exec_fit</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">chunk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">),</span> <span class="n">chunk</span>
@@ -374,6 +378,7 @@
 
     <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">&quot;_data_mask&quot;</span><span class="p">:</span> <span class="s2">&quot;A mask for the voxels that will be fitted and predicted&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_start_index&quot;</span><span class="p">:</span> <span class="s2">&quot;Start index frame for fitting&quot;</span><span class="p">,</span>
         <span class="s2">&quot;_smooth_fwhm&quot;</span><span class="p">:</span> <span class="s2">&quot;FWHM in mm over which to smooth&quot;</span><span class="p">,</span>
         <span class="s2">&quot;_thresh_pct&quot;</span><span class="p">:</span> <span class="s2">&quot;Thresholding percentile for the signal&quot;</span><span class="p">,</span>
         <span class="s2">&quot;_model_class&quot;</span><span class="p">:</span> <span class="s2">&quot;Defining a model class&quot;</span><span class="p">,</span>
@@ -384,6 +389,7 @@
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">dataset</span><span class="p">:</span> <span class="n">PET</span><span class="p">,</span>
+        <span class="n">start_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">smooth_fwhm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
         <span class="n">thresh_pct</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">20.0</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
@@ -392,6 +398,13 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
+<span class="sd">        start_index : :obj:`int`, optional</span>
+<span class="sd">            If provided, the model will be fitted using only timepoints starting</span>
+<span class="sd">            from this index (inclusive). Predictions for timepoints earlier than</span>
+<span class="sd">            the specified start will reuse the predicted volume for the start</span>
+<span class="sd">            timepoint. This is useful, for example, to discard a number of</span>
+<span class="sd">            frames at the beginning of the sequence, which due to their little</span>
+<span class="sd">            SNR may impact registration negatively.</span>
 <span class="sd">        smooth_fwhm : obj:`float`, optional</span>
 <span class="sd">            FWHM in mm over which to smooth the signal.</span>
 <span class="sd">        thresh_pct : obj:`float`, optional</span>
@@ -415,6 +428,14 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_smooth_fwhm</span> <span class="o">=</span> <span class="n">smooth_fwhm</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_thresh_pct</span> <span class="o">=</span> <span class="n">thresh_pct</span>
+
+        <span class="c1"># Validate start index / time</span>
+        <span class="k">if</span> <span class="n">start_index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_start_index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">start_index</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">start_index</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">midframe</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">START_INDEX_RANGE_ERROR_MSG</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_start_index</span> <span class="o">=</span> <span class="n">start_index</span>
 
     <span class="k">def</span> <span class="nf">_preprocess_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
         <span class="c1"># ToDo</span>
@@ -503,11 +524,19 @@
 
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preprocess_data</span><span class="p">()</span>
 
+        <span class="n">timepoints_to_fit</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">midframe</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_start_index</span> <span class="p">:</span>
+        <span class="p">]</span>
         <span class="n">x</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">midframe</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">timepoints_to_fit</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
             <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">total_duration</span>
             <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_ctrl</span>
         <span class="p">)</span>
+
+        <span class="c1"># If fitting started later than the first frame, drop early columns so the</span>
+        <span class="c1"># temporal length matches timepoints_to_fit</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_index</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_index</span> <span class="p">:]</span>
 
         <span class="c1"># A.shape = (T, K - 4); T= n. timepoints, K= n. knots (with padding)</span>
         <span class="n">A</span> <span class="o">=</span> <span class="n">BSpline</span><span class="o">.</span><span class="n">design_matrix</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_t</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_order</span><span class="p">)</span>
@@ -525,7 +554,11 @@
 <div class="viewcode-block" id="BSplinePETModel.fit_predict">
 <a class="viewcode-back" href="../../../api/nifreeze.model.pet.html#nifreeze.model.BSplinePETModel.fit_predict">[docs]</a>
     <span class="k">def</span> <span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the corrected volume using B-spline interpolation.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the corrected volume using B-spline interpolation.</span>
+
+<span class="sd">        Predictions for times earlier than the configured start time will return</span>
+<span class="sd">        the prediction for the start time.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># ToDo</span>
         <span class="c1"># Does the below apply to PET ? Martin has the return None statement</span>
@@ -544,11 +577,17 @@
         <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># If no index, just fit the data.</span>
             <span class="k">return</span> <span class="kc">None</span>
 
+        <span class="c1"># If the requested time is earlier than the configured start time, use the</span>
+        <span class="c1"># start time&#39;s prediction (reuse the transforms estimated for start)</span>
+        <span class="n">midframe</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">midframe</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_start_index</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_index</span>
+            <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">midframe</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+        <span class="p">)</span>
+
         <span class="c1"># Project sample timing into B-Spline coordinates</span>
         <span class="c1"># ToDo: x is not really a matrix ...</span>
-        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span>
-            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">midframe</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">total_duration</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_ctrl</span>
-        <span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">((</span><span class="n">midframe</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">total_duration</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_ctrl</span><span class="p">)</span>
         <span class="n">A</span> <span class="o">=</span> <span class="n">BSpline</span><span class="o">.</span><span class="n">design_matrix</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_t</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_order</span><span class="p">)</span>
 
         <span class="c1"># A is 1 (num. timepoints) x C (num. coeff)</span>
@@ -598,7 +637,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=5f3421ce"></script>
+</div><script src="../../../_static/documentation_options.js?v=1868c285"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
