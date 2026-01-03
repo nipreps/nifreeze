@@ -25,13 +25,16 @@
 import itertools
 import re
 import warnings
+from contextlib import contextmanager
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
+import h5py
 import nibabel as nb
 import numpy as np
 import pytest
+from nibabel.arrayproxy import ArrayProxy
 
 from nifreeze.data import NFDH5_EXT, BaseDataset, load
 from nifreeze.data.base import (
@@ -133,6 +136,46 @@ class DummyDataset(BaseDataset):
         return (self.dataobj[..., idx],)
 
 
+class NoArrayProxy(np.ndarray):
+    def __array__(self, dtype=None):
+        raise AssertionError("__array__ should not be called")
+
+
+class EqRaisesProxy(np.ndarray):
+    def __eq__(self, other):
+        raise AssertionError("__eq__ should not be called")
+
+
+@contextmanager
+def _h5py_dataobj(tmp_path: Path, shape: tuple[int, ...]):
+    h5_path = tmp_path / "data.h5"
+    h5_file = h5py.File(h5_path, "w")
+    try:
+        dataset = h5_file.create_dataset("data", data=np.arange(np.prod(shape)).reshape(shape))
+        yield dataset
+    finally:
+        h5_file.close()
+
+
+@contextmanager
+def _memmap_dataobj(tmp_path: Path, shape: tuple[int, ...]):
+    memmap_path = tmp_path / "memmap_data.npy"
+    memmap = np.lib.format.open_memmap(memmap_path, mode="w+", dtype=np.float32, shape=shape)
+    memmap[...] = np.arange(np.prod(shape), dtype=np.float32).reshape(shape)
+    memmap.flush()
+    yield memmap
+
+
+@contextmanager
+def _arrayproxy_dataobj(tmp_path: Path, shape: tuple[int, ...]):
+    nifti_path = tmp_path / "data.nii.gz"
+    data = np.arange(np.prod(shape), dtype=np.float32).reshape(shape)
+    img = nb.Nifti1Image(data, np.eye(4))
+    img.to_filename(nifti_path)
+    reloaded = nb.load(nifti_path, mmap=True)
+    yield reloaded.dataobj
+
+
 @pytest.mark.parametrize(
     "setup_random_uniform_spatial_data",
     [
@@ -191,6 +234,46 @@ def test_has_ndim(obj_factory, ndim, expected):
 def test_dataobj_basic_errors(value, expected_exc, expected_msg):
     with pytest.raises(expected_exc, match=str(expected_msg)):
         BaseDataset(dataobj=value)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "factory, expected_type",
+    [
+        (_h5py_dataobj, h5py.Dataset),
+        (_memmap_dataobj, np.memmap),
+        (_arrayproxy_dataobj, ArrayProxy),
+    ],
+)
+def test_array_like_dataobj_preserved(tmp_path, monkeypatch, factory, expected_type):
+    shape = (4, 4, 4, 2)
+    affine = np.eye(4)
+    with factory(tmp_path, shape) as dataobj:
+        def asarray_spy(*args, **kwargs):
+            raise AssertionError("np.asarray should not be called")
+
+        monkeypatch.setattr(np, "asarray", asarray_spy)
+        dataset = BaseDataset(dataobj=dataobj, affine=affine)
+
+        assert isinstance(dataset.dataobj, expected_type)
+        assert dataset.dataobj is dataobj
+
+
+def test_repr_tolerates_array_like_without_conversion():
+    shape = (3, 3, 3, 2)
+    data = np.zeros(shape, dtype=np.float32).view(NoArrayProxy)
+    dataset = BaseDataset(dataobj=data, affine=np.eye(4))
+
+    repr_text = repr(dataset)
+    assert f"<{'x'.join(str(v) for v in shape)} ({data.dtype})>" in repr_text
+
+
+def test_eq_uses_cmp_without_array_eq():
+    shape = (2, 2, 2, 2)
+    data = np.arange(np.prod(shape), dtype=np.float32).reshape(shape)
+    dataset = BaseDataset(dataobj=data.view(EqRaisesProxy), affine=np.eye(4))
+    dataset_same = BaseDataset(dataobj=data.view(EqRaisesProxy), affine=np.eye(4))
+
+    assert dataset == dataset_same
 
 
 def test_memmap_dataobj_preserved():
