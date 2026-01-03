@@ -22,6 +22,7 @@
 #
 """Test dataset base class."""
 
+import gc
 import itertools
 import re
 import warnings
@@ -29,6 +30,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
+import h5py
 import nibabel as nb
 import numpy as np
 import pytest
@@ -341,6 +343,89 @@ def test_to_filename_and_from_filename(random_dataset: BaseDataset):
         assert np.allclose(random_dataset.dataobj, ds2.dataobj)
 
 
+def test_from_filename_hdf5_handle_keep_open(random_dataset: BaseDataset):
+    """Ensure external HDF5 handles remain valid until explicitly closed."""
+    with TemporaryDirectory() as tmpdir:
+        h5_file = Path(tmpdir) / f"test_dataset{NFDH5_EXT}"
+        random_dataset.to_filename(h5_file)
+
+        h5_handle = h5py.File(h5_file, "r")
+        ds2 = BaseDataset.from_filename(h5_file)
+
+        assert h5_handle.id.valid
+        del ds2
+        gc.collect()
+        assert h5_handle.id.valid
+
+        h5_handle.close()
+        assert not h5_handle.id.valid
+
+        h5_handle = h5py.File(h5_file, "r")
+        file_id = h5_handle.id
+        del h5_handle
+        gc.collect()
+        assert not file_id.valid
+
+
+def test_from_filename_hdf5_handle_closes(monkeypatch, random_dataset: BaseDataset):
+    """Ensure BaseDataset.from_filename closes its HDF5 handle."""
+    with TemporaryDirectory() as tmpdir:
+        h5_file = Path(tmpdir) / f"test_dataset{NFDH5_EXT}"
+        random_dataset.to_filename(h5_file)
+
+        import nifreeze.data.base as base_mod
+
+        tracker = {}
+        original_file = h5py.File
+
+        class TrackingFile:
+            def __init__(self, *args, **kwargs):
+                self._file = original_file(*args, **kwargs)
+                tracker["file"] = self._file
+
+            def __enter__(self):
+                return self._file
+
+            def __exit__(self, exc_type, exc, traceback):
+                return self._file.__exit__(exc_type, exc, traceback)
+
+        monkeypatch.setattr(base_mod.h5py, "File", TrackingFile)
+
+        ds2 = BaseDataset.from_filename(h5_file)
+        assert ds2.dataobj is not None
+        assert not tracker["file"].id.valid
+
+
+def test_from_filename_hdf5_handle_closed_on_error(monkeypatch, tmp_path):
+    """Ensure HDF5 handles close even when BaseDataset.from_filename raises."""
+    h5_file = tmp_path / f"corrupt_dataset{NFDH5_EXT}"
+    with h5py.File(h5_file, "w"):
+        pass
+
+    import nifreeze.data.base as base_mod
+
+    tracker = {}
+    original_file = h5py.File
+
+    class TrackingFile:
+        def __init__(self, *args, **kwargs):
+            self._file = original_file(*args, **kwargs)
+            tracker["file"] = self._file
+
+        def __enter__(self):
+            return self._file
+
+        def __exit__(self, exc_type, exc, traceback):
+            return self._file.__exit__(exc_type, exc, traceback)
+
+    monkeypatch.setattr(base_mod.h5py, "File", TrackingFile)
+
+    with pytest.raises(KeyError):
+        BaseDataset.from_filename(h5_file)
+
+    assert not tracker["file"].id.valid
+
+
 def test_object_to_nifti(random_dataset: BaseDataset):
     """Test writing a dataset to a NIfTI file."""
     with TemporaryDirectory() as tmpdir:
@@ -355,6 +440,23 @@ def test_object_to_nifti(random_dataset: BaseDataset):
         data = img.get_fdata(dtype=np.float32)
         assert data.shape == (32, 32, 32, 5)
         assert np.allclose(data, random_dataset.dataobj)
+
+
+def test_nifti_handles_closed_after_load(tmp_path):
+    """Ensure nibabel file handles are closed after loading and dataset creation."""
+    data = np.zeros((4, 4, 4, 2), dtype=np.float32)
+    nifti_file = tmp_path / "sample.nii.gz"
+    nb.Nifti1Image(data, np.eye(4)).to_filename(nifti_file)
+
+    img = load_api(nifti_file, nb.spatialimages.SpatialImage)
+    _ = BaseDataset(dataobj=np.asanyarray(img.dataobj), affine=img.affine)
+
+    file_map = getattr(img, "file_map", None)
+    if file_map:
+        for file_holder in file_map.values():
+            fileobj = getattr(file_holder, "fileobj", None)
+            if fileobj is not None:
+                assert fileobj.closed
 
 
 @pytest.mark.parametrize(
