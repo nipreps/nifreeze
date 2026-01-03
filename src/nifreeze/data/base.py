@@ -180,8 +180,7 @@ def _cmp(lh: Any, rh: Any) -> bool:
 def validate_dataobj(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> None:
     """Strict validator for data objects.
 
-    Enforces that ``value`` is present and is a NumPy array with exactly 4
-    dimensions (``ndim == 4``).
+    Enforces that ``value`` is present and is a 4D, array-like object.
 
     This function is intended for use as an attrs-style validator.
 
@@ -197,14 +196,14 @@ def validate_dataobj(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> No
     Raises
     ------
     exc:`TypeError`
-        If the input cannot be converted to a float :obj:`~numpy.ndarray`.
+        If the input is not array-like.
     exc:`ValueError`
         If the value is :obj:`None`, or not 4-dimensional.
     """
     if value is None:
         raise ValueError(DATAOBJ_ABSENCE_ERROR_MSG)
 
-    if not isinstance(value, np.ndarray):
+    if not hasattr(value, "__getitem__"):
         raise TypeError(DATAOBJ_OBJECT_ERROR_MSG)
 
     if not _has_ndim(value, 4):
@@ -287,6 +286,9 @@ class BaseDataset(Generic[Unpack[Ts]]):
         eq=False,
     )
     """A path to an HDF5 file to store the whole dataset."""
+
+    _file_handle: h5py.File | None = attrs.field(default=None, repr=False, eq=False)
+    """A handle to an open HDF5 file when keep-open semantics are requested."""
 
     def __attrs_post_init__(self) -> None:
         """Enforce basic consistency of base dataset fields at instantiation
@@ -372,7 +374,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
         return np.prod(self.dataobj.shape[:3])
 
     @classmethod
-    def from_filename(cls, filename: Path | str) -> Self:
+    def from_filename(cls, filename: Path | str, keep_open: bool = False) -> Self:
         """
         Read an HDF5 file from disk and create a BaseDataset.
 
@@ -387,6 +389,19 @@ class BaseDataset(Generic[Unpack[Ts]]):
             The constructed dataset with data loaded from the file.
 
         """
+        if keep_open:
+            in_file = h5py.File(filename, "r")
+            root = in_file["/0"]
+            data = {}
+            for key, value in root.items():
+                if key.startswith("_"):
+                    continue
+                data[key] = value if key == "dataobj" else np.asanyarray(value)
+            dataset = cls(**data)
+            dataset._file_handle = in_file
+            dataset._filepath = Path(filename)
+            return dataset
+
         with h5py.File(filename, "r") as in_file:
             root = in_file["/0"]
             data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}

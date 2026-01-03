@@ -29,6 +29,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
+import h5py
 import nibabel as nb
 import numpy as np
 import pytest
@@ -51,6 +52,33 @@ from nifreeze.utils.ndimage import get_data, load_api
 
 DEFAULT_RANDOM_DATASET_SHAPE = (32, 32, 32, 5)
 DEFAULT_RANDOM_DATASET_SIZE = int(np.prod(DEFAULT_RANDOM_DATASET_SHAPE[:3]))
+
+
+class CountingArray:
+    """Array-like helper tracking conversions via __array__."""
+
+    def __init__(self, data: np.ndarray):
+        self._data = np.asarray(data)
+        self.asarray_calls = 0
+
+    @property
+    def shape(self):
+        return self._data.shape
+
+    @property
+    def ndim(self):
+        return self._data.ndim
+
+    @property
+    def dtype(self):
+        return self._data.dtype
+
+    def __getitem__(self, idx):
+        return self._data[idx]
+
+    def __array__(self, dtype=None):
+        self.asarray_calls += 1
+        return np.asarray(self._data, dtype=dtype)
 
 
 # Dummy transform classes and functions to monkeypatch into the real module
@@ -191,6 +219,13 @@ def test_has_ndim(obj_factory, ndim, expected):
 def test_dataobj_basic_errors(value, expected_exc, expected_msg):
     with pytest.raises(expected_exc, match=str(expected_msg)):
         BaseDataset(dataobj=value)  # type: ignore[arg-type]
+
+
+def test_dataobj_array_like_not_converted():
+    counting = CountingArray(np.zeros((2, 2, 2, 1), dtype=np.float32))
+    dataset = BaseDataset(dataobj=counting, affine=np.eye(4))
+    assert dataset.dataobj is counting
+    assert counting.asarray_calls == 0
 
 
 def test_memmap_dataobj_preserved():
@@ -339,6 +374,47 @@ def test_to_filename_and_from_filename(random_dataset: BaseDataset):
         assert ds2.affine.shape == (4, 4)
         # Ensure the data is the same
         assert np.allclose(random_dataset.dataobj, ds2.dataobj)
+
+
+def test_from_filename_keep_open_hdf5(tmp_path):
+    data = np.arange(8, dtype=np.float32).reshape((2, 2, 2, 1))
+    affine = np.eye(4, dtype=np.float32)
+    h5_file = tmp_path / f"test_dataset{NFDH5_EXT}"
+
+    with h5py.File(h5_file, "w") as out_file:
+        root = out_file.create_group("/0")
+        root.create_dataset("dataobj", data=data)
+        root.create_dataset("affine", data=affine)
+
+    dataset = BaseDataset.from_filename(h5_file, keep_open=True)
+    try:
+        assert isinstance(dataset.dataobj, h5py.Dataset)
+        assert dataset.dataobj.file.id.valid
+    finally:
+        if dataset._file_handle is not None:
+            dataset._file_handle.close()
+
+
+def test_load_hdf5_and_nifti_keep_proxy(tmp_path):
+    data = np.arange(16, dtype=np.float32).reshape((2, 2, 2, 2))
+    affine = np.eye(4, dtype=np.float32)
+    h5_file = tmp_path / f"test_dataset{NFDH5_EXT}"
+    BaseDataset(dataobj=data, affine=affine).to_filename(h5_file)
+
+    h5_dataset = load(h5_file)
+    assert isinstance(h5_dataset, BaseDataset)
+    assert isinstance(h5_dataset.dataobj, np.ndarray)
+    assert np.allclose(h5_dataset.dataobj, data)
+
+    nifti_file = tmp_path / "test_dataset.nii.gz"
+    nb.Nifti1Image(data, affine).to_filename(nifti_file)
+
+    reloaded_img = nb.load(nifti_file)
+    assert isinstance(reloaded_img.dataobj, nb.arrayproxy.ArrayProxy)
+
+    nifti_dataset = load(nifti_file)
+    assert isinstance(nifti_dataset, BaseDataset)
+    assert isinstance(nifti_dataset.dataobj, nb.arrayproxy.ArrayProxy)
 
 
 def test_object_to_nifti(random_dataset: BaseDataset):
