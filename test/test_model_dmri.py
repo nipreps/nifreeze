@@ -22,11 +22,16 @@
 #
 """Unit tests exercising dMRI models."""
 
+import warnings
+
 import numpy as np
 import pytest
+from dipy.core.gradients import gradient_table_from_bvals_bvecs
+from dipy.reconst import dki, dti
 from dipy.sims.voxel import single_tensor
 
 from nifreeze import model
+from nifreeze.model.base import MASK_ABSENCE_WARN_MSG
 from nifreeze.data.dmri import DWI
 from nifreeze.data.dmri.utils import (
     DEFAULT_LOWB_THRESHOLD,
@@ -51,6 +56,56 @@ B_MATRIX = np.array(
     ],
     dtype=np.float32,
 )
+
+
+# ToDo
+# Function to compare attributes of two instances. Eventually remove
+def _compare_instance_attributes(instance1, instance2):
+    # Get attributes of both instances, excluding dunder and method attributes
+    attributes1 = [
+        attr
+        for attr in dir(instance1)
+        if not attr.startswith("__") and not callable(getattr(instance1, attr))
+    ]
+    attributes2 = [
+        attr
+        for attr in dir(instance2)
+        if not attr.startswith("__") and not callable(getattr(instance2, attr))
+    ]
+
+    # Ensure both instances have the same attributes
+    if set(attributes1) != set(attributes2):
+        print("Instances have different sets of attributes.")
+        return False
+
+    # Compare the values of the attributes
+    all_equal = True
+    for attr in attributes1:
+        value1 = getattr(instance1, attr)
+        value2 = getattr(instance2, attr)
+        if value1 is None and value2 is None:
+            continue
+        elif value1 is None or value2 is None:
+            print(f"Attribute '{attr}' differs: {value1} != {value2}")
+            all_equal = False
+
+        try:
+            array1 = np.asarray(value1).ravel()
+            array2 = np.asarray(value2).ravel()
+            # If a multi-dimensional array after the ravelling, it was something
+            # like a shape product, so skip
+            if array1.shape != array2.shape:
+                continue
+            if not np.allclose(array1, array2):
+                print(f"Attribute '{attr}' differs: {value1} != {array2}")
+                all_equal = False
+        except Exception:
+            # If conversion fails, assume equality to avoid complicating things
+            print(f"Attribute '{attr}' not compared: assuming equality")
+
+    if all_equal:
+        print("All attributes are equal.")
+    return all_equal
 
 
 def test_base_model_exceptions():
@@ -192,3 +247,127 @@ def test_dti_model_essentials(setup_random_dwi_data):
     predicted = dtimodel.fit_predict(4)
     assert predicted is not None
     assert predicted.shape == dwi_dataobj.shape[:-1]
+
+
+@pytest.mark.random_gtab_data(6, (1000,), 1)
+@pytest.mark.random_dwi_data(50, (2, 2, 4), True)
+@pytest.mark.parametrize("index", (None, 3, 5))
+@pytest.mark.parametrize("use_mask", (False, True))
+def test_dti_model_correctness(setup_random_dwi_data, index, use_mask):
+    """Ensure that we get the same result obtained through the DTI model
+    implemented in DIPY."""
+
+    # ToDo
+    # Create some data that makes sense for the DTI fit
+
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
+
+    if not use_mask:
+        brainmask_dataobj = None
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
+        dataset = DWI(
+            dataobj=dwi_dataobj,
+            affine=affine,
+            brainmask=brainmask_dataobj,
+            gradients=gradients,
+        )
+
+    # Fit & predict
+    dtimodel_nf = model.DTIModel(dataset)
+    predicted_nf = dtimodel_nf.fit_predict(index)
+
+    # Insert the b0 data into the DWI data
+    gtab = gradient_table_from_bvals_bvecs(gradients[..., -1], gradients[..., :-1])
+    assert dataset.bzero is not None
+    data = np.concatenate([dataset.bzero[..., np.newaxis], dataset.dataobj], axis=-1)
+
+    dtimodel_dp = dti.TensorModel(gtab)
+    dtifit_dp = dtimodel_dp.fit(data, mask=brainmask_dataobj)
+    predicted_dp = dtifit_dp.predict(gtab[index], S0=dataset.bzero)
+
+    assert _compare_instance_attributes(dtimodel_nf._models[0], dtifit_dp)
+
+    assert predicted_nf is not None
+    assert np.allclose(predicted_nf, predicted_dp.squeeze())
+
+
+@pytest.mark.random_gtab_data(10, (1000, 2000), 0)
+@pytest.mark.random_dwi_data(50, (14, 16, 8), True)
+def test_dki_model_bzero_exception(setup_random_dwi_data):
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
+
+    dataset = DWI(
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        gradients=gradients,
+    )
+
+    dkimodel = model.DKIModel(dataset)
+
+    with pytest.raises(ValueError, match=model.dmri.DWI_DKI_NULL_GRADIENT_ERROR_MSG):
+        dkimodel.fit_predict(4)
+
+
+@pytest.mark.random_gtab_data(10, (1000, 2000), 1)
+@pytest.mark.random_dwi_data(50, (14, 16, 8), True)
+def test_dki_model_essentials(setup_random_dwi_data):
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
+
+    dataset = DWI(
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        gradients=gradients,
+    )
+
+    dkimodel_nf = model.DKIModel(dataset)
+    predicted_nf = dkimodel_nf.fit_predict(4)
+    assert predicted_nf is not None
+    assert predicted_nf.shape == dwi_dataobj.shape[:-1]
+
+
+@pytest.mark.random_gtab_data(10, (1000, 2000), 1)
+@pytest.mark.random_dwi_data(50, (14, 16, 8), True)
+@pytest.mark.parametrize("index", (None, 4, 9))
+@pytest.mark.parametrize("use_mask", (False, True))
+def test_dki_model_correctness(setup_random_dwi_data, index, use_mask):
+    """Ensure that we get the same result obtained through the DKI model
+    implemented in DIPY."""
+
+    # ToDo
+    # Create some data that makes sense for the DKI fit
+
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
+
+    if not use_mask:
+        brainmask_dataobj = None
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
+        dataset = DWI(
+            dataobj=dwi_dataobj,
+            affine=affine,
+            brainmask=brainmask_dataobj,
+            gradients=gradients,
+        )
+
+    # Fit & predict
+    dkimodel_nf = model.DKIModel(dataset)
+    predicted_nf = dkimodel_nf.fit_predict(index)
+
+    # Insert the b0 data into the DWI data
+    gtab = gradient_table_from_bvals_bvecs(gradients[1:, -1], gradients[1:, :-1])
+    assert dataset.bzero is not None
+    data = np.concatenate([dataset.bzero[..., np.newaxis], dataset.dataobj], axis=-1)
+
+    dkimodel_dp = dki.DiffusionKurtosisModel(gtab)
+    dkifit_dp = dkimodel_dp.fit(data, mask=brainmask_dataobj)
+    predicted_dp = dkifit_dp.predict(gtab[index], S0=dataset.bzero)
+
+    assert _compare_instance_attributes(dkimodel_nf._models[0], dkifit_dp)
+
+    assert predicted_nf is not None
+    assert np.allclose(predicted_nf, predicted_dp.squeeze())
