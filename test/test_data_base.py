@@ -192,6 +192,22 @@ def test_dataobj_basic_errors(value, expected_exc, expected_msg):
         BaseDataset(dataobj=value)  # type: ignore[arg-type]
 
 
+def test_memmap_dataobj_preserved():
+    shape = (64, 64, 32, 4)
+    with TemporaryDirectory() as tmpdir:
+        memmap_path = Path(tmpdir) / "memmap_data.npy"
+        memmap = np.lib.format.open_memmap(memmap_path, mode="w+", dtype=np.float32, shape=shape)
+        memmap[0, 0, 0, 0] = 1.0
+        memmap.flush()
+
+        dataset: BaseDataset = BaseDataset(dataobj=memmap, affine=np.eye(4))
+
+        assert isinstance(dataset.dataobj, np.memmap)
+
+        frame, _, *_ = dataset[0]
+        assert np.shares_memory(frame, dataset.dataobj)
+
+
 @pytest.mark.random_uniform_spatial_data((2, 2, 2, 4, 6), 0.0, 1.0)
 def test_dataobj_ndim_error(setup_random_uniform_spatial_data):
     data, _ = setup_random_uniform_spatial_data
