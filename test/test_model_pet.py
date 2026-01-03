@@ -24,8 +24,10 @@
 import re
 import sys
 
+import nibabel as nb
 import numpy as np
 import pytest
+from nibabel.processing import smooth_image
 
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.pet import PET
@@ -201,3 +203,42 @@ def test_petmodel_start_index_reuses_start_prediction(setup_random_pet_data):
     assert pred_start.shape == pet_dataobj.shape[:3]
     assert pred_early.shape == pet_dataobj.shape[:3]
     assert pred_late.shape == pet_dataobj.shape[:3]
+
+
+def test_petmodel_preprocess_threshold_and_smoothing():
+    data = np.zeros((3, 3, 3, 2), dtype="float32")
+    data[1, 1, 1, 0] = 1.0
+    data[0, 0, 0, 1] = 2.0
+    affine = np.eye(4)
+    brainmask = np.ones(data.shape[:-1]).astype(bool)
+    midframe = np.asarray([1.0, 2.0], dtype="float32")
+    total_duration = 5.0
+
+    pet_obj = PET(
+        dataobj=data,
+        affine=affine,
+        brainmask=brainmask,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+
+    smooth_fwhm = 1.5
+    thresh_pct = 50.0
+    model = BSplinePETModel(dataset=pet_obj, smooth_fwhm=smooth_fwhm, thresh_pct=thresh_pct)
+
+    model.fit_predict(None, n_jobs=1)
+
+    smoothed = smooth_image(nb.Nifti1Image(data, affine), smooth_fwhm).get_fdata()
+    assert not np.allclose(smoothed, data)
+
+    thresh_val = np.percentile(smoothed, thresh_pct)
+    expected = smoothed.copy()
+    expected[expected < thresh_val] = 0.0
+    expected_flat = expected.reshape((-1, expected.shape[-1]))
+
+    preprocessed = model._preprocess_data()
+
+    below_thresh = smoothed.reshape((-1, smoothed.shape[-1])) < thresh_val
+    assert np.all(preprocessed[below_thresh] == 0.0)
+    assert np.any(preprocessed == 0.0)
+    assert np.all(np.isclose(preprocessed, expected_flat))
