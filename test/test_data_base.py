@@ -133,6 +133,22 @@ class DummyDataset(BaseDataset):
         return (self.dataobj[..., idx],)
 
 
+class NoArrayProxy:
+    """Proxy object that raises if it is coerced to a NumPy array."""
+
+    def __init__(self, dataobj):
+        self._dataobj = dataobj
+        self.shape = dataobj.shape
+        self.dtype = dataobj.dtype
+        self.ndim = dataobj.ndim
+
+    def __array__(self, dtype=None):
+        raise AssertionError("Unexpected array materialization")
+
+    def __getitem__(self, idx):
+        return self._dataobj[idx]
+
+
 @pytest.mark.parametrize(
     "setup_random_uniform_spatial_data",
     [
@@ -485,6 +501,76 @@ def test_to_nifti(
     else:
         found_x5 = list(tmp_path.glob("*.x5"))
         assert len(found_x5) == 0
+
+
+def test_to_nifti_proxy_preserves_header_without_loading(tmp_path, monkeypatch):
+    import nifreeze.data.base as base_mod
+
+    data = np.arange(24, dtype=np.int16).reshape((2, 3, 2, 2))
+    affine = np.diag([2.0, 2.0, 2.0, 1.0])
+    hdr = nb.Nifti1Header()
+    hdr.set_data_dtype(np.int16)
+    hdr["descrip"] = b"proxy-header-test"
+
+    source_path = tmp_path / "source.nii.gz"
+    nb.Nifti1Image(data, affine, hdr).to_filename(source_path)
+
+    proxy_img = nb.Nifti1Image.from_filename(
+        source_path, mmap="r", keep_file_open=True
+    )
+    try:
+        proxy = NoArrayProxy(proxy_img.dataobj)
+
+        def _raise_on_empty_like(*args, **kwargs):
+            raise AssertionError("np.empty_like should not be called when motion_affines is None")
+
+        monkeypatch.setattr(base_mod.np, "empty_like", _raise_on_empty_like)
+
+        dataset = BaseDataset(
+            dataobj=proxy,
+            affine=proxy_img.affine,
+            datahdr=proxy_img.header,
+            motion_affines=None,
+        )
+
+        nii = to_nifti(dataset, filename=None)
+
+        assert isinstance(nii.dataobj, NoArrayProxy)
+        assert np.array_equal(nii.affine, proxy_img.affine)
+        assert nii.header.get_data_dtype() == proxy_img.header.get_data_dtype()
+        assert nii.header["descrip"] == proxy_img.header["descrip"]
+    finally:
+        fileobj = proxy_img.file_map["image"].fileobj
+        if fileobj is not None and not fileobj.closed:
+            fileobj.close()
+
+
+def test_to_nifti_mmap_proxy_writes_with_open_file(tmp_path):
+    data = np.arange(60, dtype=np.int16).reshape((3, 4, 5))
+    affine = np.diag([1.0, 2.0, 3.0, 1.0])
+    hdr = nb.Nifti1Header()
+    hdr.set_data_dtype(np.int16)
+
+    source_path = tmp_path / "source.nii.gz"
+    nb.Nifti1Image(data, affine, hdr).to_filename(source_path)
+
+    proxy_img = nb.Nifti1Image.from_filename(
+        source_path, mmap="r", keep_file_open=True
+    )
+    try:
+        dataset = BaseDataset(
+            dataobj=proxy_img.dataobj,
+            affine=proxy_img.affine,
+            datahdr=proxy_img.header,
+        )
+        out_path = tmp_path / "roundtrip.nii.gz"
+        dataset.to_nifti(out_path)
+
+        assert out_path.is_file()
+    finally:
+        fileobj = proxy_img.file_map["image"].fileobj
+        if fileobj is not None and not fileobj.closed:
+            fileobj.close()
 
 
 def test_load_hdf5(random_dataset: BaseDataset):
