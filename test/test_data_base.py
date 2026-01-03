@@ -24,6 +24,7 @@
 
 import itertools
 import re
+import warnings
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
@@ -354,9 +355,6 @@ def test_object_to_nifti(random_dataset: BaseDataset):
         data = img.get_fdata(dtype=np.float32)
         assert data.shape == (32, 32, 32, 5)
         assert np.allclose(data, random_dataset.dataobj)
-
-
-import warnings
 
 
 @pytest.mark.parametrize(
