@@ -280,44 +280,6 @@ class PET(BaseDataset[np.ndarray]):
         """
         return super().__getitem__(idx)
 
-    def lofo_split(self, index):
-        """
-        Leave-one-frame-out (LOFO) for PET data.
-
-        Parameters
-        ----------
-        index : int
-            Index of the PET frame to be left out in this fold.
-
-        Returns
-        -------
-        (train_data, train_timings) : tuple
-            Training data and corresponding timings, excluding the left-out frame.
-        (test_data, test_timing) : tuple
-            Test data (one PET frame) and corresponding timing.
-        """
-
-        if not Path(self._filepath).exists():
-            self.to_filename(self._filepath)
-
-        # Read original PET data
-        with h5py.File(self._filepath, "r") as in_file:
-            root = in_file["/0"]
-            pet_frame = np.asanyarray(root["dataobj"][..., index])
-            timing_frame = np.asanyarray(root["midframe"][..., index])
-
-        # Mask to exclude the selected frame
-        mask = np.ones(self.dataobj.shape[-1], dtype=bool)
-        mask[index] = False
-
-        train_data = self.dataobj[..., mask]
-        train_timings = self.midframe[mask]
-
-        test_data = pet_frame
-        test_timing = timing_frame
-
-        return (train_data, train_timings), (test_data, test_timing)
-
     def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
         """Set an affine, and update data object and gradients."""
         ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
