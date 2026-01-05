@@ -141,6 +141,7 @@ class BSplinePETModel(BasePETModel):
         "_t": "B-Spline knot time-coordinates",
         "_order": "B-Spline order",
         "_n_ctrl": "Number of B-Spline control points",
+        "_edges": "Edge handling strategy",
     }
 
     def __init__(
@@ -148,6 +149,7 @@ class BSplinePETModel(BasePETModel):
         dataset: PET,
         n_ctrl: int | None = None,
         order: int = 3,
+        edges: str = "mirror",
         **kwargs,
     ):
         """Create the B-Spline interpolating matrix.
@@ -158,6 +160,9 @@ class BSplinePETModel(BasePETModel):
             Number of B-Spline control points. If :obj:`None`, then one control
             point every six timepoints will be used. The less control points,
             the smoother is the model.
+            Please note that this is the number of control points `within the extent`
+            of the data, and extra control points are added at either side to
+            compensate edge effects when interpolating the initial or end timepoints.
         order : :obj:`int`, optional
             Order of the B-Spline approximation.
 
@@ -166,15 +171,19 @@ class BSplinePETModel(BasePETModel):
         super().__init__(dataset, **kwargs)
 
         self._order = order
+        self._edges = edges
 
         # Number of control points for the B-Spline basis
         self._n_ctrl = n_ctrl or (len(self._dataset) // 4) + 1
+        ctrl_sep = self._dataset.total_duration / (self._n_ctrl + 1)
 
         # Control point indices (with padding for B-Spline of order k at either side)
-        _ctrl_idx = np.arange(-order, self._n_ctrl + (order + 1), dtype="float32")
+        _ctrl_idx = np.arange(-(order + 1), self._n_ctrl + (order + 2), dtype="float32")
 
         # Time-coordinates of the B-Spline knots
-        self._t = _ctrl_idx * self._dataset.total_duration / self._n_ctrl
+        self._t = self._dataset.midframe[0] + 0.5 * ctrl_sep + _ctrl_idx * ctrl_sep
+        # self._t[_ctrl_idx < -1] = self._t[_ctrl_idx < - 1][-1]
+        # self._t[_ctrl_idx > self._n_ctrl + 1] = self._t[_ctrl_idx > self._n_ctrl + 1][0]
 
     def fit_predict(self, index: int | None = None, **kwargs) -> Union[np.ndarray, None]:
         """Return the corrected volume using B-spline interpolation.
@@ -191,14 +200,18 @@ class BSplinePETModel(BasePETModel):
 
         # Generate a time mask for the frames to fit
         x_mask = np.ones(len(self._dataset), dtype=bool)
-        x_mask[: self._start_index] = False
-        x_mask[self._end_index :] = False
+        # x_mask[: self._start_index] = False
+        # x_mask[self._end_index :] = False
 
         x_mask[index] = False if index is not None else x_mask[index]
-        x = self._dataset.midframe[x_mask]
+        x = self._dataset.midframe[x_mask].tolist()
+
+        if self._edges == "mirror":
+            # Pad time coordinates to avoid edge effects
+            x = [-x[1]] + x + [2 * x[-1] - x[-2]]
 
         # A.shape = (T, K - 4); t= n. timepoints, K= n. knots (with padding)
-        A = BSpline.design_matrix(x, t=self._t, k=self._order)
+        A = BSpline.design_matrix(x, t=self._t, k=self._order, extrapolate=True)
         AT = A.T
         ATdotA = AT @ A
 
@@ -208,9 +221,12 @@ class BSplinePETModel(BasePETModel):
             if self._dataset.brainmask is None
             else self._dataset.dataobj[self._dataset.brainmask, :]
         )
-
-        # Filter timepoints according to mask and reshape data to 2D (voxels x timepoints)
-        data = data[:, x_mask]
+        # Filter timepoints according to time mask and mirror ends
+        data = (
+            np.hstack([data[:, 0][:, None], data[:, x_mask], data[:, -1][:, None]])
+            if self._edges == "mirror"
+            else data[:, x_mask]
+        )
 
         # Parallelize fitting process with joblib
         with Parallel(n_jobs=n_jobs) as executor:
@@ -223,7 +239,9 @@ class BSplinePETModel(BasePETModel):
         interp_index = index if index is not None else slice(self._start_index, self._end_index)
         interp_mask[interp_index] = True
 
-        A = BSpline.design_matrix(self._dataset.midframe[interp_mask], self._t, k=self._order)
+        A = BSpline.design_matrix(
+            self._dataset.midframe[interp_mask], self._t, k=self._order, extrapolate=True
+        )
 
         # A is T (num. timepoints) x C (num. coeff)
         # coefficients is V (num. voxels) x C (num. coeff)

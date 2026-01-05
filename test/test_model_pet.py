@@ -223,13 +223,13 @@ def test_petmodel_simulated_correlation_motion_free():
         total_duration=total_duration,
     )
 
-    model = BSplinePETModel(dataset=pet_obj, smooth_fwhm=0, thresh_pct=0)
+    model = BSplinePETModel(dataset=pet_obj, n_ctrl=3, edges="zero")
 
     predicted = np.stack([model.fit_predict(t_index) for t_index in range(n_timepoints)], axis=-1)
 
     correlations = np.array(
         [
-            np.corrcoef(x[1:-1], y[1:-1])[0, 1]
+            np.corrcoef(x, y)[0, 1]
             for x, y in zip(
                 dataobj.reshape((-1, n_timepoints)),
                 predicted.reshape((-1, n_timepoints)),
@@ -245,8 +245,6 @@ def test_petmodel_simulated_correlation_motion_free():
     # # original: (N, 16)
     # # predicted_masked: (N, 16)
 
-    # import pdb;pdb.set_trace()
-
     # i = 0  # choose which timeseries/voxel to inspect
     # t = np.arange(n_timepoints)
 
@@ -259,5 +257,6 @@ def test_petmodel_simulated_correlation_motion_free():
     # ax.legend()
 
     # plt.show()
+    # import pdb;pdb.set_trace()
 
     assert np.all(correlations > 0.95)
