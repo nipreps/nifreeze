@@ -27,9 +27,10 @@ from os import cpu_count
 from typing import Union
 
 import numpy as np
-from joblib import Parallel, delayed
+
+# from scipy.sparse import linalg as la
+from scipy import linalg as la
 from scipy.interpolate import BSpline
-from scipy.sparse.linalg import cg
 
 from nifreeze.data.pet import PET
 from nifreeze.model.base import BaseModel
@@ -45,6 +46,12 @@ DEFAULT_TIMEPOINT_TOL = 1e-2
 
 MIN_N_TIMEPOINTS = 4
 """Minimum number of timepoints for PET model fitting."""
+
+DEFAULT_BSPLINE_N_CTRL = 3
+"""Default number of B-Spline control points."""
+
+DEFAULT_BSPLINE_ORDER = 3
+"""Default B-Spline order."""
 
 START_INDEX_RANGE_ERROR_MSG = """\
 'start_index' must be a valid dataset index."""
@@ -141,15 +148,13 @@ class BSplinePETModel(BasePETModel):
         "_t": "B-Spline knot time-coordinates",
         "_order": "B-Spline order",
         "_n_ctrl": "Number of B-Spline control points",
-        "_edges": "Edge handling strategy",
     }
 
     def __init__(
         self,
         dataset: PET,
-        n_ctrl: int | None = None,
-        order: int = 3,
-        edges: str = "mirror",
+        n_ctrl: int = DEFAULT_BSPLINE_N_CTRL,
+        order: int = DEFAULT_BSPLINE_ORDER,
         **kwargs,
     ):
         """Create the B-Spline interpolating matrix.
@@ -168,22 +173,32 @@ class BSplinePETModel(BasePETModel):
 
         """
 
+        if order < 1:
+            raise ValueError("B-Spline order must be at least 1.")
+
+        if n_ctrl is not None and n_ctrl < 1:
+            raise ValueError("Number of B-Spline control points must be at least 1.")
+
         super().__init__(dataset, **kwargs)
 
         self._order = order
-        self._edges = edges
 
         # Number of control points for the B-Spline basis
-        self._n_ctrl = n_ctrl or (len(self._dataset) // 4) + 1
-        ctrl_sep = self._dataset.total_duration / (self._n_ctrl + 1)
+        self._n_ctrl = n_ctrl
 
-        # Control point indices (with padding for B-Spline of order k at either side)
-        _ctrl_idx = np.arange(-(order + 1), self._n_ctrl + (order + 2), dtype="float32")
+        # Start and end timepoints
+        x0 = float(self._dataset.midframe[self._start_index])
+        x1 = float(self._dataset.midframe[self._end_index - 1])
+        inner_x = np.linspace(x0, x1, self._n_ctrl + 2, dtype="float32")[1:-1]
 
         # Time-coordinates of the B-Spline knots
-        self._t = self._dataset.midframe[0] + 0.5 * ctrl_sep + _ctrl_idx * ctrl_sep
-        # self._t[_ctrl_idx < -1] = self._t[_ctrl_idx < - 1][-1]
-        # self._t[_ctrl_idx > self._n_ctrl + 1] = self._t[_ctrl_idx > self._n_ctrl + 1][0]
+        self._t = np.concatenate(
+            [
+                np.full(self._order + 1, x0, dtype="float32"),
+                inner_x,
+                np.full(self._order + 1, x1, dtype="float32"),
+            ]
+        )
 
     def fit_predict(self, index: int | None = None, **kwargs) -> Union[np.ndarray, None]:
         """Return the corrected volume using B-spline interpolation.
@@ -200,20 +215,15 @@ class BSplinePETModel(BasePETModel):
 
         # Generate a time mask for the frames to fit
         x_mask = np.ones(len(self._dataset), dtype=bool)
+        # TODO: decide whether we really want this
         # x_mask[: self._start_index] = False
         # x_mask[self._end_index :] = False
 
         x_mask[index] = False if index is not None else x_mask[index]
         x = self._dataset.midframe[x_mask].tolist()
 
-        if self._edges == "mirror":
-            # Pad time coordinates to avoid edge effects
-            x = [-x[1]] + x + [2 * x[-1] - x[-2]]
-
         # A.shape = (T, K - 4); t= n. timepoints, K= n. knots (with padding)
-        A = BSpline.design_matrix(x, t=self._t, k=self._order, extrapolate=True)
-        AT = A.T
-        ATdotA = AT @ A
+        A = BSpline.design_matrix(x, t=self._t, k=self._order, extrapolate=False)
 
         # Get data as 2D array (voxels x timepoints)
         data = (
@@ -221,18 +231,14 @@ class BSplinePETModel(BasePETModel):
             if self._dataset.brainmask is None
             else self._dataset.dataobj[self._dataset.brainmask, :]
         )
-        # Filter timepoints according to time mask and mirror ends
-        data = (
-            np.hstack([data[:, 0][:, None], data[:, x_mask], data[:, -1][:, None]])
-            if self._edges == "mirror"
-            else data[:, x_mask]
+
+        X = la.lstsq(
+            A.toarray().astype("float64"),
+            data[:, x_mask].T.astype("float64"),
+            cond=None,
+            lapack_driver="gelsd",
         )
-
-        # Parallelize fitting process with joblib
-        with Parallel(n_jobs=n_jobs) as executor:
-            results = executor(delayed(cg)(ATdotA, AT @ v) for v in data)
-
-        coefficients = np.asarray([r[0] for r in results])
+        coefficients = X[0].T.astype("float32")
 
         # Generate an interpolation time mask
         interp_mask = np.zeros(len(self._dataset), dtype=bool)
@@ -240,7 +246,7 @@ class BSplinePETModel(BasePETModel):
         interp_mask[interp_index] = True
 
         A = BSpline.design_matrix(
-            self._dataset.midframe[interp_mask], self._t, k=self._order, extrapolate=True
+            self._dataset.midframe[interp_mask], self._t, k=self._order, extrapolate=False
         )
 
         # A is T (num. timepoints) x C (num. coeff)

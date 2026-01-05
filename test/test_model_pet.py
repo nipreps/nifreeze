@@ -207,7 +207,8 @@ def test_petmodel_simulated_correlation_motion_free():
     n_timepoints = 16
 
     t = np.linspace(0, 2 * np.pi, n_timepoints, dtype="float32")
-    temporal_basis = 1.0 + np.sin(t) + np.cos(2 * t)
+    temporal_basis = np.sin(t) + np.cos(2 * t)
+    temporal_basis -= temporal_basis.min()
 
     dataobj = np.ones(shape + (n_timepoints,), dtype="float32")
     dataobj = dataobj * temporal_basis  # broadcasting
@@ -223,7 +224,7 @@ def test_petmodel_simulated_correlation_motion_free():
         total_duration=total_duration,
     )
 
-    model = BSplinePETModel(dataset=pet_obj, n_ctrl=3, edges="zero")
+    model = BSplinePETModel(dataset=pet_obj, n_ctrl=5)
 
     predicted = np.stack([model.fit_predict(t_index) for t_index in range(n_timepoints)], axis=-1)
 
@@ -238,13 +239,14 @@ def test_petmodel_simulated_correlation_motion_free():
         ]
     )
 
+    # original: (N, 16)
+    # predicted_masked: (N, 16)
+
+    # # Uncomment to plot prediction
     # import matplotlib
+
     # matplotlib.use("TkAgg")  # must be set BEFORE importing pyplot
     # import matplotlib.pyplot as plt
-
-    # # original: (N, 16)
-    # # predicted_masked: (N, 16)
-
     # i = 0  # choose which timeseries/voxel to inspect
     # t = np.arange(n_timepoints)
 
