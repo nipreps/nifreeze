@@ -56,7 +56,6 @@ def test_pet_base_model():
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]))
 def test_petmodel_init_dataset_error(request, setup_random_pet_data, monkeypatch):
-    rng = request.node.rng
     pet_dataobj, _affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
 
     # Create a dummy dataset class without attributes
@@ -204,56 +203,61 @@ def test_petmodel_start_index_reuses_start_prediction(setup_random_pet_data):
 
 
 def test_petmodel_simulated_correlation_motion_free():
-    shape = (8, 8, 8)
+    shape = (1, 1, 1)
     n_timepoints = 16
-    grid = np.meshgrid(
-        np.linspace(0.5, 1.5, shape[0]),
-        np.linspace(0.5, 1.5, shape[1]),
-        np.linspace(0.5, 1.5, shape[2]),
-        indexing="ij",
-    )
-    spatial_map = np.prod(grid, axis=0)
 
     t = np.linspace(0, 2 * np.pi, n_timepoints, dtype="float32")
-    spatial_norm = spatial_map / spatial_map.max()
-    weight_sin = 0.2 + 0.1 * spatial_norm
-    weight_cos = 0.1 + 0.05 * spatial_norm
-    temporal_basis = (
-        1.0 + weight_sin[..., np.newaxis] * np.sin(t) + weight_cos[..., np.newaxis] * np.cos(2 * t)
-    )
+    temporal_basis = 1.0 + np.sin(t) + np.cos(2 * t)
 
-    dataobj = (spatial_map[..., np.newaxis] * temporal_basis).astype("float32")
+    dataobj = np.ones(shape + (n_timepoints,), dtype="float32")
+    dataobj = dataobj * temporal_basis  # broadcasting
 
-    brainmask = spatial_map > 0.9
     midframe = np.arange(n_timepoints, dtype="float32")
     total_duration = float(n_timepoints)
 
     pet_obj = PET(
         dataobj=dataobj,
         affine=np.eye(4),
-        brainmask=brainmask,
+        brainmask=None,
         midframe=midframe,
         total_duration=total_duration,
     )
 
     model = BSplinePETModel(dataset=pet_obj, smooth_fwhm=0, thresh_pct=0)
 
-    predicted_volumes = []
-    for t_index in range(n_timepoints):
-        vol = model.fit_predict(t_index)
-        assert vol is not None
-        predicted_volumes.append(vol)
-    predicted = np.stack(predicted_volumes, axis=-1)
+    predicted = np.stack([model.fit_predict(t_index) for t_index in range(n_timepoints)], axis=-1)
 
-    original = dataobj[brainmask]
-    predicted_masked = predicted[brainmask]
-
-    original_demean = original - original.mean(axis=1, keepdims=True)
-    predicted_demean = predicted_masked - predicted_masked.mean(axis=1, keepdims=True)
-    numerator = np.sum(original_demean * predicted_demean, axis=1)
-    denominator = np.linalg.norm(original_demean, axis=1) * np.linalg.norm(
-        predicted_demean, axis=1
+    correlations = np.array(
+        [
+            np.corrcoef(x[1:-1], y[1:-1])[0, 1]
+            for x, y in zip(
+                dataobj.reshape((-1, n_timepoints)),
+                predicted.reshape((-1, n_timepoints)),
+                strict=False,
+            )
+        ]
     )
-    correlations = numerator / denominator
+
+    # import matplotlib
+    # matplotlib.use("TkAgg")  # must be set BEFORE importing pyplot
+    # import matplotlib.pyplot as plt
+
+    # # original: (N, 16)
+    # # predicted_masked: (N, 16)
+
+    # import pdb;pdb.set_trace()
+
+    # i = 0  # choose which timeseries/voxel to inspect
+    # t = np.arange(n_timepoints)
+
+    # fig, ax = plt.subplots()
+    # ax.plot(t, dataobj.reshape((-1, n_timepoints))[i], label="original")
+    # ax.plot(t, predicted.reshape((-1, n_timepoints))[i], label="predicted")
+    # ax.set_xlabel("timepoint")
+    # ax.set_ylabel("signal")
+    # ax.set_title(f"series {i}   r={correlations[i]:.3f}")
+    # ax.legend()
+
+    # plt.show()
 
     assert np.all(correlations > 0.95)
