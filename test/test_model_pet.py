@@ -36,6 +36,8 @@ from nifreeze.model.pet import (
     BSplinePETModel,
 )
 
+from nifreeze.testing.simulations import simSRTM_1_0_0
+
 
 def test_pet_base_model():
     from nifreeze.model.pet import BasePETModel
@@ -260,5 +262,81 @@ def test_petmodel_simulated_correlation_motion_free():
 
     # plt.show()
     # import pdb;pdb.set_trace()
+
+    assert np.all(correlations > 0.95)
+
+
+def _srtm_reference_inputs(n_timepoints: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Create (t, dt, cr, cri) for SRTM simulation.
+    t is mid-frame time, dt are frame durations, cr is reference TAC, cri is its integral.
+    """
+    # Simple constant framing (arbitrary units)
+    dt = np.ones(n_timepoints, dtype="float32")
+    t = np.cumsum(dt) - dt / 2.0
+
+    # A smooth bolus-like reference TAC
+    cr = (t**2) * np.exp(-0.35 * t)
+    cr = cr / cr.max()
+
+    # Cumulative trapezoidal integral of reference TAC
+    cri = np.zeros_like(cr)
+    cri[0] = cr[0] * dt[0]
+    for i in range(1, n_timepoints):
+        cri[i] = cri[i - 1] + 0.5 * (cr[i] + cr[i - 1]) * dt[i]
+
+    return t.astype("float32"), dt, cr.astype("float32"), cri.astype("float32")
+
+
+def test_petmodel_simulated_correlation_motion_free_srtm():
+    # Same structure as the sinusoid-based test, but using SRTM temporal basis
+    shape = (1, 1, 1)
+    n_timepoints = 30
+
+    t, dt, cr, cri = _srtm_reference_inputs(n_timepoints)
+
+    # SRTM parameters: [R1, k2, BP]
+    x = np.array([1.2, 0.15, 2.0], dtype="float32")
+
+    CT, _DT = simSRTM_1_0_0(x=x, t=t, cr=cr, cri=cri, dt=dt, nr=n_timepoints)
+
+    # Ensure non-negative (PET-like), and avoid a totally flat series
+    CT = CT.astype("float32")
+    CT -= CT.min()
+    assert CT.max() > 0
+
+    # Build synthetic 4D PET: one voxel following CT
+    S0 = np.float32(100.0)
+    temporal_basis = S0 * (CT / CT.max())
+
+    dataobj = np.ones(shape + (n_timepoints,), dtype="float32") * temporal_basis
+
+    # PET metadata
+    midframe = t.astype("float32")
+    total_duration = float(np.sum(dt))
+
+    pet_obj = PET(
+        dataobj=dataobj,
+        affine=np.eye(4),
+        brainmask=None,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+
+    # Fit/predict with spline PET model
+    model = BSplinePETModel(dataset=pet_obj, n_ctrl=3)
+
+    predicted = np.stack([model.fit_predict(t_index) for t_index in range(n_timepoints)], axis=-1)
+
+    correlations = np.array(
+        [
+            np.corrcoef(x, y)[0, 1]
+            for x, y in zip(
+                dataobj.reshape((-1, n_timepoints)),
+                predicted.reshape((-1, n_timepoints)),
+                strict=False,
+            )
+        ]
+    )
 
     assert np.all(correlations > 0.95)
