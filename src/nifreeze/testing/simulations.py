@@ -628,7 +628,9 @@ def srtm(
     # dCTdk2(1) = (F*g - f*G)/(g*g);
     if k2 == 0.0:
         # Avoid divide-by-zero; the original MATLAB would blow up here too.
-        raise ValueError("k2 must be nonzero for derivative computation (matches MATLAB behavior).")
+        raise ValueError(
+            "k2 must be nonzero for derivative computation (matches MATLAB behavior)."
+        )
     F = cri[0]
     G = dt[0] * h2 / k2
     dCTdk2[0] = (F * g - f * G) / (g * g)
