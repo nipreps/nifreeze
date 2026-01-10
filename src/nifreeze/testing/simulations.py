@@ -566,30 +566,49 @@ def srtm(
     nr: int,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Python translation of Turku PET Centre's simSRTM_1_0_0 (SRTM tissue simulation)
-    with partial derivatives.
+    Simplified Reference Tissue Model (SRTM) simulation with partial derivatives.
+
+    SRTM estimates brain receptor binding potentials useful in PET simulation
+    studies.
+
+    The model was proposed in :footcite:p:`Lammertsma_simplified_1996`, and this
+    implementation is based on :footcite:p:`Karjalainen_magia_2020`.
 
     Parameters
     ----------
-    x : array_like, shape (3,)
+    x : :obj:`~numpy.ndarray`, shape (3,)
         Model parameters: [R1, k2, BP]
-    t : array_like, shape (nr,)
-        Mid times (kept for API parity; not used directly in the original code)
-    cr : array_like, shape (nr,)
+    t : :obj:`~numpy.ndarray`, shape (nr,)
+        Mid-times (kept for API parity; not used directly in the original code)
+    cr : :obj:`~numpy.ndarray`, shape (nr,)
         Reference region TAC
-    cri : array_like, shape (nr,)
+    cri : :obj:`~numpy.ndarray`, shape (nr,)
         Integral of reference TAC over frames (must match what MATLAB 'cri' represents)
-    dt : array_like, shape (nr,)
+    dt : :obj:`~numpy.ndarray`, shape (nr,)
         Frame durations / time steps used by the solver
-    nr : int
+    nr : :obj:`int`
         Number of time points (should equal len(cr))
 
     Returns
     -------
-    CT : ndarray, shape (nr,)
+    CT : :obj:`~numpy.ndarray`, shape (nr,)
         Simulated tissue TAC
-    DT : ndarray, shape (nr, 3)
+    DT : :obj:`~numpy.ndarray`, shape (nr, 3)
         Partial derivatives [dCT/dR1, dCT/dk2, dCT/dBP] as columns
+
+    Notes
+    -----
+    This code is translation from the ``simSRTM_1_0_0.m`` MATLAB script
+    available on `GitHub <https://github.com/tkkarjal/magia/blob/af495dfe1e54097ed202f0a99598b5d1d5d7f613/simSRTM_1_0_0.m>`__
+    and the `Human Emotion Systems Laboratory of the Turku PET Centre GitLab
+    <https://gitlab.utu.fi/human-emotion-systems-laboratory/magia/-/blob/f4bfdabbfea4058cfb17580994131f7dbe57dc65/simSRTM_1_0_0.m>`__
+
+    A description of the model is also available at the `Turku PET Centre website
+    <https://www.turkupetcentre.net/petanalysis/model_compartmental_ref.html>`__
+
+    References
+    ----------
+    .. footbibliography::
     """
     # Ensure 1D float arrays
     x = np.asarray(x, dtype=float).ravel()
