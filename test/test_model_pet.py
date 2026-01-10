@@ -57,7 +57,7 @@ def test_pet_base_model():
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]))
-def test_petmodel_init_dataset_error(request, setup_random_pet_data, monkeypatch):
+def test_petmodel_init_dataset_error(setup_random_pet_data, monkeypatch):
     pet_dataobj, _affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
 
     # Create a dummy dataset class without attributes
