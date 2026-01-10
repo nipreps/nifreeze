@@ -35,7 +35,7 @@ from nifreeze.model.pet import (
     START_INDEX_RANGE_ERROR_MSG,
     BSplinePETModel,
 )
-from nifreeze.testing.simulations import srtm
+from nifreeze.testing.simulations import compute_pet_noise_sd, srtm
 
 
 def test_pet_base_model():
@@ -288,7 +288,19 @@ def _srtm_reference_inputs(
     return t.astype("float32"), dt, cr.astype("float32"), cri.astype("float32")
 
 
-def test_petmodel_simulated_correlation_motion_free_srtm():
+@pytest.mark.parametrize(
+    "add_noise, scale_factor, lambda_",
+    [
+        (False, None, None),
+        (True, 0.05, 0.0063),  # 0.0063 corresponds to a 18F tracer
+        (True, 0.1, 0.0063),
+        (True, 0.15, 0.0063),
+    ],
+)
+def test_petmodel_simulated_correlation_motion_free_srtm(
+    request, add_noise, scale_factor, lambda_
+):
+    rng = request.node.rng
     # Same structure as the sinusoid-based test, but using SRTM temporal basis
     shape = (1, 1, 1)
     n_timepoints = 30
@@ -299,6 +311,13 @@ def test_petmodel_simulated_correlation_motion_free_srtm():
     x = np.array([1.2, 0.15, 2.0], dtype="float32")
 
     CT, _ = srtm(x=x, t=t, cr=cr, cri=cri, dt=dt, nr=n_timepoints)
+
+    if add_noise:
+        delta = np.diff(t)
+        delta = np.append(delta, delta[-1])  # Duplicate last frame duration
+        sd = compute_pet_noise_sd(scale_factor, CT, delta, lambda_, t)
+        noise = rng.normal(loc=0.0, scale=sd, size=len(t))
+        CT = CT + noise
 
     # Ensure non-negative (PET-like), and avoid a totally flat series
     CT = CT.astype("float32")
