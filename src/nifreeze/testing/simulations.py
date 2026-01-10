@@ -557,7 +557,7 @@ def serialize_dmri(
     serialize_gtab(gtab, bval_data_fname, bvec_data_fname)
 
 
-def simSRTM_1_0_0(
+def srtm(
     x: np.ndarray,
     t: np.ndarray,
     cr: np.ndarray,
