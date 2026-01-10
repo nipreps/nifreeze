@@ -694,3 +694,39 @@ def srtm(
     # DT as (nr, 3) like MATLAB's [dCTdR1' dCTdk2' dCTdBP']
     DT = np.column_stack((dCTdR1, dCTdk2, dCTdBP))
     return CT, DT
+
+
+def compute_pet_noise_sd(
+    scale_factor: float, c: np.ndarray, delta: np.ndarray, lambda_: float, t: np.ndarray
+) -> np.ndarray:
+    """Compute PET signal noise standard deviation (SD).
+
+    Computes standard deviation values to be added to normally distributed noise
+    in PET simulations following equation 7 in :footcite:p:`Ichise_linearized_2003`.
+
+    Parameters
+    ----------
+    scale_factor : :obj:`float`
+        Scale factor controlling the level of noise.
+    c : :obj:`~numpy.ndarray`
+        Noise-free simulated radioactivity at each time point.
+    delta : :obj:`~numpy.ndarray`
+        Frame duration in seconds.
+    lambda_ : :obj:`float`
+        Radioisotope decay constant.
+    t : obj:`~numpy.ndarray`
+         Time at which the noise is to be generated.
+
+    Returns
+    -------
+    obj:`~numpy.ndarray`
+        The computed SD value.
+
+    References
+    ----------
+    .. footbibliography::
+    """
+
+    numerator = np.exp(lambda_ * t) * c
+    ratio = numerator / delta
+    return scale_factor * (ratio**0.5)
