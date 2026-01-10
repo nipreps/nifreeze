@@ -35,8 +35,7 @@ from nifreeze.model.pet import (
     START_INDEX_RANGE_ERROR_MSG,
     BSplinePETModel,
 )
-
-from nifreeze.testing.simulations import simSRTM_1_0_0
+from nifreeze.testing.simulations import srtm
 
 
 def test_pet_base_model():
@@ -293,7 +292,7 @@ def test_petmodel_simulated_correlation_motion_free_srtm():
     # SRTM parameters: [R1, k2, BP]
     x = np.array([1.2, 0.15, 2.0], dtype="float32")
 
-    CT, _DT = simSRTM_1_0_0(x=x, t=t, cr=cr, cri=cri, dt=dt, nr=n_timepoints)
+    CT, _DT = srtm(x=x, t=t, cr=cr, cri=cri, dt=dt, nr=n_timepoints)
 
     # Ensure non-negative (PET-like), and avoid a totally flat series
     CT = CT.astype("float32")
