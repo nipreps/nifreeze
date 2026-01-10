@@ -222,7 +222,11 @@ def test_petmodel_simulated_correlation_motion_free():
 
     model = BSplinePETModel(dataset=pet_obj, n_ctrl=5)
 
-    predicted = np.stack([model.fit_predict(t_index) for t_index in range(n_timepoints)], axis=-1)
+    results = [model.fit_predict(t_index) for t_index in range(n_timepoints)]
+    assert all(result is not None for result in results), (
+        "fit_predict returned None for some indices"
+    )
+    predicted = np.stack(results, axis=-1)  # type: ignore[arg-type]
 
     correlations = np.array(
         [
@@ -322,7 +326,11 @@ def test_petmodel_simulated_correlation_motion_free_srtm():
     # Fit/predict with spline PET model
     model = BSplinePETModel(dataset=pet_obj, n_ctrl=3)
 
-    predicted = np.stack([model.fit_predict(t_index) for t_index in range(n_timepoints)], axis=-1)
+    results = [model.fit_predict(t_index) for t_index in range(n_timepoints)]
+    assert all(result is not None for result in results), (
+        "fit_predict returned None for some indices"
+    )
+    predicted = np.stack(results, axis=-1)  # type: ignore[arg-type]
 
     correlations = np.array(
         [
