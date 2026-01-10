@@ -260,7 +260,9 @@ def test_petmodel_simulated_correlation_motion_free():
     assert np.all(correlations > 0.95)
 
 
-def _srtm_reference_inputs(n_timepoints: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def _srtm_reference_inputs(
+    n_timepoints: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Create (t, dt, cr, cri) for SRTM simulation.
     t is mid-frame time, dt are frame durations, cr is reference TAC, cri is its integral.
