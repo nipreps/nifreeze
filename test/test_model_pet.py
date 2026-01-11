@@ -35,6 +35,7 @@ from nifreeze.model.pet import (
     START_INDEX_RANGE_ERROR_MSG,
     BSplinePETModel,
 )
+from nifreeze.testing.simulations import compute_pet_noise_sd, srtm
 
 
 def test_pet_base_model():
@@ -55,8 +56,7 @@ def test_pet_base_model():
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]))
-def test_petmodel_init_dataset_error(request, setup_random_pet_data, monkeypatch):
-    rng = request.node.rng
+def test_petmodel_init_dataset_error(setup_random_pet_data, monkeypatch):
     pet_dataobj, _affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
 
     # Create a dummy dataset class without attributes
@@ -201,3 +201,170 @@ def test_petmodel_start_index_reuses_start_prediction(setup_random_pet_data):
     assert pred_start.shape == pet_dataobj.shape[:3]
     assert pred_early.shape == pet_dataobj.shape[:3]
     assert pred_late.shape == pet_dataobj.shape[:3]
+
+
+def test_petmodel_simulated_correlation_motion_free():
+    shape = (1, 1, 1)
+    n_timepoints = 16
+
+    t = np.linspace(0, 2 * np.pi, n_timepoints, dtype="float32")
+    temporal_basis = np.sin(t) + np.cos(2 * t)
+    temporal_basis -= temporal_basis.min()
+
+    dataobj = np.ones(shape + (n_timepoints,), dtype="float32")
+    dataobj = dataobj * temporal_basis  # broadcasting
+
+    midframe = np.arange(n_timepoints, dtype="float32")
+    total_duration = float(n_timepoints)
+
+    pet_obj = PET(
+        dataobj=dataobj,
+        affine=np.eye(4),
+        brainmask=None,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+
+    model = BSplinePETModel(dataset=pet_obj, n_ctrl=5)
+
+    results = [model.fit_predict(t_index) for t_index in range(n_timepoints)]
+    assert all(result is not None for result in results), (
+        "fit_predict returned None for some indices"
+    )
+    predicted = np.stack(results, axis=-1)  # type: ignore[arg-type]
+
+    correlations = np.array(
+        [
+            np.corrcoef(x, y)[0, 1]
+            for x, y in zip(
+                dataobj.reshape((-1, n_timepoints)),
+                predicted.reshape((-1, n_timepoints)),
+                strict=False,
+            )
+        ]
+    )
+
+    # original: (N, 16)
+    # predicted_masked: (N, 16)
+
+    # # Uncomment to plot prediction
+    # import matplotlib
+
+    # matplotlib.use("TkAgg")  # must be set BEFORE importing pyplot
+    # import matplotlib.pyplot as plt
+    # i = 0  # choose which timeseries/voxel to inspect
+    # t = np.arange(n_timepoints)
+
+    # fig, ax = plt.subplots()
+    # ax.plot(t, dataobj.reshape((-1, n_timepoints))[i], label="original")
+    # ax.plot(t, predicted.reshape((-1, n_timepoints))[i], label="predicted")
+    # ax.set_xlabel("timepoint")
+    # ax.set_ylabel("signal")
+    # ax.set_title(f"series {i}   r={correlations[i]:.3f}")
+    # ax.legend()
+
+    # plt.show()
+    # import pdb;pdb.set_trace()
+
+    assert np.all(correlations > 0.95)
+
+
+def _srtm_reference_inputs(
+    n_timepoints: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Create (t, dt, cr, cri) for SRTM simulation.
+    t is mid-frame time, dt are frame durations, cr is reference TAC, cri is its integral.
+    """
+    # Simple constant framing (arbitrary units)
+    dt = np.ones(n_timepoints, dtype="float32")
+    t = np.cumsum(dt) - dt / 2.0
+
+    # A smooth bolus-like reference TAC
+    cr = (t**2) * np.exp(-0.35 * t)
+    cr = cr / cr.max()
+
+    # Cumulative trapezoidal integral of reference TAC
+    cri = np.zeros_like(cr)
+    cri[0] = cr[0] * dt[0]
+    for i in range(1, n_timepoints):
+        cri[i] = cri[i - 1] + 0.5 * (cr[i] + cr[i - 1]) * dt[i]
+
+    return t.astype("float32"), dt, cr.astype("float32"), cri.astype("float32")
+
+
+@pytest.mark.parametrize(
+    "add_noise, scale_factor, lambda_",
+    [
+        (False, None, None),
+        (True, 0.05, 0.0063),  # 0.0063 corresponds to a 18F tracer
+        (True, 0.1, 0.0063),
+        (True, 0.15, 0.0063),
+    ],
+)
+def test_petmodel_simulated_correlation_motion_free_srtm(
+    request, add_noise, scale_factor, lambda_
+):
+    rng = request.node.rng
+    # Same structure as the sinusoid-based test, but using SRTM temporal basis
+    shape = (1, 1, 1)
+    n_timepoints = 30
+
+    t, dt, cr, cri = _srtm_reference_inputs(n_timepoints)
+
+    # SRTM parameters: [R1, k2, BP]
+    x = np.array([1.2, 0.15, 2.0], dtype="float32")
+
+    CT, _ = srtm(x=x, t=t, cr=cr, cri=cri, dt=dt, nr=n_timepoints)
+
+    if add_noise:
+        delta = np.diff(t)
+        delta = np.append(delta, delta[-1])  # Duplicate last frame duration
+        sd = compute_pet_noise_sd(scale_factor, CT, delta, lambda_, t)
+        noise = rng.normal(loc=0.0, scale=sd, size=len(t))
+        CT = CT + noise
+
+    # Ensure non-negative (PET-like), and avoid a totally flat series
+    CT = CT.astype("float32")
+    CT -= CT.min()
+    assert CT.max() > 0
+
+    # Build synthetic 4D PET: one voxel following CT
+    S0 = np.float32(100.0)
+    temporal_basis = S0 * (CT / CT.max())
+
+    dataobj = np.ones(shape + (n_timepoints,), dtype="float32") * temporal_basis
+
+    # PET metadata
+    midframe = t.astype("float32")
+    total_duration = float(np.sum(dt))
+
+    pet_obj = PET(
+        dataobj=dataobj,
+        affine=np.eye(4),
+        brainmask=None,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+
+    # Fit/predict with spline PET model
+    model = BSplinePETModel(dataset=pet_obj, n_ctrl=3)
+
+    results = [model.fit_predict(t_index) for t_index in range(n_timepoints)]
+    assert all(result is not None for result in results), (
+        "fit_predict returned None for some indices"
+    )
+    predicted = np.stack(results, axis=-1)  # type: ignore[arg-type]
+
+    correlations = np.array(
+        [
+            np.corrcoef(x, y)[0, 1]
+            for x, y in zip(
+                dataobj.reshape((-1, n_timepoints)),
+                predicted.reshape((-1, n_timepoints)),
+                strict=False,
+            )
+        ]
+    )
+
+    assert np.all(correlations > 0.95)
