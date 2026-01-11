@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.testing.simulations - nifreeze 26.0.0.dev815 documentation</title>
+        <title>nifreeze.testing.simulations - nifreeze 26.0.0.dev817 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev815 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev817 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev815</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev817</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev815</span>
+  <span class="sidebar-brand-text">26.0.0.dev817</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -341,16 +341,40 @@
 <span class="kn">from</span> <span class="nn">dipy.core.sphere</span> <span class="kn">import</span> <span class="n">HemiSphere</span><span class="p">,</span> <span class="n">Sphere</span><span class="p">,</span> <span class="n">disperse_charges</span>
 <span class="kn">from</span> <span class="nn">dipy.sims.voxel</span> <span class="kn">import</span> <span class="n">all_tensor_evecs</span><span class="p">,</span> <span class="n">multi_tensor</span><span class="p">,</span> <span class="n">single_tensor</span>
 
-<span class="c1"># Bounds defined following Canales-Rodriguez, NIMG 184 2019, https://doi.org/10.1016/j.neuroimage.2018.08.071</span>
 <span class="n">BOUNDS_LAMBDA1</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.4e-3</span><span class="p">,</span> <span class="mf">1.8e-3</span><span class="p">)</span>
+<span class="sa">r</span><span class="sd">&quot;&quot;&quot;Bounds for single-fiber :math:`\lambda_1` volume fraction parameter.</span>
+
+<span class="sd">.. footcite:p:`Canales_sparse_2019`</span>
+<span class="sd">&quot;&quot;&quot;</span>
 <span class="n">BOUNDS_LAMBDA23</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.1e-3</span><span class="p">,</span> <span class="mf">0.5e-3</span><span class="p">)</span>
+<span class="sa">r</span><span class="sd">&quot;&quot;&quot;Bounds for single-fiber :math:`\lambda_{2}` and :math:`\lambda_{3}` volume fraction parameters.</span>
+
+<span class="sd">.. footcite:p:`Canales_sparse_2019`</span>
+<span class="sd">&quot;&quot;&quot;</span>
 
 <span class="n">BOUNDS_2FIBERS_NONDOMINANT_VF1</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">)</span>
+<span class="sa">r</span><span class="sd">&quot;&quot;&quot;Bounds for two-fiber :math:`\lambda_1` volume fraction in the non-dominant configuration.</span>
+
+<span class="sd">.. footcite:p:`Canales_sparse_2019`</span>
+<span class="sd">&quot;&quot;&quot;</span>
 
 <span class="n">BOUNDS_2FIBERS_DOMINANT_VF1</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">)</span>
+<span class="sa">r</span><span class="sd">&quot;&quot;&quot;Bounds for two-fiber :math:`\lambda_1` volume fraction in the dominant configuration.</span>
+
+<span class="sd">.. footcite:p:`Canales_sparse_2019`</span>
+<span class="sd">&quot;&quot;&quot;</span>
 
 <span class="n">BOUNDS_3FIBERS_VF1</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">)</span>
+<span class="sa">r</span><span class="sd">&quot;&quot;&quot;Bounds for three-fiber :math:`\lambda_1` volume fraction.</span>
+
+<span class="sd">.. footcite:p:`Canales_sparse_2019`</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
 <span class="n">BOUNDS_3FIBERS_VF2</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">)</span>
+<span class="sa">r</span><span class="sd">&quot;&quot;&quot;Bounds for three-fiber :math:`\lambda_2` volume fraction.</span>
+
+<span class="sd">.. footcite:p:`Canales_sparse_2019`</span>
+<span class="sd">&quot;&quot;&quot;</span>
 
 
 <div class="viewcode-block" id="add_b0">
@@ -564,10 +588,16 @@
 <a class="viewcode-back" href="../../../api/nifreeze.testing.simulations.html#nifreeze.testing.simulations.create_random_diffusivity_eigenvalues">[docs]</a>
 <span class="k">def</span> <span class="nf">create_random_diffusivity_eigenvalues</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">rng</span><span class="p">):</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Create DTI model diffusion tensor eigenvalues (:math:`\lambda_{1}, \lambda_{2}, \lambda_{3}`)</span>
-<span class="sd">    drawn from a uniform distribution.&quot;&quot;&quot;</span>
+<span class="sd">    drawn from a uniform distribution.</span>
 
-    <span class="c1"># lambda_2 = lambda_3 following Canales-Rodriguez, NIMG 184 2019,</span>
-    <span class="c1"># https://doi.org/10.1016/j.neuroimage.2018.08.071</span>
+<span class="sd">    It is assumed that :math:`\lambda_{2} = \lambda_{3}` following</span>
+<span class="sd">    :footcite:p:`Canales_sparse_2019`.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. footbibliography::</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="k">return</span> <span class="nb">zip</span><span class="p">(</span>
         <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">*</span><span class="n">BOUNDS_LAMBDA1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">),</span>
         <span class="o">*</span><span class="p">[</span><span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">*</span><span class="n">BOUNDS_LAMBDA23</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">)]</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span>
@@ -579,12 +609,27 @@
 <div class="viewcode-block" id="create_three_fiber_random_volume_fractions">
 <a class="viewcode-back" href="../../../api/nifreeze.testing.simulations.html#nifreeze.testing.simulations.create_three_fiber_random_volume_fractions">[docs]</a>
 <span class="k">def</span> <span class="nf">create_three_fiber_random_volume_fractions</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">rng</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create fiber volume fractions drawn from a uniform distribution for a</span>
-<span class="sd">    three-fiber configuration.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Create fiber volume fractions drawn from a uniform distribution for a</span>
+<span class="sd">    three-fiber configuration.</span>
 
-    <span class="c1"># f1 ~ U(0.25, 0.3) f2 ~ U(0.3, 0.35) and f3 = 1 - (f1 + f2) set</span>
-    <span class="c1"># according to Canales-Rodriguez, NIMG 184 2019,</span>
-    <span class="c1"># https://doi.org/10.1016/j.neuroimage.2018.08.071</span>
+<span class="sd">    Volume fractions are assumed to be:</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">      :nowrap:</span>
+
+<span class="sd">       \begin{align*}</span>
+<span class="sd">       f1 &amp;\sim U(0.25, 0.3) \\</span>
+<span class="sd">       f2 &amp;\sim U(0.3, 0.35) \\</span>
+<span class="sd">       f3 &amp;= 1 - (f1 + f2)</span>
+<span class="sd">       \end{align*}</span>
+
+<span class="sd">    following :footcite:p:`Canales_sparse_2019`.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. footbibliography::</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="n">f1</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">*</span><span class="n">BOUNDS_3FIBERS_VF1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">)</span>
     <span class="n">f2</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">*</span><span class="n">BOUNDS_3FIBERS_VF2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">)</span>
     <span class="k">return</span> <span class="nb">zip</span><span class="p">(</span><span class="n">f1</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="n">f2</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">f1</span> <span class="o">+</span> <span class="n">f2</span><span class="p">))</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
@@ -594,11 +639,26 @@
 <div class="viewcode-block" id="create_two_fiber_nondominant_random_volume_fractions">
 <a class="viewcode-back" href="../../../api/nifreeze.testing.simulations.html#nifreeze.testing.simulations.create_two_fiber_nondominant_random_volume_fractions">[docs]</a>
 <span class="k">def</span> <span class="nf">create_two_fiber_nondominant_random_volume_fractions</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">rng</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create fiber volume fractions drawn from a uniform distribution for a</span>
-<span class="sd">    two-fiber configuration with non-dominant fibers.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Create fiber volume fractions drawn from a uniform distribution for a</span>
+<span class="sd">    two-fiber configuration with non-dominant fibers.</span>
 
-    <span class="c1"># f1 ~ U(0.3, 0.7), f2 = 1 - f1 following Canales-Rodriguez, NIMG 184 2019,</span>
-    <span class="c1"># https://doi.org/10.1016/j.neuroimage.2018.08.071</span>
+<span class="sd">    Volume fractions are assumed to be:</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">      :nowrap:</span>
+
+<span class="sd">       \begin{align*}</span>
+<span class="sd">       f1 &amp;\sim U(0.3, 0.7) \\</span>
+<span class="sd">       f2 &amp;= 1 - f1</span>
+<span class="sd">       \end{align*}</span>
+
+<span class="sd">    following :footcite:p:`Canales_sparse_2019`.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. footbibliography::</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="n">f1</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">*</span><span class="n">BOUNDS_2FIBERS_NONDOMINANT_VF1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">)</span>
     <span class="k">return</span> <span class="nb">zip</span><span class="p">(</span><span class="n">f1</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">f1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
 
@@ -607,11 +667,26 @@
 <div class="viewcode-block" id="create_two_fiber_dominant_random_volume_fractions">
 <a class="viewcode-back" href="../../../api/nifreeze.testing.simulations.html#nifreeze.testing.simulations.create_two_fiber_dominant_random_volume_fractions">[docs]</a>
 <span class="k">def</span> <span class="nf">create_two_fiber_dominant_random_volume_fractions</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">rng</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create fiber volume fractions drawn from a uniform distribution for a</span>
-<span class="sd">    two-fiber configuration with a dominant fiber.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Create fiber volume fractions drawn from a uniform distribution for a</span>
+<span class="sd">    two-fiber configuration with a dominant fiber.</span>
 
-    <span class="c1"># f1 ~ U(0.1, 0.3), f2 = 1 - f1 following to Canales-Rodriguez, NIMG 184</span>
-    <span class="c1"># 2019, https://doi.org/10.1016/j.neuroimage.2018.08.071</span>
+<span class="sd">    Volume fractions are assumed to be:</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">      :nowrap:</span>
+
+<span class="sd">       \begin{align*}</span>
+<span class="sd">       f1 &amp;\sim U(0.1, 0.3) \\</span>
+<span class="sd">       f2 &amp;= 1 - f1</span>
+<span class="sd">       \end{align*}</span>
+
+<span class="sd">    following :footcite:p:`Canales_sparse_2019`.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. footbibliography::</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="n">f1</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">*</span><span class="n">BOUNDS_2FIBERS_DOMINANT_VF1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">)</span>
     <span class="k">return</span> <span class="nb">zip</span><span class="p">(</span><span class="n">f1</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">f1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
 
@@ -885,7 +960,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=40615c3b"></script>
+</div><script src="../../../_static/documentation_options.js?v=d3e15248"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
