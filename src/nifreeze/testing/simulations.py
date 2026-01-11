@@ -31,16 +31,40 @@ from dipy.core.gradients import GradientTable, gradient_table
 from dipy.core.sphere import HemiSphere, Sphere, disperse_charges
 from dipy.sims.voxel import all_tensor_evecs, multi_tensor, single_tensor
 
-# Bounds defined following Canales-Rodriguez, NIMG 184 2019, https://doi.org/10.1016/j.neuroimage.2018.08.071
 BOUNDS_LAMBDA1: tuple[float, float] = (1.4e-3, 1.8e-3)
+r"""Bounds for single-fiber :math:`\lambda_1` volume fraction parameter.
+
+.. footcite:p:`Canales_sparse_2019`
+"""
 BOUNDS_LAMBDA23: tuple[float, float] = (0.1e-3, 0.5e-3)
+r"""Bounds for single-fiber :math:`\lambda_{2}` and :math:`\lambda_{3}` volume fraction parameters.
+
+.. footcite:p:`Canales_sparse_2019`
+"""
 
 BOUNDS_2FIBERS_NONDOMINANT_VF1: tuple[float, float] = (0.3, 0.7)
+r"""Bounds for two-fiber :math:`\lambda_1` volume fraction in the non-dominant configuration.
+
+.. footcite:p:`Canales_sparse_2019`
+"""
 
 BOUNDS_2FIBERS_DOMINANT_VF1: tuple[float, float] = (0.1, 0.3)
+r"""Bounds for two-fiber :math:`\lambda_1` volume fraction in the dominant configuration.
+
+.. footcite:p:`Canales_sparse_2019`
+"""
 
 BOUNDS_3FIBERS_VF1: tuple[float, float] = (0.25, 0.3)
+r"""Bounds for three-fiber :math:`\lambda_1` volume fraction.
+
+.. footcite:p:`Canales_sparse_2019`
+"""
+
 BOUNDS_3FIBERS_VF2: tuple[float, float] = (0.3, 0.35)
+r"""Bounds for three-fiber :math:`\lambda_2` volume fraction.
+
+.. footcite:p:`Canales_sparse_2019`
+"""
 
 
 def add_b0(bvals: np.ndarray, bvecs: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -228,10 +252,16 @@ def create_random_polar_angles(size, rng):
 
 def create_random_diffusivity_eigenvalues(size, rng):
     r"""Create DTI model diffusion tensor eigenvalues (:math:`\lambda_{1}, \lambda_{2}, \lambda_{3}`)
-    drawn from a uniform distribution."""
+    drawn from a uniform distribution.
 
-    # lambda_2 = lambda_3 following Canales-Rodriguez, NIMG 184 2019,
-    # https://doi.org/10.1016/j.neuroimage.2018.08.071
+    It is assumed that :math:`\lambda_{2} = \lambda_{3}` following
+    :footcite:p:`Canales_sparse_2019`.
+
+    References
+    ----------
+    .. footbibliography::
+    """
+
     return zip(
         rng.uniform(*BOUNDS_LAMBDA1, size=size),
         *[rng.uniform(*BOUNDS_LAMBDA23, size=size)] * 2,
@@ -240,33 +270,78 @@ def create_random_diffusivity_eigenvalues(size, rng):
 
 
 def create_three_fiber_random_volume_fractions(size, rng):
-    """Create fiber volume fractions drawn from a uniform distribution for a
-    three-fiber configuration."""
+    r"""Create fiber volume fractions drawn from a uniform distribution for a
+    three-fiber configuration.
 
-    # f1 ~ U(0.25, 0.3) f2 ~ U(0.3, 0.35) and f3 = 1 - (f1 + f2) set
-    # according to Canales-Rodriguez, NIMG 184 2019,
-    # https://doi.org/10.1016/j.neuroimage.2018.08.071
+    Volume fractions are assumed to be:
+
+    .. math::
+      :nowrap:
+
+       \begin{align*}
+       f1 &\sim U(0.25, 0.3) \\
+       f2 &\sim U(0.3, 0.35) \\
+       f3 &= 1 - (f1 + f2)
+       \end{align*}
+
+    following :footcite:p:`Canales_sparse_2019`.
+
+    References
+    ----------
+    .. footbibliography::
+    """
+
     f1 = rng.uniform(*BOUNDS_3FIBERS_VF1, size=size)
     f2 = rng.uniform(*BOUNDS_3FIBERS_VF2, size=size)
     return zip(f1 * 100, f2 * 100, (1 - (f1 + f2)) * 100, strict=True)
 
 
 def create_two_fiber_nondominant_random_volume_fractions(size, rng):
-    """Create fiber volume fractions drawn from a uniform distribution for a
-    two-fiber configuration with non-dominant fibers."""
+    r"""Create fiber volume fractions drawn from a uniform distribution for a
+    two-fiber configuration with non-dominant fibers.
 
-    # f1 ~ U(0.3, 0.7), f2 = 1 - f1 following Canales-Rodriguez, NIMG 184 2019,
-    # https://doi.org/10.1016/j.neuroimage.2018.08.071
+    Volume fractions are assumed to be:
+
+    .. math::
+      :nowrap:
+
+       \begin{align*}
+       f1 &\sim U(0.3, 0.7) \\
+       f2 &= 1 - f1
+       \end{align*}
+
+    following :footcite:p:`Canales_sparse_2019`.
+
+    References
+    ----------
+    .. footbibliography::
+    """
+
     f1 = rng.uniform(*BOUNDS_2FIBERS_NONDOMINANT_VF1, size=size)
     return zip(f1 * 100, (1 - f1) * 100, strict=True)
 
 
 def create_two_fiber_dominant_random_volume_fractions(size, rng):
-    """Create fiber volume fractions drawn from a uniform distribution for a
-    two-fiber configuration with a dominant fiber."""
+    r"""Create fiber volume fractions drawn from a uniform distribution for a
+    two-fiber configuration with a dominant fiber.
 
-    # f1 ~ U(0.1, 0.3), f2 = 1 - f1 following to Canales-Rodriguez, NIMG 184
-    # 2019, https://doi.org/10.1016/j.neuroimage.2018.08.071
+    Volume fractions are assumed to be:
+
+    .. math::
+      :nowrap:
+
+       \begin{align*}
+       f1 &\sim U(0.1, 0.3) \\
+       f2 &= 1 - f1
+       \end{align*}
+
+    following :footcite:p:`Canales_sparse_2019`.
+
+    References
+    ----------
+    .. footbibliography::
+    """
+
     f1 = rng.uniform(*BOUNDS_2FIBERS_DOMINANT_VF1, size=size)
     return zip(f1 * 100, (1 - f1) * 100, strict=True)
 
