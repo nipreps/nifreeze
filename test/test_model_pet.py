@@ -126,7 +126,7 @@ def test_petmodel_fit_predict(setup_random_pet_data):
         total_duration=total_duration,
     )
 
-    model = BSplinePETModel(dataset=pet_obj, smooth_fwhm=0, thresh_pct=0)
+    model = BSplinePETModel(dataset=pet_obj)
 
     # Fit on all data
     model.fit_predict(None)
@@ -174,12 +174,7 @@ def test_petmodel_start_index_reuses_start_prediction(setup_random_pet_data):
     )
 
     # Configure the model to start fitting at index=2
-    model = BSplinePETModel(
-        pet_obj,
-        smooth_fwhm=0.0,  # disable smoothing for deterministic behaviour
-        thresh_pct=0.0,  # disable thresholding
-        start_index=2,
-    )
+    model = BSplinePETModel(pet_obj, start_index=2)
 
     model.fit_predict(None)
 
