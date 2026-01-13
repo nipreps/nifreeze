@@ -53,6 +53,10 @@ DEFAULT_BSPLINE_N_CTRL = 3
 DEFAULT_BSPLINE_ORDER = 3
 """Default B-Spline order."""
 
+MIN_TIMEPOINTS_ERROR_MSG = """\
+'min_timepoints' must be a valid dataset size."""
+"""PET model fitting minimum fitting timepoint allowed values error."""
+
 START_INDEX_RANGE_ERROR_MSG = """\
 'start_index' must be a valid dataset index."""
 """PET model fitting start index allowed values error."""
@@ -119,6 +123,9 @@ class BasePETModel(BaseModel, ABC):
 
         if not hasattr(dataset, "midframe"):
             raise ValueError(PET_MIDFRAME_ERROR_MSG)
+
+        if not 0 < min_timepoints < len(self._dataset):
+            raise ValueError(MIN_TIMEPOINTS_ERROR_MSG)
 
         if 0 > start_index >= len(self._dataset) - min_timepoints:
             raise ValueError(START_INDEX_RANGE_ERROR_MSG)

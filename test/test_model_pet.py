@@ -30,6 +30,7 @@ import pytest
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.pet import PET
 from nifreeze.model.pet import (
+    MIN_TIMEPOINTS_ERROR_MSG,
     PET_MIDFRAME_ERROR_MSG,
     PET_OBJECT_ERROR_MSG,
     START_INDEX_RANGE_ERROR_MSG,
@@ -137,6 +138,30 @@ def test_petmodel_fit_predict(setup_random_pet_data):
     assert vol is not None
     assert vol.shape == pet_obj.shape3d
     assert vol.dtype == pet_obj.dataobj.dtype
+
+
+@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
+def test_min_timepoints_error(setup_random_pet_data):
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+
+    pet_obj = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+
+    # Smaller than zero min_timepoints raises ValueError
+    with pytest.raises(ValueError, match=MIN_TIMEPOINTS_ERROR_MSG):
+        BSplinePETModel(pet_obj, min_timepoints=-1)
+
+    with pytest.raises(ValueError, match=MIN_TIMEPOINTS_ERROR_MSG):
+        BSplinePETModel(pet_obj, min_timepoints=0)
+
+    # min_timepoints equal to len(timepoints) is out of range
+    with pytest.raises(ValueError, match=MIN_TIMEPOINTS_ERROR_MSG):
+        BSplinePETModel(pet_obj, min_timepoints=len(pet_obj.midframe))
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
