@@ -251,7 +251,7 @@ class BSplinePETModel(BasePETModel):
 
         # A is T (num. timepoints) x C (num. coeff)
         # coefficients is V (num. voxels) x C (num. coeff)
-        predicted = np.squeeze(A @ coefficients.T)
+        predicted = np.squeeze(A @ coefficients.T).T
 
         brainmask = self._dataset.brainmask
         datashape = self._dataset.dataobj.shape[:3]
