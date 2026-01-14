@@ -100,6 +100,8 @@ class BasePETModel(BaseModel, ABC):
 
         Parameters
         ----------
+        dataset : :obj:`~nifreeze.data.pet.base.PET`
+            Reference to a PET object.
         start_index : :obj:`int`, optional
             If provided, the model will be fitted using only timepoints starting
             from this index (inclusive). Predictions for timepoints earlier than
