@@ -22,8 +22,6 @@
 #
 """Benchmarking for nifreeze's models."""
 
-from abc import ABC
-
 import dipy.data as dpd
 import nibabel as nb
 import numpy as np
@@ -37,7 +35,7 @@ from nifreeze.model.gpr import DiffusionGPR, SphericalKriging
 from nifreeze.utils.ndimage import load_api
 
 
-class DiffusionGPRBenchmark(ABC):
+class DiffusionGPRBenchmark:
     def __init__(self):
         self._estimator = None
         self._X_train = None
