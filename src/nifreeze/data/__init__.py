@@ -23,8 +23,9 @@
 """Four-dimensional data representation in hard-disk and memory."""
 
 from pathlib import Path
+from typing import cast
 
-from nifreeze.data.base import NFDH5_EXT, BaseDataset
+from nifreeze.data.base import NFDH5_EXT, BaseDataset, _ArrayLike
 from nifreeze.data.dmri import DWI
 from nifreeze.data.pet import PET
 
@@ -32,6 +33,8 @@ from nifreeze.data.pet import PET
 def load(
     filename: Path | str,
     brainmask_file: Path | str | None = None,
+    *,
+    keep_file_open: bool = False,
     **kwargs,
 ) -> BaseDataset | DWI | PET:
     """
@@ -68,7 +71,7 @@ def load(
     if filename.name.endswith(NFDH5_EXT):
         for dataclass in (BaseDataset, PET, DWI):
             with suppress(TypeError):
-                return dataclass.from_filename(filename)
+                return dataclass.from_filename(filename, keep_file_open=keep_file_open)
 
         raise TypeError("Could not read data")
 
@@ -82,11 +85,13 @@ def load(
         return pet_from_nii(filename, brainmask_file=brainmask_file, **kwargs)
 
     img = load_api(filename, SpatialImage)
-    retval: BaseDataset = BaseDataset(dataobj=np.asanyarray(img.dataobj), affine=img.affine)
+    retval: BaseDataset = BaseDataset(
+        dataobj=cast(_ArrayLike, img.dataobj), affine=np.asanyarray(img.affine)
+    )
 
     if brainmask_file:
         mask = load_api(brainmask_file, SpatialImage)
-        retval.brainmask = np.asanyarray(mask.dataobj)
+        retval.brainmask = np.asanyarray(mask.dataobj, dtype=bool)
     else:
         retval.brainmask = np.ones(img.shape[:3], dtype=bool)
 

@@ -120,7 +120,7 @@ class Estimator:
         n_jobs = kwargs.pop("n_jobs", None) or min(cpu_count() or 1, 8)
         n_threads = kwargs.pop("omp_nthreads", None) or ((cpu_count() or 2) - 1)
 
-        num_voxels = dataset.brainmask.sum() if dataset.brainmask is not None else dataset.size3d
+        num_voxels = np.sum(dataset.brainmask) if dataset.brainmask is not None else dataset.size3d
         chunk_size = DEFAULT_CHUNK_SIZE * (n_threads or 1)
 
         # Prepare iterator
