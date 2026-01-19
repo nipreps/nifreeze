@@ -555,3 +555,178 @@ def serialize_dmri(
 
     serialize_dwi(dwi_data, dwi_data_fname, affine=affine)
     serialize_gtab(gtab, bval_data_fname, bvec_data_fname)
+
+
+def srtm(
+    x: np.ndarray,
+    t: np.ndarray,
+    cr: np.ndarray,
+    cri: np.ndarray,
+    dt: np.ndarray,
+    nr: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Simplified Reference Tissue Model (SRTM) simulation with partial derivatives.
+
+    SRTM estimates brain receptor binding potentials useful in PET simulation
+    studies.
+
+    The model was proposed in :footcite:p:`Lammertsma_simplified_1996`, and this
+    implementation is based on :footcite:p:`Karjalainen_magia_2020`.
+
+    Parameters
+    ----------
+    x : :obj:`~numpy.ndarray`, shape (3,)
+        Model parameters: [R1, k2, BP]
+    t : :obj:`~numpy.ndarray`, shape (nr,)
+        Mid-times (kept for API parity; not used directly in the original code)
+    cr : :obj:`~numpy.ndarray`, shape (nr,)
+        Reference region TAC
+    cri : :obj:`~numpy.ndarray`, shape (nr,)
+        Integral of reference TAC over frames (must match what MATLAB 'cri' represents)
+    dt : :obj:`~numpy.ndarray`, shape (nr,)
+        Frame durations / time steps used by the solver
+    nr : :obj:`int`
+        Number of time points (should equal len(cr))
+
+    Returns
+    -------
+    CT : :obj:`~numpy.ndarray`, shape (nr,)
+        Simulated tissue TAC
+    DT : :obj:`~numpy.ndarray`, shape (nr, 3)
+        Partial derivatives [dCT/dR1, dCT/dk2, dCT/dBP] as columns
+
+    Notes
+    -----
+    This code is translation from the ``simSRTM_1_0_0.m`` MATLAB script
+    available on `GitHub <https://github.com/tkkarjal/magia/blob/af495dfe1e54097ed202f0a99598b5d1d5d7f613/simSRTM_1_0_0.m>`__
+    and the `Human Emotion Systems Laboratory of the Turku PET Centre GitLab
+    <https://gitlab.utu.fi/human-emotion-systems-laboratory/magia/-/blob/f4bfdabbfea4058cfb17580994131f7dbe57dc65/simSRTM_1_0_0.m>`__
+
+    A description of the model is also available at the `Turku PET Centre website
+    <https://www.turkupetcentre.net/petanalysis/model_compartmental_ref.html>`__
+
+    References
+    ----------
+    .. footbibliography::
+    """
+    # Ensure 1D float arrays
+    x = np.asarray(x, dtype=float).ravel()
+    cr = np.asarray(cr, dtype=float).ravel()
+    cri = np.asarray(cri, dtype=float).ravel()
+    dt = np.asarray(dt, dtype=float).ravel()
+    _ = np.asarray(t, dtype=float).ravel()  # unused, kept for signature compatibility
+
+    if x.size != 3:
+        raise ValueError("x must have length 3: [R1, k2, BP].")
+    if nr != cr.size or nr != cri.size or nr != dt.size:
+        raise ValueError("nr must match lengths of cr, cri, and dt.")
+    if nr < 1:
+        raise ValueError("nr must be >= 1.")
+    if (1.0 + x[2]) == 0.0:
+        raise ValueError("Invalid BP: 1+BP must be nonzero.")
+
+    R1 = float(x[0])
+    k2 = float(x[1])
+    BP = float(x[2])
+
+    CT = np.zeros_like(cr, dtype=float)
+    dCTdk2 = np.zeros_like(cr, dtype=float)
+    dCTdBP = np.zeros_like(cr, dtype=float)
+
+    h = k2 / (1.0 + BP)
+    h2 = 0.5 * h
+
+    # i = 0 (MATLAB i=1)
+    f = R1 * cr[0] + k2 * cri[0]
+    g = 1.0 + dt[0] * h2
+    CT[0] = f / g
+
+    # derivative wrt k2 at i=0
+    # F = cri(1); G = dt(1)*h2/k2;
+    # dCTdk2(1) = (F*g - f*G)/(g*g);
+    if k2 == 0.0:
+        # Avoid divide-by-zero; the original MATLAB would blow up here too.
+        raise ValueError(
+            "k2 must be nonzero for derivative computation (matches MATLAB behavior)."
+        )
+    F = cri[0]
+    G = dt[0] * h2 / k2
+    dCTdk2[0] = (F * g - f * G) / (g * g)
+
+    # Running integral-like term
+    cti_last = dt[0] * CT[0] / 2.0
+
+    # i = 1..nr-1 (MATLAB i=2..nr)
+    for i in range(1, nr):
+        h3 = 0.5 * dt[i]
+        a = cti_last + h3 * CT[i - 1]
+        f = R1 * cr[i] + k2 * cri[i] - h * a
+        g = 1.0 + dt[i] * h2
+        h4 = g * g
+        CT[i] = f / g
+
+        # dCT/dk2
+        # F = cri(i) - (h/k2)*a
+        # G = dt(i)*h2/k2
+        # dCTdk2(i) = (F*g - f*G)/(g*g)
+        F = cri[i] - (h / k2) * a
+        G = dt[i] * h2 / k2
+        dCTdk2[i] = (F * g - f * G) / h4
+
+        # dCT/dBP
+        # b = (1+BP)^2
+        # h5 = k2/b
+        # F = h5*a
+        # G = -h3*h5
+        # dCTdBP(i) = (F*g - f*G)/(g*g)
+        b = (1.0 + BP) ** 2
+        h5 = k2 / b
+        F = h5 * a
+        G = -h3 * h5
+        dCTdBP[i] = (F * g - f * G) / h4
+
+        # update cti_last
+        cti_last = cti_last + h3 * (CT[i] + CT[i - 1])
+
+    dCTdR1 = cr.copy()
+
+    # DT as (nr, 3) like MATLAB's [dCTdR1' dCTdk2' dCTdBP']
+    DT = np.column_stack((dCTdR1, dCTdk2, dCTdBP))
+    return CT, DT
+
+
+def compute_pet_noise_sd(
+    scale_factor: float, c: np.ndarray, delta: np.ndarray, lambda_: float, t: np.ndarray
+) -> np.ndarray:
+    """Compute PET signal noise standard deviation (SD).
+
+    Computes standard deviation values to be added to normally distributed noise
+    in PET simulations following equation 7 in :footcite:p:`Ichise_linearized_2003`.
+
+    Parameters
+    ----------
+    scale_factor : :obj:`float`
+        Scale factor controlling the level of noise.
+    c : :obj:`~numpy.ndarray`
+        Noise-free simulated radioactivity at each time point.
+    delta : :obj:`~numpy.ndarray`
+        Frame duration in seconds.
+    lambda_ : :obj:`float`
+        Radioisotope decay constant.
+    t : obj:`~numpy.ndarray`
+         Time at which the noise is to be generated.
+
+    Returns
+    -------
+    obj:`~numpy.ndarray`
+        The computed SD value.
+
+    References
+    ----------
+    .. footbibliography::
+    """
+
+    numerator = np.exp(lambda_ * t) * c
+    ratio = numerator / delta
+    return scale_factor * (ratio**0.5)
