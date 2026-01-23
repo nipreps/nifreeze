@@ -142,6 +142,27 @@ def test_average_model():
     assert np.allclose(avgmodel_median_2000.fit_predict(last), 1000)
 
 
+@pytest.mark.random_dwi_data(50, (14, 16, 8), True)
+@pytest.mark.parametrize("index", (None, 4))
+def test_dti_model_predict_idx_essentials(setup_random_dwi_data, index):
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
+
+    dataset = DWI(
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        gradients=gradients,
+    )
+
+    dtimodel = model.DTIModel(dataset)
+    predicted = dtimodel.fit_predict(index)
+    if index is not None:
+        assert predicted is not None
+        assert predicted.shape == dwi_dataobj.shape[:-1]
+    else:
+        assert predicted is None
+
+
 @pytest.mark.parametrize(
     (
         "bval_shell",
@@ -175,20 +196,3 @@ def test_gp_model(evals, S0, snr, hsph_dirs, bval_shell):
     prediction = gpfit.predict(gtab.bvecs[-2:])
 
     assert prediction.shape == (2,)
-
-
-@pytest.mark.random_dwi_data(50, (14, 16, 8), True)
-def test_dti_model_essentials(setup_random_dwi_data):
-    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
-
-    dataset = DWI(
-        dataobj=dwi_dataobj,
-        affine=affine,
-        brainmask=brainmask_dataobj,
-        gradients=gradients,
-    )
-
-    dtimodel = model.DTIModel(dataset)
-    predicted = dtimodel.fit_predict(4)
-    assert predicted is not None
-    assert predicted.shape == dwi_dataobj.shape[:-1]
