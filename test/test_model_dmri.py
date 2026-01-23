@@ -164,18 +164,8 @@ def test_dti_model_predict_idx_essentials(setup_random_dwi_data, index):
 
 
 @pytest.mark.parametrize(
-    (
-        "bval_shell",
-        "S0",
-        "evals",
-    ),
-    [
-        (
-            1000,
-            100,
-            (0.0015, 0.0003, 0.0003),
-        )
-    ],
+    ("bval_shell", "S0", "evals"),
+    [(1000, 100, (0.0015, 0.0003, 0.0003))],
 )
 @pytest.mark.parametrize("snr", (10, 20))
 @pytest.mark.parametrize("hsph_dirs", (60, 30))
