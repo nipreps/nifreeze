@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="nifreeze.analysis package" href="api/nifreeze.analysis.html"><link rel="prev" title="Running NiFreeze" href="running.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>For developers - nifreeze 26.0.0.dev820 documentation</title>
+        <title>For developers - nifreeze 26.0.0.dev822 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev820 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev822 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev820</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev822</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev820</span>
+  <span class="sidebar-brand-text">26.0.0.dev822</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -336,6 +336,13 @@ Please, do not commit manually to <code class="docutils literal notranslate"><sp
 <span class="n">make</span> <span class="o">-</span><span class="n">C</span> <span class="n">docs</span><span class="o">/</span> <span class="n">html</span>
 </pre></div>
 </div>
+</section>
+<section id="benchmarking">
+<h2>Benchmarking<a class="headerlink" href="#benchmarking" title="Link to this heading">¶</a></h2>
+<p><em>NiFreeze</em> uses <a class="reference external" href="https://asv.readthedocs.io/en/latest/">asv</a> for performance benchmarking. Benchmarking code is found under the
+<code class="docutils literal notranslate"><span class="pre">benchmarks/</span></code> folder. Maintaining reasonable runtime and memory consumption of core
+<em>NiFreeze</em> components (e.g., models, data I/O, estimator) is critical for the
+efficiency of pipelines using it.</p>
 </section>
 <section id="library-api-application-program-interface">
 <h2>Library API (application program interface)<a class="headerlink" href="#library-api-application-program-interface" title="Link to this heading">¶</a></h2>
@@ -971,6 +978,7 @@ Please, do not commit manually to <code class="docutils literal notranslate"><sp
 <li><a class="reference internal" href="#">For developers</a><ul>
 <li><a class="reference internal" href="#contributing">Contributing</a></li>
 <li><a class="reference internal" href="#documentation">Documentation</a></li>
+<li><a class="reference internal" href="#benchmarking">Benchmarking</a></li>
 <li><a class="reference internal" href="#library-api-application-program-interface">Library API (application program interface)</a></li>
 </ul>
 </li>
@@ -983,7 +991,7 @@ Please, do not commit manually to <code class="docutils literal notranslate"><sp
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=b538b249"></script>
+</div><script src="_static/documentation_options.js?v=26b8bc3a"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
