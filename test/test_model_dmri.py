@@ -144,7 +144,7 @@ def test_average_model():
 
 @pytest.mark.random_dwi_data(50, (14, 16, 8), True)
 @pytest.mark.parametrize("index", (None, 4))
-def test_dti_model_predict_idx_essentials(setup_random_dwi_data, index):
+def test_dti_prediction_shape(setup_random_dwi_data, index):
     dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
 
     dataset = DWI(
