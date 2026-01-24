@@ -8,3 +8,5 @@
 .. _AFNI: https://afni.nimh.nih.gov/
 .. _FreeSurfer: https://surfer.nmr.mgh.harvard.edu/
 .. _DIPY: https://dipy.org/
+.. _asv: https://asv.readthedocs.io/en/latest/
+.. _nifreeze dashboard: https://www.nipreps.org/nifreeze/benhcmarks/

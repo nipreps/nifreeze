@@ -1,3 +1,5 @@
+.. include:: links.rst
+
 For developers
 ==============
 Contributing
@@ -20,6 +22,14 @@ To build the documentation locally, you first need to make sure that ``setuptool
   cd <nifreeze-repository>/
   python -m setuptools_scm  # This will generate ``src/nifreeze/_version.py``
   make -C docs/ html
+
+Benchmarking
+------------
+
+*NiFreeze* uses asv_ for performance benchmarking. Benchmarking code is found under the
+``benchmarks/`` folder. Maintaining reasonable runtime and memory consumption of core
+*NiFreeze* components (e.g., models, data I/O, estimator) is critical for the
+efficiency of pipelines using it.
 
 Library API (application program interface)
 -------------------------------------------
