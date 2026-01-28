@@ -52,6 +52,94 @@ def _exec_predict(model, chunk=None, **kwargs):
     return np.squeeze(model.predict(**kwargs)), chunk
 
 
+def _compute_data_mask(
+    shape: tuple,
+    brainmask: np.ndarray | None = None,
+    bzero: np.ndarray | None = None,
+    ignore_bzero: bool = False,
+    default_min_S0: float = DEFAULT_MIN_S0,
+) -> np.ndarray:
+    """Compute the data mask for the given volume shape.
+
+    If no ``brainmask`` is provided, a default mask (all :obj:`True`) is
+    created. If ``b0`` data is not to be ignored, values where the ``b0`` is
+    below ``default_min_S0`` are set to :obj:`False` in the mask.
+
+    Parameters
+    ----------
+    shape : :obj:`tuple`
+        DWI volume shape (3D).
+    brainmask : :obj:`~numpy.ndarray`
+        Brainmask.
+    bzero : :obj:`~numpy.ndarray`
+        ``b0`` data.
+    ignore_bzero : :obj:`bool`, optional
+        :obj:`True` to ignore ``b0``.
+    default_min_S0 : :obj:`float`, optional
+        Minimum S0 value to consider when ``b0`` data is not ignored.
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        The computed data mask.
+    """
+    # Use the brainmask if available, else create a default mask
+    data_mask = brainmask if brainmask is not None else np.ones(shape, dtype=bool)
+
+    # Modify the mask if b0 is not ignored
+    if not ignore_bzero and bzero is not None:
+        data_mask[bzero < default_min_S0] = False
+
+    return data_mask
+
+
+def _compute_S0(
+    dwi_dataobj: np.ndarray,
+    data_mask: np.ndarray,
+    bzero: np.ndarray | None = None,
+    ignore_bzero: bool = False,
+    default_percentile: int = DEFAULT_S0_CLIP_PERCENTILE,
+) -> np.ndarray:
+    """Compute the DWI ``S0`` value (non-diffusion-weighted signal).
+
+    Generates an array of the same size as the number of voxels in the
+    ``data_mask`` that are marked as ``True``. All values in the ``S0`` array
+    are set to the rounded value of the specified percentile of the
+    non-diffusion-weighted image data (``bzero``) within the region defined by
+    the ``data_mask``.
+
+    Parameters
+    ----------
+    dwi_dataobj : :obj:`~numpy.ndarray`
+        DWI data.
+    data_mask : :obj:`~numpy.ndarray`
+        The mask to apply on the data.
+    bzero : :obj:`~numpy.ndarray`
+        ``b0`` data.
+    ignore_bzero : :obj:`bool`, optional
+        :obj:`True` to ignore ``b0``.
+    default_percentile : :obj:`int`, optional
+        Percentile threshold for S0 computation.
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        The S0 signal array.
+    """
+
+    # By default, set S0 to the q-th percentile of the DWI data within mask
+    S0 = np.full(
+        data_mask.sum(),
+        np.round(np.percentile(dwi_dataobj[data_mask, ...], default_percentile)),
+    )
+
+    # Modify S0 if b0 is not ignored
+    if not ignore_bzero and bzero is not None:
+        S0 = bzero[data_mask]
+
+    return S0
+
+
 class BaseDWIModel(BaseModel):
     """Interface and default methods for DWI models."""
 
@@ -87,24 +175,20 @@ class BaseDWIModel(BaseModel):
         if max_b is not None and max_b > DEFAULT_LOWB_THRESHOLD:
             self._max_b = max_b
 
-        self._data_mask = (
-            dataset.brainmask
-            if dataset.brainmask is not None
-            else np.ones(dataset.dataobj.shape[:3], dtype=bool)
+        ignore_bzero = kwargs.pop("ignore_bzero", False)
+
+        # Compute the data mask (ignores or uses b0 as specified)
+        self._data_mask = _compute_data_mask(
+            dataset.dataobj.shape[:3],
+            dataset.brainmask,
+            dataset.bzero,
+            ignore_bzero=ignore_bzero,
         )
 
-        # By default, set S0 to the q-th percentile of the DWI data within mask
-        self._S0 = np.full(
-            self._data_mask.sum(),
-            np.round(
-                np.percentile(dataset.dataobj[self._data_mask, ...], DEFAULT_S0_CLIP_PERCENTILE)
-            ),
+        # Compute S0 based on the mask and b0 ignore flag
+        self._S0 = _compute_S0(
+            dataset.dataobj, self._data_mask, dataset.bzero, ignore_bzero=ignore_bzero
         )
-
-        # If b=0 is present and not to be ignored, update brain mask and set
-        if not kwargs.pop("ignore_bzero", False) and dataset.bzero is not None:
-            self._data_mask[dataset.bzero < DEFAULT_MIN_S0] = False
-            self._S0 = dataset.bzero[self._data_mask]
 
         super().__init__(dataset, **kwargs)
 
