@@ -205,7 +205,8 @@ def validate_dataobj(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> No
         raise ValueError(DATAOBJ_ABSENCE_ERROR_MSG)
 
     if not isinstance(value, np.ndarray):
-        raise TypeError(DATAOBJ_OBJECT_ERROR_MSG)
+        if not (hasattr(value, "shape") and hasattr(value, "dtype")):
+            raise TypeError(DATAOBJ_OBJECT_ERROR_MSG)
 
     if not _has_ndim(value, 4):
         raise ValueError(DATAOBJ_NDIM_ERROR_MSG)
