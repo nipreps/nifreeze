@@ -173,7 +173,7 @@ def test_has_dim_size(value, size, expected):
         (lambda: type("WithNdim", (), {"ndim": 2})(), 3, False),
         (lambda: type("BadNdim", (), {"ndim": "not-an-int"})(), 2, False),
         (lambda: type("WithShape", (), {"shape": (3, 4)})(), 2, True),
-        (lambda: (123), 1, False),  # No ndim or shape
+        (lambda: 123, 1, False),  # No ndim or shape
     ],
 )
 def test_has_ndim(obj_factory, ndim, expected):
