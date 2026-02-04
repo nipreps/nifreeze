@@ -839,10 +839,8 @@ def test_dki_model_bzero_exception(setup_random_dwi_data):
         gradients=gradients,
     )
 
-    dkimodel = model.DKIModel(dataset)
-
     with pytest.raises(ValueError, match=model.dmri.DWI_DKI_NULL_GRADIENT_ERROR_MSG):
-        dkimodel.fit_predict(4)
+        dkimodel = model.DKIModel(dataset)
 
 
 @pytest.mark.random_gtab_data(10, (1000, 2000), 1)
