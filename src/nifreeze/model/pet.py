@@ -57,14 +57,6 @@ MIN_TIMEPOINTS_ERROR_MSG = """\
 'min_timepoints' must be a valid dataset size."""
 """PET model fitting minimum fitting timepoint allowed values error."""
 
-START_INDEX_RANGE_ERROR_MSG = """\
-'start_index' must be a valid dataset index."""
-"""PET model fitting start index allowed values error."""
-
-END_INDEX_RANGE_ERROR_MSG = """\
-'end_index' must be a valid dataset index later than 'start_index'."""
-"""PET model fitting start index allowed values error."""
-
 
 def _exec_fit(model, data, chunk=None, **kwargs):
     return model.fit(data, **kwargs), chunk
@@ -81,8 +73,6 @@ class BasePETModel(BaseModel, ABC):
     __metaclass__ = ABCMeta
 
     __slots__ = {
-        "_start_index": "Start index frame for fitting",
-        "_end_index": "End index frame for fitting",
         "_model_class": "Defining a model class",
         "_modelargs": "Arguments acceptable by the underlying model",
         "_models": "List with one or more (if parallel execution) model instances",
@@ -91,8 +81,6 @@ class BasePETModel(BaseModel, ABC):
     def __init__(
         self,
         dataset: PET,
-        start_index: int = 0,
-        end_index: int | None = None,
         min_timepoints: int = MIN_N_TIMEPOINTS,
         **kwargs,
     ):
@@ -102,16 +90,6 @@ class BasePETModel(BaseModel, ABC):
         ----------
         dataset : :obj:`~nifreeze.data.pet.base.PET`
             Reference to a PET object.
-        start_index : :obj:`int`, optional
-            If provided, the model will be fitted using only timepoints starting
-            from this index (inclusive). Predictions for timepoints earlier than
-            the specified start will reuse the predicted volume for the start
-            timepoint. This is useful, for example, to discard a number of
-            frames at the beginning of the sequence, which due to their little
-            SNR may impact registration negatively.
-        end_index : :obj:`int`, optional
-            If provided, the model will be fitted using only timepoints up to
-            this index (exclusive).
         min_timepoints : :obj:`int`, optional
             Minimum number of timepoints required to fit the model.
 
@@ -128,17 +106,6 @@ class BasePETModel(BaseModel, ABC):
 
         if not 0 < min_timepoints < len(self._dataset):
             raise ValueError(MIN_TIMEPOINTS_ERROR_MSG)
-
-        if 0 > start_index >= len(self._dataset) - min_timepoints:
-            raise ValueError(START_INDEX_RANGE_ERROR_MSG)
-
-        self._start_index = start_index
-
-        self._end_index = len(self._dataset)
-        if end_index is not None:
-            if not (start_index + min_timepoints < end_index <= len(self._dataset)):
-                raise ValueError(END_INDEX_RANGE_ERROR_MSG)
-            self._end_index = end_index
 
     @property
     def is_fitted(self) -> bool:
@@ -196,8 +163,8 @@ class BSplinePETModel(BasePETModel):
         self._n_ctrl = n_ctrl
 
         # Start and end timepoints
-        x0 = float(self._dataset.midframe[self._start_index])
-        x1 = float(self._dataset.midframe[self._end_index - 1])
+        x0 = float(self._dataset.midframe[0])
+        x1 = float(self._dataset.midframe[-1])
         inner_x = np.linspace(x0, x1, self._n_ctrl + 2, dtype="float32")[1:-1]
 
         # Time-coordinates of the B-Spline knots
@@ -224,9 +191,6 @@ class BSplinePETModel(BasePETModel):
 
         # Generate a time mask for the frames to fit
         x_mask = np.ones(len(self._dataset), dtype=bool)
-        # TODO: decide whether we really want this
-        # x_mask[: self._start_index] = False
-        # x_mask[self._end_index :] = False
 
         x_mask[index] = False if index is not None else x_mask[index]
         x = self._dataset.midframe[x_mask].tolist()
@@ -251,7 +215,7 @@ class BSplinePETModel(BasePETModel):
 
         # Generate an interpolation time mask
         interp_mask = np.zeros(len(self._dataset), dtype=bool)
-        interp_index = index if index is not None else slice(self._start_index, self._end_index)
+        interp_index = index if index is not None else slice(0, len(interp_mask))
         interp_mask[interp_index] = True
 
         A = BSpline.design_matrix(

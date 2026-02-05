@@ -33,7 +33,6 @@ from nifreeze.model.pet import (
     MIN_TIMEPOINTS_ERROR_MSG,
     PET_MIDFRAME_ERROR_MSG,
     PET_OBJECT_ERROR_MSG,
-    START_INDEX_RANGE_ERROR_MSG,
     BSplinePETModel,
 )
 from nifreeze.testing.simulations import compute_pet_noise_sd, srtm
@@ -162,65 +161,6 @@ def test_min_timepoints_error(setup_random_pet_data):
     # min_timepoints equal to len(timepoints) is out of range
     with pytest.raises(ValueError, match=MIN_TIMEPOINTS_ERROR_MSG):
         BSplinePETModel(pet_obj, min_timepoints=len(pet_obj.midframe))
-
-
-@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
-def test_init_start_index_error(setup_random_pet_data):
-    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
-
-    pet_obj = PET(
-        dataobj=pet_dataobj,
-        affine=affine,
-        brainmask=brainmask_dataobj,
-        midframe=midframe,
-        total_duration=total_duration,
-    )
-
-    # Negative start_index raises ValueError
-    with pytest.raises(ValueError, match=START_INDEX_RANGE_ERROR_MSG):
-        BSplinePETModel(pet_obj, start_index=-1)
-
-    # start_index equal to len(timepoints) is out of range
-    with pytest.raises(ValueError, match=START_INDEX_RANGE_ERROR_MSG):
-        BSplinePETModel(pet_obj, start_index=len(pet_obj.midframe))
-
-
-@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
-def test_petmodel_start_index_reuses_start_prediction(setup_random_pet_data):
-    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
-
-    pet_obj = PET(
-        dataobj=pet_dataobj,
-        affine=affine,
-        brainmask=brainmask_dataobj,
-        midframe=midframe,
-        total_duration=total_duration,
-    )
-
-    # Configure the model to start fitting at index=2
-    model = BSplinePETModel(pet_obj, start_index=2)
-
-    model.fit_predict(None)
-
-    # Prediction for the configured start timepoint
-    pred_start = model.fit_predict(index=2)
-
-    # Prediction for an earlier timepoint (should reuse start prediction)
-    pred_early = model.fit_predict(index=1)
-
-    assert pred_start is not None
-    assert pred_early is not None
-    assert np.allclose(pred_start, pred_early), (
-        "Earlier frames should reuse start-frame prediction"
-    )
-
-    # Prediction for a later timepoint should be allowed and may differ
-    pred_late = model.fit_predict(index=3)
-
-    assert pred_late is not None
-    assert pred_start.shape == pet_dataobj.shape[:3]
-    assert pred_early.shape == pet_dataobj.shape[:3]
-    assert pred_late.shape == pet_dataobj.shape[:3]
 
 
 def test_petmodel_simulated_correlation_motion_free():
