@@ -183,11 +183,13 @@ class BSplinePETModel(BasePETModel):
         the prediction for the start time.
         """
 
-        n_jobs = kwargs.pop("n_jobs", min(cpu_count() or 1, 8))
+        if index is None:
+            raise NotImplementedError(
+                "Fitting all frames at once (index=None) is not yet implemented. "
+                "Use LOVO mode by passing an integer index."
+            )
 
-        # TODO: locked fit handling
-        if self._locked_fit is not None:
-            return n_jobs
+        n_jobs = kwargs.pop("n_jobs", min(cpu_count() or 1, 8))
 
         # Generate a time mask for the frames to fit
         x_mask = np.ones(len(self._dataset), dtype=bool)

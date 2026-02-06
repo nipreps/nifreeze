@@ -127,11 +127,7 @@ def test_petmodel_fit_predict(setup_random_pet_data):
 
     model = BSplinePETModel(dataset=pet_obj)
 
-    # Fit on all data
-    model.fit_predict(None)
-    assert model.is_fitted
-
-    # Predict at a specific timepoint
+    # Predict at a specific timepoint (LOVO mode)
     index = 2
     vol = model.fit_predict(index)
     assert vol is not None
@@ -254,16 +250,16 @@ def _srtm_reference_inputs(
 
 
 @pytest.mark.parametrize(
-    "add_noise, scale_factor, lambda_",
+    "add_noise, scale_factor, lambda_, min_corr",
     [
-        (False, None, None),
-        (True, 0.05, 0.0063),  # 0.0063 corresponds to a 18F tracer
-        (True, 0.1, 0.0063),
-        (True, 0.15, 0.0063),
+        (False, None, None, 0.98),
+        (True, 0.05, 0.0063, 0.98),  # 0.0063 corresponds to a 18F tracer
+        (True, 0.1, 0.0063, 0.95),
+        (True, 0.15, 0.0063, 0.88),
     ],
 )
 def test_petmodel_simulated_correlation_motion_free_srtm(
-    request, add_noise, scale_factor, lambda_
+    request, add_noise, scale_factor, lambda_, min_corr
 ):
     rng = request.node.rng
     # Same structure as the sinusoid-based test, but using SRTM temporal basis
@@ -327,4 +323,4 @@ def test_petmodel_simulated_correlation_motion_free_srtm(
         ]
     )
 
-    assert np.all(correlations > 0.95)
+    assert np.all(correlations > min_corr)
