@@ -159,7 +159,18 @@ def test_min_timepoints_error(setup_random_pet_data):
         BSplinePETModel(pet_obj, min_timepoints=len(pet_obj.midframe))
 
 
-def test_petmodel_simulated_correlation_motion_free(request, outdir):
+@pytest.mark.parametrize(
+    "n_ctrl, min_corr",
+    [
+        (2, 0.80),
+        (3, 0.90),
+        (4, 0.90),
+        (5, 0.90),
+        (6, 0.90),
+        (7, 0.90),
+    ],
+)
+def test_petmodel_simulated_correlation_motion_free(request, outdir, n_ctrl, min_corr):
     rng = request.node.rng
 
     shape = (2, 2, 2)
@@ -185,7 +196,7 @@ def test_petmodel_simulated_correlation_motion_free(request, outdir):
         total_duration=total_duration,
     )
 
-    model = BSplinePETModel(dataset=pet_obj, n_ctrl=5)
+    model = BSplinePETModel(dataset=pet_obj, n_ctrl=n_ctrl)
 
     results = [model.fit_predict(t_index) for t_index in range(n_timepoints)]
     assert all(result is not None for result in results), (
@@ -206,7 +217,7 @@ def test_petmodel_simulated_correlation_motion_free(request, outdir):
 
     if outdir is not None:
         _plot_pet_timeseries(
-            outdir / "pet_simulated_correlation_motion_free.svg",
+            outdir / f"pet_simulated_correlation_motion_free_nctrl{n_ctrl}.svg",
             dataobj,
             predicted,
             correlations,
@@ -214,7 +225,7 @@ def test_petmodel_simulated_correlation_motion_free(request, outdir):
             title_suffix="",
         )
 
-    assert correlations.mean() > 0.90
+    assert correlations.mean() > min_corr
 
 
 def _srtm_reference_inputs(
@@ -250,8 +261,16 @@ def _srtm_reference_inputs(
         (True, 0.15, 0.0063, 0.88),
     ],
 )
+@pytest.mark.parametrize(
+    "n_ctrl, corr_offset",
+    [
+        (3, 0.0),
+        (4, 0.05),
+        (5, 0.10),
+    ],
+)
 def test_petmodel_simulated_correlation_motion_free_srtm(
-    request, outdir, add_noise, scale_factor, lambda_, min_corr
+    request, outdir, add_noise, scale_factor, lambda_, min_corr, n_ctrl, corr_offset
 ):
     rng = request.node.rng
     # Same structure as the sinusoid-based test, but using SRTM temporal basis
@@ -296,7 +315,7 @@ def test_petmodel_simulated_correlation_motion_free_srtm(
     )
 
     # Fit/predict with spline PET model
-    model = BSplinePETModel(dataset=pet_obj, n_ctrl=3)
+    model = BSplinePETModel(dataset=pet_obj, n_ctrl=n_ctrl)
 
     results = [model.fit_predict(t_index) for t_index in range(n_timepoints)]
     assert all(result is not None for result in results), (
@@ -317,7 +336,7 @@ def test_petmodel_simulated_correlation_motion_free_srtm(
 
     if outdir is not None:
         _plot_pet_timeseries(
-            outdir / f"pet_srtm_noise{add_noise}_sf{scale_factor}.svg",
+            outdir / f"pet_srtm_noise{add_noise}_sf{scale_factor}_nctrl{n_ctrl}.svg",
             dataobj,
             predicted,
             correlations,
@@ -325,7 +344,7 @@ def test_petmodel_simulated_correlation_motion_free_srtm(
             title_suffix=f" noise={add_noise} sf={scale_factor}",
         )
 
-    assert np.all(correlations > min_corr)
+    assert np.all(correlations > min_corr - corr_offset)
 
 
 def _plot_pet_timeseries(
