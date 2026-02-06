@@ -22,11 +22,13 @@
 #
 """Unit tests exercising dMRI models."""
 
+import re
 import warnings
+from contextlib import nullcontext
 
 import numpy as np
 import pytest
-from dipy.core.gradients import gradient_table_from_bvals_bvecs
+from dipy.core.gradients import check_multi_b, gradient_table_from_bvals_bvecs
 from dipy.reconst import dki, dti
 from dipy.sims.voxel import single_tensor
 
@@ -213,16 +215,22 @@ def multi_shell_test_data(request):
     hsph_dirs = params["hsph_dirs"]
     snr = params["snr"]
     vol_shape = params["vol_shape"]
+    add_bzero = params.get("add_bzero", False)
 
     n_voxels = np.prod(vol_shape)
 
     gtab = []
     for bval, dirs in zip(bval_shell, hsph_dirs):
         gtab.append(_sim.create_single_shell_gradient_table(dirs, bval))
-    # Combine the bvals and bvecs to create the final gradient table; keep a
-    # single b0 value
-    bvals = np.concatenate([[0], np.concatenate([g[~g.b0s_mask].bvals for g in gtab])])
-    bvecs = np.vstack([np.zeros((1, 3)), np.vstack([g[~g.b0s_mask].bvecs for g in gtab])])
+
+    # Combine the bvals and bvecs to create the final gradient table
+    # Conditionally include b0
+    if add_bzero:
+        bvals = np.concatenate([[0], np.concatenate([g[~g.b0s_mask].bvals for g in gtab])])
+        bvecs = np.vstack([np.zeros((1, 3)), np.vstack([g[~g.b0s_mask].bvecs for g in gtab])])
+    else:
+        bvals = np.concatenate([g[~g.b0s_mask].bvals for g in gtab])
+        bvecs = np.vstack([g[~g.b0s_mask].bvecs for g in gtab])
 
     gtab = gradient_table_from_bvals_bvecs(bvals, bvecs)
 
@@ -355,6 +363,75 @@ def test_compute_S0(request, use_none_bzero, ignore_bzero, default_percentile):
         expected_S0 = bzero[data_mask]
 
     assert np.allclose(obtained_S0, expected_S0)
+
+
+@pytest.mark.parametrize(
+    "data_shape, n_bvals, bzero_provided, bzero_value",
+    [
+        # 4D data without bzero
+        ((10, 10, 10, 30), 30, False, None),
+        # 4D data with bzero
+        ((10, 10, 10, 30), 30, True, 1.5),
+        # 2D data without bzero
+        ((10, 5), 5, False, None),
+        # 2D data with bzero
+        ((10, 5), 5, True, 2.0),
+        # 3D data with bzero
+        ((5, 5, 10), 10, True, 0.5),
+        # Single voxel, multiple volumes
+        ((1, 20), 20, True, 3.0),
+    ],
+)
+def test_append_bzero(request, data_shape, n_bvals, bzero_provided, bzero_value):
+    rng = request.node.rng
+    # Create mock data
+    dataobj = rng.random(data_shape)
+
+    # Create mock gradient table values - mix of b=0 (1/5 of values) and b=1000
+    n_bzeros = max(1, n_bvals // 5)
+    bvals = np.concatenate([np.zeros(n_bzeros), np.ones(n_bvals - n_bzeros) * 1000])
+    bvecs = rng.normal(size=(n_bvals, 3))
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+
+    # Create mock gradient table object
+    class MockGradientTable:
+        def __init__(self, _bvals, _bvecs):
+            self.bvals = _bvals
+            self.bvecs = _bvecs
+
+    gtab = MockGradientTable(bvals, bvecs)
+
+    # Create bzero volume if needed
+    if bzero_provided:
+        bzero_shape = data_shape[:-1]
+        bzero = np.ones(bzero_shape) * bzero_value
+    else:
+        bzero = None
+
+    data_out, gtab_out = model.dmri._append_bzero(dataobj, gtab, bzero=bzero)
+
+    if bzero_provided:
+        expected_shape = data_shape[:-1] + (data_shape[-1] + 1,)
+        assert data_out.shape == expected_shape
+
+        assert np.allclose(data_out[..., :-1], dataobj)
+
+        assert np.allclose(data_out[..., -1], bzero_value)
+
+        assert len(gtab_out.bvals) == n_bvals + 1
+        assert len(gtab_out.bvecs) == n_bvals + 1
+
+        assert gtab_out.bvals[-1] == 0
+        assert np.allclose(gtab_out.bvecs[-1], np.zeros(3))
+
+        assert np.allclose(gtab_out.bvals[:-1], bvals)
+        assert np.allclose(gtab_out.bvecs[:-1], bvecs)
+    else:
+        assert np.allclose(data_out, dataobj)
+        assert data_out.shape == data_shape
+
+        assert np.allclose(gtab_out.bvals, bvals)
+        assert np.allclose(gtab_out.bvecs, bvecs)
 
 
 def test_base_model_exceptions():
@@ -601,6 +678,52 @@ def test_dti_model_predict(single_shell_test_data, index, ignore_bzero, use_mask
         assert np.allclose(predicted_nf, predicted_dp[..., 0])
 
 
+@pytest.mark.parametrize(
+    "gradient_cases",
+    [
+        pytest.param(
+            None, marks=pytest.mark.random_gtab_data(10, (1000, 2000), 0), id="2shells-0b0"
+        ),
+        pytest.param(
+            None, marks=pytest.mark.random_gtab_data(10, (1000, 2000), 1), id="2shells-1b0"
+        ),
+        pytest.param(
+            None, marks=pytest.mark.random_gtab_data(10, (1000, 2000, 3000), 0), id="3shells-0b0"
+        ),
+        pytest.param(
+            None, marks=pytest.mark.random_gtab_data(10, (1000, 2000, 3000), 1), id="3shells-1b0"
+        ),
+    ],
+)
+@pytest.mark.random_dwi_data(50, (14, 16, 8), True)
+def test_dki_model_shell_exception(gradient_cases, setup_random_dwi_data):
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
+
+    dataset = DWI(
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        gradients=gradients,
+    )
+
+    bvals = dataset.gradients[:, -1]
+    bvecs = dataset.gradients[:, :-1]
+    if dataset.bzero is not None:
+        bvals = np.concatenate([np.asarray([0]), bvals])
+        bvecs = np.concatenate([np.zeros([1, 3]), bvecs])
+    gtab = gradient_table_from_bvals_bvecs(bvals, bvecs)
+    enough_b = check_multi_b(gtab, 3, non_zero=False)
+
+    context = (
+        pytest.raises(ValueError, match=re.escape(model.dmri.DWI_DKI_SHELL_ERROR_MSG))
+        if not enough_b
+        else nullcontext()
+    )
+
+    with context:
+        model.DKIModel(dataset)
+
+
 @pytest.mark.random_gtab_data(10, (1000, 2000, 3000), 1)
 @pytest.mark.random_dwi_data(50, (14, 16, 8), True)
 @pytest.mark.parametrize("index", (None, 4))
@@ -627,23 +750,33 @@ def test_dki_prediction_shape(setup_random_dwi_data, index):
     "multi_shell_test_data",
     [
         {
+            "bval_shell": (1000, 2000),
+            "S0": 1,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": (3, 4),
+            "snr": None,
+            "vol_shape": (1, 1, 1),
+            "add_bzero": True,
+        },
+        {
             "bval_shell": (1000, 2000, 3000),
             "S0": 1,
             "evals": (0.0015, 0.0003, 0.0003),
             "hsph_dirs": (3, 4, 5),
             "snr": None,
             "vol_shape": (1, 1, 1),
+            "add_bzero": False,
         },
     ],
     indirect=True,
 )
-@pytest.mark.parametrize("index", (None,))
+@pytest.mark.parametrize("index", (None, 4, 9))
 @pytest.mark.parametrize("ignore_bzero", (False, True))
 @pytest.mark.parametrize("use_mask", (False, True))
 def test_dki_model_fit(multi_shell_test_data, index, ignore_bzero, use_mask):
     """Ensure that we get the same result obtained through the DKI model
     implemented in DIPY."""
-    dataset, data_mask, S0, gtab = setup_multi_shell_fit_predict_data(
+    dataset, data_mask, _, gtab = setup_multi_shell_fit_predict_data(
         multi_shell_test_data, ignore_bzero, use_mask
     )
 
@@ -655,13 +788,36 @@ def test_dki_model_fit(multi_shell_test_data, index, ignore_bzero, use_mask):
     dkimodel_nf._fit(index)
 
     # Fit using the DIPY DKI model directly
+    idxmask = np.ones(dataset.dataobj.shape[-1], dtype=bool)
+    if index is not None:
+        idxmask[index] = False
+
     data = dataset.dataobj
 
+    b0_bval = np.array([])
+    b0_bvec = np.empty((0, 3))
+
+    # Check for sufficient b-shells and append b0 data if necessary
+    if not check_multi_b(gtab, 3, non_zero=True):
+        assert dataset.bzero is not None
+        b0_bval = np.array([0])
+        b0_bvec = np.zeros((1, 3))
+        data = np.concatenate([dataset.dataobj, dataset.bzero[..., np.newaxis]], axis=-1)
+
+    # Regenerate gtab with the b0 gradient (if added) at the end
+    _bvals = np.concatenate(
+        [np.concatenate([g.bvals for g in gtab[~gtab.b0s_mask][idxmask]]), b0_bval]
+    )
+    _bvecs = np.vstack([np.vstack([g.bvecs for g in gtab[~gtab.b0s_mask][idxmask]]), b0_bvec])
+    gtab_loo = gradient_table_from_bvals_bvecs(_bvals, _bvecs)
+
+    # Recompute the index mask in case the data grew by one unit across the last
+    # dimension
     idxmask = np.ones(data.shape[-1], dtype=bool)
     if index is not None:
         idxmask[index] = False
 
-    dkimodel_dp = dki.DiffusionKurtosisModel(gtab[~gtab.b0s_mask][idxmask])
+    dkimodel_dp = dki.DiffusionKurtosisModel(gtab_loo)
     dkifit_dp = dkimodel_dp.fit(data=data[..., idxmask], mask=data_mask)
 
     assert _compare_instance_attributes(
@@ -673,17 +829,27 @@ def test_dki_model_fit(multi_shell_test_data, index, ignore_bzero, use_mask):
     "multi_shell_test_data",
     [
         {
+            "bval_shell": (1000, 2000),
+            "S0": 1,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": (3, 4),
+            "snr": None,
+            "vol_shape": (1, 1, 1),
+            "add_bzero": True,
+        },
+        {
             "bval_shell": (1000, 2000, 3000),
             "S0": 1,
             "evals": (0.0015, 0.0003, 0.0003),
             "hsph_dirs": (3, 4, 5),
             "snr": None,
             "vol_shape": (1, 1, 1),
+            "add_bzero": False,
         },
     ],
     indirect=True,
 )
-@pytest.mark.parametrize("index", (None,))
+@pytest.mark.parametrize("index", (None, 4, 9))
 @pytest.mark.parametrize("ignore_bzero", (False, True))
 @pytest.mark.parametrize("use_mask", (False, True))
 def test_dki_model_predict(multi_shell_test_data, index, ignore_bzero, use_mask):
@@ -701,17 +867,40 @@ def test_dki_model_predict(multi_shell_test_data, index, ignore_bzero, use_mask)
     predicted_nf = dkimodel_nf.fit_predict(index)
 
     # Fit & predict using the DIPY DKI model directly
+    idxmask = np.ones(dataset.dataobj.shape[-1], dtype=bool)
+    if index is not None:
+        idxmask[index] = False
+
     data = dataset.dataobj
 
+    b0_bval = np.array([])
+    b0_bvec = np.empty((0, 3))
+
+    # Check for sufficient b-shells and append b0 data if necessary
+    if not check_multi_b(gtab, 3, non_zero=True):
+        assert dataset.bzero is not None
+        b0_bval = np.array([0])
+        b0_bvec = np.zeros((1, 3))
+        data = np.concatenate([dataset.dataobj, dataset.bzero[..., np.newaxis]], axis=-1)
+
+    # Regenerate gtab with the b0 gradient (if added) at the end
+    _bvals = np.concatenate(
+        [np.concatenate([g.bvals for g in gtab[~gtab.b0s_mask][idxmask]]), b0_bval]
+    )
+    _bvecs = np.vstack([np.vstack([g.bvecs for g in gtab[~gtab.b0s_mask][idxmask]]), b0_bvec])
+    gtab_loo = gradient_table_from_bvals_bvecs(_bvals, _bvecs)
+
+    # Recompute the index mask in case the data grew by one unit across the last
+    # dimension
     idxmask = np.ones(data.shape[-1], dtype=bool)
     if index is not None:
         idxmask[index] = False
 
-    dkimodel_dp = dki.DiffusionKurtosisModel(gtab[~gtab.b0s_mask][idxmask])
+    dkimodel_dp = dki.DiffusionKurtosisModel(gtab_loo)
     dkifit_dp = dkimodel_dp.fit(data=data[..., idxmask], mask=data_mask)
 
     if index is not None:
-        predicted_dp = dkifit_dp.predict(gtab[index], S0=S0)
+        predicted_dp = dkifit_dp.predict(gtab[~gtab.b0s_mask][index], S0=S0)
 
         # Mask the DIPY prediction
         # ToDo

@@ -25,7 +25,7 @@ from importlib import import_module
 from typing import Any, Union
 
 import numpy as np
-from dipy.core.gradients import gradient_table_from_bvals_bvecs
+from dipy.core.gradients import check_multi_b, gradient_table_from_bvals_bvecs
 from joblib import Parallel, delayed
 
 from nifreeze.data.dmri import DWI
@@ -41,6 +41,9 @@ DWI_GTAB_ERROR_MSG = "Dataset MUST have a gradient table."
 """dMRI gradient table error message."""
 DWI_SIZE_ERROR_MSG = "DWI dataset is too small ({directions} directions)."
 """dMRI dataset size error message."""
+DWI_DKI_SHELL_ERROR_MSG = """\
+DKI requires at least 3 b-values (which can include b=0)."""
+"""dMRI dataset DKI model insufficient shells error message."""
 
 
 def _exec_fit(model, data, chunk=None, **kwargs):
@@ -140,6 +143,49 @@ def _compute_S0(
     return S0
 
 
+def _append_bzero(dataobj, gtab, bzero=None):
+    """Append a b-zero volume to diffusion data and update the gradient table.
+
+    If provided, appends a b-zero (non-diffusion-weighted) volume to the
+    diffusion data and updates the gradient table accordingly by adding
+    a b-value of 0 and a corresponding zero vector.
+
+    Parameters
+    ----------
+    dataobj : :obj:`~numpy.ndarray`
+        Diffusion-weighted imaging data.
+    gtab : :obj:`~dipy.core.gradients.GradientTable`
+        Gradient table object containing b-values and b-vectors corresponding
+        to the input data.
+    bzero : :obj:`~numpy.ndarray`, optional
+        B-zero volume with shape matching ``dataobj[..., 0]``. If :obj:`None`,
+        no volume is appended and the original data and gradient table are
+        returned unchanged.
+
+    Returns
+    -------
+    data : :obj:`~numpy.ndarray`
+        Diffusion data with the b-zero volume appended (if ``bzero`` was not
+        :obj:`None`).
+    gtab : :obj:`~dipy.core.gradients.GradientTable`
+        Updated gradient table with an additional b-value of 0 and zero vector
+        if  ``bzero`` was not :obj:`None`, otherwise a new gradient table object
+        with the same values.
+    """
+
+    data = dataobj
+    bvals = gtab.bvals
+    bvecs = gtab.bvecs
+    if bzero is not None:
+        data = np.concatenate([dataobj, bzero[..., np.newaxis]], axis=-1)
+        bvals = np.concatenate([bvals, np.asarray([0])])
+        bvecs = np.concatenate([bvecs, np.zeros([1, 3])])
+
+    gtab = gradient_table_from_bvals_bvecs(bvals, bvecs)
+
+    return data, gtab
+
+
 class BaseDWIModel(BaseModel):
     """Interface and default methods for DWI models."""
 
@@ -171,6 +217,19 @@ class BaseDWIModel(BaseModel):
 
         if len(dataset) < DTI_MIN_ORIENTATIONS:
             raise ValueError(DWI_SIZE_ERROR_MSG.format(directions=dataset.gradients.shape[0]))
+
+        model_str = getattr(self, "_model_class", "")
+        if "DiffusionKurtosisModel" in model_str:
+            bvals = dataset.gradients[:, -1]
+            bvecs = dataset.gradients[:, :-1]
+            gtab = gradient_table_from_bvals_bvecs(bvals, bvecs)
+            bzero = dataset.bzero
+            if bzero is not None:
+                bzero = bzero * dataset.brainmask if dataset.brainmask is not None else bzero
+            _, gtab = _append_bzero(dataset.dataobj, gtab, bzero=bzero)
+            enough_b = check_multi_b(gtab, 3, non_zero=False)
+            if not enough_b:
+                raise ValueError(DWI_DKI_SHELL_ERROR_MSG)
 
         if max_b is not None and max_b > DEFAULT_LOWB_THRESHOLD:
             self._max_b = max_b
@@ -216,6 +275,19 @@ class BaseDWIModel(BaseModel):
         model_str = getattr(self, "_model_class", "")
         if "dipy" in model_str or "GeneralizedQSamplingModel" in model_str:
             gtab = gradient_table_from_bvals_bvecs(gtab[:, -1], gtab[:, :-1])
+
+        # Append the b0 (if existing) to the gradients and the data for the
+        # kurtosis model.
+        # Appending instead of prepending avoids index manipulation.
+        if "DiffusionKurtosisModel" in model_str:
+            bzero = self._dataset.bzero
+            if bzero is not None:
+                bzero = (
+                    bzero[brainmask, ...]
+                    if brainmask is not None
+                    else bzero.reshape(data.shape[0])
+                )
+            data, gtab = _append_bzero(data, gtab, bzero=bzero)
 
         if model_str:
             module_name, class_name = model_str.rsplit(".", 1)
