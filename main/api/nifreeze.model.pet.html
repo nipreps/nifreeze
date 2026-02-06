@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.registration package" href="nifreeze.registration.html"><link rel="prev" title="nifreeze.model.gqi module" href="nifreeze.model.gqi.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.pet module - nifreeze 26.0.0.dev5 documentation</title>
+        <title>nifreeze.model.pet module - nifreeze 26.0.0.dev36 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev5 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev36 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev5</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev36</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev5</span>
+  <span class="sidebar-brand-text">26.0.0.dev36</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -319,16 +319,22 @@
 <p>Models for nuclear imaging.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="nifreeze.model.pet.BSplinePETModel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.pet.</span></span><span class="sig-name descname"><span class="pre">BSplinePETModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="nifreeze.data.pet.base.html#nifreeze.data.pet.base.PET" title="nifreeze.data.pet.base.PET"><span class="pre">nifreeze.data.pet.base.PET</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_ctrl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/pet.html#BSplinePETModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.pet.BSplinePETModel" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.pet.</span></span><span class="sig-name descname"><span class="pre">BSplinePETModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="nifreeze.data.pet.base.html#nifreeze.data.pet.base.PET" title="nifreeze.data.pet.base.PET"><span class="pre">nifreeze.data.pet.base.PET</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_ctrl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/pet.html#BSplinePETModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.pet.BSplinePETModel" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#nifreeze.model.pet.BasePETModel" title="nifreeze.model.pet.BasePETModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BasePETModel</span></code></a></p>
 <p>A PET imaging realignment model based on B-Spline approximation.</p>
 <p>Create the B-Spline interpolating matrix.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>n_ctrl</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Number of B-Spline control points. If <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, then one control
-point every six timepoints will be used. The less control points,
-the smoother is the model.</p></li>
+<li><p><strong>n_ctrl</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Number of internal B-Spline control points that determine the
+flexibility of the temporal fit. Given a hold-out index,
+all frames except the held-out one are used in a least-squares fit
+against the B-spline basis.
+<code class="docutils literal notranslate"><span class="pre">n_ctrl</span></code> sets the number of degrees of freedom of that basis.
+Fewer control points produce a smoother approximation; more control
+points allow the curve to track finer temporal detail.
+Boundary knots (<code class="docutils literal notranslate"><span class="pre">order</span> <span class="pre">+</span> <span class="pre">1</span></code> at each end) are added
+automatically to ensure proper edge behavior.</p></li>
 <li><p><strong>order</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Order of the B-Spline approximation.</p></li>
 </ul>
 </dd>
@@ -345,21 +351,15 @@ the prediction for the start time.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nifreeze.model.pet.BasePETModel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.pet.</span></span><span class="sig-name descname"><span class="pre">BasePETModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="nifreeze.data.pet.base.html#nifreeze.data.pet.base.PET" title="nifreeze.data.pet.base.PET"><span class="pre">nifreeze.data.pet.base.PET</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smooth_fwhm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_pct</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20.0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/pet.html#BasePETModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.pet.BasePETModel" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.pet.</span></span><span class="sig-name descname"><span class="pre">BasePETModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="nifreeze.data.pet.base.html#nifreeze.data.pet.base.PET" title="nifreeze.data.pet.base.PET"><span class="pre">nifreeze.data.pet.base.PET</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_timepoints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/pet.html#BasePETModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.pet.BasePETModel" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="nifreeze.model.base.html#nifreeze.model.base.BaseModel" title="nifreeze.model.base.BaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></a></p>
 <p>Interface and default methods for PET models.</p>
 <p>Initialization.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>start_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – If provided, the model will be fitted using only timepoints starting
-from this index (inclusive). Predictions for timepoints earlier than
-the specified start will reuse the predicted volume for the start
-timepoint. This is useful, for example, to discard a number of
-frames at the beginning of the sequence, which due to their little
-SNR may impact registration negatively.</p></li>
-<li><p><strong>smooth_fwhm</strong> (obj:<cite>float</cite>, optional) – FWHM in mm over which to smooth the signal.</p></li>
-<li><p><strong>thresh_pct</strong> (obj:<cite>float</cite>, optional) – Thresholding percentile for the signal.</p></li>
+<li><p><strong>dataset</strong> (<a class="reference internal" href="nifreeze.data.pet.base.html#nifreeze.data.pet.base.PET" title="nifreeze.data.pet.base.PET"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PET</span></code></a>) – Reference to a PET object.</p></li>
+<li><p><strong>min_timepoints</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Minimum number of timepoints required to fit the model.</p></li>
 </ul>
 </dd>
 </dl>
@@ -377,9 +377,33 @@ SNR may impact registration negatively.</p></li>
 </dd></dl>
 
 <dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.model.pet.DEFAULT_BSPLINE_N_CTRL">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.model.pet.</span></span><span class="sig-name descname"><span class="pre">DEFAULT_BSPLINE_N_CTRL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></em><a class="headerlink" href="#nifreeze.model.pet.DEFAULT_BSPLINE_N_CTRL" title="Link to this definition">¶</a></dt>
+<dd><p>Default number of B-Spline control points.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.model.pet.DEFAULT_BSPLINE_ORDER">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.model.pet.</span></span><span class="sig-name descname"><span class="pre">DEFAULT_BSPLINE_ORDER</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></em><a class="headerlink" href="#nifreeze.model.pet.DEFAULT_BSPLINE_ORDER" title="Link to this definition">¶</a></dt>
+<dd><p>Default B-Spline order.</p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="nifreeze.model.pet.DEFAULT_TIMEPOINT_TOL">
 <span class="sig-prename descclassname"><span class="pre">nifreeze.model.pet.</span></span><span class="sig-name descname"><span class="pre">DEFAULT_TIMEPOINT_TOL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.01</span></em><a class="headerlink" href="#nifreeze.model.pet.DEFAULT_TIMEPOINT_TOL" title="Link to this definition">¶</a></dt>
 <dd><p>Time frame tolerance in seconds.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.model.pet.MIN_N_TIMEPOINTS">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.model.pet.</span></span><span class="sig-name descname"><span class="pre">MIN_N_TIMEPOINTS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4</span></em><a class="headerlink" href="#nifreeze.model.pet.MIN_N_TIMEPOINTS" title="Link to this definition">¶</a></dt>
+<dd><p>Minimum number of timepoints for PET model fitting.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.model.pet.MIN_TIMEPOINTS_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.model.pet.</span></span><span class="sig-name descname"><span class="pre">MIN_TIMEPOINTS_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;'min_timepoints'</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">a</span> <span class="pre">valid</span> <span class="pre">dataset</span> <span class="pre">size.&quot;</span></em><a class="headerlink" href="#nifreeze.model.pet.MIN_TIMEPOINTS_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>PET model fitting minimum fitting timepoint allowed values error.</p>
 </dd></dl>
 
 <dl class="py data">
@@ -392,12 +416,6 @@ SNR may impact registration negatively.</p></li>
 <dt class="sig sig-object py" id="nifreeze.model.pet.PET_OBJECT_ERROR_MSG">
 <span class="sig-prename descclassname"><span class="pre">nifreeze.model.pet.</span></span><span class="sig-name descname"><span class="pre">PET_OBJECT_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Dataset</span> <span class="pre">MUST</span> <span class="pre">be</span> <span class="pre">a</span> <span class="pre">PET</span> <span class="pre">object.'</span></em><a class="headerlink" href="#nifreeze.model.pet.PET_OBJECT_ERROR_MSG" title="Link to this definition">¶</a></dt>
 <dd><p>PET object error message.</p>
-</dd></dl>
-
-<dl class="py data">
-<dt class="sig sig-object py" id="nifreeze.model.pet.START_INDEX_RANGE_ERROR_MSG">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.model.pet.</span></span><span class="sig-name descname"><span class="pre">START_INDEX_RANGE_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;'start_index'</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">within</span> <span class="pre">the</span> <span class="pre">range</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">dataset</span> <span class="pre">'midframe'</span> <span class="pre">length.&quot;</span></em><a class="headerlink" href="#nifreeze.model.pet.START_INDEX_RANGE_ERROR_MSG" title="Link to this definition">¶</a></dt>
-<dd><p>PET model fitting start index allowed values error.</p>
 </dd></dl>
 
 </section>
@@ -467,10 +485,13 @@ SNR may impact registration negatively.</p></li>
 <li><a class="reference internal" href="#nifreeze.model.pet.BasePETModel.is_fitted"><code class="docutils literal notranslate"><span class="pre">BasePETModel.is_fitted</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#nifreeze.model.pet.DEFAULT_BSPLINE_N_CTRL"><code class="docutils literal notranslate"><span class="pre">DEFAULT_BSPLINE_N_CTRL</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.model.pet.DEFAULT_BSPLINE_ORDER"><code class="docutils literal notranslate"><span class="pre">DEFAULT_BSPLINE_ORDER</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.model.pet.DEFAULT_TIMEPOINT_TOL"><code class="docutils literal notranslate"><span class="pre">DEFAULT_TIMEPOINT_TOL</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.model.pet.MIN_N_TIMEPOINTS"><code class="docutils literal notranslate"><span class="pre">MIN_N_TIMEPOINTS</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.model.pet.MIN_TIMEPOINTS_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">MIN_TIMEPOINTS_ERROR_MSG</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.model.pet.PET_MIDFRAME_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">PET_MIDFRAME_ERROR_MSG</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.model.pet.PET_OBJECT_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">PET_OBJECT_ERROR_MSG</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.pet.START_INDEX_RANGE_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">START_INDEX_RANGE_ERROR_MSG</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -482,7 +503,7 @@ SNR may impact registration negatively.</p></li>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=bec90b6d"></script>
+</div><script src="../_static/documentation_options.js?v=a6a36fbe"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

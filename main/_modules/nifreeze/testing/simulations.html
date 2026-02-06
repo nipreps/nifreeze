@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.testing.simulations - nifreeze 26.0.0.dev5 documentation</title>
+        <title>nifreeze.testing.simulations - nifreeze 26.0.0.dev36 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev5 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev36 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev5</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev36</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev5</span>
+  <span class="sidebar-brand-text">26.0.0.dev36</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -928,6 +928,187 @@
     <span class="n">serialize_dwi</span><span class="p">(</span><span class="n">dwi_data</span><span class="p">,</span> <span class="n">dwi_data_fname</span><span class="p">,</span> <span class="n">affine</span><span class="o">=</span><span class="n">affine</span><span class="p">)</span>
     <span class="n">serialize_gtab</span><span class="p">(</span><span class="n">gtab</span><span class="p">,</span> <span class="n">bval_data_fname</span><span class="p">,</span> <span class="n">bvec_data_fname</span><span class="p">)</span></div>
 
+
+
+<div class="viewcode-block" id="srtm">
+<a class="viewcode-back" href="../../../api/nifreeze.testing.simulations.html#nifreeze.testing.simulations.srtm">[docs]</a>
+<span class="k">def</span> <span class="nf">srtm</span><span class="p">(</span>
+    <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">t</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">cr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">cri</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">dt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">nr</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simplified Reference Tissue Model (SRTM) simulation with partial derivatives.</span>
+
+<span class="sd">    SRTM estimates brain receptor binding potentials useful in PET simulation</span>
+<span class="sd">    studies.</span>
+
+<span class="sd">    The model was proposed in :footcite:p:`Lammertsma_simplified_1996`, and this</span>
+<span class="sd">    implementation is based on :footcite:p:`Karjalainen_magia_2020`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x : :obj:`~numpy.ndarray`, shape (3,)</span>
+<span class="sd">        Model parameters: [R1, k2, BP]</span>
+<span class="sd">    t : :obj:`~numpy.ndarray`, shape (nr,)</span>
+<span class="sd">        Mid-times (kept for API parity; not used directly in the original code)</span>
+<span class="sd">    cr : :obj:`~numpy.ndarray`, shape (nr,)</span>
+<span class="sd">        Reference region TAC</span>
+<span class="sd">    cri : :obj:`~numpy.ndarray`, shape (nr,)</span>
+<span class="sd">        Integral of reference TAC over frames (must match what MATLAB &#39;cri&#39; represents)</span>
+<span class="sd">    dt : :obj:`~numpy.ndarray`, shape (nr,)</span>
+<span class="sd">        Frame durations / time steps used by the solver</span>
+<span class="sd">    nr : :obj:`int`</span>
+<span class="sd">        Number of time points (should equal len(cr))</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    CT : :obj:`~numpy.ndarray`, shape (nr,)</span>
+<span class="sd">        Simulated tissue TAC</span>
+<span class="sd">    DT : :obj:`~numpy.ndarray`, shape (nr, 3)</span>
+<span class="sd">        Partial derivatives [dCT/dR1, dCT/dk2, dCT/dBP] as columns</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This code is translation from the ``simSRTM_1_0_0.m`` MATLAB script</span>
+<span class="sd">    available on `GitHub &lt;https://github.com/tkkarjal/magia/blob/af495dfe1e54097ed202f0a99598b5d1d5d7f613/simSRTM_1_0_0.m&gt;`__</span>
+<span class="sd">    and the `Human Emotion Systems Laboratory of the Turku PET Centre GitLab</span>
+<span class="sd">    &lt;https://gitlab.utu.fi/human-emotion-systems-laboratory/magia/-/blob/f4bfdabbfea4058cfb17580994131f7dbe57dc65/simSRTM_1_0_0.m&gt;`__</span>
+
+<span class="sd">    A description of the model is also available at the `Turku PET Centre website</span>
+<span class="sd">    &lt;https://www.turkupetcentre.net/petanalysis/model_compartmental_ref.html&gt;`__</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. footbibliography::</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Ensure 1D float arrays</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="n">cr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">cr</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="n">cri</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">cri</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="n">dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>  <span class="c1"># unused, kept for signature compatibility</span>
+
+    <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;x must have length 3: [R1, k2, BP].&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">nr</span> <span class="o">!=</span> <span class="n">cr</span><span class="o">.</span><span class="n">size</span> <span class="ow">or</span> <span class="n">nr</span> <span class="o">!=</span> <span class="n">cri</span><span class="o">.</span><span class="n">size</span> <span class="ow">or</span> <span class="n">nr</span> <span class="o">!=</span> <span class="n">dt</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;nr must match lengths of cr, cri, and dt.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">nr</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;nr must be &gt;= 1.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid BP: 1+BP must be nonzero.&quot;</span><span class="p">)</span>
+
+    <span class="n">R1</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">k2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">BP</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+
+    <span class="n">CT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">cr</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">dCTdk2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">cr</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">dCTdBP</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">cr</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="n">h</span> <span class="o">=</span> <span class="n">k2</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">BP</span><span class="p">)</span>
+    <span class="n">h2</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">h</span>
+
+    <span class="c1"># i = 0 (MATLAB i=1)</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">R1</span> <span class="o">*</span> <span class="n">cr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">k2</span> <span class="o">*</span> <span class="n">cri</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">dt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">h2</span>
+    <span class="n">CT</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span> <span class="o">/</span> <span class="n">g</span>
+
+    <span class="c1"># derivative wrt k2 at i=0</span>
+    <span class="c1"># F = cri(1); G = dt(1)*h2/k2;</span>
+    <span class="c1"># dCTdk2(1) = (F*g - f*G)/(g*g);</span>
+    <span class="k">if</span> <span class="n">k2</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="c1"># Avoid divide-by-zero; the original MATLAB would blow up here too.</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;k2 must be nonzero for derivative computation (matches MATLAB behavior).&quot;</span>
+        <span class="p">)</span>
+    <span class="n">F</span> <span class="o">=</span> <span class="n">cri</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">G</span> <span class="o">=</span> <span class="n">dt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">h2</span> <span class="o">/</span> <span class="n">k2</span>
+    <span class="n">dCTdk2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">F</span> <span class="o">*</span> <span class="n">g</span> <span class="o">-</span> <span class="n">f</span> <span class="o">*</span> <span class="n">G</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">g</span> <span class="o">*</span> <span class="n">g</span><span class="p">)</span>
+
+    <span class="c1"># Running integral-like term</span>
+    <span class="n">cti_last</span> <span class="o">=</span> <span class="n">dt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">CT</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mf">2.0</span>
+
+    <span class="c1"># i = 1..nr-1 (MATLAB i=2..nr)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">nr</span><span class="p">):</span>
+        <span class="n">h3</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">dt</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">cti_last</span> <span class="o">+</span> <span class="n">h3</span> <span class="o">*</span> <span class="n">CT</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">R1</span> <span class="o">*</span> <span class="n">cr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">k2</span> <span class="o">*</span> <span class="n">cri</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">h</span> <span class="o">*</span> <span class="n">a</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">dt</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">h2</span>
+        <span class="n">h4</span> <span class="o">=</span> <span class="n">g</span> <span class="o">*</span> <span class="n">g</span>
+        <span class="n">CT</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span> <span class="o">/</span> <span class="n">g</span>
+
+        <span class="c1"># dCT/dk2</span>
+        <span class="c1"># F = cri(i) - (h/k2)*a</span>
+        <span class="c1"># G = dt(i)*h2/k2</span>
+        <span class="c1"># dCTdk2(i) = (F*g - f*G)/(g*g)</span>
+        <span class="n">F</span> <span class="o">=</span> <span class="n">cri</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="n">h</span> <span class="o">/</span> <span class="n">k2</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="n">dt</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">h2</span> <span class="o">/</span> <span class="n">k2</span>
+        <span class="n">dCTdk2</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">F</span> <span class="o">*</span> <span class="n">g</span> <span class="o">-</span> <span class="n">f</span> <span class="o">*</span> <span class="n">G</span><span class="p">)</span> <span class="o">/</span> <span class="n">h4</span>
+
+        <span class="c1"># dCT/dBP</span>
+        <span class="c1"># b = (1+BP)^2</span>
+        <span class="c1"># h5 = k2/b</span>
+        <span class="c1"># F = h5*a</span>
+        <span class="c1"># G = -h3*h5</span>
+        <span class="c1"># dCTdBP(i) = (F*g - f*G)/(g*g)</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">BP</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">h5</span> <span class="o">=</span> <span class="n">k2</span> <span class="o">/</span> <span class="n">b</span>
+        <span class="n">F</span> <span class="o">=</span> <span class="n">h5</span> <span class="o">*</span> <span class="n">a</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="o">-</span><span class="n">h3</span> <span class="o">*</span> <span class="n">h5</span>
+        <span class="n">dCTdBP</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">F</span> <span class="o">*</span> <span class="n">g</span> <span class="o">-</span> <span class="n">f</span> <span class="o">*</span> <span class="n">G</span><span class="p">)</span> <span class="o">/</span> <span class="n">h4</span>
+
+        <span class="c1"># update cti_last</span>
+        <span class="n">cti_last</span> <span class="o">=</span> <span class="n">cti_last</span> <span class="o">+</span> <span class="n">h3</span> <span class="o">*</span> <span class="p">(</span><span class="n">CT</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">CT</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span>
+
+    <span class="n">dCTdR1</span> <span class="o">=</span> <span class="n">cr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># DT as (nr, 3) like MATLAB&#39;s [dCTdR1&#39; dCTdk2&#39; dCTdBP&#39;]</span>
+    <span class="n">DT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">((</span><span class="n">dCTdR1</span><span class="p">,</span> <span class="n">dCTdk2</span><span class="p">,</span> <span class="n">dCTdBP</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">CT</span><span class="p">,</span> <span class="n">DT</span></div>
+
+
+
+<div class="viewcode-block" id="compute_pet_noise_sd">
+<a class="viewcode-back" href="../../../api/nifreeze.testing.simulations.html#nifreeze.testing.simulations.compute_pet_noise_sd">[docs]</a>
+<span class="k">def</span> <span class="nf">compute_pet_noise_sd</span><span class="p">(</span>
+    <span class="n">scale_factor</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">c</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">delta</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">lambda_</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute PET signal noise standard deviation (SD).</span>
+
+<span class="sd">    Computes standard deviation values to be added to normally distributed noise</span>
+<span class="sd">    in PET simulations following equation 7 in :footcite:p:`Ichise_linearized_2003`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    scale_factor : :obj:`float`</span>
+<span class="sd">        Scale factor controlling the level of noise.</span>
+<span class="sd">    c : :obj:`~numpy.ndarray`</span>
+<span class="sd">        Noise-free simulated radioactivity at each time point.</span>
+<span class="sd">    delta : :obj:`~numpy.ndarray`</span>
+<span class="sd">        Frame duration in seconds.</span>
+<span class="sd">    lambda_ : :obj:`float`</span>
+<span class="sd">        Radioisotope decay constant.</span>
+<span class="sd">    t : obj:`~numpy.ndarray`</span>
+<span class="sd">         Time at which the noise is to be generated.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    obj:`~numpy.ndarray`</span>
+<span class="sd">        The computed SD value.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. footbibliography::</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">numerator</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">lambda_</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">*</span> <span class="n">c</span>
+    <span class="n">ratio</span> <span class="o">=</span> <span class="n">numerator</span> <span class="o">/</span> <span class="n">delta</span>
+    <span class="k">return</span> <span class="n">scale_factor</span> <span class="o">*</span> <span class="p">(</span><span class="n">ratio</span><span class="o">**</span><span class="mf">0.5</span><span class="p">)</span></div>
+
 </pre></div>
         </article>
       </div>
@@ -960,7 +1141,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=bec90b6d"></script>
+</div><script src="../../../_static/documentation_options.js?v=a6a36fbe"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
