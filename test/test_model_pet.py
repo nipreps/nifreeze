@@ -159,7 +159,7 @@ def test_min_timepoints_error(setup_random_pet_data):
         BSplinePETModel(pet_obj, min_timepoints=len(pet_obj.midframe))
 
 
-def test_petmodel_simulated_correlation_motion_free():
+def test_petmodel_simulated_correlation_motion_free(outdir):
     shape = (1, 1, 1)
     n_timepoints = 16
 
@@ -200,27 +200,24 @@ def test_petmodel_simulated_correlation_motion_free():
         ]
     )
 
-    # original: (N, 16)
-    # predicted_masked: (N, 16)
+    if outdir is not None:
+        import matplotlib as mpl
 
-    # # Uncomment to plot prediction
-    # import matplotlib
+        mpl.use("Agg")
+        import matplotlib.pyplot as plt
 
-    # matplotlib.use("TkAgg")  # must be set BEFORE importing pyplot
-    # import matplotlib.pyplot as plt
-    # i = 0  # choose which timeseries/voxel to inspect
-    # t = np.arange(n_timepoints)
+        i = 0
+        tp = np.arange(n_timepoints)
 
-    # fig, ax = plt.subplots()
-    # ax.plot(t, dataobj.reshape((-1, n_timepoints))[i], label="original")
-    # ax.plot(t, predicted.reshape((-1, n_timepoints))[i], label="predicted")
-    # ax.set_xlabel("timepoint")
-    # ax.set_ylabel("signal")
-    # ax.set_title(f"series {i}   r={correlations[i]:.3f}")
-    # ax.legend()
-
-    # plt.show()
-    # import pdb;pdb.set_trace()
+        fig, ax = plt.subplots()
+        ax.plot(tp, dataobj.reshape((-1, n_timepoints))[i], label="original")
+        ax.plot(tp, predicted.reshape((-1, n_timepoints))[i], label="predicted")
+        ax.set_xlabel("timepoint")
+        ax.set_ylabel("signal")
+        ax.set_title(f"series {i}   r={correlations[i]:.3f}")
+        ax.legend()
+        fig.savefig(outdir / "pet_simulated_correlation_motion_free.svg")
+        plt.close(fig)
 
     assert np.all(correlations > 0.95)
 
@@ -259,7 +256,7 @@ def _srtm_reference_inputs(
     ],
 )
 def test_petmodel_simulated_correlation_motion_free_srtm(
-    request, add_noise, scale_factor, lambda_, min_corr
+    request, outdir, add_noise, scale_factor, lambda_, min_corr
 ):
     rng = request.node.rng
     # Same structure as the sinusoid-based test, but using SRTM temporal basis
@@ -322,5 +319,24 @@ def test_petmodel_simulated_correlation_motion_free_srtm(
             )
         ]
     )
+
+    if outdir is not None:
+        import matplotlib as mpl
+
+        mpl.use("Agg")
+        import matplotlib.pyplot as plt
+
+        i = 0
+        tp = np.arange(n_timepoints)
+
+        fig, ax = plt.subplots()
+        ax.plot(tp, dataobj.reshape((-1, n_timepoints))[i], label="original")
+        ax.plot(tp, predicted.reshape((-1, n_timepoints))[i], label="predicted")
+        ax.set_xlabel("timepoint")
+        ax.set_ylabel("signal")
+        ax.set_title(f"series {i}   r={correlations[i]:.3f}")
+        ax.legend()
+        fig.savefig(outdir / f"pet_srtm_noise{add_noise}_sf{scale_factor}.svg")
+        plt.close(fig)
 
     assert np.all(correlations > min_corr)
