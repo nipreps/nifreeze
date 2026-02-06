@@ -69,11 +69,21 @@ Other tox environments: `tox -e typecheck`, `tox -e spellcheck`, `tox -e docs`
 
 ### Linting and Formatting
 ```bash
-pipx run ruff check --fix <files>   # lint and auto-fix
-pipx run ruff format <files>        # reformat
+python -m ruff check --fix <files>   # lint and auto-fix
+python -m run ruff format <files>        # reformat
 ```
 
 Ruff config: line-length 99, target Python 3.10, rules: F, E, C, W, B, I, ICN. Import convention: `nibabel` aliased as `nb`.
+
+### Type checking
+```bash
+tox -e typecheck
+```
+
+### Spellcheck
+```bash
+tox -e spellcheck
+```
 
 ### Documentation
 ```bash
