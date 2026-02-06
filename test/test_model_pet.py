@@ -176,7 +176,7 @@ def test_petmodel_simulated_correlation_motion_free():
     pet_obj = PET(
         dataobj=dataobj,
         affine=np.eye(4),
-        brainmask=None,
+        brainmask=np.ones(shape, dtype=bool),
         midframe=midframe,
         total_duration=total_duration,
     )
@@ -298,7 +298,7 @@ def test_petmodel_simulated_correlation_motion_free_srtm(
     pet_obj = PET(
         dataobj=dataobj,
         affine=np.eye(4),
-        brainmask=None,
+        brainmask=np.ones(shape, dtype=bool),
         midframe=midframe,
         total_duration=total_duration,
     )
