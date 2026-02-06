@@ -22,6 +22,7 @@ defaults:
 env:
   FORCE_COLOR: true
   TEST_DATA_HOME: /home/runner/nifreeze-tests/
+  TEST_OUPUT_DIR: /home/runner/nifreeze-tests/test-output
   DIPY_HOME: /home/runner/nifreeze-tests/dipy
   ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS: 4
   ANTSPATH: /usr/share/miniconda/bin/
@@ -134,10 +135,19 @@ jobs:
           uv tool install --with=tox-uv --with=tox-gh-actions tox
       - name: Show tox config
         run: tox c
+      - name: Prepare test output directory
+        run: mkdir -p "${TEST_OUPUT_DIR}"
       - name: Run tox
         run: |
           export PATH=$ANTSPATH:$PATH
           tox -v --exit-and-dump-after 1200
+      - name: Upload test artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output-py${{ matrix.python-version }}
+          path: ${{ env.TEST_OUPUT_DIR }}
+          if-no-files-found: warn
       - uses: codecov/codecov-action@v4
         if: ${{ always() }}
         with:
