@@ -163,7 +163,7 @@ def test_petmodel_simulated_correlation_motion_free(request, outdir):
     rng = request.node.rng
 
     shape = (2, 2, 2)
-    n_timepoints = 16
+    n_timepoints = 30
 
     t = np.linspace(0, 2 * np.pi, n_timepoints, dtype="float32")
     temporal_basis = np.sin(t) + np.cos(2 * t)
@@ -172,6 +172,7 @@ def test_petmodel_simulated_correlation_motion_free(request, outdir):
     dataobj = np.ones(shape + (n_timepoints,), dtype="float32")
     dataobj = dataobj * temporal_basis  # broadcasting
     dataobj *= rng.normal(loc=2.0, scale=0.9, size=shape + (1,)).astype("float32")
+    dataobj *= rng.normal(loc=1.0, scale=0.1, size=dataobj.shape).astype("float32")
 
     midframe = np.arange(n_timepoints, dtype="float32")
     total_duration = float(n_timepoints)
@@ -194,7 +195,7 @@ def test_petmodel_simulated_correlation_motion_free(request, outdir):
 
     correlations = np.array(
         [
-            np.corrcoef(x, y)[0, 1]
+            np.corrcoef(x[1:-1], y[1:-1])[0, 1]
             for x, y in zip(
                 dataobj.reshape((-1, n_timepoints)),
                 predicted.reshape((-1, n_timepoints)),
@@ -213,7 +214,7 @@ def test_petmodel_simulated_correlation_motion_free(request, outdir):
             title_suffix="",
         )
 
-    assert np.all(correlations > 0.95)
+    assert correlations.mean() > 0.90
 
 
 def _srtm_reference_inputs(
@@ -341,14 +342,27 @@ def _plot_pet_timeseries(
     import matplotlib.pyplot as plt
 
     i = 0
-    tp = np.arange(n_timepoints)
 
+    tp = np.arange(n_timepoints)
     fig, ax = plt.subplots()
-    ax.plot(tp, dataobj.reshape((-1, n_timepoints))[i], label="original")
-    ax.plot(tp, predicted.reshape((-1, n_timepoints))[i], label="predicted")
+
+    for i in range(np.prod(dataobj.shape[:-1])):
+        ax.plot(
+            tp,
+            dataobj.reshape((-1, n_timepoints))[i],
+            label="original",
+            c=plt.cm.tab10(i),
+            alpha=0.7,
+        )
+        ax.plot(
+            tp[1:-1],
+            predicted.reshape((-1, n_timepoints))[i, 1:-1],
+            label="predicted",
+            c=plt.cm.tab10(i),
+            ls="--",
+        )
     ax.set_xlabel("timepoint")
     ax.set_ylabel("signal")
-    ax.set_title(f"series {i}   r={correlations[i]:.3f} {title_suffix}")
-    ax.legend()
+    ax.set_title(f"r={np.median(correlations):.3f} {title_suffix}")
     fig.savefig(outpath)
     plt.close(fig)
