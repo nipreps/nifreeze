@@ -1,0 +1,16 @@
+nifreeze.cli package
+====================
+
+.. automodule:: nifreeze.cli
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   nifreeze.cli.parser
+   nifreeze.cli.run

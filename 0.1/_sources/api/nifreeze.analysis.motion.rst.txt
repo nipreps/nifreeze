@@ -1,0 +1,7 @@
+nifreeze.analysis.motion module
+===============================
+
+.. automodule:: nifreeze.analysis.motion
+   :members:
+   :undoc-members:
+   :show-inheritance:
