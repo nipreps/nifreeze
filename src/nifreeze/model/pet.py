@@ -138,12 +138,15 @@ class BSplinePETModel(BasePETModel):
         Parameters
         ----------
         n_ctrl : :obj:`int`, optional
-            Number of B-Spline control points. If :obj:`None`, then one control
-            point every six timepoints will be used. The less control points,
-            the smoother is the model.
-            Please note that this is the number of control points `within the extent`
-            of the data, and extra control points are added at either side to
-            compensate edge effects when interpolating the initial or end timepoints.
+            Number of internal B-Spline control points that determine the
+            flexibility of the temporal fit. Given a hold-out index,
+            all frames except the held-out one are used in a least-squares fit
+            against the B-spline basis.
+            ``n_ctrl`` sets the number of degrees of freedom of that basis.
+            Fewer control points produce a smoother approximation; more control
+            points allow the curve to track finer temporal detail.
+            Boundary knots (``order + 1`` at each end) are added
+            automatically to ensure proper edge behavior.
         order : :obj:`int`, optional
             Order of the B-Spline approximation.
 
