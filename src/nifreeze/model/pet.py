@@ -26,12 +26,11 @@ from abc import ABC, ABCMeta, abstractmethod
 from os import cpu_count
 from typing import Union
 
-import nibabel as nb
 import numpy as np
-from joblib import Parallel, delayed
-from nibabel.processing import smooth_image
+
+# from scipy.sparse import linalg as la
+from scipy import linalg as la
 from scipy.interpolate import BSpline
-from scipy.sparse.linalg import cg
 
 from nifreeze.data.pet import PET
 from nifreeze.model.base import BaseModel
@@ -45,9 +44,18 @@ PET_MIDFRAME_ERROR_MSG = "Dataset MUST have a 'midframe'."
 DEFAULT_TIMEPOINT_TOL = 1e-2
 """Time frame tolerance in seconds."""
 
-START_INDEX_RANGE_ERROR_MSG = """\
-'start_index' must be within the range of the dataset 'midframe' length."""
-"""PET model fitting start index allowed values error."""
+MIN_N_TIMEPOINTS = 4
+"""Minimum number of timepoints for PET model fitting."""
+
+DEFAULT_BSPLINE_N_CTRL = 3
+"""Default number of B-Spline control points."""
+
+DEFAULT_BSPLINE_ORDER = 3
+"""Default B-Spline order."""
+
+MIN_TIMEPOINTS_ERROR_MSG = """\
+'min_timepoints' must be a valid dataset size."""
+"""PET model fitting minimum fitting timepoint allowed values error."""
 
 
 def _exec_fit(model, data, chunk=None, **kwargs):
@@ -65,10 +73,6 @@ class BasePETModel(BaseModel, ABC):
     __metaclass__ = ABCMeta
 
     __slots__ = {
-        "_data_mask": "A mask for the voxels that will be fitted and predicted",
-        "_start_index": "Start index frame for fitting",
-        "_smooth_fwhm": "FWHM in mm over which to smooth",
-        "_thresh_pct": "Thresholding percentile for the signal",
         "_model_class": "Defining a model class",
         "_modelargs": "Arguments acceptable by the underlying model",
         "_models": "List with one or more (if parallel execution) model instances",
@@ -77,26 +81,18 @@ class BasePETModel(BaseModel, ABC):
     def __init__(
         self,
         dataset: PET,
-        start_index: int | None = None,
-        smooth_fwhm: float = 10.0,
-        thresh_pct: float = 20.0,
+        min_timepoints: int = MIN_N_TIMEPOINTS,
         **kwargs,
     ):
         """Initialization.
 
         Parameters
         ----------
-        start_index : :obj:`int`, optional
-            If provided, the model will be fitted using only timepoints starting
-            from this index (inclusive). Predictions for timepoints earlier than
-            the specified start will reuse the predicted volume for the start
-            timepoint. This is useful, for example, to discard a number of
-            frames at the beginning of the sequence, which due to their little
-            SNR may impact registration negatively.
-        smooth_fwhm : obj:`float`, optional
-            FWHM in mm over which to smooth the signal.
-        thresh_pct : obj:`float`, optional
-            Thresholding percentile for the signal.
+        dataset : :obj:`~nifreeze.data.pet.base.PET`
+            Reference to a PET object.
+        min_timepoints : :obj:`int`, optional
+            Minimum number of timepoints required to fit the model.
+
         """
 
         super().__init__(dataset, **kwargs)
@@ -108,42 +104,8 @@ class BasePETModel(BaseModel, ABC):
         if not hasattr(dataset, "midframe"):
             raise ValueError(PET_MIDFRAME_ERROR_MSG)
 
-        self._data_mask = (
-            dataset.brainmask
-            if dataset.brainmask is not None
-            else np.ones(dataset.dataobj.shape[:3], dtype=bool)
-        )
-
-        self._smooth_fwhm = smooth_fwhm
-        self._thresh_pct = thresh_pct
-
-        # Validate start index / time
-        if start_index is None:
-            self._start_index = 0
-        else:
-            if start_index < 0 or start_index >= len(dataset.midframe):
-                raise ValueError(START_INDEX_RANGE_ERROR_MSG)
-            self._start_index = start_index
-
-    def _preprocess_data(self) -> np.ndarray:
-        # ToDo
-        # data, _, gtab = self._dataset[idxmask]  ### This needs the PET data model to be changed
-        data = self._dataset.dataobj
-        brainmask = self._dataset.brainmask
-
-        # Preprocess the data
-        if self._smooth_fwhm > 0:
-            smoothed_img = smooth_image(
-                nb.Nifti1Image(data, self._dataset.affine), self._smooth_fwhm
-            )
-            data = smoothed_img.get_fdata()
-
-        if self._thresh_pct > 0:
-            thresh_val = np.percentile(data, self._thresh_pct)
-            data[data < thresh_val] = 0
-
-        # Convert data into V (voxels) x T (timepoints)
-        return data.reshape((-1, data.shape[-1])) if brainmask is None else data[brainmask]
+        if not 0 < min_timepoints < len(self._dataset):
+            raise ValueError(MIN_TIMEPOINTS_ERROR_MSG)
 
     @property
     def is_fitted(self) -> bool:
@@ -158,17 +120,17 @@ class BasePETModel(BaseModel, ABC):
 class BSplinePETModel(BasePETModel):
     """A PET imaging realignment model based on B-Spline approximation."""
 
-    __slots__ = (
-        "_t",
-        "_order",
-        "_n_ctrl",
-    )
+    __slots__ = {
+        "_t": "B-Spline knot time-coordinates",
+        "_order": "B-Spline order",
+        "_n_ctrl": "Number of B-Spline control points",
+    }
 
     def __init__(
         self,
         dataset: PET,
-        n_ctrl: int | None = None,
-        order: int = 3,
+        n_ctrl: int = DEFAULT_BSPLINE_N_CTRL,
+        order: int = DEFAULT_BSPLINE_ORDER,
         **kwargs,
     ):
         """Create the B-Spline interpolating matrix.
@@ -176,62 +138,46 @@ class BSplinePETModel(BasePETModel):
         Parameters
         ----------
         n_ctrl : :obj:`int`, optional
-            Number of B-Spline control points. If :obj:`None`, then one control
-            point every six timepoints will be used. The less control points,
-            the smoother is the model.
+            Number of internal B-Spline control points that determine the
+            flexibility of the temporal fit. Given a hold-out index,
+            all frames except the held-out one are used in a least-squares fit
+            against the B-spline basis.
+            ``n_ctrl`` sets the number of degrees of freedom of that basis.
+            Fewer control points produce a smoother approximation; more control
+            points allow the curve to track finer temporal detail.
+            Boundary knots (``order + 1`` at each end) are added
+            automatically to ensure proper edge behavior.
         order : :obj:`int`, optional
             Order of the B-Spline approximation.
+
         """
+
+        if order < 1:
+            raise ValueError("B-Spline order must be at least 1.")
+
+        if n_ctrl is not None and n_ctrl < 1:
+            raise ValueError("Number of B-Spline control points must be at least 1.")
 
         super().__init__(dataset, **kwargs)
 
         self._order = order
 
-        # Calculate index coordinates in the B-Spline grid
-        self._n_ctrl = n_ctrl or (len(self._dataset.midframe) // 4) + 1
+        # Number of control points for the B-Spline basis
+        self._n_ctrl = n_ctrl
 
-        # B-Spline knots
-        self._t = np.arange(-3, self._n_ctrl + 4, dtype="float32")
+        # Start and end timepoints
+        x0 = float(self._dataset.midframe[0])
+        x1 = float(self._dataset.midframe[-1])
+        inner_x = np.linspace(x0, x1, self._n_ctrl + 2, dtype="float32")[1:-1]
 
-    def _fit(self, index: int | None = None, n_jobs=None, **kwargs) -> int:
-        """Fit the model."""
-
-        n_jobs = n_jobs or min(cpu_count() or 1, 8)
-
-        if self._locked_fit is not None:
-            return n_jobs
-
-        if index is not None:
-            raise NotImplementedError("Fitting with held-out data is not supported")
-
-        data = self._preprocess_data()
-
-        timepoints_to_fit = np.asarray(self._dataset.midframe, dtype="float32")[
-            self._start_index :
-        ]
-        x = (
-            np.asarray(timepoints_to_fit, dtype="float32")
-            / self._dataset.total_duration
-            * self._n_ctrl
+        # Time-coordinates of the B-Spline knots
+        self._t = np.concatenate(
+            [
+                np.full(self._order + 1, x0, dtype="float32"),
+                inner_x,
+                np.full(self._order + 1, x1, dtype="float32"),
+            ]
         )
-
-        # If fitting started later than the first frame, drop early columns so the
-        # temporal length matches timepoints_to_fit
-        if self._start_index > 0:
-            data = data[:, self._start_index :]
-
-        # A.shape = (T, K - 4); T= n. timepoints, K= n. knots (with padding)
-        A = BSpline.design_matrix(x, self._t, k=self._order)
-        AT = A.T
-        ATdotA = AT @ A
-
-        # Parallelize process with joblib
-        with Parallel(n_jobs=n_jobs) as executor:
-            results = executor(delayed(cg)(ATdotA, AT @ v) for v in data)
-
-        self._locked_fit = np.asarray([r[0] for r in results])
-
-        return n_jobs
 
     def fit_predict(self, index: int | None = None, **kwargs) -> Union[np.ndarray, None]:
         """Return the corrected volume using B-spline interpolation.
@@ -240,39 +186,50 @@ class BSplinePETModel(BasePETModel):
         the prediction for the start time.
         """
 
-        # ToDo
-        # Does the below apply to PET ? Martin has the return None statement
-        # if index is None:
-        #    raise RuntimeError(
-        #        f"Model {self.__class__.__name__} does not allow locking.")
+        if index is None:
+            raise NotImplementedError(
+                "Fitting all frames at once (index=None) is not yet implemented. "
+                "Use LOVO mode by passing an integer index."
+            )
 
-        # Fit the BSpline basis on all data
-        if self._locked_fit is None:
-            self._fit(index, n_jobs=kwargs.pop("n_jobs", None), **kwargs)
+        n_jobs = kwargs.pop("n_jobs", min(cpu_count() or 1, 8))
 
-        # Make type checking happy by preventing it to signal that None has no
-        # attribute T: after this point, _locked_fit should no longer be None
-        assert self._locked_fit is not None, "Internal error: _locked_fit has not been set"
+        # Generate a time mask for the frames to fit
+        x_mask = np.ones(len(self._dataset), dtype=bool)
 
-        if index is None:  # If no index, just fit the data.
-            return None
+        x_mask[index] = False if index is not None else x_mask[index]
+        x = self._dataset.midframe[x_mask].tolist()
 
-        # If the requested time is earlier than the configured start time, use the
-        # start time's prediction (reuse the transforms estimated for start)
-        midframe = (
-            self._dataset.midframe[self._start_index]
-            if index < self._start_index
-            else self._dataset.midframe[index]
+        # A.shape = (T, K - 4); t= n. timepoints, K= n. knots (with padding)
+        A = BSpline.design_matrix(x, t=self._t, k=self._order, extrapolate=False)
+
+        # Get data as 2D array (voxels x timepoints)
+        data = (
+            self._dataset.dataobj.reshape((-1, len(self._dataset)))
+            if self._dataset.brainmask is None
+            else self._dataset.dataobj[self._dataset.brainmask, :]
         )
 
-        # Project sample timing into B-Spline coordinates
-        # ToDo: x is not really a matrix ...
-        x = np.asarray((midframe / self._dataset.total_duration) * self._n_ctrl)
-        A = BSpline.design_matrix(x, self._t, k=self._order)
+        X = la.lstsq(
+            A.toarray().astype("float64"),
+            data[:, x_mask].T.astype("float64"),
+            cond=None,
+            lapack_driver="gelsd",
+        )
+        coefficients = X[0].T.astype("float32")
 
-        # A is 1 (num. timepoints) x C (num. coeff)
-        # self._locked_fit is V (num. voxels) x K - 4
-        predicted = np.squeeze(A @ self._locked_fit.T)
+        # Generate an interpolation time mask
+        interp_mask = np.zeros(len(self._dataset), dtype=bool)
+        interp_index = index if index is not None else slice(0, len(interp_mask))
+        interp_mask[interp_index] = True
+
+        A = BSpline.design_matrix(
+            self._dataset.midframe[interp_mask], self._t, k=self._order, extrapolate=False
+        )
+
+        # A is T (num. timepoints) x C (num. coeff)
+        # coefficients is V (num. voxels) x C (num. coeff)
+        predicted = np.squeeze(A @ coefficients.T).T
 
         brainmask = self._dataset.brainmask
         datashape = self._dataset.dataobj.shape[:3]
@@ -280,6 +237,6 @@ class BSplinePETModel(BasePETModel):
         if brainmask is None:
             return predicted.reshape(datashape)
 
-        retval = np.zeros_like(self._dataset.dataobj[..., 0])
+        retval = np.squeeze(np.zeros_like(self._dataset.dataobj[..., interp_mask]))
         retval[brainmask] = predicted
         return retval

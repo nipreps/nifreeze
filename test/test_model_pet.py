@@ -30,11 +30,12 @@ import pytest
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.pet import PET
 from nifreeze.model.pet import (
+    MIN_TIMEPOINTS_ERROR_MSG,
     PET_MIDFRAME_ERROR_MSG,
     PET_OBJECT_ERROR_MSG,
-    START_INDEX_RANGE_ERROR_MSG,
     BSplinePETModel,
 )
+from nifreeze.testing.simulations import compute_pet_noise_sd, srtm
 
 
 def test_pet_base_model():
@@ -55,8 +56,7 @@ def test_pet_base_model():
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]))
-def test_petmodel_init_dataset_error(request, setup_random_pet_data, monkeypatch):
-    rng = request.node.rng
+def test_petmodel_init_dataset_error(setup_random_pet_data, monkeypatch):
     pet_dataobj, _affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
 
     # Create a dummy dataset class without attributes
@@ -125,13 +125,9 @@ def test_petmodel_fit_predict(setup_random_pet_data):
         total_duration=total_duration,
     )
 
-    model = BSplinePETModel(dataset=pet_obj, smooth_fwhm=0, thresh_pct=0)
+    model = BSplinePETModel(dataset=pet_obj)
 
-    # Fit on all data
-    model.fit_predict(None)
-    assert model.is_fitted
-
-    # Predict at a specific timepoint
+    # Predict at a specific timepoint (LOVO mode)
     index = 2
     vol = model.fit_predict(index)
     assert vol is not None
@@ -140,7 +136,7 @@ def test_petmodel_fit_predict(setup_random_pet_data):
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
-def test_init_start_index_error(setup_random_pet_data):
+def test_min_timepoints_error(setup_random_pet_data):
     pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
 
     pet_obj = PET(
@@ -151,53 +147,324 @@ def test_init_start_index_error(setup_random_pet_data):
         total_duration=total_duration,
     )
 
-    # Negative start_index raises ValueError
-    with pytest.raises(ValueError, match=START_INDEX_RANGE_ERROR_MSG):
-        BSplinePETModel(pet_obj, start_index=-1)
+    # Smaller than zero min_timepoints raises ValueError
+    with pytest.raises(ValueError, match=MIN_TIMEPOINTS_ERROR_MSG):
+        BSplinePETModel(pet_obj, min_timepoints=-1)
 
-    # start_index equal to len(timepoints) is out of range
-    with pytest.raises(ValueError, match=START_INDEX_RANGE_ERROR_MSG):
-        BSplinePETModel(pet_obj, start_index=len(pet_obj.midframe))
+    with pytest.raises(ValueError, match=MIN_TIMEPOINTS_ERROR_MSG):
+        BSplinePETModel(pet_obj, min_timepoints=0)
+
+    # min_timepoints equal to len(timepoints) is out of range
+    with pytest.raises(ValueError, match=MIN_TIMEPOINTS_ERROR_MSG):
+        BSplinePETModel(pet_obj, min_timepoints=len(pet_obj.midframe))
 
 
-@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
-def test_petmodel_start_index_reuses_start_prediction(setup_random_pet_data):
-    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+@pytest.mark.parametrize(
+    "n_ctrl, min_corr",
+    [
+        (2, 0.80),
+        (3, 0.90),
+        (4, 0.90),
+        (5, 0.90),
+        (6, 0.90),
+        (7, 0.90),
+    ],
+)
+def test_petmodel_simulated_correlation_motion_free(request, outdir, n_ctrl, min_corr):
+    rng = request.node.rng
+
+    shape = (2, 2, 2)
+    n_timepoints = 30
+
+    t = np.linspace(0, 2 * np.pi, n_timepoints, dtype="float32")
+    temporal_basis = np.sin(t) + np.cos(2 * t)
+    temporal_basis -= temporal_basis.min()
+
+    dataobj = np.ones(shape + (n_timepoints,), dtype="float32")
+    dataobj = dataobj * temporal_basis  # broadcasting
+    dataobj *= rng.normal(loc=2.0, scale=0.9, size=shape + (1,)).astype("float32")
+    dataobj *= rng.normal(loc=1.0, scale=0.1, size=dataobj.shape).astype("float32")
+
+    midframe = np.arange(n_timepoints, dtype="float32")
+    total_duration = float(n_timepoints)
 
     pet_obj = PET(
-        dataobj=pet_dataobj,
-        affine=affine,
-        brainmask=brainmask_dataobj,
+        dataobj=dataobj,
+        affine=np.eye(4),
+        brainmask=np.ones(shape, dtype=bool),
         midframe=midframe,
         total_duration=total_duration,
     )
 
-    # Configure the model to start fitting at index=2
-    model = BSplinePETModel(
-        pet_obj,
-        smooth_fwhm=0.0,  # disable smoothing for deterministic behaviour
-        thresh_pct=0.0,  # disable thresholding
-        start_index=2,
+    model = BSplinePETModel(dataset=pet_obj, n_ctrl=n_ctrl)
+
+    results = [model.fit_predict(t_index) for t_index in range(n_timepoints)]
+    assert all(result is not None for result in results), (
+        "fit_predict returned None for some indices"
+    )
+    predicted = np.stack(results, axis=-1)  # type: ignore[arg-type]
+
+    correlations = np.array(
+        [
+            np.corrcoef(x[1:-1], y[1:-1])[0, 1]
+            for x, y in zip(
+                dataobj.reshape((-1, n_timepoints)),
+                predicted.reshape((-1, n_timepoints)),
+                strict=False,
+            )
+        ]
     )
 
-    model.fit_predict(None)
+    if outdir is not None:
+        _plot_pet_timeseries(
+            outdir / f"pet_simulated_correlation_motion_free_nctrl{n_ctrl}.svg",
+            dataobj,
+            predicted,
+            correlations,
+            n_timepoints,
+            title_suffix="",
+        )
 
-    # Prediction for the configured start timepoint
-    pred_start = model.fit_predict(index=2)
+    assert correlations.mean() > min_corr
 
-    # Prediction for an earlier timepoint (should reuse start prediction)
-    pred_early = model.fit_predict(index=1)
 
-    assert pred_start is not None
-    assert pred_early is not None
-    assert np.allclose(pred_start, pred_early), (
-        "Earlier frames should reuse start-frame prediction"
+def _srtm_reference_inputs(
+    n_timepoints: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Create (t, dt, cr, cri) for SRTM simulation.
+    t is mid-frame time, dt are frame durations, cr is reference TAC, cri is its integral.
+    """
+    # Simple constant framing (arbitrary units)
+    dt = np.ones(n_timepoints, dtype="float32")
+    t = np.cumsum(dt) - dt / 2.0
+
+    # A smooth bolus-like reference TAC
+    cr = (t**2) * np.exp(-0.35 * t)
+    cr = cr / cr.max()
+
+    # Cumulative trapezoidal integral of reference TAC
+    cri = np.zeros_like(cr)
+    cri[0] = cr[0] * dt[0]
+    for i in range(1, n_timepoints):
+        cri[i] = cri[i - 1] + 0.5 * (cr[i] + cr[i - 1]) * dt[i]
+
+    return t.astype("float32"), dt, cr.astype("float32"), cri.astype("float32")
+
+
+@pytest.mark.parametrize(
+    "add_noise, scale_factor, lambda_, min_corr",
+    [
+        (False, None, None, 0.98),
+        (True, 0.05, 0.0063, 0.98),  # 0.0063 corresponds to a 18F tracer
+        (True, 0.1, 0.0063, 0.95),
+        (True, 0.15, 0.0063, 0.88),
+    ],
+)
+@pytest.mark.parametrize(
+    "n_ctrl, corr_offset",
+    [
+        (3, 0.0),
+        (4, 0.10),
+        (5, 0.10),
+    ],
+)
+def test_petmodel_simulated_correlation_motion_free_srtm(
+    request, outdir, add_noise, scale_factor, lambda_, min_corr, n_ctrl, corr_offset
+):
+    rng = request.node.rng
+    # Same structure as the sinusoid-based test, but using SRTM temporal basis
+    shape = (2, 2, 2)
+    n_timepoints = 30
+
+    t, dt, cr, cri = _srtm_reference_inputs(n_timepoints)
+
+    # SRTM parameters: [R1, k2, BP]
+    x = np.array([1.2, 0.15, 2.0], dtype="float32")
+
+    CT, _ = srtm(x=x, t=t, cr=cr, cri=cri, dt=dt, nr=n_timepoints)
+
+    if add_noise:
+        delta = np.diff(t)
+        delta = np.append(delta, delta[-1])  # Duplicate last frame duration
+        sd = compute_pet_noise_sd(scale_factor, CT, delta, lambda_, t)
+        noise = rng.normal(loc=0.0, scale=sd, size=shape + (len(t),))
+        CT = CT + noise
+
+    # Ensure non-negative (PET-like), and avoid a totally flat series
+    CT = CT.astype("float32")
+    CT -= CT.min()
+    assert CT.max() > 0
+
+    # Build synthetic 4D PET: one voxel following CT
+    S0 = np.float32(100.0)
+    temporal_basis = S0 * (CT / CT.max())
+
+    dataobj = np.ones(shape + (n_timepoints,), dtype="float32") * temporal_basis
+
+    # PET metadata
+    midframe = t.astype("float32")
+    total_duration = float(np.sum(dt))
+
+    pet_obj = PET(
+        dataobj=dataobj,
+        affine=np.eye(4),
+        brainmask=np.ones(shape, dtype=bool),
+        midframe=midframe,
+        total_duration=total_duration,
     )
 
-    # Prediction for a later timepoint should be allowed and may differ
-    pred_late = model.fit_predict(index=3)
+    # Fit/predict with spline PET model
+    model = BSplinePETModel(dataset=pet_obj, n_ctrl=n_ctrl)
 
-    assert pred_late is not None
-    assert pred_start.shape == pet_dataobj.shape[:3]
-    assert pred_early.shape == pet_dataobj.shape[:3]
-    assert pred_late.shape == pet_dataobj.shape[:3]
+    results = [model.fit_predict(t_index) for t_index in range(n_timepoints)]
+    assert all(result is not None for result in results), (
+        "fit_predict returned None for some indices"
+    )
+    predicted = np.stack(results, axis=-1)  # type: ignore[arg-type]
+
+    correlations = np.array(
+        [
+            np.corrcoef(x, y)[0, 1]
+            for x, y in zip(
+                dataobj.reshape((-1, n_timepoints)),
+                predicted.reshape((-1, n_timepoints)),
+                strict=False,
+            )
+        ]
+    )
+
+    if outdir is not None:
+        _plot_pet_timeseries(
+            outdir / f"pet_srtm_noise{add_noise}_sf{scale_factor}_nctrl{n_ctrl}.svg",
+            dataobj,
+            predicted,
+            correlations,
+            n_timepoints,
+            title_suffix=f" noise={add_noise} sf={scale_factor}",
+        )
+
+    assert correlations.mean() > min_corr - corr_offset
+
+
+def _plot_pet_timeseries(
+    outpath,
+    dataobj: np.ndarray,
+    predicted: np.ndarray,
+    correlations: np.ndarray,
+    n_timepoints: int,
+    title_suffix: str,
+):
+    import matplotlib as mpl
+
+    mpl.use("Agg")
+    import matplotlib.pyplot as plt
+
+    i = 0
+
+    tp = np.arange(n_timepoints)
+    fig, ax = plt.subplots()
+
+    colors = plt.get_cmap("tab10")
+    for i in range(np.prod(dataobj.shape[:-1])):
+        ax.plot(
+            tp,
+            dataobj.reshape((-1, n_timepoints))[i],
+            label="original",
+            c=colors(i),
+            alpha=0.7,
+        )
+        ax.plot(
+            tp[1:-1],
+            predicted.reshape((-1, n_timepoints))[i, 1:-1],
+            label="predicted",
+            c=colors(i),
+            ls="--",
+        )
+    ax.set_xlabel("timepoint")
+    ax.set_ylabel("signal")
+    ax.set_title(f"r={np.median(correlations):.3f} {title_suffix}")
+    fig.savefig(outpath)
+    plt.close(fig)
+
+
+@pytest.mark.parametrize(
+    "x, t, cr, cri, dt, nr, match",
+    [
+        # x.size != 3
+        (
+            np.array([1.0, 2.0]),
+            np.ones(5),
+            np.ones(5),
+            np.ones(5),
+            np.ones(5),
+            5,
+            "x must have length 3",
+        ),
+        # nr mismatch with cr
+        (
+            np.array([1.0, 0.1, 2.0]),
+            np.ones(5),
+            np.ones(3),
+            np.ones(5),
+            np.ones(5),
+            5,
+            "nr must match",
+        ),
+        # nr < 1
+        (
+            np.array([1.0, 0.1, 2.0]),
+            np.ones(0),
+            np.ones(0),
+            np.ones(0),
+            np.ones(0),
+            0,
+            "nr must be >= 1",
+        ),
+        # 1 + BP == 0
+        (
+            np.array([1.0, 0.1, -1.0]),
+            np.ones(5),
+            np.ones(5),
+            np.ones(5),
+            np.ones(5),
+            5,
+            r"Invalid BP",
+        ),
+        # k2 == 0
+        (
+            np.array([1.0, 0.0, 2.0]),
+            np.ones(5),
+            np.ones(5),
+            np.ones(5),
+            np.ones(5),
+            5,
+            "k2 must be nonzero",
+        ),
+    ],
+)
+def test_srtm_validation_errors(x, t, cr, cri, dt, nr, match):
+    with pytest.raises(ValueError, match=match):
+        srtm(x=x, t=t, cr=cr, cri=cri, dt=dt, nr=nr)
+
+
+@pytest.mark.filterwarnings("ignore:No mask provided")
+def test_petmodel_fit_predict_no_brainmask():
+    shape = (2, 2, 2)
+    n_tp = 10
+    rng = np.random.default_rng(42)
+    dataobj = rng.random(shape + (n_tp,), dtype=np.float32)
+    midframe = np.arange(n_tp, dtype="float32")
+
+    pet_obj = PET(
+        dataobj=dataobj,
+        affine=np.eye(4),
+        brainmask=None,
+        midframe=midframe,
+        total_duration=float(n_tp),
+    )
+
+    model = BSplinePETModel(dataset=pet_obj)
+    vol = model.fit_predict(0)
+    assert vol is not None
+    assert vol.shape == shape
