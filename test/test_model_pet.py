@@ -365,19 +365,20 @@ def _plot_pet_timeseries(
     tp = np.arange(n_timepoints)
     fig, ax = plt.subplots()
 
+    colors = plt.get_cmap("tab10")
     for i in range(np.prod(dataobj.shape[:-1])):
         ax.plot(
             tp,
             dataobj.reshape((-1, n_timepoints))[i],
             label="original",
-            c=plt.cm.tab10(i),
+            c=colors(i),
             alpha=0.7,
         )
         ax.plot(
             tp[1:-1],
             predicted.reshape((-1, n_timepoints))[i, 1:-1],
             label="predicted",
-            c=plt.cm.tab10(i),
+            c=colors(i),
             ls="--",
         )
     ax.set_xlabel("timepoint")
