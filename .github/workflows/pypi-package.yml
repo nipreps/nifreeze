@@ -3,8 +3,8 @@ name: Build and upload package
 
 on:
   push:
-    branches: [main]
-    tags: ["*"]
+    branches: ['main']
+    tags: ['*']
   release:
     types:
       - published

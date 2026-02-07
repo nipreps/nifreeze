@@ -3,7 +3,7 @@ name: Build docs
 
 on:
   pull_request:
-    branches: [ main, 'maint/*' ]
+    branches: ['main', 'maint/*']
 
 jobs:
   build:
