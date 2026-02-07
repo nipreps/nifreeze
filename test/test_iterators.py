@@ -186,3 +186,105 @@ def test_monotonic_value_iterator(feature, values, expected):
     sorted_vals = [values[i] for i in obtained]
     reverse = True if feature == "uptake" else False
     assert sorted_vals == sorted(values, reverse=reverse)
+
+
+def test_linear_iterator_with_start_index():
+    """Test linear iterator with start_index."""
+    size = 7
+    start_index = 3
+    result = list(linear_iterator(size=size, start_index=start_index))
+    assert len(result) == size
+    assert result == [3, 4, 5, 6, 7, 8, 9]
+
+    size = 4
+    result = list(linear_iterator(size=size, start_index=start_index))
+    assert len(result) == size
+    expected = [3, 4, 5, 6]
+    assert result == expected
+
+
+def test_random_iterator_with_start_index():
+    """Test random iterator with start_index."""
+    size = 5
+    start_index = 3
+    result = list(random_iterator(size=size, seed=0, start_index=3))
+    assert len(result) == size
+    assert all(start_index <= idx < start_index + size for idx in result)
+    assert len(set(result)) == 5  # All unique
+    expected = [5, 4, 3, 7, 6]
+    assert result == expected
+
+
+def test_centralsym_iterator_with_start_index():
+    """Test centralsym iterator with start_index."""
+    size = 5
+    start_index = 3
+    result = list(centralsym_iterator(size=size, start_index=3))
+    assert len(result) == size
+    # Should iterate over indices 3-7, starting from center
+    assert all(start_index <= idx < start_index + size for idx in result)
+    expected = [5, 4, 6, 3, 7]
+    assert result == expected
+
+
+def test_monotonic_value_iterator_bvals_with_start_index():
+    """Test monotonic_value iterator with bvals and start_index."""
+    bvals = [0.0, 0.0, 1000.0, 1000.0, 700.0, 700.0, 2000.0, 2000.0, 0.0]
+
+    # Full range
+    full_result = list(monotonic_value_iterator(bvals=bvals))
+    assert full_result == [0, 1, 8, 4, 5, 2, 3, 6, 7]
+
+    # With start_index and size
+    start_index = 4
+    result = list(monotonic_value_iterator(bvals=bvals, start_index=start_index))
+    # Indices 4-8: bvals are [700.0, 700.0, 2000.0, 2000.0, 0.0]
+    # Sorted ascending: 0.0 (idx 8), 700.0 (idx 4), 700.0 (idx 5), 2000.0 (idx 6), 2000.0 (idx 7)
+    # But with original indices: [8, 4, 5, 6, 7] relative to full array
+    # Actually indices 4-8 get remapped: 0(->4), 1(->5), 2(->6), 3(->7), 4(->8)
+    assert len(result) == len(bvals) - start_index
+    expected = [8, 4, 5, 6, 7]  # Indices in original array
+    assert result == expected
+
+
+def test_monotonic_value_iterator_uptake_with_start_index():
+    """Test monotonic_value iterator with uptake and start_index."""
+    uptake = [-1.23, 1.06, 1.02, 1.38, -1.46, -1.12, -1.19, 1.24, 1.05]
+
+    # Full range (descending for uptake)
+    full_result = list(monotonic_value_iterator(uptake=uptake))
+    assert full_result == [3, 7, 1, 8, 2, 5, 6, 0, 4]
+
+    # Subset with start_index
+    start_index = 2
+    result = list(monotonic_value_iterator(uptake=uptake, start_index=start_index))
+    # Indices 2-8: uptake values [1.02, 1.38, -1.46, -1.12, -1.19, 1.24, 1.05]
+    # Sorted descending: 1.38 (idx 3), 1.24 (idx 7), 1.05 (idx 8), 1.02 (idx 2), -1.12 (idx 5), -1.19 (idx 6), -1.46 (idx 4)
+    assert len(result) == len(uptake) - start_index
+    expected = [3, 7, 8, 2, 5, 6, 4]
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "size,start_index,expected",
+    [
+        (10, 0, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+        (7, 3, [3, 4, 5, 6, 7, 8, 9]),
+        (4, 3, [3, 4, 5, 6]),
+        (3, 0, [0, 1, 2]),
+    ],
+)
+def test_linear_iterator_parametrize(size, start_index, expected):
+    """Parametrized tests for linear iterator."""
+    result = list(linear_iterator(size=size, start_index=start_index))
+    assert result == expected
+
+
+def test_iterators_produce_correct_count():
+    """Test that all iterators produce the correct number of indices."""
+    size = 5
+    start_index = 10
+
+    assert len(list(linear_iterator(size=size, start_index=start_index))) == size
+    assert len(list(random_iterator(size=size, start_index=start_index, seed=0))) == size
+    assert len(list(centralsym_iterator(size=size, start_index=start_index))) == size

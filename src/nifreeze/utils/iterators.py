@@ -43,6 +43,11 @@ bvals : :obj:`list`, optional
 uptake : :obj:`list`, optional
     List of uptake values corresponding to all volumes of the dataset.
 """
+START_INDEX_DOC = """
+start_index : :obj:`int`, optional
+    Starting index (inclusive) for the iteration. If provided, only indices
+    ``>= start_index`` will be yielded.
+"""
 
 ITERATOR_NOTES = """
 Only one of the size-related parameters (``size``, ``bvals``, or ``uptake``)
@@ -90,8 +95,9 @@ def _get_size_from_kwargs(kwargs: dict) -> int:
 
 
 def linear_iterator(**kwargs) -> Iterator[int]:
+    start_index = kwargs.pop("start_index", 0)
     size = _get_size_from_kwargs(kwargs)
-    return (s for s in range(size))
+    return (s for s in range(start_index, start_index + size))
 
 
 linear_iterator.__doc__ = f"""
@@ -100,6 +106,7 @@ Traverse the dataset volumes in ascending order.
 Other Parameters
 ----------------
 {SIZE_KEYS_DOC}
+{START_INDEX_DOC}
 
 Notes
 -----
@@ -114,11 +121,15 @@ Examples
 --------
 >>> list(linear_iterator(size=10))
 [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-
+>>> list(linear_iterator(size=7, start_index=3))
+[3, 4, 5, 6, 7, 8, 9]
+>>> list(linear_iterator(size=4, start_index=3))
+[3, 4, 5, 6]
 """
 
 
 def random_iterator(**kwargs) -> Iterator[int]:
+    start_index = kwargs.pop("start_index", 0)
     size = _get_size_from_kwargs(kwargs)
 
     _seed = kwargs.get("seed", None)
@@ -126,7 +137,7 @@ def random_iterator(**kwargs) -> Iterator[int]:
 
     random.seed(None if _seed is False else _seed)
 
-    index_order = list(range(size))
+    index_order = list(range(start_index, start_index + size))
     random.shuffle(index_order)
     return (x for x in index_order)
 
@@ -147,6 +158,7 @@ seed : :obj:`int`, :obj:`bool`, :obj:`str`, or :obj:`None`
     is passed :obj:`None`. If :obj:`True`, a default seed value is set.
 
 {SIZE_KEYS_DOC}
+{START_INDEX_DOC}
 
 Notes
 -----
@@ -168,7 +180,8 @@ Examples
 [1, 12, 14, 5, 0, 11, 10, 9, 7, 8, 3, 13, 2, 6, 4]
 >>> list(random_iterator(size=15, seed=42))  # seed is 42
 [8, 13, 7, 6, 14, 12, 5, 2, 9, 3, 4, 11, 0, 1, 10]
-
+>>> list(random_iterator(size=4, start_index=3, seed=0))
+[5, 3, 4, 6]
 """
 
 
@@ -213,6 +226,8 @@ def _value_iterator(
 
 
 def monotonic_value_iterator(*_, **kwargs) -> Iterator[int]:
+    start_index = kwargs.pop("start_index", 0)
+
     try:
         feature = next(k for k in (BVALS_KWARG, UPTAKE_KWARG) if kwargs.get(k) is not None)
     except StopIteration:
@@ -220,10 +235,19 @@ def monotonic_value_iterator(*_, **kwargs) -> Iterator[int]:
 
     ascending = feature == BVALS_KWARG
     values = kwargs[feature]
-    return _value_iterator(
-        values,
-        ascending=ascending,
-        round_decimals=kwargs.get("round_decimals", DEFAULT_ROUND_DECIMALS),
+
+    # Slice values to only the portion we care about
+    size = len(values) - start_index
+    sliced_values = values[start_index : start_index + size]
+
+    # Return a generator that converts relative indices to absolute indices
+    return (
+        start_index + idx
+        for idx in _value_iterator(
+            sliced_values,
+            ascending=ascending,
+            round_decimals=kwargs.get("round_decimals", DEFAULT_ROUND_DECIMALS),
+        )
     )
 
 
@@ -242,6 +266,7 @@ value across the entire volume.
 Other Parameters
 ----------------
 {SIZE_KEYS_DOC}
+{START_INDEX_DOC}
 
 Notes
 -----
@@ -258,13 +283,18 @@ Examples
 [0, 1, 8, 4, 5, 2, 3, 6, 7]
 >>> list(monotonic_value_iterator(uptake=[-1.23, 1.06, 1.02, 1.38, -1.46, -1.12, -1.19, 1.24, 1.05]))
 [3, 7, 1, 8, 2, 5, 6, 0, 4]
+>>> list(monotonic_value_iterator(bvals=[0.0, 0.0, 1000.0, 1000.0, 700.0, 700.0, 2000.0, 2000.0, 0.0], start_index=4))
+[8, 4, 5, 6, 7]
+>>> list(monotonic_value_iterator(uptake=[-1.23, 1.06, 1.02, 1.38, -1.46, -1.12, -1.19, 1.24, 1.05], start_index=2))
+[3, 7, 8, 2, 5, 6, 4]
 """
 
 
 def centralsym_iterator(**kwargs) -> Iterator[int]:
+    start_index = kwargs.pop("start_index", 0)
     size = _get_size_from_kwargs(kwargs)
 
-    linear = list(range(size))
+    linear = list(range(start_index, start_index + size))
     return (
         x
         for x in chain.from_iterable(
@@ -283,6 +313,7 @@ Traverse the dataset starting from the center and alternatingly progressing to t
 Other Parameters
 ----------------
 {SIZE_KEYS_DOC}
+{START_INDEX_DOC}
 
 Notes
 -----
@@ -294,4 +325,6 @@ Examples
 [5, 4, 6, 3, 7, 2, 8, 1, 9, 0]
 >>> list(centralsym_iterator(size=11))
 [5, 4, 6, 3, 7, 2, 8, 1, 9, 0, 10]
+>>> list(centralsym_iterator(size=7, start_index=3))
+[6, 5, 7, 4, 8, 3, 9]
 """
