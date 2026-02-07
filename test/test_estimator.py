@@ -34,7 +34,7 @@ from nifreeze.estimator import Estimator
 from nifreeze.model.base import BaseModel
 from nifreeze.utils import iterators
 
-DATAOBJ_SIZE = (5, 5, 5, 4)
+DATAOBJ_SIZE = (5, 5, 5, 7)
 
 
 class DummyInsiderModel(BaseModel):
@@ -118,6 +118,98 @@ def test_estimator_init_model_string(request, monkeypatch):
     est.run(_dataset)
     assert isinstance(est._model, str)
     assert est._model == model_name
+
+
+def test_estimator_start_index(request, monkeypatch):
+    """Test that estimator respects start_index."""
+    recorded_indices = []
+
+    def fake_set_transform(self, i, xform):
+        recorded_indices.append(i)
+
+    monkeypatch.setattr(
+        type(DummyDataset(rng=request.node.rng)), "set_transform", fake_set_transform
+    )
+
+    class DummyXForm:
+        matrix = np.eye(4)
+
+    monkeypatch.setattr(
+        nifreeze.estimator,
+        "_run_registration",
+        lambda *a, **k: DummyXForm(),
+    )
+
+    dataset = DummyDataset(rng=request.node.rng)
+    model = DummyInsiderModel(dataset=dataset)
+
+    estimator = Estimator(model, strategy="linear", start_index=3)
+    estimator.run(dataset)
+
+    assert recorded_indices == [3, 4, 5, 6]
+
+
+def test_estimator_start_and_end_index(request, monkeypatch):
+    """Test that estimator respects both start_index and end_index."""
+    recorded_indices = []
+
+    def fake_set_transform(self, i, xform):
+        recorded_indices.append(i)
+
+    monkeypatch.setattr(
+        type(DummyDataset(rng=request.node.rng)), "set_transform", fake_set_transform
+    )
+
+    class DummyXForm:
+        matrix = np.eye(4)
+
+    monkeypatch.setattr(
+        nifreeze.estimator,
+        "_run_registration",
+        lambda *a, **k: DummyXForm(),
+    )
+
+    dataset = DummyDataset(rng=request.node.rng)
+    model = DummyInsiderModel(dataset=dataset)
+
+    estimator = Estimator(model, strategy="linear", start_index=2, end_index=5)
+    estimator.run(dataset)
+
+    # Should only process indices 2-4 (end_index is exclusive)
+    assert recorded_indices == [2, 3, 4]
+
+
+def test_estimator_invalid_start_index(request):
+    """Test that negative start_index raises an error."""
+    dataset = DummyDataset(rng=request.node.rng)
+    model = DummyInsiderModel(dataset=dataset)
+
+    with pytest.raises(ValueError, match="'start_index' must be >= 0"):
+        Estimator(model, start_index=-1)
+
+    estimator = Estimator(model, start_index=len(dataset))
+    with pytest.raises(
+        ValueError, match="'start_index' must be < dataset length. Adjust your start index."
+    ):
+        estimator.run(dataset)
+
+
+def test_estimator_invalid_end_index(request):
+    """Test that end_index <= start_index raises an error."""
+    dataset = DummyDataset(rng=request.node.rng)
+    model = DummyInsiderModel(dataset=dataset)
+
+    with pytest.raises(ValueError, match="'end_index' must be > 'start_index'"):
+        Estimator(model, start_index=5, end_index=3)
+
+    with pytest.raises(ValueError, match="'end_index' must be > 'start_index'"):
+        Estimator(model, end_index=-1)
+
+    estimator = Estimator(model, end_index=len(dataset))
+    with pytest.raises(
+        ValueError, match="'end_index' must be < dataset length. Adjust your end index."
+    ):
+        estimator.run(dataset)
 
 
 @pytest.mark.parametrize(
