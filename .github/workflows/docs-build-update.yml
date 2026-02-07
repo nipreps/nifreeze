@@ -3,8 +3,8 @@ name: Build & update docs
 
 on:
   push:
-    branches: [ 'doc/*', 'docs/*', main, "maint/*" ]
-    tags: [ '*' ]
+    branches: ['doc/*', 'docs/*', 'main', 'maint/*']
+    tags: ['*']
 
 jobs:
   build:
