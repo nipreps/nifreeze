@@ -2,13 +2,9 @@ name: Unit and integration tests
 
 on:
   push:
-    branches:
-      - main
-      - maint/*
+    branches: ['main', 'maint/*']
   pull_request:
-    branches:
-      - main
-      - maint/*
+    branches: ['main', 'maint/*']
   # Allow job to be triggered manually from GitHub interface
   workflow_dispatch:
   schedule:
