@@ -13,6 +13,7 @@ Contents
     :maxdepth: 3
 
     installation
+    design
     usage
     running
     developers
