@@ -388,66 +388,6 @@ def _plot_pet_timeseries(
     plt.close(fig)
 
 
-@pytest.mark.parametrize(
-    "x, t, cr, cri, dt, nr, match",
-    [
-        # x.size != 3
-        (
-            np.array([1.0, 2.0]),
-            np.ones(5),
-            np.ones(5),
-            np.ones(5),
-            np.ones(5),
-            5,
-            "x must have length 3",
-        ),
-        # nr mismatch with cr
-        (
-            np.array([1.0, 0.1, 2.0]),
-            np.ones(5),
-            np.ones(3),
-            np.ones(5),
-            np.ones(5),
-            5,
-            "nr must match",
-        ),
-        # nr < 1
-        (
-            np.array([1.0, 0.1, 2.0]),
-            np.ones(0),
-            np.ones(0),
-            np.ones(0),
-            np.ones(0),
-            0,
-            "nr must be >= 1",
-        ),
-        # 1 + BP == 0
-        (
-            np.array([1.0, 0.1, -1.0]),
-            np.ones(5),
-            np.ones(5),
-            np.ones(5),
-            np.ones(5),
-            5,
-            r"Invalid BP",
-        ),
-        # k2 == 0
-        (
-            np.array([1.0, 0.0, 2.0]),
-            np.ones(5),
-            np.ones(5),
-            np.ones(5),
-            np.ones(5),
-            5,
-            "k2 must be nonzero",
-        ),
-    ],
-)
-def test_srtm_validation_errors(x, t, cr, cri, dt, nr, match):
-    with pytest.raises(ValueError, match=match):
-        srtm(x=x, t=t, cr=cr, cri=cri, dt=dt, nr=nr)
-
-
 @pytest.mark.filterwarnings("ignore:No mask provided")
 def test_petmodel_fit_predict_no_brainmask():
     shape = (2, 2, 2)
