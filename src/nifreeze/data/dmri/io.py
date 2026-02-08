@@ -22,6 +22,8 @@
 #
 """Input/Output utilities for DWI objects."""
 
+from __future__ import annotations
+
 from pathlib import Path
 from warnings import warn
 

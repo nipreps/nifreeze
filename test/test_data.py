@@ -208,7 +208,7 @@ def test_load_base_nifti(
         def __init__(self, **kwargs):
             self.dataobj = kwargs["dataobj"]
             self.affine = kwargs["affine"]
-            self.brainmask = None
+            self.brainmask = kwargs.get("brainmask")
 
     monkeypatch.setattr(data, "BaseDataset", SimpleBaseDataset)
 

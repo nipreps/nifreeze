@@ -45,7 +45,13 @@ def test_lofo_split_shapes(tmp_path, setup_random_pet_data):
     )
 
     idx = 2
-    (train_data, train_times), (test_data, test_time) = pet_obj.lofo_split(idx)
+    # Leave-one-frame-out via indexing + _load_original_frame
+    mask = np.ones(len(pet_obj), dtype=bool)
+    mask[idx] = False
+    train_data, _, train_times = pet_obj[mask]
+    test_data = pet_obj._load_original_frame(idx)
+    test_time = pet_obj.midframe[idx]
+
     assert train_data.shape[-1] == pet_obj.dataobj.shape[-1] - 1
     np.testing.assert_array_equal(test_data, pet_obj.dataobj[..., idx])
     np.testing.assert_array_equal(train_times, np.delete(pet_obj.midframe, idx))

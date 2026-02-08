@@ -38,6 +38,82 @@ from nitransforms.linear import LinearTransformsMapping
 from nitransforms.resampling import apply
 from typing_extensions import Self, TypeVarTuple, Unpack
 
+MEMMAP_CHUNK_VOL = 1
+"""Number of volumes copied per chunk when streaming data to a memory-mapped file."""
+
+
+def _to_memmap(
+    arr: np.ndarray,
+    path: Path,
+    mode: str = "w+",
+) -> np.memmap:
+    """Copy *arr* into a memory-mapped file, streaming volume-by-volume for 4-D data.
+
+    If *arr* is already a :obj:`numpy.memmap`, it is returned unchanged.
+
+    Parameters
+    ----------
+    arr : array-like
+        Source data.  Must expose ``.shape``, ``.dtype``, and support NumPy
+        indexing.
+    path : :obj:`~pathlib.Path`
+        Destination file for the memory map.
+    mode : :obj:`str`
+        File mode passed to :func:`numpy.lib.format.open_memmap`.
+
+    Returns
+    -------
+    :obj:`numpy.memmap`
+        A memory-mapped array backed by *path* with the same shape and dtype
+        as *arr*.
+    """
+    if isinstance(arr, np.memmap):
+        return arr
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    mm = np.lib.format.open_memmap(
+        str(path), mode=mode, dtype=arr.dtype, shape=tuple(arr.shape)
+    )
+    if arr.ndim >= 4:
+        n_vols = arr.shape[-1]
+        for start in range(0, n_vols, MEMMAP_CHUNK_VOL):
+            end = min(start + MEMMAP_CHUNK_VOL, n_vols)
+            mm[..., start:end] = arr[..., start:end]
+    else:
+        mm[:] = np.asanyarray(arr)
+    mm.flush()
+    return mm
+
+
+def _h5_to_memmap(h5dset: h5py.Dataset, path: Path) -> np.memmap:
+    """Stream an HDF5 dataset into a memory-mapped file.
+
+    Parameters
+    ----------
+    h5dset : :obj:`h5py.Dataset`
+        Source HDF5 dataset.
+    path : :obj:`~pathlib.Path`
+        Destination file for the memory map.
+
+    Returns
+    -------
+    :obj:`numpy.memmap`
+        A writable memory-mapped array backed by *path*.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    mm = np.lib.format.open_memmap(
+        str(path), mode="w+", dtype=h5dset.dtype, shape=h5dset.shape
+    )
+    if h5dset.ndim >= 4:
+        n_vols = h5dset.shape[-1]
+        for start in range(0, n_vols, MEMMAP_CHUNK_VOL):
+            end = min(start + MEMMAP_CHUNK_VOL, n_vols)
+            mm[..., start:end] = h5dset[..., start:end]
+    else:
+        h5dset.read_direct(mm)
+    mm.flush()
+    return mm
+
 Ts = TypeVarTuple("Ts")
 
 NFDH5_EXT = ".h5"
@@ -65,7 +141,10 @@ AFFINE_NDIM_ERROR_MSG = "BaseDataset 'affine' must be a 2D array"
 AFFINE_SHAPE_ERROR_MSG = "BaseDataset 'affine' must be a 2D numpy array (4 x 4)"
 """BaseDataset initialization affine shape error message."""
 
-BRAINMASK_SHAPE_MISMATCH_ERROR_MSG = "BaseDataset 'brainmask' shape ({brainmask_shape}) does not match dataset volumes ({data_shape})."
+BRAINMASK_SHAPE_MISMATCH_ERROR_MSG = (
+    "BaseDataset 'brainmask' shape ({brainmask_shape}) "
+    "does not match dataset volumes ({data_shape})."
+)
 """BaseDataset brainmask shape mismatch error message."""
 
 
@@ -177,11 +256,15 @@ def _cmp(lh: Any, rh: Any) -> bool:
     return lh == rh
 
 
+_array_eq = attrs.cmp_using(eq=_cmp, require_same_type=False)
+"""Equality comparator for array fields that tolerates ``np.memmap`` subclasses."""
+
+
 def validate_dataobj(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> None:
     """Strict validator for data objects.
 
-    Enforces that ``value`` is present and is a NumPy array with exactly 4
-    dimensions (``ndim == 4``).
+    Enforces that ``value`` is present, exposes ``.shape`` and ``.dtype``
+    attributes, and has exactly 4 dimensions (``ndim == 4``).
 
     This function is intended for use as an attrs-style validator.
 
@@ -197,14 +280,14 @@ def validate_dataobj(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> No
     Raises
     ------
     exc:`TypeError`
-        If the input cannot be converted to a float :obj:`~numpy.ndarray`.
+        If the input does not expose ``.shape`` and ``.dtype`` attributes.
     exc:`ValueError`
         If the value is :obj:`None`, or not 4-dimensional.
     """
     if value is None:
         raise ValueError(DATAOBJ_ABSENCE_ERROR_MSG)
 
-    if not isinstance(value, np.ndarray):
+    if not (hasattr(value, "shape") and hasattr(value, "dtype")):
         raise TypeError(DATAOBJ_OBJECT_ERROR_MSG)
 
     if not _has_ndim(value, 4):
@@ -265,35 +348,48 @@ class BaseDataset(Generic[Unpack[Ts]]):
     """
 
     dataobj: np.ndarray = attrs.field(
-        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=validate_dataobj
+        default=None, repr=_data_repr, eq=_array_eq,
+        validator=validate_dataobj,
     )
     """A :obj:`~numpy.ndarray` object for the data array."""
     affine: np.ndarray = attrs.field(
-        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=validate_affine
+        default=None, repr=_data_repr, eq=_array_eq,
+        validator=validate_affine,
     )
     """Best affine for RAS-to-voxel conversion of coordinates (NIfTI header)."""
     brainmask: np.ndarray | None = attrs.field(
-        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp)
+        default=None, repr=_data_repr, eq=_array_eq,
     )
     """A boolean ndarray object containing a corresponding brainmask."""
-    motion_affines: np.ndarray | None = attrs.field(default=None, eq=attrs.cmp_using(eq=_cmp))
+    motion_affines: np.ndarray | None = attrs.field(
+        default=None, eq=_array_eq,
+    )
     """Array of :obj:`~nitransforms.linear.Affine` realigning the dataset."""
     datahdr: nb.Nifti1Header | None = attrs.field(default=None)
     """A :obj:`~nibabel.Nifti1Header` header corresponding to the data."""
 
-    _filepath: Path = attrs.field(
-        factory=lambda: Path(mkdtemp()) / "hmxfms_cache.h5",
+    _cache_dir: Path = attrs.field(
+        factory=lambda: Path(mkdtemp()),
         repr=False,
         eq=False,
     )
-    """A path to an HDF5 file to store the whole dataset."""
+    """A directory for caching memory-mapped arrays and HDF5 files."""
+    _original_h5: Path | None = attrs.field(default=None, repr=False, eq=False)
+    """Path to an HDF5 file storing the original (unmodified) dataset."""
+
+    @property
+    def _filepath(self) -> Path:
+        """Backward-compatible path to an HDF5 cache file."""
+        return self._cache_dir / "hmxfms_cache.h5"
 
     def __attrs_post_init__(self) -> None:
         """Enforce basic consistency of base dataset fields at instantiation
         time.
 
         Specifically, the brainmask (if present) must match spatial shape of
-        dataobj.
+        dataobj.  After validation, large arrays are converted to
+        memory-mapped files under ``_cache_dir`` and the original data is
+        persisted to an HDF5 file for later retrieval.
         """
 
         if self.brainmask is not None:
@@ -303,6 +399,56 @@ class BaseDataset(Generic[Unpack[Ts]]):
                         brainmask_shape=self.brainmask.shape, data_shape=self.dataobj.shape[:3]
                     )
                 )
+
+        # Convert large arrays to memory-mapped files
+        self._cache_dir.mkdir(parents=True, exist_ok=True)
+        self.dataobj = _to_memmap(self.dataobj, self._cache_dir / "dataobj.npy")
+        if self.brainmask is not None:
+            self.brainmask = _to_memmap(self.brainmask, self._cache_dir / "brainmask.npy")
+
+        # Cache the original dataset to HDF5 (before any subclass modifications)
+        if self._original_h5 is None:
+            self._original_h5 = self._cache_dir / "original.h5"
+            self.to_filename(self._original_h5)
+
+    def _load_original_frame(self, index: int) -> np.ndarray:
+        """Load a single 3D frame from the original (unmodified) data on disk.
+
+        Only the requested frame enters RAM — the full 4D array stays on disk.
+
+        Parameters
+        ----------
+        index : :obj:`int`
+            The volume/frame index along the last dimension.
+
+        Returns
+        -------
+        :obj:`numpy.ndarray`
+            A 3D array for the requested frame.
+        """
+        with h5py.File(self._original_h5, "r") as f:
+            return np.asanyarray(f["/0/dataobj"][..., index])
+
+    def _load_original_field(self, field: str, index: int | None = None) -> np.ndarray:
+        """Load a named field (or a slice of it) from the original data on disk.
+
+        Parameters
+        ----------
+        field : :obj:`str`
+            Name of the HDF5 dataset under ``/0/`` to read.
+        index : :obj:`int`, optional
+            If given, read only ``dataset[..., index]``.
+
+        Returns
+        -------
+        :obj:`numpy.ndarray`
+            The requested data.
+        """
+        with h5py.File(self._original_h5, "r") as f:
+            dset = f["/0"][field]
+            if index is not None:
+                return np.asanyarray(dset[..., index])
+            return np.asanyarray(dset)
 
     def __len__(self) -> int:
         """Obtain the number of volumes/frames in the dataset."""
@@ -376,6 +522,9 @@ class BaseDataset(Generic[Unpack[Ts]]):
         """
         Read an HDF5 file from disk and create a BaseDataset.
 
+        Large datasets (ndim >= 3) are streamed into memory-mapped files
+        rather than being fully materialized.
+
         Parameters
         ----------
         filename : :obj:`os.pathlike`
@@ -387,10 +536,18 @@ class BaseDataset(Generic[Unpack[Ts]]):
             The constructed dataset with data loaded from the file.
 
         """
+        cache_dir = Path(mkdtemp())
+        data: dict[str, Any] = {}
         with h5py.File(filename, "r") as in_file:
             root = in_file["/0"]
-            data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}
-        return cls(**data)
+            for k, v in root.items():
+                if k.startswith("_"):
+                    continue
+                if v.ndim >= 3:
+                    data[k] = _h5_to_memmap(v, cache_dir / f"{k}.npy")
+                else:
+                    data[k] = np.asanyarray(v)
+        return cls(**data, cache_dir=cache_dir, original_h5=Path(filename))
 
     def get_filename(self) -> Path:
         """Get the filepath of the HDF5 file."""
@@ -528,7 +685,13 @@ def to_nifti(
 
     if dataset.motion_affines is not None:  # resampling is needed
         reference = ImageGrid(shape=dataset.dataobj.shape[:3], affine=dataset.affine)
-        resampled = np.empty_like(dataset.dataobj, dtype=dataset.dataobj.dtype)
+        resampled_path = Path(mkdtemp()) / "resampled.npy"
+        resampled = np.lib.format.open_memmap(
+            str(resampled_path),
+            mode="w+",
+            dtype=dataset.dataobj.dtype,
+            shape=tuple(dataset.dataobj.shape),
+        )
         xforms = LinearTransformsMapping(dataset.motion_affines, reference=reference)
 
         # This loop could be replaced by nitransforms.resampling.apply() when

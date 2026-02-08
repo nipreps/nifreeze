@@ -245,12 +245,13 @@ class PETMotionEstimator:
             tmp_path = Path(tmp_dir)
 
             for idx in tqdm(frame_indices, desc="Estimating PET motion"):
-                (train_data, train_times), (test_data, test_time) = pet_dataset.lofo_split(idx)
+                # Leave-one-frame-out: training = all frames except idx
+                mask = np.ones(n_frames, dtype=bool)
+                mask[idx] = False
+                train_data, _, train_times = pet_dataset[mask]
 
-                if train_times is None:
-                    raise ValueError(
-                        f"train_times is None at index {idx}, check midframe initialization."
-                    )
+                # Test frame from the original (unmodified) data on disk
+                test_data = pet_dataset._load_original_frame(idx)
 
                 # Build a temporary dataset excluding the test frame
                 train_dataset = PET(
@@ -259,6 +260,7 @@ class PETMotionEstimator:
                     brainmask=pet_dataset.brainmask,
                     midframe=train_times,
                     total_duration=pet_dataset.total_duration,
+                    original_h5=pet_dataset._original_h5,
                 )
 
                 # Instantiate the PET model explicitly
