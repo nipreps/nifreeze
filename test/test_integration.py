@@ -66,7 +66,6 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path, p_error=20.0):
     )
 
     dwi_motion = DWI.from_filename(dwi_motion_path)
-    dwi_motion._filepath = tmp_path / "dwi_motion.h5"  # Prevent accidental overwriting
 
     ground_truth_affines = (
         np.copy(dwi_motion.motion_affines) if dwi_motion.motion_affines is not None else None
@@ -138,7 +137,6 @@ def test_stacked_estimators(datadir, tmp_path, monkeypatch):
 
     # Wrap into dataset object
     dwi_motion = DWI.from_filename(datadir / "dmri_data" / "motion_test_data" / "dwi_motion.h5")
-    dwi_motion._filepath = tmp_path / "dwi_motion.h5"  # Prevent accidental overwriting
     dwi_motion.motion_affines = None  # Erase ground truth for estimation
 
     def mock_iterator(*_, **kwargs):

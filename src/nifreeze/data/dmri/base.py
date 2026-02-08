@@ -35,7 +35,7 @@ import numpy as np
 import numpy.typing as npt
 from typing_extensions import Self
 
-from nifreeze.data.base import BaseDataset, _cmp, _data_repr
+from nifreeze.data.base import BaseDataset, _array_eq, _data_repr
 from nifreeze.data.dmri.utils import (
     DEFAULT_HIGHB_THRESHOLD,
     DEFAULT_LOWB_THRESHOLD,
@@ -125,19 +125,20 @@ class DWI(BaseDataset[np.ndarray]):
     gradients: np.ndarray = attrs.field(
         default=None,
         repr=_data_repr,
-        eq=attrs.cmp_using(eq=_cmp),
+        eq=_array_eq,
         converter=format_gradients,
         validator=validate_gradients,
     )
     """A 2D numpy array of the gradient table (``N`` orientations x ``C`` components)."""
     bzero: np.ndarray | None = attrs.field(
-        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp)
+        default=None, repr=_data_repr, eq=_array_eq,
     )
     """A *b=0* reference map, computed automatically when low-b frames are present."""
     eddy_xfms: list = attrs.field(default=None)
     """List of transforms to correct for estimated eddy current distortions."""
 
     def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
         if self.dataobj.shape[-1] != self.gradients.shape[0]:
             raise ValueError(
                 GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR.format(
@@ -175,9 +176,20 @@ class DWI(BaseDataset[np.ndarray]):
             self.bzero = bzeros if bzeros.ndim == 3 else np.median(bzeros, axis=-1)
 
         if b0_num > 0:
-            # Remove b0 volumes from dataobj and gradients
+            # Remove b0 volumes from dataobj (memmap → memmap) and gradients
             self.gradients = self.gradients[~b0_mask, :]
-            self.dataobj = self.dataobj[..., ~b0_mask]
+            keep_indices = np.where(~b0_mask)[0]
+            new_shape = (*self.dataobj.shape[:3], len(keep_indices))
+            filtered = np.lib.format.open_memmap(
+                str(self._cache_dir / "dataobj_filtered.npy"),
+                mode="w+",
+                dtype=self.dataobj.dtype,
+                shape=new_shape,
+            )
+            for out_i, src_i in enumerate(keep_indices):
+                filtered[..., out_i] = self.dataobj[..., src_i]
+            filtered.flush()
+            self.dataobj = filtered
 
         if self.gradients.shape[0] < DTI_MIN_ORIENTATIONS:
             raise ValueError(

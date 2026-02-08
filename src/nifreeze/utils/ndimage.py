@@ -21,6 +21,8 @@
 #     https://www.nipreps.org/community/licensing/
 #
 
+from __future__ import annotations
+
 import os
 import typing
 from warnings import warn
