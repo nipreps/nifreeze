@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.utils.iterators - nifreeze 26.0.0.dev43 documentation</title>
+        <title>nifreeze.utils.iterators - nifreeze 26.0.0.dev45 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev43 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev45 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev43</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev45</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev43</span>
+  <span class="sidebar-brand-text">26.0.0.dev45</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -354,6 +354,15 @@
 <span class="s2">    List of uptake values corresponding to all volumes of the dataset.</span>
 <span class="s2">&quot;&quot;&quot;</span>
 
+<span class="n">ITERATOR_NOTES</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">Only one of the size-related parameters (``size``, ``bvals``, or ``uptake``)</span>
+<span class="s2">may be provided at a time. If ``size`` is given, all other size-related</span>
+<span class="s2">parameters will be ignored. If ``size`` is not provided, the function will</span>
+<span class="s2">attempt to infer the number of volumes from the length or value of the provided</span>
+<span class="s2">parameter. If more than one such parameter is provided, a :exc:`ValueError`</span>
+<span class="s2">will be raised.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
 <span class="n">ITERATOR_SIZE_ERROR_MSG</span> <span class="o">=</span> <span class="p">(</span>
     <span class="sa">f</span><span class="s2">&quot;None of </span><span class="si">{</span><span class="n">SIZE_KEYS</span><span class="si">}</span><span class="s2"> were provided to infer size: cannot build iterator without size.&quot;</span>
 <span class="p">)</span>
@@ -407,11 +416,7 @@
 
 <span class="s2">Notes</span>
 <span class="s2">-----</span>
-<span class="s2">Only one of the above keyword arguments may be provided at a time. If ``size``</span>
-<span class="s2">is given, all other size-related keyword arguments will be ignored. If ``size``</span>
-<span class="s2">is not provided, the function will attempt to infer the number of volumes from</span>
-<span class="s2">the length or value of the provided keyword argument. If more than one such</span>
-<span class="s2">keyword is provided, a :exc:`ValueError` will be raised.</span>
+<span class="si">{</span><span class="n">ITERATOR_NOTES</span><span class="si">}</span>
 
 <span class="s2">Yields</span>
 <span class="s2">------</span>
@@ -461,11 +466,7 @@
 
 <span class="s2">Notes</span>
 <span class="s2">-----</span>
-<span class="s2">Only one of the above keyword arguments may be provided at a time. If ``size``</span>
-<span class="s2">is given, all other size-related keyword arguments will be ignored. If ``size``</span>
-<span class="s2">is not provided, the function will attempt to infer the number of volumes from</span>
-<span class="s2">the length or value of the provided keyword argument. If more than one such</span>
-<span class="s2">keyword is provided, a :exc:`ValueError` will be raised.</span>
+<span class="si">{</span><span class="n">ITERATOR_NOTES</span><span class="si">}</span>
 
 <span class="s2">Yields</span>
 <span class="s2">------</span>
@@ -563,11 +564,7 @@
 
 <span class="s2">Notes</span>
 <span class="s2">-----</span>
-<span class="s2">Only one of the above keyword arguments may be provided at a time. If ``size``</span>
-<span class="s2">is given, all other size-related keyword arguments will be ignored. If ``size``</span>
-<span class="s2">is not provided, the function will attempt to infer the number of volumes from</span>
-<span class="s2">the length or value of the provided keyword argument. If more than one such</span>
-<span class="s2">keyword is provided, a :exc:`ValueError` will be raised.</span>
+<span class="si">{</span><span class="n">ITERATOR_NOTES</span><span class="si">}</span>
 
 <span class="s2">Yields</span>
 <span class="s2">------</span>
@@ -611,11 +608,7 @@
 
 <span class="s2">Notes</span>
 <span class="s2">-----</span>
-<span class="s2">Only one of the above keyword arguments may be provided at a time. If ``size``</span>
-<span class="s2">is given, all other size-related keyword arguments will be ignored. If ``size``</span>
-<span class="s2">is not provided, the function will attempt to infer the number of volumes from</span>
-<span class="s2">the length or value of the provided keyword argument. If more than one such</span>
-<span class="s2">keyword is provided, a :exc:`ValueError` will be raised.</span>
+<span class="si">{</span><span class="n">ITERATOR_NOTES</span><span class="si">}</span>
 
 <span class="s2">Examples</span>
 <span class="s2">--------</span>
@@ -656,7 +649,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=1bb4c69d"></script>
+</div><script src="../../../_static/documentation_options.js?v=7445d249"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

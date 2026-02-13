@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.utils.ndimage module" href="nifreeze.utils.ndimage.html"><link rel="prev" title="nifreeze.utils package" href="nifreeze.utils.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.utils.iterators module - nifreeze 26.0.0.dev43 documentation</title>
+        <title>nifreeze.utils.iterators module - nifreeze 26.0.0.dev45 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev43 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev45 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev43</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev45</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev43</span>
+  <span class="sidebar-brand-text">26.0.0.dev45</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -370,11 +370,12 @@ are part of the 4th axis (e.g. diffusion gradients in DWI or update in PET).</p>
 </dd>
 </dl>
 <p class="rubric">Notes</p>
-<p>Only one of the above keyword arguments may be provided at a time. If <code class="docutils literal notranslate"><span class="pre">size</span></code>
-is given, all other size-related keyword arguments will be ignored. If <code class="docutils literal notranslate"><span class="pre">size</span></code>
-is not provided, the function will attempt to infer the number of volumes from
-the length or value of the provided keyword argument. If more than one such
-keyword is provided, a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code></a> will be raised.</p>
+<p>Only one of the size-related parameters (<code class="docutils literal notranslate"><span class="pre">size</span></code>, <code class="docutils literal notranslate"><span class="pre">bvals</span></code>, or <code class="docutils literal notranslate"><span class="pre">uptake</span></code>)
+may be provided at a time. If <code class="docutils literal notranslate"><span class="pre">size</span></code> is given, all other size-related
+parameters will be ignored. If <code class="docutils literal notranslate"><span class="pre">size</span></code> is not provided, the function will
+attempt to infer the number of volumes from the length or value of the provided
+parameter. If more than one such parameter is provided, a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code></a>
+will be raised.</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">centralsym_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>
 <span class="go">[5, 4, 6, 3, 7, 2, 8, 1, 9, 0]</span>
@@ -398,11 +399,12 @@ keyword is provided, a <a class="reference external" href="https://docs.python.o
 </dd>
 </dl>
 <p class="rubric">Notes</p>
-<p>Only one of the above keyword arguments may be provided at a time. If <code class="docutils literal notranslate"><span class="pre">size</span></code>
-is given, all other size-related keyword arguments will be ignored. If <code class="docutils literal notranslate"><span class="pre">size</span></code>
-is not provided, the function will attempt to infer the number of volumes from
-the length or value of the provided keyword argument. If more than one such
-keyword is provided, a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code></a> will be raised.</p>
+<p>Only one of the size-related parameters (<code class="docutils literal notranslate"><span class="pre">size</span></code>, <code class="docutils literal notranslate"><span class="pre">bvals</span></code>, or <code class="docutils literal notranslate"><span class="pre">uptake</span></code>)
+may be provided at a time. If <code class="docutils literal notranslate"><span class="pre">size</span></code> is given, all other size-related
+parameters will be ignored. If <code class="docutils literal notranslate"><span class="pre">size</span></code> is not provided, the function will
+attempt to infer the number of volumes from the length or value of the provided
+parameter. If more than one such parameter is provided, a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code></a>
+will be raised.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Yields<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
@@ -436,11 +438,12 @@ value across the entire volume.</p>
 </dd>
 </dl>
 <p class="rubric">Notes</p>
-<p>Only one of the above keyword arguments may be provided at a time. If <code class="docutils literal notranslate"><span class="pre">size</span></code>
-is given, all other size-related keyword arguments will be ignored. If <code class="docutils literal notranslate"><span class="pre">size</span></code>
-is not provided, the function will attempt to infer the number of volumes from
-the length or value of the provided keyword argument. If more than one such
-keyword is provided, a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code></a> will be raised.</p>
+<p>Only one of the size-related parameters (<code class="docutils literal notranslate"><span class="pre">size</span></code>, <code class="docutils literal notranslate"><span class="pre">bvals</span></code>, or <code class="docutils literal notranslate"><span class="pre">uptake</span></code>)
+may be provided at a time. If <code class="docutils literal notranslate"><span class="pre">size</span></code> is given, all other size-related
+parameters will be ignored. If <code class="docutils literal notranslate"><span class="pre">size</span></code> is not provided, the function will
+attempt to infer the number of volumes from the length or value of the provided
+parameter. If more than one such parameter is provided, a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code></a>
+will be raised.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Yields<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
@@ -479,11 +482,12 @@ is passed <a class="reference external" href="https://docs.python.org/3/library/
 </dd>
 </dl>
 <p class="rubric">Notes</p>
-<p>Only one of the above keyword arguments may be provided at a time. If <code class="docutils literal notranslate"><span class="pre">size</span></code>
-is given, all other size-related keyword arguments will be ignored. If <code class="docutils literal notranslate"><span class="pre">size</span></code>
-is not provided, the function will attempt to infer the number of volumes from
-the length or value of the provided keyword argument. If more than one such
-keyword is provided, a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code></a> will be raised.</p>
+<p>Only one of the size-related parameters (<code class="docutils literal notranslate"><span class="pre">size</span></code>, <code class="docutils literal notranslate"><span class="pre">bvals</span></code>, or <code class="docutils literal notranslate"><span class="pre">uptake</span></code>)
+may be provided at a time. If <code class="docutils literal notranslate"><span class="pre">size</span></code> is given, all other size-related
+parameters will be ignored. If <code class="docutils literal notranslate"><span class="pre">size</span></code> is not provided, the function will
+attempt to infer the number of volumes from the length or value of the provided
+parameter. If more than one such parameter is provided, a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code></a>
+will be raised.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Yields<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
@@ -582,7 +586,7 @@ keyword is provided, a <a class="reference external" href="https://docs.python.o
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=1bb4c69d"></script>
+</div><script src="../_static/documentation_options.js?v=7445d249"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
