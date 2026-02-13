@@ -544,6 +544,18 @@ def test_dti_prediction_shape(setup_random_dwi_data, index):
         assert predicted is None
 
 
+# ToDo
+# If use hsph_dirs >= 6 I get the above evals; however, some directions, evecs,
+# model_params differ for the case where I do not use the mask (because in
+# NiFreeze we do not pass the mask to the fitting; if I comment
+# passing the mask on the DIPY call below, tests pass); if I use 3
+# tests pass even if passing the mask. CAN BE RELATED TO SOME BROADCASTING THINGS AS
+# IN NIFREEZE WE FLATTEN THINGS (NOTE THAT MIN/MAX VALUES ARE DIFFERENT
+# SO IT IS NOT THAT THE COMPARISON FUNCTION FLATTENING IS WRONG);
+# OTHERWISE, CHECK IF WE DO SOMETHING FANCY IN NIFREEZE IF HAVING FEW DIRECTIONS
+# dipy fit USES wls BY DEFAULT SO MAYBE RELATED TO THE WEIGHTING ??
+# Only fails when having multiple voxels, so for sure must be something related
+# to the broadcasting and weights
 @pytest.mark.parametrize(
     "single_shell_test_data",
     [
@@ -558,8 +570,32 @@ def test_dti_prediction_shape(setup_random_dwi_data, index):
         {
             "bval_shell": 1000,
             "S0": 1,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": 3,
+            "snr": None,
+            "vol_shape": (2, 4, 1),
+        },
+        {
+            "bval_shell": 1000,
+            "S0": 1,
             "evals": (0.0016, 0.0004, 0.0004),
             "hsph_dirs": 6,
+            "snr": None,
+            "vol_shape": (1, 1, 1),
+        },
+        {
+            "bval_shell": 1000,
+            "S0": 1,
+            "evals": (0.0016, 0.0004, 0.0004),
+            "hsph_dirs": 6,
+            "snr": None,
+            "vol_shape": (2, 5, 1),
+        },
+        {
+            "bval_shell": 1000,
+            "S0": 1,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": 8,
             "snr": None,
             "vol_shape": (1, 1, 1),
         },
@@ -569,7 +605,7 @@ def test_dti_prediction_shape(setup_random_dwi_data, index):
             "evals": (0.0015, 0.0003, 0.0003),
             "hsph_dirs": 8,
             "snr": None,
-            "vol_shape": (1, 1, 1),
+            "vol_shape": (2, 3, 1),
         },
     ],
     indirect=True,
@@ -619,8 +655,32 @@ def test_dti_model_fit(single_shell_test_data, index, ignore_bzero, use_mask):
         {
             "bval_shell": 1000,
             "S0": 1,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": 3,
+            "snr": None,
+            "vol_shape": (2, 4, 1),
+        },
+        {
+            "bval_shell": 1000,
+            "S0": 1,
             "evals": (0.0016, 0.0004, 0.0004),
             "hsph_dirs": 6,
+            "snr": None,
+            "vol_shape": (1, 1, 1),
+        },
+        {
+            "bval_shell": 1000,
+            "S0": 1,
+            "evals": (0.0016, 0.0004, 0.0004),
+            "hsph_dirs": 6,
+            "snr": None,
+            "vol_shape": (2, 5, 1),
+        },
+        {
+            "bval_shell": 1000,
+            "S0": 1,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": 8,
             "snr": None,
             "vol_shape": (1, 1, 1),
         },
@@ -630,7 +690,7 @@ def test_dti_model_fit(single_shell_test_data, index, ignore_bzero, use_mask):
             "evals": (0.0015, 0.0003, 0.0003),
             "hsph_dirs": 8,
             "snr": None,
-            "vol_shape": (1, 1, 1),
+            "vol_shape": (2, 3, 1),
         },
     ],
     indirect=True,
