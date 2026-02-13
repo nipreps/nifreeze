@@ -44,6 +44,15 @@ uptake : :obj:`list`, optional
     List of uptake values corresponding to all volumes of the dataset.
 """
 
+ITERATOR_NOTES = """
+Only one of the size-related parameters (``size``, ``bvals``, or ``uptake``)
+may be provided at a time. If ``size`` is given, all other size-related
+parameters will be ignored. If ``size`` is not provided, the function will
+attempt to infer the number of volumes from the length or value of the provided
+parameter. If more than one such parameter is provided, a :exc:`ValueError`
+will be raised.
+"""
+
 ITERATOR_SIZE_ERROR_MSG = (
     f"None of {SIZE_KEYS} were provided to infer size: cannot build iterator without size."
 )
@@ -94,11 +103,7 @@ Other Parameters
 
 Notes
 -----
-Only one of the above keyword arguments may be provided at a time. If ``size``
-is given, all other size-related keyword arguments will be ignored. If ``size``
-is not provided, the function will attempt to infer the number of volumes from
-the length or value of the provided keyword argument. If more than one such
-keyword is provided, a :exc:`ValueError` will be raised.
+{ITERATOR_NOTES}
 
 Yields
 ------
@@ -145,11 +150,7 @@ seed : :obj:`int`, :obj:`bool`, :obj:`str`, or :obj:`None`
 
 Notes
 -----
-Only one of the above keyword arguments may be provided at a time. If ``size``
-is given, all other size-related keyword arguments will be ignored. If ``size``
-is not provided, the function will attempt to infer the number of volumes from
-the length or value of the provided keyword argument. If more than one such
-keyword is provided, a :exc:`ValueError` will be raised.
+{ITERATOR_NOTES}
 
 Yields
 ------
@@ -244,11 +245,7 @@ Other Parameters
 
 Notes
 -----
-Only one of the above keyword arguments may be provided at a time. If ``size``
-is given, all other size-related keyword arguments will be ignored. If ``size``
-is not provided, the function will attempt to infer the number of volumes from
-the length or value of the provided keyword argument. If more than one such
-keyword is provided, a :exc:`ValueError` will be raised.
+{ITERATOR_NOTES}
 
 Yields
 ------
@@ -289,11 +286,7 @@ Other Parameters
 
 Notes
 -----
-Only one of the above keyword arguments may be provided at a time. If ``size``
-is given, all other size-related keyword arguments will be ignored. If ``size``
-is not provided, the function will attempt to infer the number of volumes from
-the length or value of the provided keyword argument. If more than one such
-keyword is provided, a :exc:`ValueError` will be raised.
+{ITERATOR_NOTES}
 
 Examples
 --------
