@@ -26,6 +26,7 @@ import sys
 
 import numpy as np
 import pytest
+from scipy.interpolate import BSpline
 
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.pet import PET
@@ -34,6 +35,7 @@ from nifreeze.model.pet import (
     PET_MIDFRAME_ERROR_MSG,
     PET_OBJECT_ERROR_MSG,
     BSplinePETModel,
+    _build_bspline_knots,
 )
 from nifreeze.testing.simulations import compute_pet_noise_sd, srtm
 
@@ -113,7 +115,41 @@ def test_petmodel_init_dataset_error(setup_random_pet_data, monkeypatch):
         BSplinePETModel(dataset=pet_obj_totald)  # type:ignore[arg-type]
 
 
-@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
+# ToDo
+# If the fix is applied to the PET _build_bspline_knots function (uses x1p)
+# The below still failes because compares different floats assert np.float64(5.0) > np.float32(5.0)
+# @pytest.mark.parametrize("x", [np.array([5.0, 15.0, 25.0, 35.005, 45.015], dtype=np.float32),])
+@pytest.mark.parametrize(
+    "x",
+    [
+        np.array([5.0, 15.0, 25.0, 35.005, 45.015], dtype=np.float64),
+    ],
+)
+def test_bspline_bounds(x):
+    order = 3
+    n_ctrl = 3
+    t = _build_bspline_knots(x, n_ctrl=n_ctrl, order=order)
+
+    # Valid B-spline domain: the B-Spline contract in scipy requires
+    # all x_{i} \in [t[k], t[-k-1]]
+    # where k is the spline order, and t is the knot vector
+    valid_min = t[order]
+    valid_max = t[-order - 1]  # same as t[t.shape[0] - order - 1]
+
+    for index in range(len(x)):
+        _x = np.delete(x, index)
+        BSpline.design_matrix(_x, t=t, k=order, extrapolate=False)
+        print(index)
+        assert min(_x) > valid_min, f"Training data {_x} has values < {valid_min}"
+        assert max(_x) < valid_max, f"Training data {_x} has values > {valid_max}"
+
+
+# @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
+@pytest.mark.random_pet_data(
+    5,
+    (4, 4, 4),
+    np.array([10.0, 20.0, 30.0, 40.0, 50.01]),
+)
 def test_petmodel_fit_predict(setup_random_pet_data):
     pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
 
@@ -127,12 +163,12 @@ def test_petmodel_fit_predict(setup_random_pet_data):
 
     model = BSplinePETModel(dataset=pet_obj)
 
-    # Predict at a specific timepoint (LOVO mode)
-    index = 2
-    vol = model.fit_predict(index)
-    assert vol is not None
-    assert vol.shape == pet_obj.shape3d
-    assert vol.dtype == pet_obj.dataobj.dtype
+    # Test all indices
+    for idx in range(len(pet_obj)):
+        vol = model.fit_predict(index=idx)
+        assert vol is not None
+        assert vol.shape == pet_obj.shape3d
+        assert vol.dtype == pet_obj.dataobj.dtype
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
