@@ -79,7 +79,16 @@ class Filter:
 class Estimator:
     """Orchestrates components for a single estimation step."""
 
-    __slots__ = ("_model", "_single_fit", "_strategy", "_prev", "_model_kwargs", "_align_kwargs")
+    __slots__ = (
+        "_model",
+        "_single_fit",
+        "_strategy",
+        "_prev",
+        "_model_kwargs",
+        "_align_kwargs",
+        "_start_index",
+        "_end_index",
+    )
 
     def __init__(
         self,
@@ -88,14 +97,27 @@ class Estimator:
         prev: Estimator | Filter | None = None,
         model_kwargs: dict | None = None,
         single_fit: bool = False,
+        start_index: int = 0,
+        end_index: int | None = None,
         **kwargs,
     ):
+        # ToDo
+        # Document start, end and size
+        if start_index < 0:
+            raise ValueError("'start_index' must be >= 0.")
+
+        if end_index is not None and end_index <= start_index:
+            raise ValueError("'end_index' must be > 'start_index'.")
+
         self._model = model
         self._prev = prev
         self._strategy = strategy
         self._single_fit = single_fit
         self._model_kwargs = model_kwargs or {}
         self._align_kwargs = kwargs or {}
+
+        self._start_index = start_index
+        self._end_index = end_index
 
     def run(self, dataset: DatasetT, **kwargs) -> Self:
         """
@@ -117,20 +139,35 @@ class Estimator:
             if isinstance(self._prev, Filter):
                 dataset = result  # type: ignore[assignment]
 
+        # ToDo
+        # Ideally, these should be done at instantiation, but the dataset is not
+        # available there, unless we use the model's. This looks a design issue
+        if self._start_index >= len(dataset):
+            raise ValueError("'start_index' must be < dataset length. Adjust your start index.")
+        if self._end_index is not None and self._end_index >= len(dataset):
+            raise ValueError("'end_index' must be < dataset length. Adjust your end index.")
+
         n_jobs = kwargs.pop("n_jobs", None) or min(cpu_count() or 1, 8)
         n_threads = kwargs.pop("omp_nthreads", None) or ((cpu_count() or 2) - 1)
 
         num_voxels = dataset.brainmask.sum() if dataset.brainmask is not None else dataset.size3d
         chunk_size = DEFAULT_CHUNK_SIZE * (n_threads or 1)
 
+        # Calculate the size parameter for the iterator
+        if self._end_index is not None:
+            size = self._end_index - self._start_index
+        else:
+            size = len(dataset) - self._start_index
+
         # Prepare iterator
         iterfunc = getattr(iterators, f"{self._strategy}_iterator")
         index_iter = iterfunc(
-            size=len(dataset),
+            size=size,
             bvals=kwargs.pop("bvals", None),
             uptake=kwargs.pop("uptake", None),
             seed=kwargs.get("seed", None),
             round_decimals=kwargs.pop("round_decimals", iterators.DEFAULT_ROUND_DECIMALS),
+            start_index=self._start_index,
         )
 
         # Initialize model
@@ -172,7 +209,12 @@ class Estimator:
         kwargs["num_threads"] = n_threads
         kwargs = self._align_kwargs | kwargs
 
-        dataset_length = len(dataset)
+        # Calculate effective dataset length for progress bar
+        if self._end_index is not None:
+            dataset_length = self._end_index - self._start_index
+        else:
+            dataset_length = len(dataset) - self._start_index
+
         with TemporaryDirectory() as tmp_dir:
             print(f"Processing in <{tmp_dir}>")
             ptmp_dir = Path(tmp_dir)
