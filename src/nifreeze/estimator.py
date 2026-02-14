@@ -40,7 +40,6 @@ from typing_extensions import Self
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.pet import PET
 from nifreeze.model.base import BaseModel, ModelFactory
-from nifreeze.model.pet import BSplinePETModel
 from nifreeze.registration.ants import (
     Registration,
     _prepare_registration_data,
@@ -228,87 +227,93 @@ class Estimator:
 class PETMotionEstimator:
     """Estimates motion within PET imaging data aligned with generic Estimator workflow."""
 
-    def __init__(self, align_kwargs: dict | None = None, strategy: str = "lofo"):
-        self.align_kwargs = align_kwargs or {}
-        self.strategy = strategy
+    def __init__(
+        self,
+        model: BaseModel | str,
+        strategy="linear",
+        model_kwargs: dict | None = None,
+        align_kwargs: dict | None = None,
+    ):
+        self._model = model
+        self._strategy = strategy
+        self._model_kwargs = model_kwargs or {}
+        self._align_kwargs = align_kwargs or {}
 
-    def run(self, pet_dataset: PET, omp_nthreads: int | None = None) -> list:
-        n_frames = len(pet_dataset)
-        frame_indices = np.arange(n_frames).astype(int)
+    def run(self, dataset: PET, omp_nthreads: int | None = None) -> list:
+        # Prepare iterator
+        iterfunc = getattr(iterators, f"{self._strategy}_iterator")
+        index_iter = iterfunc(size=len(dataset), seed=self._align_kwargs.get("seed", None))
+
+        # Initialize model
+        if isinstance(self._model, str):
+            model = ModelFactory.init(
+                model=self._model,
+                dataset=dataset,
+                **self._model_kwargs,
+            )
+        else:
+            model = self._model
+
+        dataset_length = len(dataset)
 
         if omp_nthreads:
-            self.align_kwargs["num_threads"] = omp_nthreads
+            self._align_kwargs["num_threads"] = omp_nthreads
 
         affine_matrices = []
 
         with TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
 
-            for idx in tqdm(frame_indices, desc="Estimating PET motion"):
-                (train_data, train_times), (test_data, test_time) = pet_dataset.lofo_split(idx)
+            with tqdm(total=dataset_length, unit="vols.") as pbar:
+                for i in index_iter:
+                    pbar.set_description_str(f"{FIT_MSG: <16} vol. <{i}>")
 
-                if train_times is None:
-                    raise ValueError(
-                        f"train_times is None at index {idx}, check midframe initialization."
+                    # Fit the model once on the training dataset
+                    model.fit_predict(None)
+
+                    # Predict the reference volume at the test frame's timepoint
+                    predicted = model.fit_predict(i)
+
+                    fixed_image_path = tmp_path / f"fixed_frame_{i:03d}.nii.gz"
+                    moving_image_path = tmp_path / f"moving_frame_{i:03d}.nii.gz"
+
+                    fixed_img = nb.Nifti1Image(predicted, dataset.affine)
+                    moving_img = nb.Nifti1Image(dataset[i][0], dataset.affine)
+
+                    moving_img = nb.as_closest_canonical(moving_img, enforce_diag=True)
+
+                    fixed_img.to_filename(fixed_image_path)
+                    moving_img.to_filename(moving_image_path)
+
+                    registration_config = files("nifreeze.registration.config").joinpath(
+                        "pet-to-pet_level1.json"
                     )
 
-                # Build a temporary dataset excluding the test frame
-                train_dataset = PET(
-                    dataobj=train_data,
-                    affine=pet_dataset.affine,
-                    brainmask=pet_dataset.brainmask,
-                    midframe=train_times,
-                    total_duration=pet_dataset.total_duration,
-                )
+                    registration = Registration(
+                        from_file=registration_config,
+                        fixed_image=str(fixed_image_path),
+                        moving_image=str(moving_image_path),
+                        output_warped_image=True,
+                        output_transform_prefix=f"ants_{i:03d}",
+                        **self._align_kwargs,
+                    )
 
-                # Instantiate the PET model explicitly
-                model = BSplinePETModel(dataset=train_dataset)
+                    try:
+                        result = registration.run(cwd=str(tmp_path))
+                        if result.outputs.forward_transforms:
+                            transform = nt.io.itk.ITKLinearTransform.from_filename(
+                                result.outputs.forward_transforms[0]
+                            )
+                            matrix = transform.to_ras(
+                                reference=str(fixed_image_path), moving=str(moving_image_path)
+                            )
+                            affine_matrices.append(matrix)
+                        else:
+                            affine_matrices.append(np.eye(4))
+                            print(f"No transforms produced for index {i}")
+                    except Exception as e:
+                        print(f"Failed to process frame {i} due to {e}")
 
-                # Fit the model once on the training dataset
-                model.fit_predict(None)
+                    pbar.update()
 
-                # Predict the reference volume at the test frame's timepoint
-                predicted = model.fit_predict(idx)
-
-                fixed_image_path = tmp_path / f"fixed_frame_{idx:03d}.nii.gz"
-                moving_image_path = tmp_path / f"moving_frame_{idx:03d}.nii.gz"
-
-                fixed_img = nb.Nifti1Image(predicted, pet_dataset.affine)
-                moving_img = nb.Nifti1Image(test_data, pet_dataset.affine)
-
-                moving_img = nb.as_closest_canonical(moving_img, enforce_diag=True)
-
-                fixed_img.to_filename(fixed_image_path)
-                moving_img.to_filename(moving_image_path)
-
-                registration_config = files("nifreeze.registration.config").joinpath(
-                    "pet-to-pet_level1.json"
-                )
-
-                registration = Registration(
-                    from_file=registration_config,
-                    fixed_image=str(fixed_image_path),
-                    moving_image=str(moving_image_path),
-                    output_warped_image=True,
-                    output_transform_prefix=f"ants_{idx:03d}",
-                    **self.align_kwargs,
-                )
-
-                try:
-                    result = registration.run(cwd=str(tmp_path))
-                    if result.outputs.forward_transforms:
-                        transform = nt.io.itk.ITKLinearTransform.from_filename(
-                            result.outputs.forward_transforms[0]
-                        )
-                        matrix = transform.to_ras(
-                            reference=str(fixed_image_path), moving=str(moving_image_path)
-                        )
-                        affine_matrices.append(matrix)
-                    else:
-                        affine_matrices.append(np.eye(4))
-                        print(f"No transforms produced for index {idx}")
-                except Exception as e:
-                    affine_matrices.append(np.eye(4))
-                    print(f"Failed to process frame {idx} due to {e}")
-
-        return affine_matrices
+            return affine_matrices

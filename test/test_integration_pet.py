@@ -30,26 +30,7 @@ import pytest
 
 from nifreeze.data.pet import PET
 from nifreeze.estimator import PETMotionEstimator
-
-
-@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 13.0, 17.0, 30.0, 33.0]))
-def test_lofo_split_shapes(tmp_path, setup_random_pet_data):
-    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
-
-    pet_obj = PET(
-        dataobj=pet_dataobj,
-        affine=affine,
-        brainmask=brainmask_dataobj,
-        midframe=midframe,
-        total_duration=total_duration,
-    )
-
-    idx = 2
-    (train_data, train_times), (test_data, test_time) = pet_obj.lofo_split(idx)
-    assert train_data.shape[-1] == pet_obj.dataobj.shape[-1] - 1
-    np.testing.assert_array_equal(test_data, pet_obj.dataobj[..., idx])
-    np.testing.assert_array_equal(train_times, np.delete(pet_obj.midframe, idx))
-    assert test_time == pet_obj.midframe[idx]
+from nifreeze.model.base import BaseModel
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
@@ -101,16 +82,17 @@ def test_pet_motion_estimator_run(monkeypatch, setup_random_pet_data):
         total_duration=total_duration,
     )
 
-    class DummyModel:
+    class DummyModel(BaseModel):
         def __init__(self, dataset):
+            super().__init__(dataset)
             self.dataset = dataset
 
-        def fit_predict(self, index):
+        def fit_predict(self, index=None, **kawargs):
             if index is None:
                 return None
             return np.zeros(self.dataset.shape3d, dtype=np.float32)
 
-    monkeypatch.setattr("nifreeze.estimator.BSplinePETModel", DummyModel)
+    model = DummyModel(pet_obj)
 
     class DummyRegistration:
         def __init__(self, *args, **kwargs):
@@ -121,7 +103,7 @@ def test_pet_motion_estimator_run(monkeypatch, setup_random_pet_data):
 
     monkeypatch.setattr("nifreeze.estimator.Registration", DummyRegistration)
 
-    estimator = PETMotionEstimator(None)
+    estimator = PETMotionEstimator(model)
     affines = estimator.run(pet_obj)
     assert len(affines) == len(pet_obj)
     for mat in affines:
