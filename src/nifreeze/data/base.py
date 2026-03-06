@@ -47,10 +47,10 @@ ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
 DATAOBJ_ABSENCE_ERROR_MSG = "BaseDataset 'dataobj' may not be None"
 """BaseDataset initialization dataobj absence error message."""
 
-DATAOBJ_OBJECT_ERROR_MSG = "BaseDataset 'dataobj' must be a numpy array."
+DATAOBJ_OBJECT_ERROR_MSG = "BaseDataset 'dataobj' must be an array-like object."
 """BaseDataset initialization dataobj object error message."""
 
-DATAOBJ_NDIM_ERROR_MSG = "BaseDataset 'dataobj' must be a 4-D numpy array"
+DATAOBJ_NDIM_ERROR_MSG = "BaseDataset 'dataobj' must be a 4-D array"
 """BaseDataset initialization dataobj dimensionality error message."""
 
 AFFINE_ABSENCE_ERROR_MSG = "BaseDataset 'affine' may not be None"
@@ -180,7 +180,7 @@ def _cmp(lh: Any, rh: Any) -> bool:
 def validate_dataobj(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> None:
     """Strict validator for data objects.
 
-    Enforces that ``value`` is present and is a NumPy array with exactly 4
+    Enforces that ``value`` is present, array-like, and exposes exactly 4
     dimensions (``ndim == 4``).
 
     This function is intended for use as an attrs-style validator.
@@ -197,14 +197,14 @@ def validate_dataobj(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> No
     Raises
     ------
     exc:`TypeError`
-        If the input cannot be converted to a float :obj:`~numpy.ndarray`.
+        If the input is not an array-like object.
     exc:`ValueError`
         If the value is :obj:`None`, or not 4-dimensional.
     """
     if value is None:
         raise ValueError(DATAOBJ_ABSENCE_ERROR_MSG)
 
-    if not isinstance(value, np.ndarray):
+    if not isinstance(value, (np.ndarray, nb.arrayproxy.ArrayProxy, h5py.Dataset)):
         raise TypeError(DATAOBJ_OBJECT_ERROR_MSG)
 
     if not _has_ndim(value, 4):
@@ -287,6 +287,9 @@ class BaseDataset(Generic[Unpack[Ts]]):
         eq=False,
     )
     """A path to an HDF5 file to store the whole dataset."""
+
+    _h5file: h5py.File | None = attrs.field(default=None, repr=False, eq=False)
+    """An optional open HDF5 handle keeping on-disk datasets accessible."""
 
     def __attrs_post_init__(self) -> None:
         """Enforce basic consistency of base dataset fields at instantiation
@@ -374,27 +377,62 @@ class BaseDataset(Generic[Unpack[Ts]]):
     @classmethod
     def from_filename(cls, filename: Path | str) -> Self:
         """
-        Read an HDF5 file from disk and create a BaseDataset.
+        Read a dataset from disk and create a :class:`BaseDataset`.
 
         Parameters
         ----------
         filename : :obj:`os.pathlike`
-            The HDF5 file path to read.
+            The HDF5 or NIfTI file path to read.
 
         Returns
         -------
         :obj:`~nifreeze.data.base.BaseDataset`
-            The constructed dataset with data loaded from the file.
+            The constructed dataset backed by on-disk data when possible.
 
         """
-        with h5py.File(filename, "r") as in_file:
-            root = in_file["/0"]
-            data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}
-        return cls(**data)
+        filename = Path(filename)
+
+        if filename.suffix == NFDH5_EXT:
+            h5file = h5py.File(filename, "r")
+            root = h5file["/0"]
+
+            try:
+                data: dict[str, Any] = {"dataobj": root["dataobj"]}
+
+                for key, value in root.items():
+                    if key.startswith("_") or key == "dataobj":
+                        continue
+
+                    data[key] = np.asanyarray(value)
+
+                dataset = cls(**data, _filepath=filename, _h5file=h5file)
+            except Exception:
+                h5file.close()
+                raise
+
+            return dataset
+
+        img = nb.load(str(filename))
+        header = img.header.copy()
+        header.set_sform(img.affine, code=1)
+        header.set_qform(img.affine, code=1)
+        return cls(
+            dataobj=img.dataobj,
+            affine=img.affine,
+            datahdr=np.frombuffer(header.binaryblock, dtype=np.uint8).copy(),
+            _filepath=filename,
+        )
 
     def get_filename(self) -> Path:
         """Get the filepath of the HDF5 file."""
         return self._filepath
+
+    def close(self) -> None:
+        """Close any open HDF5 handle keeping disk-backed data alive."""
+
+        if self._h5file is not None:
+            self._h5file.close()
+            self._h5file = None
 
     def set_transform(self, index: int, affine: np.ndarray) -> None:
         """
@@ -489,6 +527,9 @@ class BaseDataset(Generic[Unpack[Ts]]):
             write_hmxfms=write_hmxfms,
             order=order,
         )
+
+    def __del__(self) -> None:  # pragma: no cover - best effort cleanup
+        self.close()
 
 
 def to_nifti(
