@@ -82,7 +82,7 @@ class Estimator:
         "_model_kwargs",
         "_align_kwargs",
         "_start_index",
-        "_end_index",
+        "_stop_index",
     )
 
     def __init__(
@@ -93,17 +93,9 @@ class Estimator:
         model_kwargs: dict | None = None,
         single_fit: bool = False,
         start_index: int = 0,
-        end_index: int | None = None,
+        stop_index: int | None = None,
         **kwargs,
     ):
-        # ToDo
-        # Document start, end and size
-        if start_index < 0:
-            raise ValueError("'start_index' must be >= 0.")
-
-        if end_index is not None and end_index <= start_index:
-            raise ValueError("'end_index' must be > 'start_index'.")
-
         self._model = model
         self._prev = prev
         self._strategy = strategy
@@ -112,7 +104,7 @@ class Estimator:
         self._align_kwargs = kwargs or {}
 
         self._start_index = start_index
-        self._end_index = end_index
+        self._stop_index = stop_index
 
     def run(self, dataset: DatasetT, **kwargs) -> Self:
         """
@@ -134,35 +126,36 @@ class Estimator:
             if isinstance(self._prev, Filter):
                 dataset = result  # type: ignore[assignment]
 
-        # ToDo
-        # Ideally, these should be done at instantiation, but the dataset is not
-        # available there, unless we use the model's. This looks a design issue
-        if self._start_index >= len(dataset):
-            raise ValueError("'start_index' must be < dataset length. Adjust your start index.")
-        if self._end_index is not None and self._end_index >= len(dataset):
-            raise ValueError("'end_index' must be < dataset length. Adjust your end index.")
-
         n_jobs = kwargs.pop("n_jobs", None) or min(cpu_count() or 1, 8)
         n_threads = kwargs.pop("omp_nthreads", None) or ((cpu_count() or 2) - 1)
 
         num_voxels = dataset.brainmask.sum() if dataset.brainmask is not None else dataset.size3d
         chunk_size = DEFAULT_CHUNK_SIZE * (n_threads or 1)
 
-        # Calculate the size parameter for the iterator
-        if self._end_index is not None:
-            size = self._end_index - self._start_index
-        else:
-            size = len(dataset) - self._start_index
+        # Calculate the size parameter for the iterator (exclusive upper bound)
+        n = len(dataset)
+        size = n
+        start_index = self._start_index or 0
+        stop_index = (
+            None
+            if self._stop_index is None
+            else (n + self._stop_index if self._stop_index < 0 else self._stop_index)
+        )
 
         # Prepare iterator
         iterfunc = getattr(iterators, f"{self._strategy}_iterator")
+        # ToDo: Not sure why we are willing to pass bvals or uptake here if we
+        #   are providing the dataset and start/end indices.
+        #   test_estimator_iterator_index_match fails because multiple keys are
+        #   found (size, and bval/updatke)
         index_iter = iterfunc(
             size=size,
             bvals=kwargs.pop("bvals", None),
             uptake=kwargs.pop("uptake", None),
             seed=kwargs.get("seed", None),
             round_decimals=kwargs.pop("round_decimals", iterators.DEFAULT_ROUND_DECIMALS),
-            start_index=self._start_index,
+            start_index=start_index,
+            stop_index=stop_index,
         )
 
         # Initialize model
@@ -205,8 +198,8 @@ class Estimator:
         kwargs = self._align_kwargs | kwargs
 
         # Calculate effective dataset length for progress bar
-        if self._end_index is not None:
-            dataset_length = self._end_index - self._start_index
+        if self._stop_index is not None:
+            dataset_length = self._stop_index - self._start_index
         else:
             dataset_length = len(dataset) - self._start_index
 

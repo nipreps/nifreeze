@@ -36,6 +36,17 @@ from nifreeze.utils import iterators
 
 DATAOBJ_SIZE = (5, 5, 5, 7)
 
+import re
+from nifreeze.utils.iterators import (
+    ITERATOR_MULTIPLICITY_ERROR_MSG,
+    ITERATOR_SIZE_ERROR_MSG,
+    START_INDEX_POSITIVITY_ERROR_MSG,
+    START_INDEX_DATA_LENGTH_ERROR_MSG,
+    STOP_INDEX_ORDERING_ERROR_MSG,
+    STOP_INDEX_DATA_LENGTH_ERROR_MSG,
+    SIZE_KWARG,
+)
+
 
 class DummyInsiderModel(BaseModel):
     def __init__(self, dataset, **kwargs):
@@ -172,10 +183,10 @@ def test_estimator_start_and_end_index(request, monkeypatch):
     dataset = DummyDataset(rng=request.node.rng)
     model = DummyInsiderModel(dataset=dataset)
 
-    estimator = Estimator(model, strategy="linear", start_index=2, end_index=5)
+    estimator = Estimator(model, strategy="linear", start_index=2, stop_index=5)
     estimator.run(dataset)
 
-    # Should only process indices 2-4 (end_index is exclusive)
+    # Should only process indices 2-4 (stop_index is exclusive)
     assert recorded_indices == [2, 3, 4]
 
 
@@ -184,31 +195,28 @@ def test_estimator_invalid_start_index(request):
     dataset = DummyDataset(rng=request.node.rng)
     model = DummyInsiderModel(dataset=dataset)
 
-    with pytest.raises(ValueError, match="'start_index' must be >= 0"):
-        Estimator(model, start_index=-1)
+    estimator = Estimator(model, start_index=-1)
+    with pytest.raises(ValueError, match=re.escape(START_INDEX_POSITIVITY_ERROR_MSG)):
+        estimator.run(dataset)
 
     estimator = Estimator(model, start_index=len(dataset))
     with pytest.raises(
-        ValueError, match="'start_index' must be < dataset length. Adjust your start index."
+        ValueError, match=re.escape(START_INDEX_DATA_LENGTH_ERROR_MSG.format(feature=SIZE_KWARG))
     ):
         estimator.run(dataset)
 
 
-def test_estimator_invalid_end_index(request):
-    """Test that end_index <= start_index raises an error."""
+def test_estimator_invalid_stop_index(request):
+    """Test that stop_index <= start_index raises an error."""
     dataset = DummyDataset(rng=request.node.rng)
     model = DummyInsiderModel(dataset=dataset)
 
-    with pytest.raises(ValueError, match="'end_index' must be > 'start_index'"):
-        Estimator(model, start_index=5, end_index=3)
+    estimator = Estimator(model, start_index=2, stop_index=2)
+    with pytest.raises(ValueError, match=re.escape(STOP_INDEX_ORDERING_ERROR_MSG)):
+        estimator.run(dataset)
 
-    with pytest.raises(ValueError, match="'end_index' must be > 'start_index'"):
-        Estimator(model, end_index=-1)
-
-    estimator = Estimator(model, end_index=len(dataset))
-    with pytest.raises(
-        ValueError, match="'end_index' must be < dataset length. Adjust your end index."
-    ):
+    estimator = Estimator(model, stop_index=len(dataset) + 1)
+    with pytest.raises(ValueError, match=re.escape(STOP_INDEX_DATA_LENGTH_ERROR_MSG.format(feature=SIZE_KWARG))):
         estimator.run(dataset)
 
 
