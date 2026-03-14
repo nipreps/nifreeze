@@ -1,0 +1,285 @@
+# emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
+# vi: set ft=python sts=4 ts=4 sw=4 et:
+#
+# Copyright The NiPreps Developers <nipreps@gmail.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We support and encourage derived works from this project, please read
+# about our expectations at
+#
+#     https://www.nipreps.org/community/licensing/
+#
+
+import re
+from typing import Union
+
+import numpy as np
+import pytest
+
+import nifreeze.estimator
+from nifreeze.data.base import BaseDataset
+from nifreeze.data.dmri.utils import DEFAULT_LOWB_THRESHOLD
+from nifreeze.data.pet.utils import compute_uptake_statistic
+from nifreeze.estimator import Estimator
+from nifreeze.model.base import BaseModel
+from nifreeze.utils import iterators
+
+DATAOBJ_SIZE = (5, 5, 5, 7)
+
+
+class DummyInsiderModel(BaseModel):
+    def __init__(self, dataset, **kwargs):
+        super().__init__(dataset, **kwargs)
+
+    def fit_predict(self, index: int | None = None, **kwargs):
+        # Return the indexed volume
+        return self._dataset.dataobj[..., index]
+
+
+class DummyDataset(BaseDataset):
+    def __init__(self, rng):
+        self.dataobj = rng.uniform(0.0, 1.0, DATAOBJ_SIZE)  # np.ones(DATAOBJ_SIZE)
+        self.brainmask = rng.choice([True, False], size=self.dataobj.shape[:-1]).astype(bool)
+        self.affine = np.eye(4)
+
+    def __len__(self):
+        return self.dataobj.shape[-1]
+
+    def __getitem__(self, idx):
+        # Return the indexed volume and a dummy value
+        return self.dataobj[..., idx], None
+
+    def set_transform(self, idx, matrix):
+        pass
+
+
+class DummyDWIDataset(BaseDataset):
+    def __init__(self, dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients):
+        self.dataobj = dwi_dataobj
+        self.affine = affine
+        self.brainmask = brainmask_dataobj
+        self.bzero = b0_dataobj
+        self.gradients = gradients
+
+    def __len__(self):
+        return self.dataobj.shape[-1]
+
+    def __getitem__(self, idx):
+        return self.dataobj[..., idx], None, self.gradients[idx, ...]
+
+
+class DummyPETDataset(BaseDataset):
+    def __init__(self, pet_dataobj, affine, brainmask_dataobj, midframe, total_duration):
+        self.dataobj = pet_dataobj
+        self.affine = affine
+        self.brainmask = brainmask_dataobj
+        self.midframe = midframe
+        self.total_duration = total_duration
+
+    def __len__(self):
+        return self.dataobj.shape[-1]
+
+    def __getitem__(self, idx):
+        return self.dataobj[..., idx], None, self.midframe[idx]
+
+
+def test_estimator_invalid_start_index(request):
+    """Test that negative start_index raises an error."""
+    dataset = DummyDataset(rng=request.node.rng)
+    model = DummyInsiderModel(dataset=dataset)
+
+    estimator = Estimator(model, start_index=-1)
+    with pytest.raises(ValueError, match=re.escape(iterators.START_INDEX_POSITIVITY_ERROR_MSG)):
+        estimator.run(dataset)
+
+    estimator = Estimator(model, start_index=len(dataset))
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            iterators.START_INDEX_DATA_LENGTH_ERROR_MSG.format(feature=iterators.SIZE_KWARG)
+        ),
+    ):
+        estimator.run(dataset)
+
+
+def test_estimator_invalid_stop_index(request):
+    """Test that stop_index <= start_index raises an error."""
+    dataset = DummyDataset(rng=request.node.rng)
+    model = DummyInsiderModel(dataset=dataset)
+
+    estimator = Estimator(model, start_index=2, stop_index=2)
+    with pytest.raises(ValueError, match=re.escape(iterators.STOP_INDEX_ORDERING_ERROR_MSG)):
+        estimator.run(dataset)
+
+    estimator = Estimator(model, stop_index=len(dataset) + 1)
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            iterators.STOP_INDEX_DATA_LENGTH_ERROR_MSG.format(feature=iterators.SIZE_KWARG)
+        ),
+    ):
+        estimator.run(dataset)
+
+
+def test_estimator_start_index(request, monkeypatch):
+    """Test that estimator respects start_index."""
+    recorded_indices = []
+
+    def fake_set_transform(self, i, xform):
+        recorded_indices.append(i)
+
+    monkeypatch.setattr(
+        type(DummyDataset(rng=request.node.rng)), "set_transform", fake_set_transform
+    )
+
+    class DummyXForm:
+        matrix = np.eye(4)
+
+    monkeypatch.setattr(
+        nifreeze.estimator,
+        "_run_registration",
+        lambda *a, **k: DummyXForm(),
+    )
+
+    dataset = DummyDataset(rng=request.node.rng)
+    model = DummyInsiderModel(dataset=dataset)
+
+    estimator = Estimator(model, strategy="linear", start_index=3)
+    estimator.run(dataset)
+
+    assert recorded_indices == [3, 4, 5, 6]
+
+
+def test_estimator_start_and_end_index(request, monkeypatch):
+    """Test that estimator respects both start_index and end_index."""
+    recorded_indices = []
+
+    def fake_set_transform(self, i, xform):
+        recorded_indices.append(i)
+
+    monkeypatch.setattr(
+        type(DummyDataset(rng=request.node.rng)), "set_transform", fake_set_transform
+    )
+
+    class DummyXForm:
+        matrix = np.eye(4)
+
+    monkeypatch.setattr(
+        nifreeze.estimator,
+        "_run_registration",
+        lambda *a, **k: DummyXForm(),
+    )
+
+    dataset = DummyDataset(rng=request.node.rng)
+    model = DummyInsiderModel(dataset=dataset)
+
+    estimator = Estimator(model, strategy="linear", start_index=2, stop_index=5)
+    estimator.run(dataset)
+
+    # Should only process indices 2-4 (stop_index is exclusive)
+    assert recorded_indices == [2, 3, 4]
+
+
+@pytest.mark.parametrize(
+    "strategy, iterator_func, modality",
+    [
+        ("linear", iterators.linear_iterator, "dwi"),
+        ("linear", iterators.linear_iterator, "pet"),
+        ("random", iterators.random_iterator, "dwi"),
+        ("random", iterators.random_iterator, "pet"),
+        ("centralsym", iterators.centralsym_iterator, "dwi"),
+        ("centralsym", iterators.centralsym_iterator, "pet"),
+        ("monotonic_value", iterators.monotonic_value_iterator, "dwi"),
+        ("monotonic_value", iterators.monotonic_value_iterator, "pet"),
+    ],
+)
+def test_estimator_iterator_index_match(
+    monkeypatch, setup_random_dwi_data, setup_random_pet_data, strategy, iterator_func, modality
+):
+    dataset: Union["DummyDWIDataset", "DummyPETDataset"]  # Avoids type annotation errors
+    if modality == "dwi":
+        dwi_dataobj, affine, brainmask_dataobj, gradients, b0_thres = setup_random_dwi_data
+
+        b0s_mask = gradients[:, -1] <= b0_thres
+        b0_dataobj = dwi_dataobj[..., b0s_mask].squeeze()
+
+        dataset = DummyDWIDataset(dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients)
+        bvals = gradients[:, -1][gradients[:, -1] > DEFAULT_LOWB_THRESHOLD]
+        kwargs = {"bvals": bvals}
+    elif modality == "pet":
+        (
+            pet_dataobj,
+            affine,
+            brainmask_dataobj,
+            _,
+            midframe,
+            total_duration,
+        ) = setup_random_pet_data
+
+        dataset = DummyPETDataset(pet_dataobj, affine, brainmask_dataobj, midframe, total_duration)
+        uptake = compute_uptake_statistic(pet_dataobj, stat_func=np.sum)
+        kwargs = {"uptake": uptake}
+    else:
+        raise NotImplementedError(f"{modality} not implemented")
+
+    # Patch set_transform to record indices and matrices
+    recorded_indices = []
+    recorded_matrices = []
+
+    # Make this accept `self` so it behaves as a proper instance method
+    def fake_set_transform(self, i, xform):
+        recorded_indices.append(i)
+        recorded_matrices.append(xform)
+
+    monkeypatch.setattr(type(dataset), "set_transform", fake_set_transform)
+
+    # Patch registration to return identity matrix
+    class DummyXForm:
+        matrix = np.eye(4)
+
+    monkeypatch.setattr(
+        nifreeze.estimator,
+        "_run_registration",
+        lambda *a, **k: DummyXForm(),
+    )
+
+    model = DummyInsiderModel(dataset=dataset)
+    estimator = Estimator(model, strategy=strategy)
+    estimator.run(dataset, **kwargs)
+
+    n_vols = len(dataset)
+
+    # Get expected indices
+    if strategy == "linear":
+        expected_indices = list(iterator_func(size=n_vols))
+    elif strategy == "random":
+        expected_indices = sorted(iterator_func(size=n_vols, seed=42))
+        recorded_indices_sorted = sorted(recorded_indices)
+        assert recorded_indices_sorted == expected_indices
+        return
+    elif strategy == "centralsym":
+        expected_indices = list(iterator_func(size=n_vols))
+    elif strategy == "monotonic_value":
+        if modality == "dwi":
+            expected_indices = list(iterator_func(bvals=bvals, ascending=True))
+        elif modality == "pet":
+            expected_indices = list(iterator_func(uptake=uptake, ascending=False))
+        else:
+            raise NotImplementedError(f"Modality {modality} not implemented")
+    else:
+        raise ValueError(f"Unknown strategy {strategy}")
+
+    # Assert indices and matrices
+    assert recorded_indices == expected_indices
+    assert all(np.allclose(mat, np.eye(4)) for mat in recorded_matrices)

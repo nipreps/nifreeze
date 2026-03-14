@@ -79,7 +79,16 @@ class Filter:
 class Estimator:
     """Orchestrates components for a single estimation step."""
 
-    __slots__ = ("_model", "_single_fit", "_strategy", "_prev", "_model_kwargs", "_align_kwargs")
+    __slots__ = (
+        "_model",
+        "_single_fit",
+        "_strategy",
+        "_prev",
+        "_model_kwargs",
+        "_align_kwargs",
+        "_start_index",
+        "_stop_index",
+    )
 
     def __init__(
         self,
@@ -88,6 +97,8 @@ class Estimator:
         prev: Estimator | Filter | None = None,
         model_kwargs: dict | None = None,
         single_fit: bool = False,
+        start_index: int = 0,
+        stop_index: int | None = None,
         **kwargs,
     ):
         self._model = model
@@ -96,6 +107,9 @@ class Estimator:
         self._single_fit = single_fit
         self._model_kwargs = model_kwargs or {}
         self._align_kwargs = kwargs or {}
+
+        self._start_index = start_index
+        self._stop_index = stop_index
 
     def run(self, dataset: DatasetT, **kwargs) -> Self:
         """
@@ -123,14 +137,30 @@ class Estimator:
         num_voxels = dataset.brainmask.sum() if dataset.brainmask is not None else dataset.size3d
         chunk_size = DEFAULT_CHUNK_SIZE * (n_threads or 1)
 
+        # Calculate the size parameter for the iterator (exclusive upper bound)
+        n = len(dataset)
+        size = n
+        start_index = self._start_index or 0
+        stop_index = (
+            None
+            if self._stop_index is None
+            else (n + self._stop_index if self._stop_index < 0 else self._stop_index)
+        )
+
         # Prepare iterator
         iterfunc = getattr(iterators, f"{self._strategy}_iterator")
+        # ToDo: Not sure why we are willing to pass bvals or uptake here if we
+        #   are providing the dataset and start/end indices.
+        #   test_estimator_iterator_index_match fails because multiple keys are
+        #   found (size, and bval/updatke)
         index_iter = iterfunc(
-            size=len(dataset),
+            size=size,
             bvals=kwargs.pop("bvals", None),
             uptake=kwargs.pop("uptake", None),
             seed=kwargs.get("seed", None),
             round_decimals=kwargs.pop("round_decimals", iterators.DEFAULT_ROUND_DECIMALS),
+            start_index=start_index,
+            stop_index=stop_index,
         )
 
         # Initialize model
@@ -172,7 +202,12 @@ class Estimator:
         kwargs["num_threads"] = n_threads
         kwargs = self._align_kwargs | kwargs
 
-        dataset_length = len(dataset)
+        # Calculate effective dataset length for progress bar
+        if self._stop_index is not None:
+            dataset_length = self._stop_index - self._start_index
+        else:
+            dataset_length = len(dataset) - self._start_index
+
         with TemporaryDirectory() as tmp_dir:
             print(f"Processing in <{tmp_dir}>")
             ptmp_dir = Path(tmp_dir)
