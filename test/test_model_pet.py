@@ -26,6 +26,7 @@ import sys
 
 import numpy as np
 import pytest
+from scipy.interpolate import BSpline
 
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.pet import PET
@@ -34,6 +35,7 @@ from nifreeze.model.pet import (
     PET_MIDFRAME_ERROR_MSG,
     PET_OBJECT_ERROR_MSG,
     BSplinePETModel,
+    _build_bspline_knots,
 )
 from nifreeze.testing.simulations import compute_pet_noise_sd, srtm
 
@@ -111,6 +113,59 @@ def test_petmodel_init_dataset_error(setup_random_pet_data, monkeypatch):
 
     with pytest.raises(ValueError, match=PET_MIDFRAME_ERROR_MSG):
         BSplinePETModel(dataset=pet_obj_totald)  # type:ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "x, order, n_ctrl",
+    [
+        (np.array([5, 15, 25, 35, 45]), 3, 3),
+        (np.array([5.0, 15.0, 25.0, 35.005, 45.015]), 3, 3),
+        (
+            np.array(
+                [
+                    0,
+                    20,
+                    40,
+                    60,
+                    120,
+                    180,
+                    240,
+                    360,
+                    480,
+                    600,
+                    900,
+                    1200.066,
+                    1800.066,
+                    2400.066,
+                    3000.066,
+                    3600.066,
+                    4200.066,
+                    4800.066,
+                    5400.066,
+                    6000.066,
+                    6600.066,
+                ]
+            ),
+            3,
+            4,
+        ),
+    ],
+)
+def test_build_bspline_knots(x, order, n_ctrl):
+    t = _build_bspline_knots(x, n_ctrl=n_ctrl, order=order)
+
+    # Valid B-spline domain: the B-Spline contract in scipy requires
+    # all x_{i} \in [t[k], t[-k-1]]
+    # where k is the spline order, and t is the knot vector
+    valid_min = t[order]
+    valid_max = t[-order - 1]  # same as t[t.shape[0] - order - 1]
+
+    for index in range(len(x)):
+        _x = np.delete(x, index)
+        BSpline.design_matrix(_x, t=t, k=order, extrapolate=False)
+        print(index)
+        assert min(_x) >= valid_min, f"Training data {_x} has values < {valid_min}"
+        assert max(_x) <= valid_max, f"Training data {_x} has values > {valid_max}"
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
