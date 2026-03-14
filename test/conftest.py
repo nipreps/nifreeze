@@ -314,7 +314,7 @@ def setup_random_dwi_data(request, setup_random_gtab_data):
     )
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def setup_random_pet_data(request):
     """Automatically generate random PET data for tests."""
     marker = request.node.get_closest_marker("random_pet_data")
@@ -322,7 +322,10 @@ def setup_random_pet_data(request):
     n_frames = 5
     vol_size = (4, 4, 4)
     frame_time = np.arange(n_frames, dtype=np.float32) + 1
-    if marker:
+
+    if hasattr(request, "param"):
+        n_frames, vol_size, frame_time = request.param
+    elif marker:
         n_frames, vol_size, frame_time = marker.args
 
     frame_time = np.asarray(frame_time)
