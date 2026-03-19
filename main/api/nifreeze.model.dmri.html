@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.model.gpr module" href="nifreeze.model.gpr.html"><link rel="prev" title="nifreeze.model.base module" href="nifreeze.model.base.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.dmri module - nifreeze 26.0.0.dev45 documentation</title>
+        <title>nifreeze.model.dmri module - nifreeze 26.0.0.dev49 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev45 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev49 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev45</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev49</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev45</span>
+  <span class="sidebar-brand-text">26.0.0.dev49</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -379,7 +379,7 @@ standardized and centered around the
 <dt class="sig sig-object py" id="nifreeze.model.dmri.DKIModel">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.dmri.</span></span><span class="sig-name descname"><span class="pre">DKIModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="nifreeze.data.dmri.base.html#nifreeze.data.dmri.base.DWI" title="nifreeze.data.dmri.base.DWI"><span class="pre">nifreeze.data.dmri.base.DWI</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/dmri.html#DKIModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.dmri.DKIModel" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#nifreeze.model.dmri.BaseDWIModel" title="nifreeze.model.dmri.BaseDWIModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseDWIModel</span></code></a></p>
-<p>A wrapper of <a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.reconst.html#dipy.reconst.dki.DiffusionKurtosisModel" title="(in dipy v1.11.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dipy.reconst.dki.DiffusionKurtosisModel</span></code></a>.</p>
+<p>A wrapper of <a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.reconst.html#dipy.reconst.dki.DiffusionKurtosisModel" title="(in dipy v1.12.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dipy.reconst.dki.DiffusionKurtosisModel</span></code></a>.</p>
 <p>Initialization.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -392,7 +392,7 @@ standardized and centered around the
 <dt class="sig sig-object py" id="nifreeze.model.dmri.DTIModel">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.dmri.</span></span><span class="sig-name descname"><span class="pre">DTIModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="nifreeze.data.dmri.base.html#nifreeze.data.dmri.base.DWI" title="nifreeze.data.dmri.base.DWI"><span class="pre">nifreeze.data.dmri.base.DWI</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/dmri.html#DTIModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.dmri.DTIModel" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#nifreeze.model.dmri.BaseDWIModel" title="nifreeze.model.dmri.BaseDWIModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseDWIModel</span></code></a></p>
-<p>A wrapper of <a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.reconst.html#dipy.reconst.dti.TensorModel" title="(in dipy v1.11.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dipy.reconst.dti.TensorModel</span></code></a>.</p>
+<p>A wrapper of <a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.reconst.html#dipy.reconst.dti.TensorModel" title="(in dipy v1.12.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dipy.reconst.dti.TensorModel</span></code></a>.</p>
 <p>Initialization.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -442,7 +442,7 @@ standardized and centered around the
 <dt class="sig sig-object py" id="nifreeze.model.dmri.GQIModel">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.dmri.</span></span><span class="sig-name descname"><span class="pre">GQIModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="nifreeze.data.dmri.base.html#nifreeze.data.dmri.base.DWI" title="nifreeze.data.dmri.base.DWI"><span class="pre">nifreeze.data.dmri.base.DWI</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/dmri.html#GQIModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.dmri.GQIModel" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#nifreeze.model.dmri.BaseDWIModel" title="nifreeze.model.dmri.BaseDWIModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseDWIModel</span></code></a></p>
-<p>A wrapper of <a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.reconst.html#dipy.reconst.gqi.GeneralizedQSamplingModel" title="(in dipy v1.11.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dipy.reconst.gqi.GeneralizedQSamplingModel</span></code></a>.</p>
+<p>A wrapper of <a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.reconst.html#dipy.reconst.gqi.GeneralizedQSamplingModel" title="(in dipy v1.12.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dipy.reconst.gqi.GeneralizedQSamplingModel</span></code></a>.</p>
 <p>Initialization.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -537,7 +537,7 @@ standardized and centered around the
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=7445d249"></script>
+</div><script src="../_static/documentation_options.js?v=aba7fbe1"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
