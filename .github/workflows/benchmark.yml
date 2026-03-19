@@ -38,7 +38,7 @@ jobs:
 
     steps:
     - name: Set up system
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
@@ -75,7 +75,7 @@ jobs:
         fi
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -101,7 +101,7 @@ jobs:
     - name: Download baseline benchmarks from main
       if: github.event_name == 'pull_request'
       id: download-main
-      uses: dawidd6/action-download-artifact@v3
+      uses: dawidd6/action-download-artifact@v19
       continue-on-error: true
       with:
         workflow: benchmark.yml
@@ -179,7 +179,7 @@ jobs:
     # Upload benchmark results as artifact (for main branch)
     - name: Upload benchmark results (main only)
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ env.BENCHMARK_MAIN_ARTIFACT }}
         path: ${{ env.BENCHMARK_RESULTS_PATH }}
@@ -188,7 +188,7 @@ jobs:
     # Also save per-commit for debugging
     - name: Save head commit benchmarks
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ env.BENCHMARK_ARTIFACT_PREFIX }}-${{ github.sha }}
         path: ${{ env.BENCHMARK_RESULTS_PATH }}
