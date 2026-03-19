@@ -44,11 +44,11 @@ jobs:
 
     - name: Determine commit SHAs
       run: |
-        git fetch origin main:main
+        git fetch origin
 
-        MAIN_SHA=$(git rev-parse main)
+        MAIN_SHA=$(git rev-parse origin/main)
         HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
-        MERGE_BASE_SHA=$(git merge-base HEAD main)
+        MERGE_BASE_SHA=$(git merge-base HEAD origin/main)
 
         echo "Main SHA: $MAIN_SHA"
         echo "Head SHA: $HEAD_SHA"
