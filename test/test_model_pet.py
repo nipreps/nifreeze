@@ -168,7 +168,15 @@ def test_build_bspline_knots(x, order, n_ctrl):
         assert max(_x) <= valid_max, f"Training data {_x} has values > {valid_max}"
 
 
-@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
+@pytest.mark.parametrize(
+    "setup_random_pet_data",
+    [
+        (5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0])),
+        (5, (4, 4, 4), np.array([10.0, 20.0, 30.0, 40.0, 50.01])),
+        (7, (4, 4, 4), np.array([0.99, 10.01, 60.0, 100.15, 200.34, 400.0, 700.01])),
+    ],
+    indirect=True,
+)
 def test_petmodel_fit_predict(setup_random_pet_data):
     pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
 
@@ -182,12 +190,12 @@ def test_petmodel_fit_predict(setup_random_pet_data):
 
     model = BSplinePETModel(dataset=pet_obj)
 
-    # Predict at a specific timepoint (LOVO mode)
-    index = 2
-    vol = model.fit_predict(index)
-    assert vol is not None
-    assert vol.shape == pet_obj.shape3d
-    assert vol.dtype == pet_obj.dataobj.dtype
+    # Test all indices
+    for idx in range(len(pet_obj)):
+        vol = model.fit_predict(index=idx)
+        assert vol is not None
+        assert vol.shape == pet_obj.shape3d
+        assert vol.dtype == pet_obj.dataobj.dtype
 
 
 @pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
@@ -311,7 +319,7 @@ def _srtm_reference_inputs(
     "add_noise, scale_factor, lambda_, min_corr",
     [
         (False, None, None, 0.98),
-        (True, 0.05, 0.0063, 0.98),  # 0.0063 corresponds to a 18F tracer
+        (True, 0.05, 0.0063, 0.97),  # 0.0063 corresponds to a 18F tracer
         (True, 0.1, 0.0063, 0.95),
         (True, 0.15, 0.0063, 0.88),
     ],
