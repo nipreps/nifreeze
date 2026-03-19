@@ -67,6 +67,55 @@ def _exec_predict(model, chunk=None, **kwargs):
     return np.squeeze(model.predict(**kwargs)), chunk
 
 
+def _build_bspline_knots(x, n_ctrl, order):
+    """Build an open/clamped B-spline knot vector over the domain of ``x``.
+
+    Constructs a 1D knot vector (in the same units as ``x``) suitable
+    for an open/uniform B-spline basis:
+
+      - The first and last knots are repeated ``order + 1`` times (an
+        open/clamped knot vector), so the spline is pinned to the endpoints of
+        the domain.
+      - The interior knots are uniformly spaced in time between the endpoints.
+
+    Parameters
+    ----------
+    x : :obj:`~numpy.ndarray`
+        1D monotonically increasing values defining the domain
+        ``[x[0], x[-1]]``. Only the first and last values are used.
+    n_ctrl : int
+        Number of control points for the spline.
+    order : int
+        Order of the spline.
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        1D array of knots with length ``n_ctrl + 2 * (order + 1)``.
+
+    Notes
+    -----
+    This function assumes ``x`` is sorted and has at least one element. If ``x``
+    is not monotonic, the resulting knot vector may be invalid for many spline
+    routines.
+
+    """
+
+    # Start and end timepoints
+    # Ensure support across the entire domain of `x` by rounding down/up
+    x0 = np.floor(x[0])
+    x1 = np.ceil(x[-1])
+    inner_x = np.linspace(x0, x1, n_ctrl + 2, dtype="float32")[1:-1]
+
+    return np.concatenate(
+        [
+            np.full(order + 1, x0, dtype="float32"),
+            inner_x,
+            np.full(order + 1, x1, dtype="float32"),
+        ]
+    )
+
+
 class BasePETModel(BaseModel, ABC):
     """Interface and default methods for PET models."""
 
@@ -165,19 +214,8 @@ class BSplinePETModel(BasePETModel):
         # Number of control points for the B-Spline basis
         self._n_ctrl = n_ctrl
 
-        # Start and end timepoints
-        x0 = float(self._dataset.midframe[0])
-        x1 = float(self._dataset.midframe[-1])
-        inner_x = np.linspace(x0, x1, self._n_ctrl + 2, dtype="float32")[1:-1]
-
         # Time-coordinates of the B-Spline knots
-        self._t = np.concatenate(
-            [
-                np.full(self._order + 1, x0, dtype="float32"),
-                inner_x,
-                np.full(self._order + 1, x1, dtype="float32"),
-            ]
-        )
+        self._t = _build_bspline_knots(self._dataset.midframe, self._n_ctrl, self._order)
 
     def fit_predict(self, index: int | None = None, **kwargs) -> Union[np.ndarray, None]:
         """Return the corrected volume using B-spline interpolation.
