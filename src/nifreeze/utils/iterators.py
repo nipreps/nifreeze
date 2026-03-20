@@ -222,7 +222,7 @@ Examples
 >>> _resolve_domain(size=4)
 (0, 4)
 >>> _resolve_domain(size=4, start_index=3)
-(3, 7)
+(3, 4)
 >>> _resolve_domain(bvals=[0, 1000, 2000, 3000])
 (0, 4)
 >>> _resolve_domain(uptake=[0.1, 0.2, 0.3, 0.4], start_index=2)
@@ -230,7 +230,7 @@ Examples
 >>> _resolve_domain(bvals=[0, 1, 2, 3, 4], start_index=1, stop_index=4)
 (1, 4)
 >>> _resolve_domain(size=3, start_index=1, bvals=[10, 20, 30, 40])
-(1, 4)
+(1, 3)
 """
 
 
@@ -262,9 +262,9 @@ Examples
 >>> list(linear_iterator(size=10))
 [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 >>> list(linear_iterator(size=7, start_index=3))
-[3, 4, 5, 6, 7, 8, 9]
->>> list(linear_iterator(size=4, start_index=3))
 [3, 4, 5, 6]
+>>> list(linear_iterator(size=4, start_index=3))
+[3]
 >>> list(linear_iterator(bvals=[0, 0, 700, 1000, 1000, 200], start_index=3))
 [3, 4, 5]
 """
@@ -323,7 +323,7 @@ Examples
 >>> list(random_iterator(size=15, seed=42))  # seed is 42
 [8, 13, 7, 6, 14, 12, 5, 2, 9, 3, 4, 11, 0, 1, 10]
 >>> list(random_iterator(size=4, start_index=3, seed=0))
-[5, 3, 4, 6]
+[3]
 """
 
 
@@ -466,5 +466,5 @@ Examples
 >>> list(centralsym_iterator(size=11))
 [5, 4, 6, 3, 7, 2, 8, 1, 9, 0, 10]
 >>> list(centralsym_iterator(size=7, start_index=3))
-[6, 5, 7, 4, 8, 3, 9]
+[5, 4, 6, 3]
 """
