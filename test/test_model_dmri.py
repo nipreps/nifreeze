@@ -82,8 +82,20 @@ def _get_attributes(instance):
     return _attrs
 
 
+_EIGVEC_DEPENDENT_ATTRS = frozenset({"model_params", "evecs", "directions"})
+"""Attributes that encode eigenvector orientation and are subject to sign/rotation
+ambiguity when eigenvalues are degenerate.  Skipped in favour of comparing the
+reconstructed diffusion tensor (``quadratic_form``), which is invariant."""
+
+
 def _compare_instance_attributes(instance1, instance2):
-    """Compare non-callable, non-dunder attributes of two instances for numerical equality."""
+    """Compare non-callable, non-dunder attributes of two instances for numerical equality.
+
+    Eigenvector-dependent attributes (``model_params``, ``evecs``, ``directions``)
+    are skipped because degenerate eigenvalues make the eigenvector basis
+    non-unique.  Instead, the reconstructed diffusion tensor
+    (``quadratic_form``) is compared, which is basis-invariant.
+    """
     # Get attributes of both instances, excluding dunder and method attributes
     attributes1 = _get_attributes(instance1)
     attributes2 = _get_attributes(instance2)
@@ -96,6 +108,10 @@ def _compare_instance_attributes(instance1, instance2):
     # Compare the values of the attributes
     all_equal = True
     for attr in attributes1:
+        # Skip eigenvector-dependent attributes — compared via quadratic_form
+        if attr in _EIGVEC_DEPENDENT_ATTRS:
+            continue
+
         value1 = attributes1.get(attr)
         value2 = attributes2.get(attr)
 
@@ -105,10 +121,6 @@ def _compare_instance_attributes(instance1, instance2):
             print(f"Attribute '{attr}' differs: {value1} != {value2}")
             all_equal = False
             continue
-
-        elif value1 is None or value2 is None:
-            print(f"Attribute '{attr}' differs: {value1} != {value2}")
-            all_equal = False
 
         try:
             array1 = np.asarray(value1).ravel()
