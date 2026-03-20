@@ -267,6 +267,8 @@ Examples
 [3]
 >>> list(linear_iterator(bvals=[0, 0, 700, 1000, 1000, 200], start_index=3))
 [3, 4, 5]
+>>> list(linear_iterator(bvals=[0, 0, 700, 1000, 1000, 200], start_index=3, stop_index=5))
+[3, 4]
 """
 
 
@@ -324,6 +326,8 @@ Examples
 [8, 13, 7, 6, 14, 12, 5, 2, 9, 3, 4, 11, 0, 1, 10]
 >>> list(random_iterator(size=4, start_index=3, seed=0))
 [3]
+>>> list(random_iterator(size=7, start_index=3, stop_index=6, seed=0))
+[3, 5, 4]
 """
 
 
@@ -424,6 +428,10 @@ Examples
 [8, 4, 5, 6, 7]
 >>> list(monotonic_value_iterator(uptake=[-1.23, 1.06, 1.02, 1.38, -1.46, -1.12, -1.19, 1.24, 1.05], start_index=2))
 [3, 7, 8, 2, 5, 6, 4]
+>>> list(monotonic_value_iterator(bvals=[0.0, 0.0, 1000.0, 1000.0, 700.0, 700.0, 2000.0, 2000.0, 0.0], start_index=4, stop_index=7))
+[4, 5, 6]
+>>> list(monotonic_value_iterator(uptake=[-1.23, 1.06, 1.02, 1.38, -1.46, -1.12, -1.19, 1.24, 1.05], start_index=2, stop_index=7))
+[3, 2, 5, 6, 4]
 """
 
 
@@ -467,4 +475,6 @@ Examples
 [5, 4, 6, 3, 7, 2, 8, 1, 9, 0, 10]
 >>> list(centralsym_iterator(size=7, start_index=3))
 [5, 4, 6, 3]
+>>> list(centralsym_iterator(size=7, start_index=3, stop_index=6))
+[4, 3, 5]
 """
