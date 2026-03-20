@@ -65,8 +65,9 @@ stop_index : :obj:`int`, optional
 ITERATOR_NOTES = """
 Iterators operate over an absolute index domain and yield absolute indices. The
 domain is always the half-open interval ``[start_index, stop_index)`` (end
-exclusive). Exactly one of the size-defining inputs must be provided: ``size``,
-``bvals``, or ``uptake``. When a sequence (``bvals``/``uptake``) is used, it
+exclusive). One of the size-defining inputs must be provided: ``size``,
+``bvals``, or ``uptake``.  If ``size`` is provided, all other size-related
+parameters will be ignored. When a sequence (``bvals``/``uptake``) is used, it
 defines the maximum valid index (i.e., the domain length) and ``stop_index``
 defaults to ``len(sequence)``.
 """
@@ -76,8 +77,8 @@ None of {features} were provided or had no valid values to infer size: cannot \
 build iterator without size."""
 """Iterator size argument error message."""
 ITERATOR_MULTIPLICITY_ERROR_MSG = """\
-f"Multiple {SIZE_KEYS} were provided; provide exactly one to build the \
-iterator."""
+f"Multiple {SIZE_KEYS} were provided; provide exactly one or provide a value for
+{SIZE_KWARG} to build the iterator."""
 """Iterator size multiplicity error message."""
 START_INDEX_POSITIVITY_ERROR_MSG = "'start_index' must be positive."
 """Start index positivity error message."""
@@ -138,11 +139,17 @@ def _resolve_domain(
 
     # Determine which allowed feature is provided (non-None)
     provided = [k for k in allowed_features if kwargs.get(k) is not None]
-    if len(provided) == 0:
+    if not provided:
         raise ValueError(ITERATOR_SIZE_ERROR_MSG.format(features=allowed_features))
-    if len(provided) > 1:
-        raise ValueError(ITERATOR_MULTIPLICITY_ERROR_MSG)
-    feature = provided[0]
+
+    # If size is provided, it takes precedence and other size-related inputs are
+    # ignored.
+    if SIZE_KWARG in provided:
+        feature = SIZE_KWARG
+    else:
+        if len(provided) > 1:
+            raise ValueError(ITERATOR_MULTIPLICITY_ERROR_MSG)
+        feature = provided[0]
 
     start_index = int(kwargs.get(START_INDEX_KWARG, 0) or 0)
     _stop_index = kwargs.get(STOP_INDEX_KWARG, None)

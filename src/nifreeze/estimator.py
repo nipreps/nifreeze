@@ -144,10 +144,6 @@ class Estimator:
 
         # Prepare iterator
         iterfunc = getattr(iterators, f"{self._strategy}_iterator")
-        # ToDo: Not sure why we are willing to pass bvals or uptake here if we
-        #   are providing the dataset and start/end indices.
-        #   test_estimator_iterator_index_match fails because multiple keys are
-        #   found (size, and bval/updatke)
         index_iter = iterfunc(
             size=size,
             bvals=kwargs.pop("bvals", None),

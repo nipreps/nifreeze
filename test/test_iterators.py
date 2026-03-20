@@ -108,26 +108,6 @@ from nifreeze.utils.iterators import (
             ValueError,
             re.escape(ITERATOR_MULTIPLICITY_ERROR_MSG),
         ),
-        (
-            {SIZE_KWARG: 3, BVALS_KWARG: [10, 20, 30, 40]},
-            ValueError,
-            re.escape(ITERATOR_MULTIPLICITY_ERROR_MSG),
-        ),
-        (
-            {SIZE_KWARG: 2, UPTAKE_KWARG: [1.0, 2.0, 3.0]},
-            ValueError,
-            re.escape(ITERATOR_MULTIPLICITY_ERROR_MSG),
-        ),
-        (
-            {SIZE_KWARG: 3, START_INDEX_KWARG: 1, BVALS_KWARG: [10, 20, 30, 40]},
-            ValueError,
-            re.escape(ITERATOR_MULTIPLICITY_ERROR_MSG),
-        ),
-        (
-            {SIZE_KWARG: 2, START_INDEX_KWARG: 0, UPTAKE_KWARG: [1.0, 2.0, 3.0]},
-            ValueError,
-            re.escape(ITERATOR_MULTIPLICITY_ERROR_MSG),
-        ),
     ],
 )
 def test_resolve_domain_errors(kwargs, err_type, err_match):
