@@ -156,6 +156,8 @@ jobs:
         echo "Comparing $HEAD_SHA against main tip $MAIN_SHA..."
 
         FACTOR=$(python -c "import json; print(json.load(open('$ASV_CONFIG')).get('regression_factor', 1.1))")
+        echo "FACTOR=$FACTOR" >> "$GITHUB_ENV"
+
         asv compare --config "$ASV_CONFIG" --factor $FACTOR --split "$MAIN_SHA" "$HEAD_SHA" | tee comparison.txt
 
         # Check for regressions
