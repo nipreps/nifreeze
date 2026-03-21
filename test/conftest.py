@@ -123,21 +123,24 @@ def _generate_random_uniform_spatial_data(request, size, a, b):
     return data, affine
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def setup_random_uniform_spatial_data(request):
     """Automatically generate random spatial data for tests."""
-    marker = request.node.get_closest_marker("random_uniform_spatial_data")
 
     size = (32, 32, 32, 5)
     a = 0.0
     b = 1.0
-    if marker:
-        size, a, b = marker.args
+    if hasattr(request, "param"):
+        size, a, b = request.param
+    else:
+        marker = request.node.get_closest_marker("random_uniform_spatial_data")
+        if marker:
+            size, a, b = marker.args
 
     return _generate_random_uniform_spatial_data(request, size, a, b)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def setup_random_uniform_ndim_data(request):
     """Automatically generate random data for tests."""
     marker = request.node.get_closest_marker("random_uniform_ndim_data")
@@ -145,8 +148,12 @@ def setup_random_uniform_ndim_data(request):
     size = (32, 32, 32, 5)
     a = 0.0
     b = 1.0
-    if marker:
-        size, a, b = marker.args
+    if hasattr(request, "param"):
+        size, a, b = request.param
+    else:
+        marker = request.node.get_closest_marker("random_uniform_ndim_data")
+        if marker:
+            size, a, b = marker.args
 
     return _generate_random_uniform_nd_data(request, size, a, b)
 
@@ -194,16 +201,19 @@ def _generate_random_bvecs(rng, b0s, n_gradients):
     return vectors
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def setup_random_bval_data(request):
     """Automatically generate random b-val data for tests."""
-    marker = request.node.get_closest_marker("random_bval_data")
 
     n_gradients = 10
     shells = (1000, 2000, 3000)
     b0s = 1
-    if marker:
-        n_gradients, shells, b0s = marker.args
+    if hasattr(request, "param"):
+        n_gradients, shells, b0s = request.param
+    else:
+        marker = request.node.get_closest_marker("random_bval_data")
+        if marker:
+            n_gradients, shells, b0s = marker.args
 
     rng = request.node.rng
     return _generate_random_bvals(rng, b0s, shells, n_gradients)
@@ -221,7 +231,7 @@ def setup_random_bvec_data(request, bvals, bval_tolerance):
     return _generate_random_bvecs(rng, b0s, n_gradients)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def setup_random_gtab_data(request):
     """Automatically generate random gtab data for tests."""
     marker = request.node.get_closest_marker("random_gtab_data")
@@ -229,8 +239,12 @@ def setup_random_gtab_data(request):
     n_gradients = 10
     shells = (1000, 2000, 3000)
     b0s = 1
-    if marker:
-        n_gradients, shells, b0s = marker.args
+    if hasattr(request, "param"):
+        n_gradients, shells, b0s = request.param
+    else:
+        marker = request.node.get_closest_marker("random_gtab_data")
+        if marker:
+            n_gradients, shells, b0s = marker.args
 
     rng = request.node.rng
 
@@ -240,15 +254,18 @@ def setup_random_gtab_data(request):
     return bvals, bvecs
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def setup_random_base_data(request):
     """Automatically generate random BaseDataset data for tests."""
-    marker = request.node.get_closest_marker("random_base_data")
 
     vol_size = (4, 4, 4)
     volumes = 5
-    if marker:
-        vol_size, volumes = marker.args
+    if hasattr(request, "param"):
+        vol_size, volumes = request.param
+    else:
+        marker = request.node.get_closest_marker("random_base_data")
+        if marker:
+            vol_size, volumes = marker.args
 
     rng = request.node.rng
 
@@ -268,16 +285,19 @@ def setup_random_base_data(request):
     )
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def setup_random_dwi_data(request, setup_random_gtab_data):
     """Automatically generate random DWI data for tests."""
-    marker = request.node.get_closest_marker("random_dwi_data")
 
     b0_thres = 50
     vol_size = (2, 2, 2)
     use_random_gtab = True
-    if marker:
-        b0_thres, vol_size, use_random_gtab = marker.args
+    if hasattr(request, "param"):
+        b0_thres, vol_size, use_random_gtab = request.param
+    else:
+        marker = request.node.get_closest_marker("random_dwi_data")
+        if marker:
+            b0_thres, vol_size, use_random_gtab = marker.args
 
     rng = request.node.rng
 

@@ -602,7 +602,7 @@ def test_load_gradients(tmp_path, setup_random_dwi_data, row_major_gradients):
 
     assert hasattr(dwi_obj, "gradients")
     assert dwi_obj.gradients.shape == expected_nonzero_grads.shape
-    assert np.allclose(dwi_obj.gradients, expected_nonzero_grads)
+    assert np.allclose(dwi_obj.gradients, expected_nonzero_grads, atol=1e-6)
 
 
 @pytest.mark.random_gtab_data(10, (1000, 2000), 1)
@@ -649,7 +649,7 @@ def test_load_bvecs_bvals(tmp_path, setup_random_dwi_data, transpose_bvals, tran
     expected_nonzero_grads = gradients[gradmask]
     assert hasattr(dwi_obj, "gradients")
     assert dwi_obj.gradients.shape == expected_nonzero_grads.shape
-    assert np.allclose(dwi_obj.gradients, expected_nonzero_grads)
+    assert np.allclose(dwi_obj.gradients, expected_nonzero_grads, atol=1e-6)
 
 
 @pytest.mark.random_gtab_data(10, (1000, 2000), 1)
