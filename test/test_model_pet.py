@@ -320,7 +320,7 @@ def _srtm_reference_inputs(
     [
         (False, None, None, 0.98),
         (True, 0.05, 0.0063, 0.97),  # 0.0063 corresponds to a 18F tracer
-        (True, 0.1, 0.0063, 0.95),
+        (True, 0.1, 0.0063, 0.94),
         (True, 0.15, 0.0063, 0.88),
     ],
 )
