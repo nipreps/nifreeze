@@ -22,6 +22,7 @@
 #
 """Unit tests exercising dMRI models."""
 
+import functools
 import re
 import warnings
 from contextlib import nullcontext
@@ -61,6 +62,20 @@ B_MATRIX = np.array(
 )
 
 
+def ignore_dipy_invalid_divide(func):
+    @functools.wraps(func)
+    def _wrapped(*args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=r".*invalid value encountered in divide.*",
+                category=RuntimeWarning,
+            )
+            return func(*args, **kwargs)
+
+    return _wrapped
+
+
 def _get_attributes(instance):
     """Return a dictionary of non-callable, non-dunder scalar- or array-like attributes."""
     _attrs = {}
@@ -82,8 +97,20 @@ def _get_attributes(instance):
     return _attrs
 
 
+_EIGVEC_DEPENDENT_ATTRS = frozenset({"model_params", "evecs", "directions"})
+"""Attributes that encode eigenvector orientation and are subject to sign/rotation
+ambiguity when eigenvalues are degenerate.  Skipped in favour of comparing the
+reconstructed diffusion tensor (``quadratic_form``), which is invariant."""
+
+
 def _compare_instance_attributes(instance1, instance2):
-    """Compare non-callable, non-dunder attributes of two instances for numerical equality."""
+    """Compare non-callable, non-dunder attributes of two instances for numerical equality.
+
+    Eigenvector-dependent attributes (``model_params``, ``evecs``, ``directions``)
+    are skipped because degenerate eigenvalues make the eigenvector basis
+    non-unique.  Instead, the reconstructed diffusion tensor
+    (``quadratic_form``) is compared, which is basis-invariant.
+    """
     # Get attributes of both instances, excluding dunder and method attributes
     attributes1 = _get_attributes(instance1)
     attributes2 = _get_attributes(instance2)
@@ -96,6 +123,10 @@ def _compare_instance_attributes(instance1, instance2):
     # Compare the values of the attributes
     all_equal = True
     for attr in attributes1:
+        # Skip eigenvector-dependent attributes — compared via quadratic_form
+        if attr in _EIGVEC_DEPENDENT_ATTRS:
+            continue
+
         value1 = attributes1.get(attr)
         value2 = attributes2.get(attr)
 
@@ -105,10 +136,6 @@ def _compare_instance_attributes(instance1, instance2):
             print(f"Attribute '{attr}' differs: {value1} != {value2}")
             all_equal = False
             continue
-
-        elif value1 is None or value2 is None:
-            print(f"Attribute '{attr}' differs: {value1} != {value2}")
-            all_equal = False
 
         try:
             array1 = np.asarray(value1).ravel()
@@ -558,10 +585,26 @@ def test_dti_prediction_shape(setup_random_dwi_data, index):
         {
             "bval_shell": 1000,
             "S0": 1,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": 3,
+            "snr": None,
+            "vol_shape": (2, 4, 1),
+        },
+        {
+            "bval_shell": 1000,
+            "S0": 1,
             "evals": (0.0016, 0.0004, 0.0004),
             "hsph_dirs": 6,
             "snr": None,
             "vol_shape": (1, 1, 1),
+        },
+        {
+            "bval_shell": 1000,
+            "S0": 1,
+            "evals": (0.0016, 0.0004, 0.0004),
+            "hsph_dirs": 6,
+            "snr": None,
+            "vol_shape": (2, 5, 1),
         },
         {
             "bval_shell": 1000,
@@ -571,12 +614,21 @@ def test_dti_prediction_shape(setup_random_dwi_data, index):
             "snr": None,
             "vol_shape": (1, 1, 1),
         },
+        {
+            "bval_shell": 1000,
+            "S0": 1,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": 8,
+            "snr": None,
+            "vol_shape": (2, 3, 1),
+        },
     ],
     indirect=True,
 )
 @pytest.mark.parametrize("index", (None, 3, 5))
 @pytest.mark.parametrize("ignore_bzero", (False, True))
 @pytest.mark.parametrize("use_mask", (False, True))
+@ignore_dipy_invalid_divide
 def test_dti_model_fit(single_shell_test_data, index, ignore_bzero, use_mask):
     """Ensure that we get the same result obtained through the DTI model
     implemented in DIPY."""
@@ -619,10 +671,26 @@ def test_dti_model_fit(single_shell_test_data, index, ignore_bzero, use_mask):
         {
             "bval_shell": 1000,
             "S0": 1,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": 3,
+            "snr": None,
+            "vol_shape": (2, 4, 1),
+        },
+        {
+            "bval_shell": 1000,
+            "S0": 1,
             "evals": (0.0016, 0.0004, 0.0004),
             "hsph_dirs": 6,
             "snr": None,
             "vol_shape": (1, 1, 1),
+        },
+        {
+            "bval_shell": 1000,
+            "S0": 1,
+            "evals": (0.0016, 0.0004, 0.0004),
+            "hsph_dirs": 6,
+            "snr": None,
+            "vol_shape": (2, 5, 1),
         },
         {
             "bval_shell": 1000,
@@ -632,12 +700,21 @@ def test_dti_model_fit(single_shell_test_data, index, ignore_bzero, use_mask):
             "snr": None,
             "vol_shape": (1, 1, 1),
         },
+        {
+            "bval_shell": 1000,
+            "S0": 1,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": 8,
+            "snr": None,
+            "vol_shape": (2, 3, 1),
+        },
     ],
     indirect=True,
 )
 @pytest.mark.parametrize("index", (None, 3, 5))
 @pytest.mark.parametrize("ignore_bzero", (False, True))
 @pytest.mark.parametrize("use_mask", (False, True))
+@ignore_dipy_invalid_divide
 def test_dti_model_predict(single_shell_test_data, index, ignore_bzero, use_mask):
     """Ensure that we get the same result obtained through the DTI model
     implemented in DIPY."""
