@@ -22,6 +22,7 @@
 #
 """Unit tests exercising dMRI models."""
 
+import functools
 import re
 import warnings
 from contextlib import nullcontext
@@ -59,6 +60,20 @@ B_MATRIX = np.array(
     ],
     dtype=np.float32,
 )
+
+
+def ignore_dipy_invalid_divide(func):
+    @functools.wraps(func)
+    def _wrapped(*args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=r".*invalid value encountered in divide.*",
+                category=RuntimeWarning,
+            )
+            return func(*args, **kwargs)
+
+    return _wrapped
 
 
 def _get_attributes(instance):
@@ -613,6 +628,7 @@ def test_dti_prediction_shape(setup_random_dwi_data, index):
 @pytest.mark.parametrize("index", (None, 3, 5))
 @pytest.mark.parametrize("ignore_bzero", (False, True))
 @pytest.mark.parametrize("use_mask", (False, True))
+@ignore_dipy_invalid_divide
 def test_dti_model_fit(single_shell_test_data, index, ignore_bzero, use_mask):
     """Ensure that we get the same result obtained through the DTI model
     implemented in DIPY."""
@@ -698,6 +714,7 @@ def test_dti_model_fit(single_shell_test_data, index, ignore_bzero, use_mask):
 @pytest.mark.parametrize("index", (None, 3, 5))
 @pytest.mark.parametrize("ignore_bzero", (False, True))
 @pytest.mark.parametrize("use_mask", (False, True))
+@ignore_dipy_invalid_divide
 def test_dti_model_predict(single_shell_test_data, index, ignore_bzero, use_mask):
     """Ensure that we get the same result obtained through the DTI model
     implemented in DIPY."""
