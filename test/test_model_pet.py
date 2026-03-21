@@ -423,8 +423,6 @@ def _plot_pet_timeseries(
     mpl.use("Agg")
     import matplotlib.pyplot as plt
 
-    i = 0
-
     tp = np.arange(n_timepoints)
     fig, ax = plt.subplots()
 
