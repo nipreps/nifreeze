@@ -3,10 +3,10 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="References" href="bibliography.html"><link rel="prev" title="nifreeze.viz.signals module" href="api/nifreeze.viz.signals.html">
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="How to Use" href="usage.html"><link rel="prev" title="Installation" href="installation.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>What’s new? - nifreeze 26.0.0.dev72 documentation</title>
+        <title>Design Principles - nifreeze 26.0.0.dev72 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -203,9 +203,9 @@
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design.html">Design Principles</a></li>
-<li class="toctree-l1"><a class="reference internal" href="design.html#extending-nifreeze">Extending <em>NiFreeze</em></a></li>
-<li class="toctree-l1"><a class="reference internal" href="design.html#contributing-to-nifreeze">Contributing to NiFreeze</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Design Principles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#extending-nifreeze">Extending <em>NiFreeze</em></a></li>
+<li class="toctree-l1"><a class="reference internal" href="#contributing-to-nifreeze">Contributing to NiFreeze</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html">How to Use</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running.html">Running <em>NiFreeze</em></a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="developers.html">For developers</a><input aria-label="Toggle navigation of For developers" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -277,7 +277,7 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">What’s new?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changes.html">What’s new?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="bibliography.html">References</a></li>
 </ul>
 
@@ -299,7 +299,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="_sources/changes.rst.txt" title="View this page">
+  <a class="muted-link" href="_sources/design.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -317,12 +317,230 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="what-s-new">
-<h1>What’s new?<a class="headerlink" href="#what-s-new" title="Link to this heading">¶</a></h1>
-<section id="eddymotion-fork">
-<h2><em>eddymotion</em> fork<a class="headerlink" href="#eddymotion-fork" title="Link to this heading">¶</a></h2>
-<p>The <em>NiFreeze</em> codebase has been ported from <em>eddymotion</em> on commit
-<a class="reference external" href="https://github.com/nipreps/eddymotion/commit/68f199dabc0aff8e904ad9f832ed276122c0845c">68f199d</a>.</p>
+          <section id="design-principles">
+<h1>Design Principles<a class="headerlink" href="#design-principles" title="Link to this heading">¶</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<p><em>NiFreeze</em>’s architecture is modular, facilitating extensibility and
+adaptability. <em>NiFreeze</em> is designed around the following core concepts:</p>
+<ul class="simple">
+<li><p><strong>Data ingestion</strong>: Handles input data, providing generalized 4D data
+management across modalities.</p></li>
+<li><p><strong>Preprocessing pipelines</strong>: Implements modality-specific preprocessing
+steps prior to artifact estimation. Examples of preprocessing operations are
+value clipping and smoothing.</p></li>
+<li><p><strong>Modelling</strong>: Implements statistical models to estimate and correct
+artifacts. Models follow a <code class="docutils literal notranslate"><span class="pre">fit</span> <span class="pre">&amp;</span> <span class="pre">predict</span></code> design, where the <code class="docutils literal notranslate"><span class="pre">fit</span></code> step
+fits the model to the data, and the <code class="docutils literal notranslate"><span class="pre">predict</span></code> step estimates the volume
+that has been held out.</p></li>
+<li><p><strong>Estimation</strong>: Orchestrates the registration target prediction. Estimates
+the motion and distortion artifacts of the data employing a particular
+model and iterating over the data using a leave-one-volume-out approach. It
+computes the registration transforms on the estimated, artifact-free volumes.
+Estimator instances can be stacked so that the output of an estimator
+instance becomes the input to the subsequent instance.</p></li>
+</ul>
+</section>
+<section id="main-concepts">
+<h2>Main Concepts<a class="headerlink" href="#main-concepts" title="Link to this heading">¶</a></h2>
+<section id="data-ingestion">
+<h3>Data Ingestion<a class="headerlink" href="#data-ingestion" title="Link to this heading">¶</a></h3>
+<p><em>NiFreeze</em> implements a set of modality-specific 4D data readers that expose a
+uniform API, enabling transparent access to individual volumes by index.</p>
+<section id="dmri">
+<h4>dMRI<a class="headerlink" href="#dmri" title="Link to this heading">¶</a></h4>
+<p>dRMI modality gradients are handled internally arrays arranged according to
+the <code class="docutils literal notranslate"><span class="pre">[gx</span> <span class="pre">gy</span> <span class="pre">gz</span> <span class="pre">b]</span></code> layout, where <code class="docutils literal notranslate"><span class="pre">[gx</span> <span class="pre">gy</span> <span class="pre">gz]</span></code> are the components of a
+given gradient vector, and <code class="docutils literal notranslate"><span class="pre">b</span></code> is the b-value in units of <span class="math notranslate nohighlight">\(s/mm^2\)</span>.</p>
+<p># ToDo
+# Or use [ R A S+ b ] instead of <code class="docutils literal notranslate"><span class="pre">[gx</span> <span class="pre">gy</span> <span class="pre">gz</span> <span class="pre">b]</span></code>  as in usage.rst</p>
+<p>The dMRI data class holds a single <code class="docutils literal notranslate"><span class="pre">b0</span></code> volume. The rationale behind this is
+that this volume serves as a canonical reference for transforming non-zero
+gradient volumes. Users can compute such reference <code class="docutils literal notranslate"><span class="pre">b0</span></code> volume using their
+preferred method and provide it when instantiating a <code class="xref py py-class docutils literal notranslate"><span class="pre">api/nifreeze.data.dmri.DWI</span></code>
+class (e.g. through the <a class="reference internal" href="api/nifreeze.data.dmri.io.html#nifreeze.data.dmri.io.from_nii" title="nifreeze.data.dmri.io.from_nii"><code class="xref py py-meth docutils literal notranslate"><span class="pre">from_nii()</span></code></a>); otherwise,
+<em>NiFreeze</em> computes a reference <code class="docutils literal notranslate"><span class="pre">b0</span></code> as the median volume across
+non-diffusion-weighted volumes. Note that following this design choice,
+the gradient data hosted by the <code class="xref py py-class docutils literal notranslate"><span class="pre">api/nifreeze.data.dmri.DWI</span></code> instance
+only contains (nonzero) diffusion-weighted gradient values.</p>
+</section>
+</section>
+</section>
+<section id="preprocessing">
+<h2>Preprocessing<a class="headerlink" href="#preprocessing" title="Link to this heading">¶</a></h2>
+<p><em>NiFreeze</em> provides a set of minimal preprocessing utilities under the form
+of <code class="xref py py-class docutils literal notranslate"><span class="pre">api/nifreeze.estimator.Filter</span></code>s. <code class="xref py py-class docutils literal notranslate"><span class="pre">api/nifreeze.estimator.Filter</span></code>s
+can be specified as inputs to estimators so that the data used by the
+estimator is processed through the given filter instance.</p>
+</section>
+<section id="modeling">
+<h2>Modeling<a class="headerlink" href="#modeling" title="Link to this heading">¶</a></h2>
+<p>These modules encapsulate the algorithms used for artifact estimation and
+correction. By abstracting the modeling logic, <em>NiFreeze</em> enables the
+integration of diverse methodologies tailored to specific research
+requirements.</p>
+<p>Models <strong>do not</strong> preprocess the data, and users are expected to have their
+data preprocessed minimally (e.g., computing a unique, meaningful <em>b0</em> volume
+for DWI data, smoothing and thresholding the PET data, clipping or detrending
+the data).</p>
+</section>
+<section id="iterators">
+<h2>Iterators<a class="headerlink" href="#iterators" title="Link to this heading">¶</a></h2>
+<p>Iterators in <em>NiFreeze</em> manage the traversal of data volumes, allowing access
+operations to particular data volumes. They are designed to be extensible,
+allowing developers to implement custom traversal logic as needed.</p>
+</section>
+<section id="estimation">
+<h2>Estimation<a class="headerlink" href="#estimation" title="Link to this heading">¶</a></h2>
+<p><em>NiFreeze</em> estimators rely on predictive models to reconstruct artifact-free
+volumes from artifact-affected 4D datasets. Each model maintains access to the
+full dataset, while the estimator traverses the data according to a specified
+iteration strategy (e.g., forward, reverse, or random ordering). At each step,
+the estimator selects a target (held-out) volume as defined by the iterator,
+fits the model on the remaining volumes, and predicts the held-out volume. A
+registration process estimates the affine transformation between the held-out
+and predicted volumes, storing the result at the corresponding index in the
+dataset’s motion parameter attribute.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>The <strong>Update &amp; iterate</strong> procedure follows a strict design principle:
+resampling is intentionally excluded from the update step; including it
+would alter the data distribution, making it impossible to attribute
+observed improvements solely to the predictive model.</p>
+</div>
+<p>Corrected datasets and associated metadata are produced in standardized
+formats for downstream analysis.</p>
+</section>
+</section>
+<section id="extending-nifreeze">
+<h1>Extending <em>NiFreeze</em><a class="headerlink" href="#extending-nifreeze" title="Link to this heading">¶</a></h1>
+<p>To extend <em>NiFreeze</em>’s functionality,</p>
+<section id="creating-new-iterators">
+<h2>Creating New Iterators<a class="headerlink" href="#creating-new-iterators" title="Link to this heading">¶</a></h2>
+<p>To extend <em>NiFreeze</em>’s functionality, such as implementing a custom iterator,
+follow these general steps:</p>
+<ol class="arabic">
+<li><p><strong>Create a new function</strong>: Define a new iterator function implementing the
+desired logic.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterator</span>
+
+<span class="k">def</span> <span class="nf">my_iterator</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="c1"># Size is the number of volumes in the dataset</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="n">get_size</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="c1"># Implement custom iteration logic</span>
+    <span class="n">index_order</span> <span class="o">=</span> <span class="n">establish_order</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">index_order</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ol>
+<ol class="arabic">
+<li><p><strong>Integrate the function</strong>: Incorporate the newly created iterator into the
+<em>NiFreeze</em> workflow by updating the configuration or pipeline definitions to
+utilize your new implementation.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">list</span><span class="p">(</span><span class="n">my_iterator</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+</pre></div>
+</div>
+</li>
+</ol>
+<ol class="arabic simple">
+<li><p><strong>Test the Implementation</strong>: Ensure that your custom class functions as intended by
+running unit tests and validating the outputs against expected results.</p></li>
+</ol>
+</section>
+<section id="creating-new-models">
+<h2>Creating New Models<a class="headerlink" href="#creating-new-models" title="Link to this heading">¶</a></h2>
+<p>To implement a new model:</p>
+<p>1. Subclass the <code class="xref py py-class docutils literal notranslate"><span class="pre">api/nifreeze.model.base.BaseModel</span></code> class.
+1. Implement the <code class="docutils literal notranslate"><span class="pre">fit(data)</span></code> method, which returns a 3D volume.
+1. Register the model in your pipeline or CLI wrapper.</p>
+<section id="example-extrapolation-model">
+<h3>Example: Extrapolation model<a class="headerlink" href="#example-extrapolation-model" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nifreeze.data.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span>
+<span class="kn">from</span> <span class="nn">nifreeze.model.base</span> <span class="kn">import</span> <span class="n">BaseModel</span>
+
+<span class="k">class</span> <span class="nc">ExtrapolationModel</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Model a volume extrapolating across training volumes.&quot;&quot;&quot;</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;_param1&quot;</span><span class="p">:</span> <span class="s2">&quot;Parameter 1&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_param2&quot;</span><span class="p">:</span> <span class="s2">&quot;Parameter 2&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">BaseDataset</span><span class="p">,</span> <span class="n">param1</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">param2</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_param1</span> <span class="o">=</span> <span class="n">param1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_param2</span> <span class="o">=</span> <span class="n">param2</span>
+
+    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># Fit the data</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># Compute prediction</span>
+        <span class="k">return</span> <span class="n">pred</span>
+</pre></div>
+</div>
+<p>so <code class="docutils literal notranslate"><span class="pre">fit_predict</span></code> is suitable for case where the model is fit only once per iteration, and <code class="docutils literal notranslate"><span class="pre">predict</span></code> is for cases where
+the model is fit across multiple volumes in each iteration.</p>
+</section>
+<section id="usage">
+<h3>Usage<a class="headerlink" href="#usage" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">ExtrapolationModel</span><span class="p">()</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="fitting-and-prediction">
+<h2>Fitting and Prediction<a class="headerlink" href="#fitting-and-prediction" title="Link to this heading">¶</a></h2>
+<p>Models have a <code class="docutils literal notranslate"><span class="pre">_locked_fit</span></code> property that allows to fit all available data if no index is provided. This is achieved
+by calling:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">..</span> <span class="n">code</span><span class="o">-</span><span class="n">block</span><span class="p">::</span> <span class="n">python</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In this case, the predicted data will always be the same regardless of the index. The <code class="docutils literal notranslate"><span class="pre">single_</span></code> prefix in the fitting
+strategy provided to the <code class="xref py py-class docutils literal notranslate"><span class="pre">api/nifreeze.estimator.Estimator</span></code> instances tells the estimator to proceed this way.</p>
+</section>
+<section id="id1">
+<h2>Usage<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
+<p>The <em>NiFreeze</em> command-line interface supports specifying multiple models, which are applied in a cascade fashion. Users
+can indicate which model should be used to address a specific problem, such as head motion or eddy current correction.</p>
+<p>The transformations computed at each level are stored in an HDF5 file and are used to initialize the immediately next
+level of the registration process.</p>
+<p>Refer to the <a class="reference external" href="https://www.nipreps.org/smriprep/usage.html#usage" title="(in smriprep v0.19.3.dev122)"><span>Usage</span></a> document for a self-contained usage example.</p>
+</section>
+</section>
+<section id="contributing-to-nifreeze">
+<h1>Contributing to NiFreeze<a class="headerlink" href="#contributing-to-nifreeze" title="Link to this heading">¶</a></h1>
+<section id="set-up-for-development">
+<h2>Set up for Development<a class="headerlink" href="#set-up-for-development" title="Link to this heading">¶</a></h2>
+<p>Install the appropriate modules:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">..</span> <span class="n">code</span><span class="o">-</span><span class="n">block</span><span class="p">::</span> <span class="n">bash</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="o">.</span><span class="p">[</span><span class="n">test</span><span class="p">,</span> <span class="n">doc</span><span class="p">,</span> <span class="n">style</span><span class="p">,</span> <span class="n">contributing</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Download data from OSF, OpenNeuro, etc.:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">..</span> <span class="n">code</span><span class="o">-</span><span class="n">block</span><span class="p">::</span> <span class="n">bash</span>
+<span class="n">download</span>
+</pre></div>
+</div>
+<p>Typechecking, spellchecking, style, doc</p>
+</section>
+<section id="developer-resources">
+<h2>Developer Resources<a class="headerlink" href="#developer-resources" title="Link to this heading">¶</a></h2>
+<p>Refer to the <a class="reference external" href="https://nipype.readthedocs.io/en/latest/developers.html#developers" title="(in nipype v1.11.1.dev2)"><span>Developer’s Corner</span></a> document for detailed development guidelines.</p>
+<p>For guidance on contributing to <em>NiFreeze</em>, refer to the <em>NiPreps</em>
+Contributing Guidelines:</p>
+<p><a class="reference external" href="https://www.nipreps.org/community/CONTRIBUTING/">https://www.nipreps.org/community/CONTRIBUTING/</a></p>
+<p>This resource provides detailed instructions on community principles and
+contributor acknowledgements.</p>
 </section>
 </section>
 
@@ -331,23 +549,23 @@
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="bibliography.html">
+          <a class="next-page" href="usage.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">References</div>
+                <div class="title">How to Use</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="api/nifreeze.viz.signals.html">
+          <a class="prev-page" href="installation.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">nifreeze.viz.signals module</div>
+                <div class="title">Installation</div>
                 
               </div>
             </a>
@@ -381,8 +599,35 @@
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">What’s new?</a><ul>
-<li><a class="reference internal" href="#eddymotion-fork"><em>eddymotion</em> fork</a></li>
+<li><a class="reference internal" href="#">Design Principles</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#main-concepts">Main Concepts</a><ul>
+<li><a class="reference internal" href="#data-ingestion">Data Ingestion</a><ul>
+<li><a class="reference internal" href="#dmri">dMRI</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#preprocessing">Preprocessing</a></li>
+<li><a class="reference internal" href="#modeling">Modeling</a></li>
+<li><a class="reference internal" href="#iterators">Iterators</a></li>
+<li><a class="reference internal" href="#estimation">Estimation</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#extending-nifreeze">Extending <em>NiFreeze</em></a><ul>
+<li><a class="reference internal" href="#creating-new-iterators">Creating New Iterators</a></li>
+<li><a class="reference internal" href="#creating-new-models">Creating New Models</a><ul>
+<li><a class="reference internal" href="#example-extrapolation-model">Example: Extrapolation model</a></li>
+<li><a class="reference internal" href="#usage">Usage</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#fitting-and-prediction">Fitting and Prediction</a></li>
+<li><a class="reference internal" href="#id1">Usage</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#contributing-to-nifreeze">Contributing to NiFreeze</a><ul>
+<li><a class="reference internal" href="#set-up-for-development">Set up for Development</a></li>
+<li><a class="reference internal" href="#developer-resources">Developer Resources</a></li>
 </ul>
 </li>
 </ul>
@@ -398,6 +643,7 @@
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/version-switch.js?v=8028bf13"></script>
     </body>
 </html>
