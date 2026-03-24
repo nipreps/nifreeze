@@ -62,13 +62,13 @@ B_MATRIX = np.array(
 )
 
 
-def ignore_dipy_invalid_divide(func):
+def ignore_dipy_divide_warning(func):
     @functools.wraps(func)
     def _wrapped(*args, **kwargs):
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
-                message=r".*invalid value encountered in divide.*",
+                message=r".*(invalid value encountered in divide|divide by zero encountered in log).*",
                 category=RuntimeWarning,
             )
             return func(*args, **kwargs)
@@ -628,7 +628,7 @@ def test_dti_prediction_shape(setup_random_dwi_data, index):
 @pytest.mark.parametrize("index", (None, 3, 5))
 @pytest.mark.parametrize("ignore_bzero", (False, True))
 @pytest.mark.parametrize("use_mask", (False, True))
-@ignore_dipy_invalid_divide
+@ignore_dipy_divide_warning
 def test_dti_model_fit(single_shell_test_data, index, ignore_bzero, use_mask):
     """Ensure that we get the same result obtained through the DTI model
     implemented in DIPY."""
@@ -714,7 +714,7 @@ def test_dti_model_fit(single_shell_test_data, index, ignore_bzero, use_mask):
 @pytest.mark.parametrize("index", (None, 3, 5))
 @pytest.mark.parametrize("ignore_bzero", (False, True))
 @pytest.mark.parametrize("use_mask", (False, True))
-@ignore_dipy_invalid_divide
+@ignore_dipy_divide_warning
 def test_dti_model_predict(single_shell_test_data, index, ignore_bzero, use_mask):
     """Ensure that we get the same result obtained through the DTI model
     implemented in DIPY."""
