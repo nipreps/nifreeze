@@ -93,8 +93,14 @@ jobs:
     - name: Configure ASV
       run: |
         CONFIG_FILE="$(pwd)/benchmarks/asv.conf.json"
-        asv machine --yes --config "$CONFIG_FILE"
+
+        # Force a stable machine name for GitHub Actions so baseline + PR results match
+        ASV_MACHINE="github-actions-ubuntu-latest-py${{ matrix.python-version }}"
+
+        asv machine --yes --config "$CONFIG_FILE" --machine "$ASV_MACHINE"
+
         echo "ASV_CONFIG=$CONFIG_FILE" >> $GITHUB_ENV
+        echo "ASV_MACHINE=$ASV_MACHINE" >> $GITHUB_ENV
         echo "ASV_RESULTS_DIR=$(pwd)/$BENCHMARK_RESULTS_PATH" >> $GITHUB_ENV
 
     # For PRs: Download baseline from main tip
@@ -158,7 +164,9 @@ jobs:
         FACTOR=$(python -c "import json; print(json.load(open('$ASV_CONFIG')).get('regression_factor', 1.1))")
         echo "FACTOR=$FACTOR" >> "$GITHUB_ENV"
 
-        asv compare --config "$ASV_CONFIG" --factor $FACTOR --split "$MAIN_SHA" "$HEAD_SHA" | tee comparison.txt
+
+        asv compare --config "$ASV_CONFIG" --machine "$ASV_MACHINE" \
+          --factor $FACTOR --split "$MAIN_SHA" "$HEAD_SHA" | tee comparison.txt
 
         # Check for regressions
         if grep -q "got worse" comparison.txt; then
