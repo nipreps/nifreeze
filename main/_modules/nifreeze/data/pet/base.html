@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../../genindex.html"><link rel="search" title="Search" href="../../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.data.pet.base - nifreeze 26.0.0.dev74 documentation</title>
+        <title>nifreeze.data.pet.base - nifreeze 26.0.0.dev76 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../../index.html"><div class="brand">nifreeze 26.0.0.dev74 documentation</div></a>
+      <a href="../../../../index.html"><div class="brand">nifreeze 26.0.0.dev76 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev74</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev76</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev74</span>
+  <span class="sidebar-brand-text">26.0.0.dev76</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -604,47 +604,6 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
 
-<div class="viewcode-block" id="PET.lofo_split">
-<a class="viewcode-back" href="../../../../api/nifreeze.data.pet.base.html#nifreeze.data.pet.PET.lofo_split">[docs]</a>
-    <span class="k">def</span> <span class="nf">lofo_split</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Leave-one-frame-out (LOFO) for PET data.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        index : int</span>
-<span class="sd">            Index of the PET frame to be left out in this fold.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        (train_data, train_timings) : tuple</span>
-<span class="sd">            Training data and corresponding timings, excluding the left-out frame.</span>
-<span class="sd">        (test_data, test_timing) : tuple</span>
-<span class="sd">            Test data (one PET frame) and corresponding timing.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span><span class="p">)</span>
-
-        <span class="c1"># Read original PET data</span>
-        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">in_file</span><span class="p">:</span>
-            <span class="n">root</span> <span class="o">=</span> <span class="n">in_file</span><span class="p">[</span><span class="s2">&quot;/0&quot;</span><span class="p">]</span>
-            <span class="n">pet_frame</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">root</span><span class="p">[</span><span class="s2">&quot;dataobj&quot;</span><span class="p">][</span><span class="o">...</span><span class="p">,</span> <span class="n">index</span><span class="p">])</span>
-            <span class="n">timing_frame</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">root</span><span class="p">[</span><span class="s2">&quot;midframe&quot;</span><span class="p">][</span><span class="o">...</span><span class="p">,</span> <span class="n">index</span><span class="p">])</span>
-
-        <span class="c1"># Mask to exclude the selected frame</span>
-        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
-        <span class="n">mask</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-
-        <span class="n">train_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">mask</span><span class="p">]</span>
-        <span class="n">train_timings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">midframe</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
-
-        <span class="n">test_data</span> <span class="o">=</span> <span class="n">pet_frame</span>
-        <span class="n">test_timing</span> <span class="o">=</span> <span class="n">timing_frame</span>
-
-        <span class="k">return</span> <span class="p">(</span><span class="n">train_data</span><span class="p">,</span> <span class="n">train_timings</span><span class="p">),</span> <span class="p">(</span><span class="n">test_data</span><span class="p">,</span> <span class="n">test_timing</span><span class="p">)</span></div>
-
-
 <div class="viewcode-block" id="PET.set_transform">
 <a class="viewcode-back" href="../../../../api/nifreeze.data.pet.base.html#nifreeze.data.pet.PET.set_transform">[docs]</a>
     <span class="k">def</span> <span class="nf">set_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -748,7 +707,7 @@
       
     </aside>
   </div>
-</div><script src="../../../../_static/documentation_options.js?v=7d6d269c"></script>
+</div><script src="../../../../_static/documentation_options.js?v=eeed28ef"></script>
     <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../../_static/scripts/furo.js?v=46bd48cc"></script>

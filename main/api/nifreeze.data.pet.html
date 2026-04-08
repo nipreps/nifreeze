@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.data.pet.base module" href="nifreeze.data.pet.base.html"><link rel="prev" title="nifreeze.data.dmri.utils module" href="nifreeze.data.dmri.utils.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.data.pet package - nifreeze 26.0.0.dev74 documentation</title>
+        <title>nifreeze.data.pet package - nifreeze 26.0.0.dev76 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev74 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev76 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev74</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev76</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev74</span>
+  <span class="sidebar-brand-text">26.0.0.dev76</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -347,24 +347,6 @@ Ultimately, the midframe and total duration values are computed by the
 <dd><p>Read an HDF5 file from disk.</p>
 </dd></dl>
 
-<dl class="py method">
-<dt class="sig sig-object py" id="nifreeze.data.pet.PET.lofo_split">
-<span class="sig-name descname"><span class="pre">lofo_split</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/data/pet/base.html#PET.lofo_split"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.pet.PET.lofo_split" title="Link to this definition">¶</a></dt>
-<dd><p>Leave-one-frame-out (LOFO) for PET data.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>index</strong> (<em>int</em>) – Index of the PET frame to be left out in this fold.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><ul class="simple">
-<li><p><strong>(train_data, train_timings)</strong> (<em>tuple</em>) – Training data and corresponding timings, excluding the left-out frame.</p></li>
-<li><p><strong>(test_data, test_timing)</strong> (<em>tuple</em>) – Test data (one PET frame) and corresponding timing.</p></li>
-</ul>
-</p>
-</dd>
-</dl>
-</dd></dl>
-
 <dl class="py attribute">
 <dt class="sig sig-object py" id="nifreeze.data.pet.PET.midframe">
 <span class="sig-name descname"><span class="pre">midframe</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">np.ndarray</span></em><a class="headerlink" href="#nifreeze.data.pet.PET.midframe" title="Link to this definition">¶</a></dt>
@@ -488,7 +470,6 @@ stored in the returned dataset.</p></li>
 <li><a class="reference internal" href="#pet-data-representation">PET data representation</a></li>
 <li><a class="reference internal" href="#nifreeze.data.pet.PET"><code class="docutils literal notranslate"><span class="pre">PET</span></code></a><ul>
 <li><a class="reference internal" href="#nifreeze.data.pet.PET.from_filename"><code class="docutils literal notranslate"><span class="pre">PET.from_filename()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.data.pet.PET.lofo_split"><code class="docutils literal notranslate"><span class="pre">PET.lofo_split()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.pet.PET.midframe"><code class="docutils literal notranslate"><span class="pre">PET.midframe</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.pet.PET.set_transform"><code class="docutils literal notranslate"><span class="pre">PET.set_transform()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.pet.PET.to_filename"><code class="docutils literal notranslate"><span class="pre">PET.to_filename()</span></code></a></li>
@@ -508,7 +489,7 @@ stored in the returned dataset.</p></li>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=7d6d269c"></script>
+</div><script src="../_static/documentation_options.js?v=eeed28ef"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
