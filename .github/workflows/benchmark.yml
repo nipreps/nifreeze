@@ -135,7 +135,7 @@ jobs:
       if: github.event_name == 'pull_request'
       id: baseline-check
       run: |
-        if [ -d "$BENCHMARK_RESULTS_PATH" ] && [ -n "$(ls -A $BENCHMARK_RESULTS_PATHs 2>/dev/null)" ]; then
+        if [ -d "$BENCHMARK_RESULTS_PATH" ] && [ -n "$(ls -A $BENCHMARK_RESULTS_PATH 2>/dev/null)" ]; then
           echo "found=true" >> $GITHUB_OUTPUT
         else
           echo "found=false" >> $GITHUB_OUTPUT
