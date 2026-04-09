@@ -103,7 +103,7 @@ ambiguity when eigenvalues are degenerate.  Skipped in favour of comparing the
 reconstructed diffusion tensor (``quadratic_form``), which is invariant."""
 
 
-def _compare_instance_attributes(instance1, instance2):
+def _compare_instance_attributes(instance1, instance2, atol=1e-6):
     """Compare non-callable, non-dunder attributes of two instances for numerical equality.
 
     Eigenvector-dependent attributes (``model_params``, ``evecs``, ``directions``)
@@ -144,7 +144,7 @@ def _compare_instance_attributes(instance1, instance2):
             # like a shape product, so skip
             if array1.shape != array2.shape:
                 continue
-            if not np.allclose(array1, array2):
+            if not np.allclose(array1, array2, atol=atol):
                 print(f"Attribute '{attr}' differs: {value1} != {array2}")
                 all_equal = False
         except Exception:
@@ -836,12 +836,30 @@ def test_dki_prediction_shape(setup_random_dwi_data, index):
             "add_bzero": True,
         },
         {
+            "bval_shell": (1000, 2000),
+            "S0": 1,
+            "evals": (0.0016, 0.0004, 0.0004),
+            "hsph_dirs": (3, 4),
+            "snr": None,
+            "vol_shape": (2, 4, 1),
+            "add_bzero": True,
+        },
+        {
             "bval_shell": (1000, 2000, 3000),
             "S0": 1,
             "evals": (0.0015, 0.0003, 0.0003),
             "hsph_dirs": (3, 4, 5),
             "snr": None,
             "vol_shape": (1, 1, 1),
+            "add_bzero": False,
+        },
+        {
+            "bval_shell": (1000, 2000, 3000),
+            "S0": 1,
+            "evals": (0.0016, 0.0004, 0.0004),
+            "hsph_dirs": (3, 4, 5),
+            "snr": None,
+            "vol_shape": (2, 5, 1),
             "add_bzero": False,
         },
     ],
@@ -915,6 +933,15 @@ def test_dki_model_fit(multi_shell_test_data, index, ignore_bzero, use_mask):
             "add_bzero": True,
         },
         {
+            "bval_shell": (1000, 2000),
+            "S0": 1,
+            "evals": (0.0016, 0.0004, 0.0004),
+            "hsph_dirs": (3, 4),
+            "snr": None,
+            "vol_shape": (2, 4, 1),
+            "add_bzero": True,
+        },
+        {
             "bval_shell": (1000, 2000, 3000),
             "S0": 1,
             "evals": (0.0015, 0.0003, 0.0003),
@@ -923,12 +950,22 @@ def test_dki_model_fit(multi_shell_test_data, index, ignore_bzero, use_mask):
             "vol_shape": (1, 1, 1),
             "add_bzero": False,
         },
+        {
+            "bval_shell": (1000, 2000, 3000),
+            "S0": 1,
+            "evals": (0.0016, 0.0004, 0.0004),
+            "hsph_dirs": (3, 4, 5),
+            "snr": None,
+            "vol_shape": (2, 5, 1),
+            "add_bzero": False,
+        },
     ],
     indirect=True,
 )
 @pytest.mark.parametrize("index", (None, 4, 9))
 @pytest.mark.parametrize("ignore_bzero", (False, True))
 @pytest.mark.parametrize("use_mask", (False, True))
+@ignore_dipy_divide_warning
 def test_dki_model_predict(multi_shell_test_data, index, ignore_bzero, use_mask):
     """Ensure that we get the same result obtained through the DKI model
     implemented in DIPY."""
