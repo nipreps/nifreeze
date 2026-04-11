@@ -104,7 +104,12 @@ def advanced_clip(
     # Clip and scale data
     np.clip(data, a_min=a_min, a_max=a_max, out=data)
     data -= data.min()
-    data /= data.max()
+    rng = float(data.max())  # rng = max-min
+    if rng != 0.0:
+        data /= rng
+    else:
+        # All values are equal after clipping: normalized result should be zeros
+        data.fill(0.0)
 
     if invert:
         np.subtract(1.0, data, out=data)

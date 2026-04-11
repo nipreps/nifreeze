@@ -22,6 +22,7 @@
 #
 
 import copy
+import warnings
 
 import numpy as np
 import pytest
@@ -35,6 +36,27 @@ from nifreeze.data.filtering import (
     grand_mean_normalization,
     robust_minmax_normalization,
 )
+
+
+@pytest.mark.parametrize(
+    ("data", "p_min", "p_max"),
+    [
+        # Constant array: after data -= data.min(), max == 0, normalization denom == 0
+        (np.full((5, 5, 5), 7.0, dtype=np.float32), 35.0, 99.98),
+        # Collapsed clip range: everything clips to one value: denom == 0
+        (np.arange(27, dtype=np.float32).reshape((3, 3, 3)), 50.0, 50.0),
+    ],
+    ids=["constant_array", "collapsed_percentiles"],
+)
+def test_advanced_clip_degenerate(data, p_min, p_max):
+    # Treat RuntimeWarnings as errors so the test fails if divide/cast warnings occur
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        clipped_data = advanced_clip(data, inplace=False, dtype="int16", p_min=p_min, p_max=p_max)
+
+    assert clipped_data is not None
+    # When dynamic range collapses, output should be all zeros
+    assert np.all(clipped_data == 0)
 
 
 @pytest.mark.random_uniform_ndim_data((32, 32, 32), 0.0, 2.0)
