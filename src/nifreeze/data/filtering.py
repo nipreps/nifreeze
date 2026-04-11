@@ -110,7 +110,8 @@ def advanced_clip(
         np.subtract(1.0, data, out=data)
 
     if dtype in ("uint8", "int16"):
-        np.round(255 * data, out=data).astype(dtype)
+        np.round(255 * data, out=data)
+        data = data.astype(dtype, copy=False)
 
     if inplace:
         return None
