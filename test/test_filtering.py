@@ -22,7 +22,6 @@
 #
 
 import copy
-import warnings
 
 import numpy as np
 import pytest
@@ -31,6 +30,11 @@ from skimage.morphology import ball
 
 from nifreeze.data.filtering import (
     BVAL_ATOL,
+    CLIPPING_DEGENERATE_RANGE_ERROR_MSG,
+    CLIPPING_EMPTY_SELECTION_ERROR_MSG,
+    CLIPPING_INVALID_THRESHOLDS_ERROR_MSG,
+    CLIPPING_NONFINITE_THRESHOLDS_ERROR_MSG,
+    ClippingValueError,
     advanced_clip,
     dwi_select_shells,
     grand_mean_normalization,
@@ -38,25 +42,81 @@ from nifreeze.data.filtering import (
 )
 
 
-@pytest.mark.parametrize(
-    ("data", "p_min", "p_max"),
-    [
-        # Constant array: after data -= data.min(), max == 0, normalization denom == 0
-        (np.full((5, 5, 5), 7.0, dtype=np.float32), 35.0, 99.98),
-        # Collapsed clip range: everything clips to one value: denom == 0
-        (np.arange(27, dtype=np.float32).reshape((3, 3, 3)), 50.0, 50.0),
-    ],
-    ids=["constant_array", "collapsed_percentiles"],
-)
-def test_advanced_clip_degenerate(data, p_min, p_max):
-    # Treat RuntimeWarnings as errors so the test fails if divide/cast warnings occur
-    with warnings.catch_warnings():
-        warnings.simplefilter("error", RuntimeWarning)
-        clipped_data = advanced_clip(data, inplace=False, dtype="int16", p_min=p_min, p_max=p_max)
+def test_advanced_clip_empty_selection():
+    data = -np.ones((5, 5, 5), dtype=np.float32)
 
-    assert clipped_data is not None
-    # When dynamic range collapses, output should be all zeros
-    assert np.all(clipped_data == 0)
+    with pytest.raises(ClippingValueError) as exc:
+        advanced_clip(data, inplace=False, nonnegative=True)
+
+    expected = CLIPPING_EMPTY_SELECTION_ERROR_MSG.format(
+        constraints="nonnegative constraint and ", p_min=35.0, p_max=99.98
+    )
+    assert str(exc.value) == expected
+
+
+def test_advanced_clip_nonfinite_thresholds(monkeypatch):
+    data = np.ones((5, 5, 5), dtype=np.float32)
+
+    # Force non-finite thresholds regardless of input data
+    def _percentile_returns_nan(*args, **kwargs):
+        return np.nan
+
+    from nifreeze.data import filtering
+
+    monkeypatch.setattr(filtering.np, "percentile", _percentile_returns_nan)
+
+    with pytest.raises(ClippingValueError) as exc:
+        advanced_clip(data, inplace=False, nonnegative=True, p_min=35.0, p_max=99.98)
+
+    expected = CLIPPING_NONFINITE_THRESHOLDS_ERROR_MSG.format(
+        a_min=float("nan"), a_max=float("nan"), p_min=35.0, p_max=99.98, nonnegative=True
+    )
+    assert str(exc.value) == expected
+
+
+def test_advanced_clip_invalid_thresholds():
+    data = np.arange(27, dtype=np.float32).reshape((3, 3, 3))
+    p = 50.0
+
+    with pytest.raises(ClippingValueError) as exc:
+        advanced_clip(data, inplace=False, nonnegative=True, p_min=p, p_max=p)
+
+    # With p_min == p_max, percentiles are equal (deterministically for this data)
+    sel = data[np.isfinite(data)]
+    a = float(np.percentile(sel, p))
+    expected = CLIPPING_INVALID_THRESHOLDS_ERROR_MSG.format(
+        a_min=a, a_max=a, p_min=p, p_max=p, nonnegative=True
+    )
+    assert str(exc.value) == expected
+
+
+def test_advanced_clip_degenerate_range(monkeypatch):
+    data = np.arange(27, dtype=np.float32).reshape((3, 3, 3))
+
+    # Ensure thresholds are valid (a_max > a_min) and deterministic.
+    # advanced_clip calls np.percentile twice (for a_min and a_max).
+    percentiles = iter([0.0, 1.0])
+
+    def _percentile(_arr, _q):
+        return next(percentiles)
+
+    monkeypatch.setattr(np, "percentile", _percentile)
+
+    # Force clipping to collapse all values to a constant after thresholds are deemed valid
+    def _clip(_data, a_min=None, a_max=None, out=None):
+        out.fill(0.5)
+        return out
+
+    monkeypatch.setattr(np, "clip", _clip)
+
+    with pytest.raises(ClippingValueError) as exc:
+        advanced_clip(data, inplace=False, nonnegative=True, p_min=35.0, p_max=99.98)
+
+    # After our fake clip: data is constant 0.5; subtract min: all zeros; den == 0.0
+    expected = CLIPPING_DEGENERATE_RANGE_ERROR_MSG.format(
+        den=0.0, a_min=0.0, a_max=1.0, nonnegative=True, data_finite=True, unique=1
+    )
+    assert str(exc.value) == expected
 
 
 @pytest.mark.random_uniform_ndim_data((32, 32, 32), 0.0, 2.0)
