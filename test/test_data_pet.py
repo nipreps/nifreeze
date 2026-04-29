@@ -590,6 +590,14 @@ def test_pet_set_transform_updates_motion_affines(setup_random_pet_data):
     assert aff is pet_obj.motion_affines[idx]
 
 
+# ToDo
+# This and the below should be merged
+def test_pet_load_hdf5(datadir):
+    input_file = datadir / "pet.h5"
+
+    assert isinstance(nifreeze_load(input_file), PET)
+
+
 @pytest.mark.random_pet_data(4, (2, 2, 2), np.asarray([1.0, 2.0, 3.0, 4.0]))
 def test_pet_load(tmp_path, setup_random_pet_data):
     pet_dataobj, affine, brainmask_dataobj, frame_time, midframe, total_duration = (
