@@ -282,11 +282,12 @@ def test_estimator_iterator_index_match(
         expected_indices = list(iterator_func(size=iter_size))
     elif strategy == "monotonic_value":
         if modality == "dwi":
-            expected_indices = list(iterator_func(bvals=bvals, ascending=True))
+            it_kwargs = {iterators.BVALS_KWARG: bvals}
         elif modality == "pet":
-            expected_indices = list(iterator_func(uptake=uptake, ascending=False))
+            it_kwargs = {iterators.UPTAKE_KWARG: uptake}
         else:
             raise NotImplementedError(f"Modality {modality} not implemented")
+        expected_indices = list(iterator_func(**it_kwargs))
     else:
         raise ValueError(f"Unknown strategy {strategy}")
 
