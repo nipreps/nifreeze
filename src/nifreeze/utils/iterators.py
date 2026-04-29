@@ -29,24 +29,40 @@ from typing import Any, Iterator, Sequence
 DEFAULT_ROUND_DECIMALS = 2
 """Round decimals to use when comparing values to be sorted for iteration purposes."""
 
-SIZE_KEYS = ("size", "bvals", "uptake")
+BVALS_KWARG = "bvals"
+"""b-vals keyword argument name."""
+UPTAKE_KWARG = "uptake"
+"""Uptake keyword argument name."""
+SIZE_KWARG = "size"
+"""Size keyword argument name."""
+STOP_INDEX_KWARG = "stop_index"
+"""Stop index keyword argument name."""
+START_INDEX_KWARG = "start_index"
+"""Start index keyword argument name."""
+
+MODALITY_SPECIFIC_SIZE_KEYS = (BVALS_KWARG, UPTAKE_KWARG)
+"""Modality-specific keys to infer the number of volumes in a dataset."""
+
+SIZE_KEYS = (SIZE_KWARG,) + MODALITY_SPECIFIC_SIZE_KEYS
 """Keys that may be used to infer the number of volumes in a dataset. When the
 size of the structure to iterate over is not given explicitly, these keys
 correspond to properties that distinguish one imaging modality from another, and
-are part of the 4th axis (e.g. diffusion gradients in DWI or update in PET)."""
+are part of the 4th axis (e.g. diffusion gradients in DWI or uptake in PET)."""
 
-DOMAIN_KEYS_DOC = """
+DOMAIN_KEYS_DOC = f"""
 size : :obj:`int`, optional
     Number of indices to generate.
 bvals : :obj:`list`, optional
     List of b-values corresponding to all orientations of a DWI dataset. If
-    provided and ``stop_index`` is not set, then ``stop_index`` is inferred as
-    ``len(bvals)``. If ``stop_index`` is set, then ``stop_index`` must be
+    provided and ``{STOP_INDEX_KWARG}`` is not set, then
+    ``{STOP_INDEX_KWARG}`` is inferred as ``len(bvals)``. If
+    ``{STOP_INDEX_KWARG}`` is set, then ``{STOP_INDEX_KWARG}`` must be
     ``<= len(bvals)``.
 uptake : :obj:`list`, optional
     List of uptake values corresponding to all volumes of the dataset. If
-    provided and ``stop_index`` is not set, then ``stop_index`` is inferred as
-    ``len(uptake)``. If ``stop_index`` is set, then ``stop_index`` must be
+    provided and ``{STOP_INDEX_KWARG}`` is not set, then
+    ``{STOP_INDEX_KWARG}`` is inferred as ``len(uptake)``. If
+    ``{STOP_INDEX_KWARG}`` is set, then ``{STOP_INDEX_KWARG}`` must be
     ``<= len(uptake)``
 """
 START_INDEX_DOC = """
@@ -54,22 +70,24 @@ start_index : :obj:`int`, optional
     Starting index (inclusive) for the iteration. If provided, only indices
     ``>= start_index`` will be yielded.
 """
-STOP_INDEX_DOC = """
+STOP_INDEX_DOC = f"""
 stop_index : :obj:`int`, optional
     Stopping index (exclusive) for the iteration. If provided, only indices
     ``< stop_index`` will be yielded; if not provided and no domain-defining
-    sequence (``bvals`` or ``uptake``) is provided, then ``stop_index`` is
-    inferred as ``start_index + size``.
+    sequence (``{MODALITY_SPECIFIC_SIZE_KEYS}``) is provided, then
+    ``stop_index`` is inferred as ``start_index + size``.
 """
 
-ITERATOR_NOTES = """
-Iterators operate over an absolute index domain and yield absolute indices. The
-domain is always the half-open interval ``[start_index, stop_index)`` (end
-exclusive). One of the size-defining inputs must be provided: ``size``,
-``bvals``, or ``uptake``.  If ``size`` is provided, all other size-related
-parameters will be ignored. When a sequence (``bvals``/``uptake``) is used, it
-defines the maximum valid index (i.e., the domain length) and ``stop_index``
-defaults to ``len(sequence)``.
+ITERATOR_NOTES = f"""
+Iterators operate over an absolute index domain and yield absolute indices.
+The domain is always the half-open interval ``[start_index, stop_index)``
+(end exclusive). One of the size-defining inputs must be provided: ``size``,
+``{BVALS_KWARG}``, or ``{UPTAKE_KWARG}``.If ``{BVALS_KWARG}`` or
+``{UPTAKE_KWARG}`` is given, it takes precedence over ``{SIZE_KWARG}``;
+``{SIZE_KWARG}`` is only used when no modality-specific parameter is
+provided. When a sequence (``{BVALS_KWARG}``/``{UPTAKE_KWARG}``) is used, it
+defines the maximum valid index (i.e., the domain length) and
+``{STOP_INDEX_KWARG}`` defaults to ``len(sequence)``.
 """
 
 ITERATOR_SIZE_ERROR_MSG = """\
@@ -90,76 +108,79 @@ STOP_INDEX_ORDERING_ERROR_MSG = "'stop_index' must be larger than 'start_index'.
 STOP_INDEX_DATA_LENGTH_ERROR_MSG = """\
 'stop_index' must be less or equal to the length of {feature}."""
 """Stop index data length error message."""
-BVALS_KWARG = "bvals"
-"""b-vals keyword argument name."""
-UPTAKE_KWARG = "uptake"
-"""Uptake keyword argument name."""
-SIZE_KWARG = "size"
-"""Size keyword argument name."""
-STOP_INDEX_KWARG = "stop_index"
-"""Stop index keyword argument name."""
-START_INDEX_KWARG = "start_index"
-"""Start index keyword argument name."""
 
 
-def _resolve_domain(
-    *, allowed_features: tuple[str, ...] = SIZE_KEYS, **kwargs: Any
-) -> tuple[int, int]:
-    """Resolve the iteration domain.
-
-    Computes and validates the ``[start_index, stop_index)`` domain (end
-    exclusive) from ``kwargs`` and returns ``(start_index, stop_index, feature)``.
-
-    Parameters
-    ----------
-    allowed_features : :obj:`tuple` of :obj:`str`, optional
-        Keys accepted to define the domain length (e.g., ``("size",)`` or
-        ``("bvals", "uptake")``). Exactly one of these keys must be present in
-        ``kwargs`` with a non-:obj:`None` value.
-    **kwargs
-        Iterator keyword arguments. Uses ``start_index`` and ``stop_index`` if
-        present, and one of the keys in ``allowed_features`` to determine the
-        domain length.
-
-    Returns
-    -------
-    start_index : :obj:`int`
-        Inclusive start index.
-    stop_index : :obj:`int`
-        Exclusive end index.
-
-    Raises
-    ------
-    :exc:`ValueError`
-        If ``start_index`` is negative, no allowed feature is provided, more
-        than one allowed feature is provided, ``start_index`` is outside the
-        domain, ``stop_index`` <= ``start_index``, or ``stop_index`` exceeds the
-        available data length.
-    """
-
-    # Determine which allowed feature is provided (non-None)
+def _resolve_feature(allowed_features: Sequence[str], **kwargs: Any) -> str:
     provided = [k for k in allowed_features if kwargs.get(k) is not None]
     if not provided:
         raise ValueError(ITERATOR_SIZE_ERROR_MSG.format(features=allowed_features))
 
-    # If size is provided, it takes precedence and other size-related inputs are
-    # ignored.
-    if SIZE_KWARG in provided:
-        feature = SIZE_KWARG
-    else:
-        if len(provided) > 1:
+    # Modality-specific keys take precedence over size
+    modality_specific = [k for k in provided if k in MODALITY_SPECIFIC_SIZE_KEYS]
+    if modality_specific:
+        if len(modality_specific) > 1:
             raise ValueError(ITERATOR_MULTIPLICITY_ERROR_MSG)
-        feature = provided[0]
+        return modality_specific[0]
+
+    return SIZE_KWARG
+
+
+_resolve_feature.__doc__ = f"""
+Determine which size-related feature to use from the provided kwargs.
+
+Modality-specific keys (``{MODALITY_SPECIFIC_SIZE_KEYS}``) take precedence
+over ``{SIZE_KWARG}``. If more than one modality-specific key is provided at
+the same time, a :exc:`ValueError` is raised.
+
+Parameters
+----------
+allowed_features : :obj:`Sequence` of :obj:`str`
+    Keys accepted to define the domain length (e.g., ``("{SIZE_KWARG}",)`` or
+    ``("{BVALS_KWARG}", "{UPTAKE_KWARG}")``). Exactly one of these keys must
+    be present in ``kwargs`` with a non-:obj:`None` value.
+kwargs : :obj:`dict`
+    The size-defining keyword arguments ({SIZE_KEYS}) to inspect.
+
+Returns
+-------
+:obj:`str`
+    The key of the selected feature.
+
+Raises
+------
+:exc:`ValueError`
+    If no size-related key is provided, or if more than one
+    modality-specific key is provided at the same time.
+
+Examples
+--------
+>>> _resolve_feature(SIZE_KEYS, size=4)
+'size'
+>>> _resolve_feature(SIZE_KEYS, bvals=[0, 1000, 2000, 3000])
+'bvals'
+>>> _resolve_feature(SIZE_KEYS, uptake=[0.1, 0.12, 0.3, 0.4])
+'uptake'
+>>> _resolve_feature(SIZE_KEYS, size=4, bvals=[10, 20, 30, 40])
+'bvals'
+>>> _resolve_feature(SIZE_KEYS, size=4, uptake=[0.1, 0.12, 0.3, 0.4])
+'uptake'
+"""
+
+
+def _resolve_domain(
+    *, allowed_features: Sequence[str] = SIZE_KEYS, **kwargs: Any
+) -> tuple[int, int]:
+    feature = _resolve_feature(allowed_features, **kwargs)
+
+    # Infer domain length
+    value = kwargs[feature]
+    n = int(value) if feature == SIZE_KWARG else len(value)
 
     start_index = int(kwargs.get(START_INDEX_KWARG, 0) or 0)
     _stop_index = kwargs.get(STOP_INDEX_KWARG, None)
 
     if start_index < 0:
         raise ValueError(START_INDEX_POSITIVITY_ERROR_MSG)
-
-    # Infer domain length
-    value = kwargs[feature]
-    n = int(value) if feature == SIZE_KWARG else len(value)
 
     if start_index >= n:
         raise ValueError(START_INDEX_DATA_LENGTH_ERROR_MSG.format(feature=feature))
@@ -183,12 +204,21 @@ def _resolve_domain(
 
 
 _resolve_domain.__doc__ = f"""
-Resolve the absolute index domain [start_index, stop_index) and validate.
+Resolve the absolute iteration index domain.
 
-The value of ``start_index`` defaults to 0; if ``stop_index`` is :obj:`None` and
-``size`` is provided`, ``stop_index`` is set to ``start_index + size``; if one
-of ``bvals`` or ``uptake`` is provided ``stop_index`` is set to ``len(bvals)`` or
-``len(uptake)``, respectively.
+The domain is inferred from exactly one of the *allowed* size-defining
+features passed in ``allowed_features`` and the optional bounds
+``{START_INDEX_KWARG}``/``{STOP_INDEX_KWARG}``.
+
+The value of ``{START_INDEX_KWARG}`` defaults to 0; if ``{STOP_INDEX_KWARG}``
+is :obj:`None`, it defaults to the domain length inferred from the selected
+feature (``{SIZE_KWARG}`` uses its integer value; sequence features such as
+``{MODALITY_SPECIFIC_SIZE_KEYS}`` use their :func:`len`).
+
+Parameters
+----------
+allowed_features : :obj:`Sequence` of :obj:`str`, optional
+    The set of keyword names that are accepted to infer the domain size.
 
 Other Parameters
 ----------------
@@ -204,18 +234,18 @@ Returns
 Raises
 ------
 :exc:`ValueError`
-    If ``start_index`` is negative.
+    If ``{START_INDEX_KWARG}`` is negative or exceeds the domain.
 :exc:`ValueError`
-    If ``stop_index`` is not greater than ``start_index``.
-:exc:`ValueError`
-    If ``stop_index`` exceeds the length of a provided ``bvals``/``uptake``.
-:exc:`ValueError`
-    If none or more than one of the size-defining parameters (``size``,
-    ``bvals``, ``uptake``) are provided.
+    If ``{STOP_INDEX_KWARG}`` is not greater than ``{START_INDEX_KWARG}``
+    or exceeds the domain.
 
 Notes
 -----
 {ITERATOR_NOTES}
+
+See also
+--------
+:func:`._resolve_feature`
 
 Examples
 --------
@@ -223,6 +253,12 @@ Examples
 (0, 4)
 >>> _resolve_domain(size=4, start_index=3)
 (3, 4)
+>>> _resolve_domain(size=5, stop_index=-1)
+(0, 4)
+>>> _resolve_domain(size=5, stop_index=-2)
+(0, 3)
+>>> _resolve_domain(size=5, start_index=2, stop_index=-1)
+(2, 4)
 >>> _resolve_domain(bvals=[0, 1000, 2000, 3000])
 (0, 4)
 >>> _resolve_domain(uptake=[0.1, 0.2, 0.3, 0.4], start_index=2)
@@ -230,7 +266,7 @@ Examples
 >>> _resolve_domain(bvals=[0, 1, 2, 3, 4], start_index=1, stop_index=4)
 (1, 4)
 >>> _resolve_domain(size=3, start_index=1, bvals=[10, 20, 30, 40])
-(1, 3)
+(1, 4)
 """
 
 

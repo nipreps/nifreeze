@@ -136,11 +136,13 @@ def test_estimator_start_index(request, monkeypatch):
     """Test that estimator respects start_index."""
     recorded_indices = []
 
+    dataset = DummyDataset(rng=request.node.rng)
+
     def fake_set_transform(self, i, xform):
         recorded_indices.append(i)
 
     monkeypatch.setattr(
-        type(DummyDataset(rng=request.node.rng)), "set_transform", fake_set_transform
+        dataset, "set_transform", fake_set_transform.__get__(dataset, type(dataset))
     )
 
     class DummyXForm:
@@ -152,7 +154,6 @@ def test_estimator_start_index(request, monkeypatch):
         lambda *a, **k: DummyXForm(),
     )
 
-    dataset = DummyDataset(rng=request.node.rng)
     model = DummyInsiderModel(dataset=dataset)
 
     estimator = Estimator(model, strategy="linear", start_index=3)
@@ -165,11 +166,13 @@ def test_estimator_start_and_end_index(request, monkeypatch):
     """Test that estimator respects both start_index and end_index."""
     recorded_indices = []
 
+    dataset = DummyDataset(rng=request.node.rng)
+
     def fake_set_transform(self, i, xform):
         recorded_indices.append(i)
 
     monkeypatch.setattr(
-        type(DummyDataset(rng=request.node.rng)), "set_transform", fake_set_transform
+        dataset, "set_transform", fake_set_transform.__get__(dataset, type(dataset))
     )
 
     class DummyXForm:
@@ -181,7 +184,6 @@ def test_estimator_start_and_end_index(request, monkeypatch):
         lambda *a, **k: DummyXForm(),
     )
 
-    dataset = DummyDataset(rng=request.node.rng)
     model = DummyInsiderModel(dataset=dataset)
 
     estimator = Estimator(model, strategy="linear", start_index=2, stop_index=5)
@@ -242,7 +244,9 @@ def test_estimator_iterator_index_match(
         recorded_indices.append(i)
         recorded_matrices.append(xform)
 
-    monkeypatch.setattr(type(dataset), "set_transform", fake_set_transform)
+    monkeypatch.setattr(
+        dataset, "set_transform", fake_set_transform.__get__(dataset, type(dataset))
+    )
 
     # Patch registration to return identity matrix
     class DummyXForm:
@@ -258,18 +262,24 @@ def test_estimator_iterator_index_match(
     estimator = Estimator(model, strategy=strategy)
     estimator.run(dataset, **kwargs)
 
-    n_vols = len(dataset)
+    # Effective iterator size: because we always pass bvals/uptake,
+    # iterators may infer the traversal length from those vectors rather than
+    # len(dataset).
+    if modality == "dwi":
+        iter_size = len(bvals)
+    else:  # pet
+        iter_size = len(uptake)
 
     # Get expected indices
     if strategy == "linear":
-        expected_indices = list(iterator_func(size=n_vols))
+        expected_indices = list(iterator_func(size=iter_size))
     elif strategy == "random":
-        expected_indices = sorted(iterator_func(size=n_vols, seed=42))
+        expected_indices = sorted(iterator_func(size=iter_size, seed=42))
         recorded_indices_sorted = sorted(recorded_indices)
         assert recorded_indices_sorted == expected_indices
         return
     elif strategy == "centralsym":
-        expected_indices = list(iterator_func(size=n_vols))
+        expected_indices = list(iterator_func(size=iter_size))
     elif strategy == "monotonic_value":
         if modality == "dwi":
             expected_indices = list(iterator_func(bvals=bvals, ascending=True))

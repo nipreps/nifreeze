@@ -39,6 +39,7 @@ from nifreeze.utils.iterators import (
     STOP_INDEX_ORDERING_ERROR_MSG,
     UPTAKE_KWARG,
     _resolve_domain,
+    _resolve_feature,
     _value_iterator,
     centralsym_iterator,
     linear_iterator,
@@ -48,10 +49,51 @@ from nifreeze.utils.iterators import (
 
 
 @pytest.mark.parametrize(
+    "kwargs",
+    [
+        {},
+        {SIZE_KWARG: None},
+        {BVALS_KWARG: None},
+        {UPTAKE_KWARG: None},
+        {SIZE_KWARG: None, BVALS_KWARG: None, UPTAKE_KWARG: None},
+    ],
+)
+def test_resolve_feature_size_error(kwargs):
+    with pytest.raises(
+        ValueError, match=re.escape(ITERATOR_SIZE_ERROR_MSG.format(features=SIZE_KEYS))
+    ):
+        _resolve_feature(SIZE_KEYS, **kwargs)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {BVALS_KWARG: [0, 1000], UPTAKE_KWARG: [0.1, 0.2]},
+        {SIZE_KWARG: 999, BVALS_KWARG: [0, 1000], UPTAKE_KWARG: [0.1, 0.2]},
+    ],
+)
+def test_resolve_feature_multiplicity_error(kwargs):
+    with pytest.raises(ValueError, match=re.escape(ITERATOR_MULTIPLICITY_ERROR_MSG)):
+        _resolve_feature(SIZE_KEYS, **kwargs)
+
+
+@pytest.mark.parametrize(
+    "kwargs, expected_feature",
+    [
+        ({SIZE_KWARG: 5}, SIZE_KWARG),
+        ({BVALS_KWARG: [0, 1000, 2000]}, BVALS_KWARG),
+        ({UPTAKE_KWARG: [0.1, 0.2, 0.3]}, UPTAKE_KWARG),
+        ({SIZE_KWARG: 99, BVALS_KWARG: [0, 1000, 2000]}, BVALS_KWARG),
+        ({SIZE_KWARG: 99, UPTAKE_KWARG: [0.1, 0.2, 0.3]}, UPTAKE_KWARG),
+    ],
+)
+def test_resolve_feature_precedence(kwargs, expected_feature):
+    assert _resolve_feature(SIZE_KEYS, **kwargs) == expected_feature
+
+
+@pytest.mark.parametrize(
     "kwargs, err_type, err_match",
     [
-        # No sizing input at all
-        ({}, ValueError, re.escape(ITERATOR_SIZE_ERROR_MSG.format(features=SIZE_KEYS))),
         # Negative start
         ({SIZE_KWARG: 1, START_INDEX_KWARG: -1}, ValueError, START_INDEX_POSITIVITY_ERROR_MSG),
         # start_index beyond domain length (validation)
@@ -73,6 +115,12 @@ from nifreeze.utils.iterators import (
         # stop_index <= start_index
         (
             {SIZE_KWARG: 3, START_INDEX_KWARG: 2, STOP_INDEX_KWARG: 1},
+            ValueError,
+            STOP_INDEX_ORDERING_ERROR_MSG,
+        ),
+        # Negative stop index resulting in ordering violation
+        (
+            {SIZE_KWARG: 5, START_INDEX_KWARG: 4, STOP_INDEX_KWARG: -1},
             ValueError,
             STOP_INDEX_ORDERING_ERROR_MSG,
         ),
@@ -102,12 +150,6 @@ from nifreeze.utils.iterators import (
             ValueError,
             STOP_INDEX_DATA_LENGTH_ERROR_MSG.format(feature=UPTAKE_KWARG),
         ),
-        # Multiple size-defining inputs are invalid under Option B
-        (
-            {BVALS_KWARG: [0, 1], UPTAKE_KWARG: [0.1, 0.2]},
-            ValueError,
-            re.escape(ITERATOR_MULTIPLICITY_ERROR_MSG),
-        ),
     ],
 )
 def test_resolve_domain_errors(kwargs, err_type, err_match):
@@ -122,6 +164,10 @@ def test_resolve_domain_errors(kwargs, err_type, err_match):
         ({SIZE_KWARG: 4, START_INDEX_KWARG: 3}, (3, 4)),
         ({SIZE_KWARG: 4, START_INDEX_KWARG: 0, STOP_INDEX_KWARG: 4}, (0, 4)),
         ({SIZE_KWARG: 10, START_INDEX_KWARG: 0, STOP_INDEX_KWARG: 4}, (0, 4)),
+        ({SIZE_KWARG: 10, START_INDEX_KWARG: 3, STOP_INDEX_KWARG: 4}, (3, 4)),
+        ({SIZE_KWARG: 5, STOP_INDEX_KWARG: -1}, (0, 4)),
+        ({SIZE_KWARG: 5, STOP_INDEX_KWARG: -2}, (0, 3)),
+        ({SIZE_KWARG: 5, START_INDEX_KWARG: 2, STOP_INDEX_KWARG: -1}, (2, 4)),
         ({BVALS_KWARG: [0, 1000, 2000, 3000]}, (0, 4)),
         ({BVALS_KWARG: [0, 1000, 2000, 3000], START_INDEX_KWARG: 2}, (2, 4)),
         ({BVALS_KWARG: [0, 1000, 2000, 3000], START_INDEX_KWARG: 1, STOP_INDEX_KWARG: 3}, (1, 3)),
@@ -185,13 +231,6 @@ def test_value_iterator(values, ascending, round_decimals, expected):
     assert result == expected
 
 
-def test_linear_iterator_error():
-    with pytest.raises(
-        ValueError, match=re.escape(ITERATOR_SIZE_ERROR_MSG.format(features=SIZE_KEYS))
-    ):
-        list(linear_iterator())
-
-
 @pytest.mark.parametrize(
     "feature, values, start_index, stop_index, expected",
     [
@@ -233,13 +272,6 @@ def test_linear_iterator(feature, values, start_index, stop_index, expected):
     )
     assert len(result) == expected_len
     assert result == expected
-
-
-def test_random_iterator_error():
-    with pytest.raises(
-        ValueError, match=re.escape(ITERATOR_SIZE_ERROR_MSG.format(features=SIZE_KEYS))
-    ):
-        list(random_iterator())
 
 
 @pytest.mark.parametrize(
@@ -288,13 +320,6 @@ def test_random_iterator(feature, values, start_index, stop_index, seed, expecte
         assert result == expected
         # Determinism check
         assert result == list(random_iterator(**kwargs))
-
-
-def test_centralsym_iterator_error():
-    with pytest.raises(
-        ValueError, match=re.escape(ITERATOR_SIZE_ERROR_MSG.format(features=SIZE_KEYS))
-    ):
-        list(random_iterator())
 
 
 @pytest.mark.parametrize(
