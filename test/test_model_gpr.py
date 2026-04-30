@@ -21,6 +21,8 @@
 #     https://www.nipreps.org/community/licensing/
 #
 
+from typing import cast
+
 import numpy as np
 import pytest
 from dipy.io import read_bvals_bvecs
@@ -525,7 +527,7 @@ def test_multishellkernel_basic(n_samples, eval_gradient):
     assert np.allclose(K, K.T)
     assert np.allclose(np.diagonal(K), k.diag(X))
 
-    K_predict = k(X, X[:1])
+    K_predict = cast(np.ndarray, k(X, X[:1]))
     assert K_predict.shape == (n_samples, 1)
 
 
@@ -564,8 +566,8 @@ def test_multishellkernel_column_selection(orientation_dims, bval_index, nuisanc
     Y = X.copy()
     Y[:, bval_index] *= 1.5
 
-    Kxy0 = k(X, X)   # includes radial similarity at identical bvals
-    Kxy1 = k(X, Y)   # radial similarity with different bvals
+    Kxy0 = k(X, X)  # includes radial similarity at identical bvals
+    Kxy1 = k(X, Y)  # radial similarity with different bvals
 
     assert not np.allclose(Kxy0, Kxy1)
 
@@ -607,7 +609,7 @@ def test_multishellkernel_gp(n_samples):
     )
     model.fit(X, y)
 
-    mean, std = model.predict(X[:2], return_std=True)
+    mean, std = cast(tuple[np.ndarray, np.ndarray], model.predict(X[:2], return_std=True))
     assert mean.shape == (2,)
     assert std.shape == (2,)
     assert np.isfinite(mean).all()
