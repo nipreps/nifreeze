@@ -24,6 +24,7 @@
 import numpy as np
 import pytest
 from dipy.io import read_bvals_bvecs
+from sklearn.base import clone
 
 from nifreeze.model import gpr
 
@@ -584,3 +585,30 @@ def test_multishellkernel_nonpositive_bval(bad_bval, match):
     with pytest.warns(RuntimeWarning, match=match):
         # Current behavior: log(bval) -inf/nan propagates into K
         k(X)
+
+
+def test_multishellkernel_cloneable():
+    k = gpr.MultiShellKernel()
+    k2 = clone(k)
+    assert isinstance(k2, gpr.MultiShellKernel)
+
+
+@pytest.mark.parametrize("n_samples", [8])
+def test_multishellkernel_gp(n_samples):
+    """Smoke test: DiffusionGPR can fit/predict with MultiShellKernel."""
+    X = _make_multishell_X(n_samples)
+    y = np.linspace(1.0, 0.5, num=n_samples, dtype=float)
+
+    model = gpr.DiffusionGPR(
+        kernel=gpr.MultiShellKernel(),
+        alpha=1e-6,
+        optimizer=None,  # avoid expensive/unstable hyperparameter optimization in tests
+        disp=False,
+    )
+    model.fit(X, y)
+
+    mean, std = model.predict(X[:2], return_std=True)
+    assert mean.shape == (2,)
+    assert std.shape == (2,)
+    assert np.isfinite(mean).all()
+    assert np.isfinite(std).all()

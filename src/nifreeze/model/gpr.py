@@ -489,17 +489,22 @@ class MultiShellKernel(KernelOperator):
         orientation_dims: Sequence[int] = (0, 1, 2),
         bval_index: int = 3,
     ) -> None:
-        super().__init__(
-            orientation_kernel if orientation_kernel is not None else SphericalKriging(),
-            radial_kernel if radial_kernel is not None else RBF(length_scale=1.0),
-        )
+        # Store init params for sklearn cloning
+        self.orientation_kernel = orientation_kernel if orientation_kernel is not None else SphericalKriging()
+        self.radial_kernel = radial_kernel if radial_kernel is not None else RBF(length_scale=1.0)
         self.orientation_dims = tuple(orientation_dims)
         self.bval_index = bval_index
 
+        super().__init__(self.orientation_kernel, self.radial_kernel,)
+
     def get_params(self, deep: bool = True):  # noqa: D401
-        params = super().get_params(deep=deep)
-        params.update({"orientation_dims": self.orientation_dims, "bval_index": self.bval_index})
-        return params
+        # Return only __init__ parameters (sklearn clone() relies on this)
+        return {
+            "orientation_kernel": self.orientation_kernel,
+            "radial_kernel": self.radial_kernel,
+            "orientation_dims": self.orientation_dims,
+            "bval_index": self.bval_index,
+        }
 
     def _split(self, X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         X = np.asarray(X)
