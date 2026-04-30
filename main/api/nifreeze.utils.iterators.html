@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.utils.ndimage module" href="nifreeze.utils.ndimage.html"><link rel="prev" title="nifreeze.utils package" href="nifreeze.utils.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.utils.iterators module - nifreeze 26.0.0.dev81 documentation</title>
+        <title>nifreeze.utils.iterators module - nifreeze 26.0.0.dev92 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev81 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev92 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev81</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev92</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev81</span>
+  <span class="sidebar-brand-text">26.0.0.dev92</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -333,15 +333,21 @@
 </dd></dl>
 
 <dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.utils.iterators.ITERATOR_MULTIPLICITY_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">ITERATOR_MULTIPLICITY_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'f&quot;Multiple</span> <span class="pre">{SIZE_KEYS}</span> <span class="pre">were</span> <span class="pre">provided;</span> <span class="pre">provide</span> <span class="pre">exactly</span> <span class="pre">one</span> <span class="pre">or</span> <span class="pre">provide</span> <span class="pre">a</span> <span class="pre">value</span> <span class="pre">for\n{SIZE_KWARG}</span> <span class="pre">to</span> <span class="pre">build</span> <span class="pre">the</span> <span class="pre">iterator.'</span></em><a class="headerlink" href="#nifreeze.utils.iterators.ITERATOR_MULTIPLICITY_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>Iterator size multiplicity error message.</p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="nifreeze.utils.iterators.ITERATOR_SIZE_ERROR_MSG">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">ITERATOR_SIZE_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;None</span> <span class="pre">of</span> <span class="pre">('size',</span> <span class="pre">'bvals',</span> <span class="pre">'uptake')</span> <span class="pre">were</span> <span class="pre">provided</span> <span class="pre">to</span> <span class="pre">infer</span> <span class="pre">size:</span> <span class="pre">cannot</span> <span class="pre">build</span> <span class="pre">iterator</span> <span class="pre">without</span> <span class="pre">size.&quot;</span></em><a class="headerlink" href="#nifreeze.utils.iterators.ITERATOR_SIZE_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">ITERATOR_SIZE_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'None</span> <span class="pre">of</span> <span class="pre">{features}</span> <span class="pre">were</span> <span class="pre">provided</span> <span class="pre">or</span> <span class="pre">had</span> <span class="pre">no</span> <span class="pre">valid</span> <span class="pre">values</span> <span class="pre">to</span> <span class="pre">infer</span> <span class="pre">size:</span> <span class="pre">cannot</span> <span class="pre">build</span> <span class="pre">iterator</span> <span class="pre">without</span> <span class="pre">size.'</span></em><a class="headerlink" href="#nifreeze.utils.iterators.ITERATOR_SIZE_ERROR_MSG" title="Link to this definition">¶</a></dt>
 <dd><p>Iterator size argument error message.</p>
 </dd></dl>
 
 <dl class="py data">
-<dt class="sig sig-object py" id="nifreeze.utils.iterators.KWARG_ERROR_MSG">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">KWARG_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Keyword</span> <span class="pre">argument</span> <span class="pre">{kwarg}</span> <span class="pre">is</span> <span class="pre">required.'</span></em><a class="headerlink" href="#nifreeze.utils.iterators.KWARG_ERROR_MSG" title="Link to this definition">¶</a></dt>
-<dd><p>Iterator keyword argument error message.</p>
+<dt class="sig sig-object py" id="nifreeze.utils.iterators.MODALITY_SPECIFIC_SIZE_KEYS">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">MODALITY_SPECIFIC_SIZE_KEYS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('bvals',</span> <span class="pre">'uptake')</span></em><a class="headerlink" href="#nifreeze.utils.iterators.MODALITY_SPECIFIC_SIZE_KEYS" title="Link to this definition">¶</a></dt>
+<dd><p>Modality-specific keys to infer the number of volumes in a dataset.</p>
 </dd></dl>
 
 <dl class="py data">
@@ -350,7 +356,49 @@
 <dd><p>Keys that may be used to infer the number of volumes in a dataset. When the
 size of the structure to iterate over is not given explicitly, these keys
 correspond to properties that distinguish one imaging modality from another, and
-are part of the 4th axis (e.g. diffusion gradients in DWI or update in PET).</p>
+are part of the 4th axis (e.g. diffusion gradients in DWI or uptake in PET).</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.utils.iterators.SIZE_KWARG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">SIZE_KWARG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'size'</span></em><a class="headerlink" href="#nifreeze.utils.iterators.SIZE_KWARG" title="Link to this definition">¶</a></dt>
+<dd><p>Size keyword argument name.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.utils.iterators.START_INDEX_DATA_LENGTH_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">START_INDEX_DATA_LENGTH_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;'start_index'</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">less</span> <span class="pre">than</span> <span class="pre">the</span> <span class="pre">length</span> <span class="pre">of</span> <span class="pre">{feature}.&quot;</span></em><a class="headerlink" href="#nifreeze.utils.iterators.START_INDEX_DATA_LENGTH_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>Start index data length error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.utils.iterators.START_INDEX_KWARG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">START_INDEX_KWARG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'start_index'</span></em><a class="headerlink" href="#nifreeze.utils.iterators.START_INDEX_KWARG" title="Link to this definition">¶</a></dt>
+<dd><p>Start index keyword argument name.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.utils.iterators.START_INDEX_POSITIVITY_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">START_INDEX_POSITIVITY_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;'start_index'</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">positive.&quot;</span></em><a class="headerlink" href="#nifreeze.utils.iterators.START_INDEX_POSITIVITY_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>Start index positivity error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.utils.iterators.STOP_INDEX_DATA_LENGTH_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">STOP_INDEX_DATA_LENGTH_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;'stop_index'</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">less</span> <span class="pre">or</span> <span class="pre">equal</span> <span class="pre">to</span> <span class="pre">the</span> <span class="pre">length</span> <span class="pre">of</span> <span class="pre">{feature}.&quot;</span></em><a class="headerlink" href="#nifreeze.utils.iterators.STOP_INDEX_DATA_LENGTH_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>Stop index data length error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.utils.iterators.STOP_INDEX_KWARG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">STOP_INDEX_KWARG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'stop_index'</span></em><a class="headerlink" href="#nifreeze.utils.iterators.STOP_INDEX_KWARG" title="Link to this definition">¶</a></dt>
+<dd><p>Stop index keyword argument name.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.utils.iterators.STOP_INDEX_ORDERING_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">STOP_INDEX_ORDERING_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;'stop_index'</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">larger</span> <span class="pre">than</span> <span class="pre">'start_index'.&quot;</span></em><a class="headerlink" href="#nifreeze.utils.iterators.STOP_INDEX_ORDERING_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>Stop index value ordering error message.</p>
 </dd></dl>
 
 <dl class="py data">
@@ -361,53 +409,99 @@ are part of the 4th axis (e.g. diffusion gradients in DWI or update in PET).</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.utils.iterators.centralsym_iterator">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">centralsym_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#centralsym_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.centralsym_iterator" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">centralsym_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#centralsym_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.centralsym_iterator" title="Link to this definition">¶</a></dt>
 <dd><p>Traverse the dataset starting from the center and alternatingly progressing to the sides.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Other Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Size of the structure to iterate over.</p></li>
-<li><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of b-values corresponding to all orientations of a DWI dataset.</p></li>
-<li><p><strong>uptake</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of uptake values corresponding to all volumes of the dataset.</p></li>
+<li><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Number of indices to generate.</p></li>
+<li><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of b-values corresponding to all orientations of a DWI dataset. If
+provided and <code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is not set, then
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is inferred as <code class="docutils literal notranslate"><span class="pre">len(bvals)</span></code>. If
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is set, then <code class="docutils literal notranslate"><span class="pre">stop_index</span></code> must be
+<code class="docutils literal notranslate"><span class="pre">&lt;=</span> <span class="pre">len(bvals)</span></code>.</p></li>
+<li><p><strong>uptake</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of uptake values corresponding to all volumes of the dataset. If
+provided and <code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is not set, then
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is inferred as <code class="docutils literal notranslate"><span class="pre">len(uptake)</span></code>. If
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is set, then <code class="docutils literal notranslate"><span class="pre">stop_index</span></code> must be
+<code class="docutils literal notranslate"><span class="pre">&lt;=</span> <span class="pre">len(uptake)</span></code></p></li>
 </ul>
 </dd>
 </dl>
+<dl>
+<dt>start_index<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional</span></dt><dd><p>Starting index (inclusive) for the iteration. If provided, only indices
+<code class="docutils literal notranslate"><span class="pre">&gt;=</span> <span class="pre">start_index</span></code> will be yielded.</p>
+</dd>
+<dt>stop_index<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional</span></dt><dd><p>Stopping index (exclusive) for the iteration. If provided, only indices
+<code class="docutils literal notranslate"><span class="pre">&lt;</span> <span class="pre">stop_index</span></code> will be yielded; if not provided and no domain-defining
+sequence (<code class="docutils literal notranslate"><span class="pre">('bvals',</span> <span class="pre">'uptake')</span></code>) is provided, then
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is inferred as <code class="docutils literal notranslate"><span class="pre">start_index</span> <span class="pre">+</span> <span class="pre">size</span></code>.</p>
+</dd>
+</dl>
 <p class="rubric">Notes</p>
-<p>Only one of the size-related parameters (<code class="docutils literal notranslate"><span class="pre">size</span></code>, <code class="docutils literal notranslate"><span class="pre">bvals</span></code>, or <code class="docutils literal notranslate"><span class="pre">uptake</span></code>)
-may be provided at a time. If <code class="docutils literal notranslate"><span class="pre">size</span></code> is given, all other size-related
-parameters will be ignored. If <code class="docutils literal notranslate"><span class="pre">size</span></code> is not provided, the function will
-attempt to infer the number of volumes from the length or value of the provided
-parameter. If more than one such parameter is provided, a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code></a>
-will be raised.</p>
+<p>Iterators operate over an absolute index domain and yield absolute indices.
+The domain is always the half-open interval <code class="docutils literal notranslate"><span class="pre">[start_index,</span> <span class="pre">stop_index)</span></code>
+(end exclusive). One of the size-defining inputs must be provided: <code class="docutils literal notranslate"><span class="pre">size</span></code>,
+<code class="docutils literal notranslate"><span class="pre">bvals</span></code>, or <code class="docutils literal notranslate"><span class="pre">uptake</span></code>.If <code class="docutils literal notranslate"><span class="pre">bvals</span></code> or
+<code class="docutils literal notranslate"><span class="pre">uptake</span></code> is given, it takes precedence over <code class="docutils literal notranslate"><span class="pre">size</span></code>;
+<code class="docutils literal notranslate"><span class="pre">size</span></code> is only used when no modality-specific parameter is
+provided. When a sequence (<code class="docutils literal notranslate"><span class="pre">bvals</span></code>/<code class="docutils literal notranslate"><span class="pre">uptake</span></code>) is used, it
+defines the maximum valid index (i.e., the domain length) and
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> defaults to <code class="docutils literal notranslate"><span class="pre">len(sequence)</span></code>.</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">centralsym_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>
 <span class="go">[5, 4, 6, 3, 7, 2, 8, 1, 9, 0]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">centralsym_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">11</span><span class="p">))</span>
 <span class="go">[5, 4, 6, 3, 7, 2, 8, 1, 9, 0, 10]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">centralsym_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">start_index</span><span class="o">=</span><span class="mi">3</span><span class="p">))</span>
+<span class="go">[5, 4, 6, 3]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">centralsym_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">start_index</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">stop_index</span><span class="o">=</span><span class="mi">6</span><span class="p">))</span>
+<span class="go">[4, 3, 5]</span>
 </pre></div>
 </div>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.utils.iterators.linear_iterator">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">linear_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#linear_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.linear_iterator" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">linear_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#linear_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.linear_iterator" title="Link to this definition">¶</a></dt>
 <dd><p>Traverse the dataset volumes in ascending order.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Other Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Size of the structure to iterate over.</p></li>
-<li><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of b-values corresponding to all orientations of a DWI dataset.</p></li>
-<li><p><strong>uptake</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of uptake values corresponding to all volumes of the dataset.</p></li>
+<li><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Number of indices to generate.</p></li>
+<li><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of b-values corresponding to all orientations of a DWI dataset. If
+provided and <code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is not set, then
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is inferred as <code class="docutils literal notranslate"><span class="pre">len(bvals)</span></code>. If
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is set, then <code class="docutils literal notranslate"><span class="pre">stop_index</span></code> must be
+<code class="docutils literal notranslate"><span class="pre">&lt;=</span> <span class="pre">len(bvals)</span></code>.</p></li>
+<li><p><strong>uptake</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of uptake values corresponding to all volumes of the dataset. If
+provided and <code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is not set, then
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is inferred as <code class="docutils literal notranslate"><span class="pre">len(uptake)</span></code>. If
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is set, then <code class="docutils literal notranslate"><span class="pre">stop_index</span></code> must be
+<code class="docutils literal notranslate"><span class="pre">&lt;=</span> <span class="pre">len(uptake)</span></code></p></li>
 </ul>
 </dd>
 </dl>
+<dl>
+<dt>start_index<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional</span></dt><dd><p>Starting index (inclusive) for the iteration. If provided, only indices
+<code class="docutils literal notranslate"><span class="pre">&gt;=</span> <span class="pre">start_index</span></code> will be yielded.</p>
+</dd>
+<dt>stop_index<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional</span></dt><dd><p>Stopping index (exclusive) for the iteration. If provided, only indices
+<code class="docutils literal notranslate"><span class="pre">&lt;</span> <span class="pre">stop_index</span></code> will be yielded; if not provided and no domain-defining
+sequence (<code class="docutils literal notranslate"><span class="pre">('bvals',</span> <span class="pre">'uptake')</span></code>) is provided, then
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is inferred as <code class="docutils literal notranslate"><span class="pre">start_index</span> <span class="pre">+</span> <span class="pre">size</span></code>.</p>
+</dd>
+</dl>
 <p class="rubric">Notes</p>
-<p>Only one of the size-related parameters (<code class="docutils literal notranslate"><span class="pre">size</span></code>, <code class="docutils literal notranslate"><span class="pre">bvals</span></code>, or <code class="docutils literal notranslate"><span class="pre">uptake</span></code>)
-may be provided at a time. If <code class="docutils literal notranslate"><span class="pre">size</span></code> is given, all other size-related
-parameters will be ignored. If <code class="docutils literal notranslate"><span class="pre">size</span></code> is not provided, the function will
-attempt to infer the number of volumes from the length or value of the provided
-parameter. If more than one such parameter is provided, a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code></a>
-will be raised.</p>
+<p>Iterators operate over an absolute index domain and yield absolute indices.
+The domain is always the half-open interval <code class="docutils literal notranslate"><span class="pre">[start_index,</span> <span class="pre">stop_index)</span></code>
+(end exclusive). One of the size-defining inputs must be provided: <code class="docutils literal notranslate"><span class="pre">size</span></code>,
+<code class="docutils literal notranslate"><span class="pre">bvals</span></code>, or <code class="docutils literal notranslate"><span class="pre">uptake</span></code>.If <code class="docutils literal notranslate"><span class="pre">bvals</span></code> or
+<code class="docutils literal notranslate"><span class="pre">uptake</span></code> is given, it takes precedence over <code class="docutils literal notranslate"><span class="pre">size</span></code>;
+<code class="docutils literal notranslate"><span class="pre">size</span></code> is only used when no modality-specific parameter is
+provided. When a sequence (<code class="docutils literal notranslate"><span class="pre">bvals</span></code>/<code class="docutils literal notranslate"><span class="pre">uptake</span></code>) is used, it
+defines the maximum valid index (i.e., the domain length) and
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> defaults to <code class="docutils literal notranslate"><span class="pre">len(sequence)</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Yields<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
@@ -416,13 +510,21 @@ will be raised.</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">linear_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>
 <span class="go">[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">linear_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">start_index</span><span class="o">=</span><span class="mi">3</span><span class="p">))</span>
+<span class="go">[3, 4, 5, 6]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">linear_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">start_index</span><span class="o">=</span><span class="mi">3</span><span class="p">))</span>
+<span class="go">[3]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">linear_iterator</span><span class="p">(</span><span class="n">bvals</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">700</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">200</span><span class="p">],</span> <span class="n">start_index</span><span class="o">=</span><span class="mi">3</span><span class="p">))</span>
+<span class="go">[3, 4, 5]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">linear_iterator</span><span class="p">(</span><span class="n">bvals</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">700</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">200</span><span class="p">],</span> <span class="n">start_index</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">stop_index</span><span class="o">=</span><span class="mi">5</span><span class="p">))</span>
+<span class="go">[3, 4]</span>
 </pre></div>
 </div>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.utils.iterators.monotonic_value_iterator">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">monotonic_value_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">_</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#monotonic_value_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.monotonic_value_iterator" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">monotonic_value_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">_</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#monotonic_value_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.monotonic_value_iterator" title="Link to this definition">¶</a></dt>
 <dd><p>Traverse the volumes by increasing b-value in a DWI dataset or by decreasing
 uptake value in a PET dataset.</p>
 <p>This function requires <code class="docutils literal notranslate"><span class="pre">bvals</span></code> or <code class="docutils literal notranslate"><span class="pre">uptake</span></code> be a keyword argument to generate
@@ -434,19 +536,40 @@ value across the entire volume.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Other Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Size of the structure to iterate over.</p></li>
-<li><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of b-values corresponding to all orientations of a DWI dataset.</p></li>
-<li><p><strong>uptake</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of uptake values corresponding to all volumes of the dataset.</p></li>
+<li><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Number of indices to generate.</p></li>
+<li><p><strong>bvals</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of b-values corresponding to all orientations of a DWI dataset. If
+provided and <code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is not set, then
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is inferred as <code class="docutils literal notranslate"><span class="pre">len(bvals)</span></code>. If
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is set, then <code class="docutils literal notranslate"><span class="pre">stop_index</span></code> must be
+<code class="docutils literal notranslate"><span class="pre">&lt;=</span> <span class="pre">len(bvals)</span></code>.</p></li>
+<li><p><strong>uptake</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional) – List of uptake values corresponding to all volumes of the dataset. If
+provided and <code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is not set, then
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is inferred as <code class="docutils literal notranslate"><span class="pre">len(uptake)</span></code>. If
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is set, then <code class="docutils literal notranslate"><span class="pre">stop_index</span></code> must be
+<code class="docutils literal notranslate"><span class="pre">&lt;=</span> <span class="pre">len(uptake)</span></code></p></li>
 </ul>
 </dd>
 </dl>
+<dl>
+<dt>start_index<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional</span></dt><dd><p>Starting index (inclusive) for the iteration. If provided, only indices
+<code class="docutils literal notranslate"><span class="pre">&gt;=</span> <span class="pre">start_index</span></code> will be yielded.</p>
+</dd>
+<dt>stop_index<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional</span></dt><dd><p>Stopping index (exclusive) for the iteration. If provided, only indices
+<code class="docutils literal notranslate"><span class="pre">&lt;</span> <span class="pre">stop_index</span></code> will be yielded; if not provided and no domain-defining
+sequence (<code class="docutils literal notranslate"><span class="pre">('bvals',</span> <span class="pre">'uptake')</span></code>) is provided, then
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is inferred as <code class="docutils literal notranslate"><span class="pre">start_index</span> <span class="pre">+</span> <span class="pre">size</span></code>.</p>
+</dd>
+</dl>
 <p class="rubric">Notes</p>
-<p>Only one of the size-related parameters (<code class="docutils literal notranslate"><span class="pre">size</span></code>, <code class="docutils literal notranslate"><span class="pre">bvals</span></code>, or <code class="docutils literal notranslate"><span class="pre">uptake</span></code>)
-may be provided at a time. If <code class="docutils literal notranslate"><span class="pre">size</span></code> is given, all other size-related
-parameters will be ignored. If <code class="docutils literal notranslate"><span class="pre">size</span></code> is not provided, the function will
-attempt to infer the number of volumes from the length or value of the provided
-parameter. If more than one such parameter is provided, a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code></a>
-will be raised.</p>
+<p>Iterators operate over an absolute index domain and yield absolute indices.
+The domain is always the half-open interval <code class="docutils literal notranslate"><span class="pre">[start_index,</span> <span class="pre">stop_index)</span></code>
+(end exclusive). One of the size-defining inputs must be provided: <code class="docutils literal notranslate"><span class="pre">size</span></code>,
+<code class="docutils literal notranslate"><span class="pre">bvals</span></code>, or <code class="docutils literal notranslate"><span class="pre">uptake</span></code>.If <code class="docutils literal notranslate"><span class="pre">bvals</span></code> or
+<code class="docutils literal notranslate"><span class="pre">uptake</span></code> is given, it takes precedence over <code class="docutils literal notranslate"><span class="pre">size</span></code>;
+<code class="docutils literal notranslate"><span class="pre">size</span></code> is only used when no modality-specific parameter is
+provided. When a sequence (<code class="docutils literal notranslate"><span class="pre">bvals</span></code>/<code class="docutils literal notranslate"><span class="pre">uptake</span></code>) is used, it
+defines the maximum valid index (i.e., the domain length) and
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> defaults to <code class="docutils literal notranslate"><span class="pre">len(sequence)</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Yields<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
@@ -457,13 +580,21 @@ will be raised.</p>
 <span class="go">[0, 1, 8, 4, 5, 2, 3, 6, 7]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">monotonic_value_iterator</span><span class="p">(</span><span class="n">uptake</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">1.23</span><span class="p">,</span> <span class="mf">1.06</span><span class="p">,</span> <span class="mf">1.02</span><span class="p">,</span> <span class="mf">1.38</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.46</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.12</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.19</span><span class="p">,</span> <span class="mf">1.24</span><span class="p">,</span> <span class="mf">1.05</span><span class="p">]))</span>
 <span class="go">[3, 7, 1, 8, 2, 5, 6, 0, 4]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">monotonic_value_iterator</span><span class="p">(</span><span class="n">bvals</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">,</span> <span class="mf">2000.0</span><span class="p">,</span> <span class="mf">2000.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="n">start_index</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+<span class="go">[8, 4, 5, 6, 7]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">monotonic_value_iterator</span><span class="p">(</span><span class="n">uptake</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">1.23</span><span class="p">,</span> <span class="mf">1.06</span><span class="p">,</span> <span class="mf">1.02</span><span class="p">,</span> <span class="mf">1.38</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.46</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.12</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.19</span><span class="p">,</span> <span class="mf">1.24</span><span class="p">,</span> <span class="mf">1.05</span><span class="p">],</span> <span class="n">start_index</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+<span class="go">[3, 7, 8, 2, 5, 6, 4]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">monotonic_value_iterator</span><span class="p">(</span><span class="n">bvals</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">,</span> <span class="mf">2000.0</span><span class="p">,</span> <span class="mf">2000.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="n">start_index</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">stop_index</span><span class="o">=</span><span class="mi">7</span><span class="p">))</span>
+<span class="go">[4, 5, 6]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">monotonic_value_iterator</span><span class="p">(</span><span class="n">uptake</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">1.23</span><span class="p">,</span> <span class="mf">1.06</span><span class="p">,</span> <span class="mf">1.02</span><span class="p">,</span> <span class="mf">1.38</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.46</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.12</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.19</span><span class="p">,</span> <span class="mf">1.24</span><span class="p">,</span> <span class="mf">1.05</span><span class="p">],</span> <span class="n">start_index</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">stop_index</span><span class="o">=</span><span class="mi">7</span><span class="p">))</span>
+<span class="go">[3, 2, 5, 6, 4]</span>
 </pre></div>
 </div>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.utils.iterators.random_iterator">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">random_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#random_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.random_iterator" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nifreeze.utils.iterators.</span></span><span class="sig-name descname"><span class="pre">random_iterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/utils/iterators.html#random_iterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.utils.iterators.random_iterator" title="Link to this definition">¶</a></dt>
 <dd><p>Traverse the dataset volumes randomly.</p>
 <p>If the <code class="docutils literal notranslate"><span class="pre">seed</span></code> key is present in the keyword arguments, initializes the seed
 of Python’s <code class="docutils literal notranslate"><span class="pre">random</span></code> pseudo-random number generator library with the given
@@ -477,20 +608,39 @@ is passed <a class="reference external" href="https://docs.python.org/3/library/
 </dd>
 </dl>
 <dl>
-<dt>size<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional</span></dt><dd><p>Size of the structure to iterate over.</p>
+<dt>size<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional</span></dt><dd><p>Number of indices to generate.</p>
 </dd>
-<dt>bvals<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional</span></dt><dd><p>List of b-values corresponding to all orientations of a DWI dataset.</p>
+<dt>bvals<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional</span></dt><dd><p>List of b-values corresponding to all orientations of a DWI dataset. If
+provided and <code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is not set, then
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is inferred as <code class="docutils literal notranslate"><span class="pre">len(bvals)</span></code>. If
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is set, then <code class="docutils literal notranslate"><span class="pre">stop_index</span></code> must be
+<code class="docutils literal notranslate"><span class="pre">&lt;=</span> <span class="pre">len(bvals)</span></code>.</p>
 </dd>
-<dt>uptake<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional</span></dt><dd><p>List of uptake values corresponding to all volumes of the dataset.</p>
+<dt>uptake<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>, optional</span></dt><dd><p>List of uptake values corresponding to all volumes of the dataset. If
+provided and <code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is not set, then
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is inferred as <code class="docutils literal notranslate"><span class="pre">len(uptake)</span></code>. If
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is set, then <code class="docutils literal notranslate"><span class="pre">stop_index</span></code> must be
+<code class="docutils literal notranslate"><span class="pre">&lt;=</span> <span class="pre">len(uptake)</span></code></p>
+</dd>
+<dt>start_index<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional</span></dt><dd><p>Starting index (inclusive) for the iteration. If provided, only indices
+<code class="docutils literal notranslate"><span class="pre">&gt;=</span> <span class="pre">start_index</span></code> will be yielded.</p>
+</dd>
+<dt>stop_index<span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional</span></dt><dd><p>Stopping index (exclusive) for the iteration. If provided, only indices
+<code class="docutils literal notranslate"><span class="pre">&lt;</span> <span class="pre">stop_index</span></code> will be yielded; if not provided and no domain-defining
+sequence (<code class="docutils literal notranslate"><span class="pre">('bvals',</span> <span class="pre">'uptake')</span></code>) is provided, then
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> is inferred as <code class="docutils literal notranslate"><span class="pre">start_index</span> <span class="pre">+</span> <span class="pre">size</span></code>.</p>
 </dd>
 </dl>
 <p class="rubric">Notes</p>
-<p>Only one of the size-related parameters (<code class="docutils literal notranslate"><span class="pre">size</span></code>, <code class="docutils literal notranslate"><span class="pre">bvals</span></code>, or <code class="docutils literal notranslate"><span class="pre">uptake</span></code>)
-may be provided at a time. If <code class="docutils literal notranslate"><span class="pre">size</span></code> is given, all other size-related
-parameters will be ignored. If <code class="docutils literal notranslate"><span class="pre">size</span></code> is not provided, the function will
-attempt to infer the number of volumes from the length or value of the provided
-parameter. If more than one such parameter is provided, a <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code></a>
-will be raised.</p>
+<p>Iterators operate over an absolute index domain and yield absolute indices.
+The domain is always the half-open interval <code class="docutils literal notranslate"><span class="pre">[start_index,</span> <span class="pre">stop_index)</span></code>
+(end exclusive). One of the size-defining inputs must be provided: <code class="docutils literal notranslate"><span class="pre">size</span></code>,
+<code class="docutils literal notranslate"><span class="pre">bvals</span></code>, or <code class="docutils literal notranslate"><span class="pre">uptake</span></code>.If <code class="docutils literal notranslate"><span class="pre">bvals</span></code> or
+<code class="docutils literal notranslate"><span class="pre">uptake</span></code> is given, it takes precedence over <code class="docutils literal notranslate"><span class="pre">size</span></code>;
+<code class="docutils literal notranslate"><span class="pre">size</span></code> is only used when no modality-specific parameter is
+provided. When a sequence (<code class="docutils literal notranslate"><span class="pre">bvals</span></code>/<code class="docutils literal notranslate"><span class="pre">uptake</span></code>) is used, it
+defines the maximum valid index (i.e., the domain length) and
+<code class="docutils literal notranslate"><span class="pre">stop_index</span></code> defaults to <code class="docutils literal notranslate"><span class="pre">len(sequence)</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Yields<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a> – The next index.</p>
@@ -506,6 +656,10 @@ will be raised.</p>
 <span class="go">[1, 12, 14, 5, 0, 11, 10, 9, 7, 8, 3, 13, 2, 6, 4]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">))</span>  <span class="c1"># seed is 42</span>
 <span class="go">[8, 13, 7, 6, 14, 12, 5, 2, 9, 3, 4, 11, 0, 1, 10]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">start_index</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+<span class="go">[3]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">random_iterator</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">start_index</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">stop_index</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+<span class="go">[3, 5, 4]</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -570,9 +724,17 @@ will be raised.</p>
 <li><a class="reference internal" href="#">nifreeze.utils.iterators module</a><ul>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.BVALS_KWARG"><code class="docutils literal notranslate"><span class="pre">BVALS_KWARG</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.DEFAULT_ROUND_DECIMALS"><code class="docutils literal notranslate"><span class="pre">DEFAULT_ROUND_DECIMALS</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.utils.iterators.ITERATOR_MULTIPLICITY_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">ITERATOR_MULTIPLICITY_ERROR_MSG</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.ITERATOR_SIZE_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">ITERATOR_SIZE_ERROR_MSG</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.utils.iterators.KWARG_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">KWARG_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.utils.iterators.MODALITY_SPECIFIC_SIZE_KEYS"><code class="docutils literal notranslate"><span class="pre">MODALITY_SPECIFIC_SIZE_KEYS</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.SIZE_KEYS"><code class="docutils literal notranslate"><span class="pre">SIZE_KEYS</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.utils.iterators.SIZE_KWARG"><code class="docutils literal notranslate"><span class="pre">SIZE_KWARG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.utils.iterators.START_INDEX_DATA_LENGTH_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">START_INDEX_DATA_LENGTH_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.utils.iterators.START_INDEX_KWARG"><code class="docutils literal notranslate"><span class="pre">START_INDEX_KWARG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.utils.iterators.START_INDEX_POSITIVITY_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">START_INDEX_POSITIVITY_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.utils.iterators.STOP_INDEX_DATA_LENGTH_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">STOP_INDEX_DATA_LENGTH_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.utils.iterators.STOP_INDEX_KWARG"><code class="docutils literal notranslate"><span class="pre">STOP_INDEX_KWARG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.utils.iterators.STOP_INDEX_ORDERING_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">STOP_INDEX_ORDERING_ERROR_MSG</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.UPTAKE_KWARG"><code class="docutils literal notranslate"><span class="pre">UPTAKE_KWARG</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.centralsym_iterator"><code class="docutils literal notranslate"><span class="pre">centralsym_iterator()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.utils.iterators.linear_iterator"><code class="docutils literal notranslate"><span class="pre">linear_iterator()</span></code></a></li>
@@ -589,7 +751,7 @@ will be raised.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=50e6011d"></script>
+</div><script src="../_static/documentation_options.js?v=03d15b33"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

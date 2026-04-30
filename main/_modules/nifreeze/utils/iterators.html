@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.utils.iterators - nifreeze 26.0.0.dev81 documentation</title>
+        <title>nifreeze.utils.iterators - nifreeze 26.0.0.dev92 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev81 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev92 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev81</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev92</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev81</span>
+  <span class="sidebar-brand-text">26.0.0.dev92</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -336,77 +336,258 @@
 <span class="sd">&quot;&quot;&quot;Iterators to traverse the volumes in a 4D image.&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">random</span>
-<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">chain</span><span class="p">,</span> <span class="n">zip_longest</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">chain</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">Sequence</span>
 
 <span class="n">DEFAULT_ROUND_DECIMALS</span> <span class="o">=</span> <span class="mi">2</span>
 <span class="sd">&quot;&quot;&quot;Round decimals to use when comparing values to be sorted for iteration purposes.&quot;&quot;&quot;</span>
 
-<span class="n">SIZE_KEYS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;size&quot;</span><span class="p">,</span> <span class="s2">&quot;bvals&quot;</span><span class="p">,</span> <span class="s2">&quot;uptake&quot;</span><span class="p">)</span>
-<span class="sd">&quot;&quot;&quot;Keys that may be used to infer the number of volumes in a dataset. When the</span>
-<span class="sd">size of the structure to iterate over is not given explicitly, these keys</span>
-<span class="sd">correspond to properties that distinguish one imaging modality from another, and</span>
-<span class="sd">are part of the 4th axis (e.g. diffusion gradients in DWI or update in PET).&quot;&quot;&quot;</span>
-
-<span class="n">SIZE_KEYS_DOC</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">size : :obj:`int`, optional</span>
-<span class="s2">    Size of the structure to iterate over.</span>
-<span class="s2">bvals : :obj:`list`, optional</span>
-<span class="s2">    List of b-values corresponding to all orientations of a DWI dataset.</span>
-<span class="s2">uptake : :obj:`list`, optional</span>
-<span class="s2">    List of uptake values corresponding to all volumes of the dataset.</span>
-<span class="s2">&quot;&quot;&quot;</span>
-
-<span class="n">ITERATOR_NOTES</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">Only one of the size-related parameters (``size``, ``bvals``, or ``uptake``)</span>
-<span class="s2">may be provided at a time. If ``size`` is given, all other size-related</span>
-<span class="s2">parameters will be ignored. If ``size`` is not provided, the function will</span>
-<span class="s2">attempt to infer the number of volumes from the length or value of the provided</span>
-<span class="s2">parameter. If more than one such parameter is provided, a :exc:`ValueError`</span>
-<span class="s2">will be raised.</span>
-<span class="s2">&quot;&quot;&quot;</span>
-
-<span class="n">ITERATOR_SIZE_ERROR_MSG</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="sa">f</span><span class="s2">&quot;None of </span><span class="si">{</span><span class="n">SIZE_KEYS</span><span class="si">}</span><span class="s2"> were provided to infer size: cannot build iterator without size.&quot;</span>
-<span class="p">)</span>
-<span class="sd">&quot;&quot;&quot;Iterator size argument error message.&quot;&quot;&quot;</span>
-<span class="n">KWARG_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;Keyword argument </span><span class="si">{kwarg}</span><span class="s2"> is required.&quot;</span>
-<span class="sd">&quot;&quot;&quot;Iterator keyword argument error message.&quot;&quot;&quot;</span>
 <span class="n">BVALS_KWARG</span> <span class="o">=</span> <span class="s2">&quot;bvals&quot;</span>
 <span class="sd">&quot;&quot;&quot;b-vals keyword argument name.&quot;&quot;&quot;</span>
 <span class="n">UPTAKE_KWARG</span> <span class="o">=</span> <span class="s2">&quot;uptake&quot;</span>
 <span class="sd">&quot;&quot;&quot;Uptake keyword argument name.&quot;&quot;&quot;</span>
+<span class="n">SIZE_KWARG</span> <span class="o">=</span> <span class="s2">&quot;size&quot;</span>
+<span class="sd">&quot;&quot;&quot;Size keyword argument name.&quot;&quot;&quot;</span>
+<span class="n">STOP_INDEX_KWARG</span> <span class="o">=</span> <span class="s2">&quot;stop_index&quot;</span>
+<span class="sd">&quot;&quot;&quot;Stop index keyword argument name.&quot;&quot;&quot;</span>
+<span class="n">START_INDEX_KWARG</span> <span class="o">=</span> <span class="s2">&quot;start_index&quot;</span>
+<span class="sd">&quot;&quot;&quot;Start index keyword argument name.&quot;&quot;&quot;</span>
+
+<span class="n">MODALITY_SPECIFIC_SIZE_KEYS</span> <span class="o">=</span> <span class="p">(</span><span class="n">BVALS_KWARG</span><span class="p">,</span> <span class="n">UPTAKE_KWARG</span><span class="p">)</span>
+<span class="sd">&quot;&quot;&quot;Modality-specific keys to infer the number of volumes in a dataset.&quot;&quot;&quot;</span>
+
+<span class="n">SIZE_KEYS</span> <span class="o">=</span> <span class="p">(</span><span class="n">SIZE_KWARG</span><span class="p">,)</span> <span class="o">+</span> <span class="n">MODALITY_SPECIFIC_SIZE_KEYS</span>
+<span class="sd">&quot;&quot;&quot;Keys that may be used to infer the number of volumes in a dataset. When the</span>
+<span class="sd">size of the structure to iterate over is not given explicitly, these keys</span>
+<span class="sd">correspond to properties that distinguish one imaging modality from another, and</span>
+<span class="sd">are part of the 4th axis (e.g. diffusion gradients in DWI or uptake in PET).&quot;&quot;&quot;</span>
+
+<span class="n">DOMAIN_KEYS_DOC</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">size : :obj:`int`, optional</span>
+<span class="s2">    Number of indices to generate.</span>
+<span class="s2">bvals : :obj:`list`, optional</span>
+<span class="s2">    List of b-values corresponding to all orientations of a DWI dataset. If</span>
+<span class="s2">    provided and ``</span><span class="si">{</span><span class="n">STOP_INDEX_KWARG</span><span class="si">}</span><span class="s2">`` is not set, then</span>
+<span class="s2">    ``</span><span class="si">{</span><span class="n">STOP_INDEX_KWARG</span><span class="si">}</span><span class="s2">`` is inferred as ``len(bvals)``. If</span>
+<span class="s2">    ``</span><span class="si">{</span><span class="n">STOP_INDEX_KWARG</span><span class="si">}</span><span class="s2">`` is set, then ``</span><span class="si">{</span><span class="n">STOP_INDEX_KWARG</span><span class="si">}</span><span class="s2">`` must be</span>
+<span class="s2">    ``&lt;= len(bvals)``.</span>
+<span class="s2">uptake : :obj:`list`, optional</span>
+<span class="s2">    List of uptake values corresponding to all volumes of the dataset. If</span>
+<span class="s2">    provided and ``</span><span class="si">{</span><span class="n">STOP_INDEX_KWARG</span><span class="si">}</span><span class="s2">`` is not set, then</span>
+<span class="s2">    ``</span><span class="si">{</span><span class="n">STOP_INDEX_KWARG</span><span class="si">}</span><span class="s2">`` is inferred as ``len(uptake)``. If</span>
+<span class="s2">    ``</span><span class="si">{</span><span class="n">STOP_INDEX_KWARG</span><span class="si">}</span><span class="s2">`` is set, then ``</span><span class="si">{</span><span class="n">STOP_INDEX_KWARG</span><span class="si">}</span><span class="s2">`` must be</span>
+<span class="s2">    ``&lt;= len(uptake)``</span>
+<span class="s2">&quot;&quot;&quot;</span>
+<span class="n">START_INDEX_DOC</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">start_index : :obj:`int`, optional</span>
+<span class="s2">    Starting index (inclusive) for the iteration. If provided, only indices</span>
+<span class="s2">    ``&gt;= start_index`` will be yielded.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+<span class="n">STOP_INDEX_DOC</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">stop_index : :obj:`int`, optional</span>
+<span class="s2">    Stopping index (exclusive) for the iteration. If provided, only indices</span>
+<span class="s2">    ``&lt; stop_index`` will be yielded; if not provided and no domain-defining</span>
+<span class="s2">    sequence (``</span><span class="si">{</span><span class="n">MODALITY_SPECIFIC_SIZE_KEYS</span><span class="si">}</span><span class="s2">``) is provided, then</span>
+<span class="s2">    ``stop_index`` is inferred as ``start_index + size``.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">ITERATOR_NOTES</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">Iterators operate over an absolute index domain and yield absolute indices.</span>
+<span class="s2">The domain is always the half-open interval ``[start_index, stop_index)``</span>
+<span class="s2">(end exclusive). One of the size-defining inputs must be provided: ``size``,</span>
+<span class="s2">``</span><span class="si">{</span><span class="n">BVALS_KWARG</span><span class="si">}</span><span class="s2">``, or ``</span><span class="si">{</span><span class="n">UPTAKE_KWARG</span><span class="si">}</span><span class="s2">``.If ``</span><span class="si">{</span><span class="n">BVALS_KWARG</span><span class="si">}</span><span class="s2">`` or</span>
+<span class="s2">``</span><span class="si">{</span><span class="n">UPTAKE_KWARG</span><span class="si">}</span><span class="s2">`` is given, it takes precedence over ``</span><span class="si">{</span><span class="n">SIZE_KWARG</span><span class="si">}</span><span class="s2">``;</span>
+<span class="s2">``</span><span class="si">{</span><span class="n">SIZE_KWARG</span><span class="si">}</span><span class="s2">`` is only used when no modality-specific parameter is</span>
+<span class="s2">provided. When a sequence (``</span><span class="si">{</span><span class="n">BVALS_KWARG</span><span class="si">}</span><span class="s2">``/``</span><span class="si">{</span><span class="n">UPTAKE_KWARG</span><span class="si">}</span><span class="s2">``) is used, it</span>
+<span class="s2">defines the maximum valid index (i.e., the domain length) and</span>
+<span class="s2">``</span><span class="si">{</span><span class="n">STOP_INDEX_KWARG</span><span class="si">}</span><span class="s2">`` defaults to ``len(sequence)``.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">ITERATOR_SIZE_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">None of </span><span class="si">{features}</span><span class="s2"> were provided or had no valid values to infer size: cannot </span><span class="se">\</span>
+<span class="s2">build iterator without size.&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;Iterator size argument error message.&quot;&quot;&quot;</span>
+<span class="n">ITERATOR_MULTIPLICITY_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">f&quot;Multiple </span><span class="si">{SIZE_KEYS}</span><span class="s2"> were provided; provide exactly one or provide a value for</span>
+<span class="si">{SIZE_KWARG}</span><span class="s2"> to build the iterator.&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;Iterator size multiplicity error message.&quot;&quot;&quot;</span>
+<span class="n">START_INDEX_POSITIVITY_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&#39;start_index&#39; must be positive.&quot;</span>
+<span class="sd">&quot;&quot;&quot;Start index positivity error message.&quot;&quot;&quot;</span>
+<span class="n">START_INDEX_DATA_LENGTH_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">&#39;start_index&#39; must be less than the length of </span><span class="si">{feature}</span><span class="s2">.&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;Start index data length error message.&quot;&quot;&quot;</span>
+<span class="n">STOP_INDEX_ORDERING_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&#39;stop_index&#39; must be larger than &#39;start_index&#39;.&quot;</span>
+<span class="sd">&quot;&quot;&quot;Stop index value ordering error message.&quot;&quot;&quot;</span>
+<span class="n">STOP_INDEX_DATA_LENGTH_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">&#39;stop_index&#39; must be less or equal to the length of </span><span class="si">{feature}</span><span class="s2">.&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;Stop index data length error message.&quot;&quot;&quot;</span>
 
 
-<span class="k">def</span> <span class="nf">_get_size_from_kwargs</span><span class="p">(</span><span class="n">kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract the size from kwargs, ensuring only one key is used.</span>
+<span class="k">def</span> <span class="nf">_resolve_feature</span><span class="p">(</span><span class="n">allowed_features</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">provided</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">allowed_features</span> <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">provided</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">ITERATOR_SIZE_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="n">allowed_features</span><span class="p">))</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    kwargs : :obj:`dict`</span>
-<span class="sd">        The keyword arguments passed to the iterator function.</span>
+    <span class="c1"># Modality-specific keys take precedence over size</span>
+    <span class="n">modality_specific</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">provided</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">MODALITY_SPECIFIC_SIZE_KEYS</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">modality_specific</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">modality_specific</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">ITERATOR_MULTIPLICITY_ERROR_MSG</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">modality_specific</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    :obj:`int`</span>
-<span class="sd">        The inferred size.</span>
+    <span class="k">return</span> <span class="n">SIZE_KWARG</span>
 
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    :exc:`ValueError`</span>
-<span class="sd">        If size could not be extracted.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">candidates</span> <span class="o">=</span> <span class="p">[</span><span class="n">kwargs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">SIZE_KEYS</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">candidates</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">candidates</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">candidates</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="n">candidates</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">ITERATOR_SIZE_ERROR_MSG</span><span class="p">)</span>
+
+<span class="n">_resolve_feature</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">Determine which size-related feature to use from the provided kwargs.</span>
+
+<span class="s2">Modality-specific keys (``</span><span class="si">{</span><span class="n">MODALITY_SPECIFIC_SIZE_KEYS</span><span class="si">}</span><span class="s2">``) take precedence</span>
+<span class="s2">over ``</span><span class="si">{</span><span class="n">SIZE_KWARG</span><span class="si">}</span><span class="s2">``. If more than one modality-specific key is provided at</span>
+<span class="s2">the same time, a :exc:`ValueError` is raised.</span>
+
+<span class="s2">Parameters</span>
+<span class="s2">----------</span>
+<span class="s2">allowed_features : :obj:`Sequence` of :obj:`str`</span>
+<span class="s2">    Keys accepted to define the domain length (e.g., ``(&quot;</span><span class="si">{</span><span class="n">SIZE_KWARG</span><span class="si">}</span><span class="s2">&quot;,)`` or</span>
+<span class="s2">    ``(&quot;</span><span class="si">{</span><span class="n">BVALS_KWARG</span><span class="si">}</span><span class="s2">&quot;, &quot;</span><span class="si">{</span><span class="n">UPTAKE_KWARG</span><span class="si">}</span><span class="s2">&quot;)``). Exactly one of these keys must</span>
+<span class="s2">    be present in ``kwargs`` with a non-:obj:`None` value.</span>
+<span class="s2">kwargs : :obj:`dict`</span>
+<span class="s2">    The size-defining keyword arguments (</span><span class="si">{</span><span class="n">SIZE_KEYS</span><span class="si">}</span><span class="s2">) to inspect.</span>
+
+<span class="s2">Returns</span>
+<span class="s2">-------</span>
+<span class="s2">:obj:`str`</span>
+<span class="s2">    The key of the selected feature.</span>
+
+<span class="s2">Raises</span>
+<span class="s2">------</span>
+<span class="s2">:exc:`ValueError`</span>
+<span class="s2">    If no size-related key is provided, or if more than one</span>
+<span class="s2">    modality-specific key is provided at the same time.</span>
+
+<span class="s2">Examples</span>
+<span class="s2">--------</span>
+<span class="s2">&gt;&gt;&gt; _resolve_feature(SIZE_KEYS, size=4)</span>
+<span class="s2">&#39;size&#39;</span>
+<span class="s2">&gt;&gt;&gt; _resolve_feature(SIZE_KEYS, bvals=[0, 1000, 2000, 3000])</span>
+<span class="s2">&#39;bvals&#39;</span>
+<span class="s2">&gt;&gt;&gt; _resolve_feature(SIZE_KEYS, uptake=[0.1, 0.12, 0.3, 0.4])</span>
+<span class="s2">&#39;uptake&#39;</span>
+<span class="s2">&gt;&gt;&gt; _resolve_feature(SIZE_KEYS, size=4, bvals=[10, 20, 30, 40])</span>
+<span class="s2">&#39;bvals&#39;</span>
+<span class="s2">&gt;&gt;&gt; _resolve_feature(SIZE_KEYS, size=4, uptake=[0.1, 0.12, 0.3, 0.4])</span>
+<span class="s2">&#39;uptake&#39;</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">_resolve_domain</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span> <span class="n">allowed_features</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">SIZE_KEYS</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+    <span class="n">feature</span> <span class="o">=</span> <span class="n">_resolve_feature</span><span class="p">(</span><span class="n">allowed_features</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="c1"># Infer domain length</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">if</span> <span class="n">feature</span> <span class="o">==</span> <span class="n">SIZE_KWARG</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="n">start_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">START_INDEX_KWARG</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">_stop_index</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">STOP_INDEX_KWARG</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">start_index</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">START_INDEX_POSITIVITY_ERROR_MSG</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">start_index</span> <span class="o">&gt;=</span> <span class="n">n</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">START_INDEX_DATA_LENGTH_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">feature</span><span class="o">=</span><span class="n">feature</span><span class="p">))</span>
+
+    <span class="c1"># Normalize stop_index to an exclusive integer end bound (slice semantics</span>
+    <span class="c1"># for negatives)</span>
+    <span class="k">if</span> <span class="n">_stop_index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">stop_index</span> <span class="o">=</span> <span class="n">n</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">stop_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">_stop_index</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">stop_index</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">stop_index</span> <span class="o">=</span> <span class="n">n</span> <span class="o">+</span> <span class="n">stop_index</span>  <span class="c1"># e.g., -1 -&gt; n-1</span>
+
+    <span class="k">if</span> <span class="n">stop_index</span> <span class="o">&lt;=</span> <span class="n">start_index</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">STOP_INDEX_ORDERING_ERROR_MSG</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">stop_index</span> <span class="o">&gt;</span> <span class="n">n</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">STOP_INDEX_DATA_LENGTH_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">feature</span><span class="o">=</span><span class="n">feature</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">start_index</span><span class="p">,</span> <span class="n">stop_index</span>
+
+
+<span class="n">_resolve_domain</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">Resolve the absolute iteration index domain.</span>
+
+<span class="s2">The domain is inferred from exactly one of the *allowed* size-defining</span>
+<span class="s2">features passed in ``allowed_features`` and the optional bounds</span>
+<span class="s2">``</span><span class="si">{</span><span class="n">START_INDEX_KWARG</span><span class="si">}</span><span class="s2">``/``</span><span class="si">{</span><span class="n">STOP_INDEX_KWARG</span><span class="si">}</span><span class="s2">``.</span>
+
+<span class="s2">The value of ``</span><span class="si">{</span><span class="n">START_INDEX_KWARG</span><span class="si">}</span><span class="s2">`` defaults to 0; if ``</span><span class="si">{</span><span class="n">STOP_INDEX_KWARG</span><span class="si">}</span><span class="s2">``</span>
+<span class="s2">is :obj:`None`, it defaults to the domain length inferred from the selected</span>
+<span class="s2">feature (``</span><span class="si">{</span><span class="n">SIZE_KWARG</span><span class="si">}</span><span class="s2">`` uses its integer value; sequence features such as</span>
+<span class="s2">``</span><span class="si">{</span><span class="n">MODALITY_SPECIFIC_SIZE_KEYS</span><span class="si">}</span><span class="s2">`` use their :func:`len`).</span>
+
+<span class="s2">Parameters</span>
+<span class="s2">----------</span>
+<span class="s2">allowed_features : :obj:`Sequence` of :obj:`str`, optional</span>
+<span class="s2">    The set of keyword names that are accepted to infer the domain size.</span>
+
+<span class="s2">Other Parameters</span>
+<span class="s2">----------------</span>
+<span class="si">{</span><span class="n">DOMAIN_KEYS_DOC</span><span class="si">}</span>
+<span class="si">{</span><span class="n">START_INDEX_DOC</span><span class="si">}</span>
+<span class="si">{</span><span class="n">STOP_INDEX_DOC</span><span class="si">}</span>
+
+<span class="s2">Returns</span>
+<span class="s2">-------</span>
+<span class="s2">:obj:`tuple`</span>
+<span class="s2">    Starting (inclusive) and stopping index (exclusive) of the domain.</span>
+
+<span class="s2">Raises</span>
+<span class="s2">------</span>
+<span class="s2">:exc:`ValueError`</span>
+<span class="s2">    If ``</span><span class="si">{</span><span class="n">START_INDEX_KWARG</span><span class="si">}</span><span class="s2">`` is negative or exceeds the domain.</span>
+<span class="s2">:exc:`ValueError`</span>
+<span class="s2">    If ``</span><span class="si">{</span><span class="n">STOP_INDEX_KWARG</span><span class="si">}</span><span class="s2">`` is not greater than ``</span><span class="si">{</span><span class="n">START_INDEX_KWARG</span><span class="si">}</span><span class="s2">``</span>
+<span class="s2">    or exceeds the domain.</span>
+
+<span class="s2">Notes</span>
+<span class="s2">-----</span>
+<span class="si">{</span><span class="n">ITERATOR_NOTES</span><span class="si">}</span>
+
+<span class="s2">See also</span>
+<span class="s2">--------</span>
+<span class="s2">:func:`._resolve_feature`</span>
+
+<span class="s2">Examples</span>
+<span class="s2">--------</span>
+<span class="s2">&gt;&gt;&gt; _resolve_domain(size=4)</span>
+<span class="s2">(0, 4)</span>
+<span class="s2">&gt;&gt;&gt; _resolve_domain(size=4, start_index=3)</span>
+<span class="s2">(3, 4)</span>
+<span class="s2">&gt;&gt;&gt; _resolve_domain(size=5, stop_index=-1)</span>
+<span class="s2">(0, 4)</span>
+<span class="s2">&gt;&gt;&gt; _resolve_domain(size=5, stop_index=-2)</span>
+<span class="s2">(0, 3)</span>
+<span class="s2">&gt;&gt;&gt; _resolve_domain(size=5, start_index=2, stop_index=-1)</span>
+<span class="s2">(2, 4)</span>
+<span class="s2">&gt;&gt;&gt; _resolve_domain(bvals=[0, 1000, 2000, 3000])</span>
+<span class="s2">(0, 4)</span>
+<span class="s2">&gt;&gt;&gt; _resolve_domain(uptake=[0.1, 0.2, 0.3, 0.4], start_index=2)</span>
+<span class="s2">(2, 4)</span>
+<span class="s2">&gt;&gt;&gt; _resolve_domain(bvals=[0, 1, 2, 3, 4], start_index=1, stop_index=4)</span>
+<span class="s2">(1, 4)</span>
+<span class="s2">&gt;&gt;&gt; _resolve_domain(size=3, start_index=1, bvals=[10, 20, 30, 40])</span>
+<span class="s2">(1, 4)</span>
+<span class="s2">&quot;&quot;&quot;</span>
 
 
 <div class="viewcode-block" id="linear_iterator">
 <a class="viewcode-back" href="../../../api/nifreeze.utils.iterators.html#nifreeze.utils.iterators.linear_iterator">[docs]</a>
-<span class="k">def</span> <span class="nf">linear_iterator</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-    <span class="n">size</span> <span class="o">=</span> <span class="n">_get_size_from_kwargs</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
-    <span class="k">return</span> <span class="p">(</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">size</span><span class="p">))</span></div>
+<span class="k">def</span> <span class="nf">linear_iterator</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="n">start</span><span class="p">,</span> <span class="n">stop</span> <span class="o">=</span> <span class="n">_resolve_domain</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">))</span></div>
 
 
 
@@ -415,7 +596,9 @@
 
 <span class="s2">Other Parameters</span>
 <span class="s2">----------------</span>
-<span class="si">{</span><span class="n">SIZE_KEYS_DOC</span><span class="si">}</span>
+<span class="si">{</span><span class="n">DOMAIN_KEYS_DOC</span><span class="si">}</span>
+<span class="si">{</span><span class="n">START_INDEX_DOC</span><span class="si">}</span>
+<span class="si">{</span><span class="n">STOP_INDEX_DOC</span><span class="si">}</span>
 
 <span class="s2">Notes</span>
 <span class="s2">-----</span>
@@ -430,21 +613,28 @@
 <span class="s2">--------</span>
 <span class="s2">&gt;&gt;&gt; list(linear_iterator(size=10))</span>
 <span class="s2">[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]</span>
-
+<span class="s2">&gt;&gt;&gt; list(linear_iterator(size=7, start_index=3))</span>
+<span class="s2">[3, 4, 5, 6]</span>
+<span class="s2">&gt;&gt;&gt; list(linear_iterator(size=4, start_index=3))</span>
+<span class="s2">[3]</span>
+<span class="s2">&gt;&gt;&gt; list(linear_iterator(bvals=[0, 0, 700, 1000, 1000, 200], start_index=3))</span>
+<span class="s2">[3, 4, 5]</span>
+<span class="s2">&gt;&gt;&gt; list(linear_iterator(bvals=[0, 0, 700, 1000, 1000, 200], start_index=3, stop_index=5))</span>
+<span class="s2">[3, 4]</span>
 <span class="s2">&quot;&quot;&quot;</span>
 
 
 <div class="viewcode-block" id="random_iterator">
 <a class="viewcode-back" href="../../../api/nifreeze.utils.iterators.html#nifreeze.utils.iterators.random_iterator">[docs]</a>
-<span class="k">def</span> <span class="nf">random_iterator</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-    <span class="n">size</span> <span class="o">=</span> <span class="n">_get_size_from_kwargs</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">random_iterator</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="n">start</span><span class="p">,</span> <span class="n">stop</span> <span class="o">=</span> <span class="n">_resolve_domain</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
     <span class="n">_seed</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;seed&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
     <span class="n">_seed</span> <span class="o">=</span> <span class="mi">20210324</span> <span class="k">if</span> <span class="n">_seed</span> <span class="ow">is</span> <span class="kc">True</span> <span class="k">else</span> <span class="n">_seed</span>
 
     <span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="kc">None</span> <span class="k">if</span> <span class="n">_seed</span> <span class="ow">is</span> <span class="kc">False</span> <span class="k">else</span> <span class="n">_seed</span><span class="p">)</span>
 
-    <span class="n">index_order</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">size</span><span class="p">))</span>
+    <span class="n">index_order</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">))</span>
     <span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">index_order</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">(</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">index_order</span><span class="p">)</span></div>
 
@@ -465,7 +655,9 @@
 <span class="s2">    random generator with the given value. If :obj:`False`, the random generator</span>
 <span class="s2">    is passed :obj:`None`. If :obj:`True`, a default seed value is set.</span>
 
-<span class="si">{</span><span class="n">SIZE_KEYS_DOC</span><span class="si">}</span>
+<span class="si">{</span><span class="n">DOMAIN_KEYS_DOC</span><span class="si">}</span>
+<span class="si">{</span><span class="n">START_INDEX_DOC</span><span class="si">}</span>
+<span class="si">{</span><span class="n">STOP_INDEX_DOC</span><span class="si">}</span>
 
 <span class="s2">Notes</span>
 <span class="s2">-----</span>
@@ -487,7 +679,10 @@
 <span class="s2">[1, 12, 14, 5, 0, 11, 10, 9, 7, 8, 3, 13, 2, 6, 4]</span>
 <span class="s2">&gt;&gt;&gt; list(random_iterator(size=15, seed=42))  # seed is 42</span>
 <span class="s2">[8, 13, 7, 6, 14, 12, 5, 2, 9, 3, 4, 11, 0, 1, 10]</span>
-
+<span class="s2">&gt;&gt;&gt; list(random_iterator(size=4, start_index=3, seed=0))</span>
+<span class="s2">[3]</span>
+<span class="s2">&gt;&gt;&gt; list(random_iterator(size=7, start_index=3, stop_index=6, seed=0))</span>
+<span class="s2">[3, 5, 4]</span>
 <span class="s2">&quot;&quot;&quot;</span>
 
 
@@ -533,18 +728,23 @@
 
 <div class="viewcode-block" id="monotonic_value_iterator">
 <a class="viewcode-back" href="../../../api/nifreeze.utils.iterators.html#nifreeze.utils.iterators.monotonic_value_iterator">[docs]</a>
-<span class="k">def</span> <span class="nf">monotonic_value_iterator</span><span class="p">(</span><span class="o">*</span><span class="n">_</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">feature</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="n">BVALS_KWARG</span><span class="p">,</span> <span class="n">UPTAKE_KWARG</span><span class="p">)</span> <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">KWARG_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">kwarg</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">BVALS_KWARG</span><span class="si">}</span><span class="s2"> or </span><span class="si">{</span><span class="n">UPTAKE_KWARG</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">))</span>
+<span class="k">def</span> <span class="nf">monotonic_value_iterator</span><span class="p">(</span><span class="o">*</span><span class="n">_</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="n">start</span><span class="p">,</span> <span class="n">stop</span> <span class="o">=</span> <span class="n">_resolve_domain</span><span class="p">(</span><span class="n">allowed_features</span><span class="o">=</span><span class="p">(</span><span class="n">BVALS_KWARG</span><span class="p">,</span> <span class="n">UPTAKE_KWARG</span><span class="p">),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="c1"># At this point, exactly one feature is guaranteed to be present</span>
+    <span class="n">feature</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="n">BVALS_KWARG</span><span class="p">,</span> <span class="n">UPTAKE_KWARG</span><span class="p">)</span> <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
 
     <span class="n">ascending</span> <span class="o">=</span> <span class="n">feature</span> <span class="o">==</span> <span class="n">BVALS_KWARG</span>
     <span class="n">values</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span>
-    <span class="k">return</span> <span class="n">_value_iterator</span><span class="p">(</span>
-        <span class="n">values</span><span class="p">,</span>
-        <span class="n">ascending</span><span class="o">=</span><span class="n">ascending</span><span class="p">,</span>
-        <span class="n">round_decimals</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;round_decimals&quot;</span><span class="p">,</span> <span class="n">DEFAULT_ROUND_DECIMALS</span><span class="p">),</span>
+
+    <span class="c1"># Return a generator that converts relative indices to absolute indices</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">start</span> <span class="o">+</span> <span class="n">idx</span>
+        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">_value_iterator</span><span class="p">(</span>
+            <span class="n">values</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">],</span>
+            <span class="n">ascending</span><span class="o">=</span><span class="n">ascending</span><span class="p">,</span>
+            <span class="n">round_decimals</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;round_decimals&quot;</span><span class="p">,</span> <span class="n">DEFAULT_ROUND_DECIMALS</span><span class="p">),</span>
+        <span class="p">)</span>
     <span class="p">)</span></div>
 
 
@@ -563,7 +763,9 @@
 
 <span class="s2">Other Parameters</span>
 <span class="s2">----------------</span>
-<span class="si">{</span><span class="n">SIZE_KEYS_DOC</span><span class="si">}</span>
+<span class="si">{</span><span class="n">DOMAIN_KEYS_DOC</span><span class="si">}</span>
+<span class="si">{</span><span class="n">START_INDEX_DOC</span><span class="si">}</span>
+<span class="si">{</span><span class="n">STOP_INDEX_DOC</span><span class="si">}</span>
 
 <span class="s2">Notes</span>
 <span class="s2">-----</span>
@@ -580,24 +782,35 @@
 <span class="s2">[0, 1, 8, 4, 5, 2, 3, 6, 7]</span>
 <span class="s2">&gt;&gt;&gt; list(monotonic_value_iterator(uptake=[-1.23, 1.06, 1.02, 1.38, -1.46, -1.12, -1.19, 1.24, 1.05]))</span>
 <span class="s2">[3, 7, 1, 8, 2, 5, 6, 0, 4]</span>
+<span class="s2">&gt;&gt;&gt; list(monotonic_value_iterator(bvals=[0.0, 0.0, 1000.0, 1000.0, 700.0, 700.0, 2000.0, 2000.0, 0.0], start_index=4))</span>
+<span class="s2">[8, 4, 5, 6, 7]</span>
+<span class="s2">&gt;&gt;&gt; list(monotonic_value_iterator(uptake=[-1.23, 1.06, 1.02, 1.38, -1.46, -1.12, -1.19, 1.24, 1.05], start_index=2))</span>
+<span class="s2">[3, 7, 8, 2, 5, 6, 4]</span>
+<span class="s2">&gt;&gt;&gt; list(monotonic_value_iterator(bvals=[0.0, 0.0, 1000.0, 1000.0, 700.0, 700.0, 2000.0, 2000.0, 0.0], start_index=4, stop_index=7))</span>
+<span class="s2">[4, 5, 6]</span>
+<span class="s2">&gt;&gt;&gt; list(monotonic_value_iterator(uptake=[-1.23, 1.06, 1.02, 1.38, -1.46, -1.12, -1.19, 1.24, 1.05], start_index=2, stop_index=7))</span>
+<span class="s2">[3, 2, 5, 6, 4]</span>
 <span class="s2">&quot;&quot;&quot;</span>
 
 
 <div class="viewcode-block" id="centralsym_iterator">
 <a class="viewcode-back" href="../../../api/nifreeze.utils.iterators.html#nifreeze.utils.iterators.centralsym_iterator">[docs]</a>
-<span class="k">def</span> <span class="nf">centralsym_iterator</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-    <span class="n">size</span> <span class="o">=</span> <span class="n">_get_size_from_kwargs</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">centralsym_iterator</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="n">start</span><span class="p">,</span> <span class="n">stop</span> <span class="o">=</span> <span class="n">_resolve_domain</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-    <span class="n">linear</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">size</span><span class="p">))</span>
+    <span class="n">domain</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">))</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span>
+
+    <span class="n">center</span> <span class="o">=</span> <span class="n">size</span> <span class="o">//</span> <span class="mi">2</span>
+
     <span class="k">return</span> <span class="p">(</span>
-        <span class="n">x</span>
-        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">chain</span><span class="o">.</span><span class="n">from_iterable</span><span class="p">(</span>
-            <span class="n">zip_longest</span><span class="p">(</span>
-                <span class="n">linear</span><span class="p">[</span><span class="n">size</span> <span class="o">//</span> <span class="mi">2</span> <span class="p">:],</span>
-                <span class="nb">reversed</span><span class="p">(</span><span class="n">linear</span><span class="p">[:</span> <span class="n">size</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]),</span>
-            <span class="p">)</span>
+        <span class="n">domain</span><span class="p">[</span><span class="n">pos</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">pos</span> <span class="ow">in</span> <span class="n">chain</span><span class="o">.</span><span class="n">from_iterable</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">center</span> <span class="o">-</span> <span class="n">k</span><span class="p">,</span> <span class="n">center</span> <span class="o">+</span> <span class="n">k</span><span class="p">)</span> <span class="k">if</span> <span class="n">k</span> <span class="k">else</span> <span class="p">(</span><span class="n">center</span><span class="p">,)</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">center</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">center</span> <span class="o">-</span> <span class="n">k</span> <span class="o">&lt;</span> <span class="n">size</span> <span class="ow">or</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">center</span> <span class="o">+</span> <span class="n">k</span> <span class="o">&lt;</span> <span class="n">size</span>
         <span class="p">)</span>
-        <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="n">size</span>
     <span class="p">)</span></div>
 
 
@@ -607,7 +820,9 @@
 
 <span class="s2">Other Parameters</span>
 <span class="s2">----------------</span>
-<span class="si">{</span><span class="n">SIZE_KEYS_DOC</span><span class="si">}</span>
+<span class="si">{</span><span class="n">DOMAIN_KEYS_DOC</span><span class="si">}</span>
+<span class="si">{</span><span class="n">START_INDEX_DOC</span><span class="si">}</span>
+<span class="si">{</span><span class="n">STOP_INDEX_DOC</span><span class="si">}</span>
 
 <span class="s2">Notes</span>
 <span class="s2">-----</span>
@@ -619,6 +834,10 @@
 <span class="s2">[5, 4, 6, 3, 7, 2, 8, 1, 9, 0]</span>
 <span class="s2">&gt;&gt;&gt; list(centralsym_iterator(size=11))</span>
 <span class="s2">[5, 4, 6, 3, 7, 2, 8, 1, 9, 0, 10]</span>
+<span class="s2">&gt;&gt;&gt; list(centralsym_iterator(size=7, start_index=3))</span>
+<span class="s2">[5, 4, 6, 3]</span>
+<span class="s2">&gt;&gt;&gt; list(centralsym_iterator(size=7, start_index=3, stop_index=6))</span>
+<span class="s2">[4, 3, 5]</span>
 <span class="s2">&quot;&quot;&quot;</span>
 </pre></div>
         </article>
@@ -652,7 +871,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=50e6011d"></script>
+</div><script src="../../../_static/documentation_options.js?v=03d15b33"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
