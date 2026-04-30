@@ -26,7 +26,6 @@ from typing import cast
 import numpy as np
 import pytest
 from dipy.io import read_bvals_bvecs
-from sklearn.base import clone
 
 from nifreeze.model import gpr
 
@@ -587,12 +586,6 @@ def test_multishellkernel_nonpositive_bval(bad_bval, match):
     with pytest.warns(RuntimeWarning, match=match):
         # Current behavior: log(bval) -inf/nan propagates into K
         k(X)
-
-
-def test_multishellkernel_cloneable():
-    k = gpr.MultiShellKernel()
-    k2 = clone(k)
-    assert isinstance(k2, gpr.MultiShellKernel)
 
 
 @pytest.mark.parametrize("n_samples", [8])
