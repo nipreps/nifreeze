@@ -35,6 +35,31 @@ DEFAULT_DTYPE = "int16"
 BVAL_ATOL = 100.0
 """b-value tolerance value."""
 
+CLIPPING_EMPTY_SELECTION_ERROR_MSG = """\
+Empty percentile selection after applying {constraints}finite filtering (p_min={p_min}, p_max={p_max}).
+"""
+"""Clipping empty selection error message."""
+
+CLIPPING_NONFINITE_THRESHOLDS_ERROR_MSG = """\
+Percentile thresholds are not finite (a_min={a_min}, a_max={a_max}, p_min={p_min}, p_max={p_max}, nonnegative={nonnegative}).
+"""
+"""Clipping non-finite thresholds error message."""
+
+CLIPPING_INVALID_THRESHOLDS_ERROR_MSG = """\
+Invalid percentile thresholds (a_max <= a_min) (a_min={a_min}, a_max={a_max}, p_min={p_min}, p_max={p_max}, nonnegative={nonnegative}).
+"""
+"""Clipping invalid percentile thresholds error message."""
+
+CLIPPING_DEGENERATE_RANGE_ERROR_MSG = """\
+Degenerate dynamic range after clipping/shift (den={den}, a_min={a_min}, a_max={a_max}, \
+nonnegative={nonnegative}, data_finite={data_finite}, unique~={unique}).
+"""
+"""Clipping degenerate dynamic range error message."""
+
+
+class ClippingValueError(RuntimeError):
+    """Raised when clipping cannot compute a valid clipping/scaling."""
+
 
 def advanced_clip(
     data: np.ndarray,
@@ -94,17 +119,55 @@ def advanced_clip(
     # Calculate stats on denoised version to avoid outlier bias
     denoised = median_filter(data, footprint=ball(3))
 
-    a_min = np.percentile(
-        np.asarray([denoised[denoised >= 0] if nonnegative else denoised]), p_min
-    )
-    a_max = np.percentile(
-        np.asarray([denoised[denoised >= 0] if nonnegative else denoised]), p_max
-    )
+    # Select values for percentile computation.
+    # If nonnegative=True, we must have at least one finite >=0 value.
+    sel = denoised[denoised >= 0] if nonnegative else denoised
+    sel = sel[np.isfinite(sel)]
+
+    if sel.size == 0:
+        constraints = "nonnegative constraint and " if nonnegative else ""
+        raise ClippingValueError(
+            CLIPPING_EMPTY_SELECTION_ERROR_MSG.format(
+                constraints=constraints, p_min=p_min, p_max=p_max
+            )
+        )
+
+    a_min = float(np.percentile(sel, p_min))
+    a_max = float(np.percentile(sel, p_max))
+
+    if not np.isfinite(a_min) or not np.isfinite(a_max):
+        raise ClippingValueError(
+            CLIPPING_NONFINITE_THRESHOLDS_ERROR_MSG.format(
+                a_min=a_min, a_max=a_max, p_min=p_min, p_max=p_max, nonnegative=nonnegative
+            )
+        )
+
+    if a_max <= a_min:
+        raise ClippingValueError(
+            CLIPPING_INVALID_THRESHOLDS_ERROR_MSG.format(
+                a_min=a_min, a_max=a_max, p_min=p_min, p_max=p_max, nonnegative=nonnegative
+            )
+        )
 
     # Clip and scale data
     np.clip(data, a_min=a_min, a_max=a_max, out=data)
     data -= data.min()
-    data /= data.max()
+    den = float(data.max())  # max-min because min is now 0
+    if not np.isfinite(den) or den == 0.0:
+        # Degenerate dynamic range after clipping
+        unique = len(np.unique(data)) if data.size < 1_000_000 else "too big"
+        raise ClippingValueError(
+            CLIPPING_DEGENERATE_RANGE_ERROR_MSG.format(
+                den=den,
+                a_min=a_min,
+                a_max=a_max,
+                nonnegative=nonnegative,
+                data_finite=bool(np.isfinite(data).all()),
+                unique=unique,
+            )
+        )
+
+    data /= den
 
     if invert:
         np.subtract(1.0, data, out=data)
