@@ -381,7 +381,8 @@ class BaseDWIModel(BaseModel):
 
             predicted = np.hstack(predicted)
 
-        retval = np.zeros_like(self._data_mask, dtype=self._dataset.dataobj.dtype)
+        out_dtype = np.result_type(predicted.dtype, np.float32)
+        retval = np.zeros(self._data_mask.shape, dtype=out_dtype)
         retval[self._data_mask, ...] = predicted
         return retval
 
