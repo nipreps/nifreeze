@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.data.splitting module" href="nifreeze.data.splitting.html"><link rel="prev" title="nifreeze.data.base module" href="nifreeze.data.base.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.data.filtering module - nifreeze 26.0.0.dev92 documentation</title>
+        <title>nifreeze.data.filtering module - nifreeze 26.0.0.dev97 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev92 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev97 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev92</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev97</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev92</span>
+  <span class="sidebar-brand-text">26.0.0.dev97</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -324,6 +324,37 @@
 <dt class="sig sig-object py" id="nifreeze.data.filtering.BVAL_ATOL">
 <span class="sig-prename descclassname"><span class="pre">nifreeze.data.filtering.</span></span><span class="sig-name descname"><span class="pre">BVAL_ATOL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">100.0</span></em><a class="headerlink" href="#nifreeze.data.filtering.BVAL_ATOL" title="Link to this definition">¶</a></dt>
 <dd><p>b-value tolerance value.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.filtering.CLIPPING_DEGENERATE_RANGE_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.filtering.</span></span><span class="sig-name descname"><span class="pre">CLIPPING_DEGENERATE_RANGE_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Degenerate</span> <span class="pre">dynamic</span> <span class="pre">range</span> <span class="pre">after</span> <span class="pre">clipping/shift</span> <span class="pre">(den={den},</span> <span class="pre">a_min={a_min},</span> <span class="pre">a_max={a_max},</span> <span class="pre">nonnegative={nonnegative},</span> <span class="pre">data_finite={data_finite},</span> <span class="pre">unique~={unique}).\n'</span></em><a class="headerlink" href="#nifreeze.data.filtering.CLIPPING_DEGENERATE_RANGE_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>Clipping degenerate dynamic range error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.filtering.CLIPPING_EMPTY_SELECTION_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.filtering.</span></span><span class="sig-name descname"><span class="pre">CLIPPING_EMPTY_SELECTION_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Empty</span> <span class="pre">percentile</span> <span class="pre">selection</span> <span class="pre">after</span> <span class="pre">applying</span> <span class="pre">{constraints}finite</span> <span class="pre">filtering</span> <span class="pre">(p_min={p_min},</span> <span class="pre">p_max={p_max}).\n'</span></em><a class="headerlink" href="#nifreeze.data.filtering.CLIPPING_EMPTY_SELECTION_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>Clipping empty selection error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.filtering.CLIPPING_INVALID_THRESHOLDS_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.filtering.</span></span><span class="sig-name descname"><span class="pre">CLIPPING_INVALID_THRESHOLDS_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Invalid</span> <span class="pre">percentile</span> <span class="pre">thresholds</span> <span class="pre">(a_max</span> <span class="pre">&lt;=</span> <span class="pre">a_min)</span> <span class="pre">(a_min={a_min},</span> <span class="pre">a_max={a_max},</span> <span class="pre">p_min={p_min},</span> <span class="pre">p_max={p_max},</span> <span class="pre">nonnegative={nonnegative}).\n'</span></em><a class="headerlink" href="#nifreeze.data.filtering.CLIPPING_INVALID_THRESHOLDS_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>Clipping invalid percentile thresholds error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.data.filtering.CLIPPING_NONFINITE_THRESHOLDS_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.data.filtering.</span></span><span class="sig-name descname"><span class="pre">CLIPPING_NONFINITE_THRESHOLDS_ERROR_MSG</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Percentile</span> <span class="pre">thresholds</span> <span class="pre">are</span> <span class="pre">not</span> <span class="pre">finite</span> <span class="pre">(a_min={a_min},</span> <span class="pre">a_max={a_max},</span> <span class="pre">p_min={p_min},</span> <span class="pre">p_max={p_max},</span> <span class="pre">nonnegative={nonnegative}).\n'</span></em><a class="headerlink" href="#nifreeze.data.filtering.CLIPPING_NONFINITE_THRESHOLDS_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>Clipping non-finite thresholds error message.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="nifreeze.data.filtering.ClippingValueError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.data.filtering.</span></span><span class="sig-name descname"><span class="pre">ClippingValueError</span></span><a class="reference internal" href="../_modules/nifreeze/data/filtering.html#ClippingValueError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.filtering.ClippingValueError" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#RuntimeError" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">RuntimeError</span></code></a></p>
+<p>Raised when clipping cannot compute a valid clipping/scaling.</p>
 </dd></dl>
 
 <dl class="py data">
@@ -518,6 +549,11 @@ percentiles.</p>
             <ul>
 <li><a class="reference internal" href="#">nifreeze.data.filtering module</a><ul>
 <li><a class="reference internal" href="#nifreeze.data.filtering.BVAL_ATOL"><code class="docutils literal notranslate"><span class="pre">BVAL_ATOL</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.filtering.CLIPPING_DEGENERATE_RANGE_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">CLIPPING_DEGENERATE_RANGE_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.filtering.CLIPPING_EMPTY_SELECTION_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">CLIPPING_EMPTY_SELECTION_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.filtering.CLIPPING_INVALID_THRESHOLDS_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">CLIPPING_INVALID_THRESHOLDS_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.filtering.CLIPPING_NONFINITE_THRESHOLDS_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">CLIPPING_NONFINITE_THRESHOLDS_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.filtering.ClippingValueError"><code class="docutils literal notranslate"><span class="pre">ClippingValueError</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.filtering.DEFAULT_CLIP_PERCENTILE"><code class="docutils literal notranslate"><span class="pre">DEFAULT_CLIP_PERCENTILE</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.filtering.DEFAULT_DTYPE"><code class="docutils literal notranslate"><span class="pre">DEFAULT_DTYPE</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.filtering.advanced_clip"><code class="docutils literal notranslate"><span class="pre">advanced_clip()</span></code></a></li>
@@ -535,7 +571,7 @@ percentiles.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=03d15b33"></script>
+</div><script src="../_static/documentation_options.js?v=5bd8c58d"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
