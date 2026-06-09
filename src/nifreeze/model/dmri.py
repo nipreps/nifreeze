@@ -55,6 +55,23 @@ def _exec_predict(model, chunk=None, **kwargs):
     return np.squeeze(model.predict(**kwargs)), chunk
 
 
+def _exec_fit_predict(model_class, bvals, bvecs, data, gradient, chunk=None, S0=None, **kwargs):
+    """Fit a model and predict a held-out gradient within a single worker.
+
+    This is used for models whose fitted object cannot be pickled across a
+    process boundary (e.g. DKI's :obj:`~dipy.reconst.multi_voxel.MultiVoxelFit`).
+    The fit happens inside the worker and only the predicted array is returned,
+    so no model instance is ever serialized. See gh-442.
+    """
+    module_name, class_name = model_class.rsplit(".", 1)
+    fit_gtab = gradient_table_from_bvals_bvecs(bvals, bvecs)
+    fitted = getattr(import_module(module_name), class_name)(fit_gtab, **kwargs).fit(data)
+    pred_gtab = gradient_table_from_bvals_bvecs(
+        gradient[np.newaxis, -1], gradient[np.newaxis, :-1]
+    )
+    return np.squeeze(fitted.predict(pred_gtab, S0=S0)), chunk
+
+
 def _compute_data_mask(
     shape: tuple,
     brainmask: np.ndarray | None = None,
@@ -198,6 +215,13 @@ class BaseDWIModel(BaseModel):
         "_models": "List with one or more (if parallel execution) model instances",
     }
 
+    _picklable_fit: bool = True
+    """Whether the fitted object can be pickled (sent across a process boundary).
+
+    Models whose fit cannot be pickled (e.g. DKI) use the in-worker
+    fit-and-predict path (:meth:`_fit_predict_chunked`) for parallelization.
+    """
+
     def __init__(self, dataset: DWI, max_b: float | int | None = None, **kwargs):
         """Initialization.
 
@@ -251,21 +275,26 @@ class BaseDWIModel(BaseModel):
 
         super().__init__(dataset, **kwargs)
 
-    def _fit(self, index: int | None = None, n_jobs: int | None = None, **kwargs) -> int:
-        """Fit the model chunk-by-chunk asynchronously"""
+    def _lovo_data(self, index: int | None = None):
+        """Assemble masked data and gradient table for a leave-one-volume-out fit.
 
-        n_jobs = n_jobs or 1
+        Parameters
+        ----------
+        index : :obj:`int` or ``None``
+            Volume index left out of the fit (``None`` keeps every volume).
 
-        if self._locked_fit is not None:
-            return n_jobs
+        Returns
+        -------
+        data : :obj:`~numpy.ndarray`
+            The masked (or flattened) signal, shaped ``(n_voxels, n_volumes)``.
+        gtab : :obj:`~dipy.core.gradients.GradientTable`
+            The matching gradient table (with b0 appended for DKI).
 
+        """
         brainmask = self._dataset.brainmask
         idxmask = np.ones(len(self._dataset), dtype=bool)
-
         if index is not None:
             idxmask[index] = False
-        else:
-            self._locked_fit = True
 
         data, _, gtab = self._dataset[idxmask]
         # Select voxels within mask or just unravel 3D if no mask
@@ -289,6 +318,22 @@ class BaseDWIModel(BaseModel):
                 )
             data, gtab = _append_bzero(data, gtab, bzero=bzero)
 
+        return data, gtab
+
+    def _fit(self, index: int | None = None, n_jobs: int | None = None, **kwargs) -> int:
+        """Fit the model chunk-by-chunk asynchronously"""
+
+        n_jobs = n_jobs or 1
+
+        if self._locked_fit is not None:
+            return n_jobs
+
+        if index is None:
+            self._locked_fit = True
+
+        data, gtab = self._lovo_data(index)
+
+        model_str = getattr(self, "_model_class", "")
         if model_str:
             module_name, class_name = model_str.rsplit(".", 1)
             model = getattr(
@@ -302,14 +347,12 @@ class BaseDWIModel(BaseModel):
 
         is_dki = model_str == "dipy.reconst.dki.DiffusionKurtosisModel"
 
-        # One single CPU - linear execution (full model)
-        # DKI model does not allow parallelization as implemented here
+        # One single CPU - linear execution (full model).
+        # DKI's fitted object cannot be pickled, so it cannot be parallelized
+        # through this fit/predict-split path; the ``n_jobs > 1`` case for DKI is
+        # handled by ``fit_predict`` via ``_fit_predict_chunked`` (see gh-442).
         if n_jobs == 1 or is_dki:
             _modelfit, _ = _exec_fit(model, data, **fit_kwargs)
-            self._models = [_modelfit]
-            return 1
-        elif is_dki:
-            _modelfit = model.multi_fit(data, **fit_kwargs)
             self._models = [_modelfit]
             return 1
 
@@ -341,11 +384,22 @@ class BaseDWIModel(BaseModel):
         """
 
         kwargs.pop("omp_nthreads", None)  # Drop omp_nthreads
-        n_models = self._fit(
-            index,
-            n_jobs=kwargs.pop("n_jobs", None),
-            **kwargs,
-        )
+        n_jobs = kwargs.pop("n_jobs", None) or 1
+
+        # Exact parallelization for models whose fitted object cannot be pickled
+        # across processes (e.g. DKI): fit AND predict each voxel chunk inside the
+        # worker, returning only the (picklable) predicted array. This is
+        # numerically identical to the serial path because voxel-wise fitting is
+        # independent. See gh-442.
+        if (
+            not self._picklable_fit
+            and n_jobs > 1
+            and index is not None
+            and self._locked_fit is None
+        ):
+            return self._fit_predict_chunked(index, n_jobs, **kwargs)
+
+        n_models = self._fit(index, n_jobs=n_jobs, **kwargs)
 
         if index is None:
             return None
@@ -381,6 +435,52 @@ class BaseDWIModel(BaseModel):
 
             predicted = np.hstack(predicted)
 
+        retval = np.zeros_like(self._data_mask, dtype=self._dataset.dataobj.dtype)
+        retval[self._data_mask, ...] = predicted
+        return retval
+
+    def _fit_predict_chunked(self, index: int, n_jobs: int, **kwargs) -> np.ndarray:
+        """Fit and predict a left-out volume in parallel voxel chunks.
+
+        For models whose fitted object cannot cross a process boundary (e.g.
+        DKI), each worker fits its own voxel chunk and predicts the held-out
+        gradient, returning only the predicted array. Because voxel-wise fitting
+        is independent, the result is numerically identical to the serial path.
+        See gh-442.
+
+        Parameters
+        ----------
+        index : :obj:`int`
+            The volume index that is left out in fitting and then predicted.
+        n_jobs : :obj:`int`
+            Number of parallel workers (must be greater than one).
+
+        """
+        data, gtab = self._lovo_data(index)
+        gradient = self._dataset.gradients[index, :]
+
+        data_chunks = np.array_split(data, n_jobs)
+        s0_chunks = np.array_split(self._S0, n_jobs)
+
+        predicted: list = [None] * n_jobs
+        with Parallel(n_jobs=n_jobs) as executor:
+            results = executor(
+                delayed(_exec_fit_predict)(
+                    self._model_class,
+                    gtab.bvals,
+                    gtab.bvecs,
+                    dchunk,
+                    gradient,
+                    chunk=i,
+                    S0=s0chunk,
+                    **kwargs,
+                )
+                for i, (dchunk, s0chunk) in enumerate(zip(data_chunks, s0_chunks, strict=False))
+            )
+        for subprediction, rindex in results:
+            predicted[rindex] = subprediction
+
+        predicted = np.hstack(predicted)
         retval = np.zeros_like(self._data_mask, dtype=self._dataset.dataobj.dtype)
         retval[self._data_mask, ...] = predicted
         return retval
@@ -472,6 +572,8 @@ class DKIModel(BaseDWIModel):
 
     _modelargs = DTIModel._modelargs
     _model_class = "dipy.reconst.dki.DiffusionKurtosisModel"
+    # DKI's MultiVoxelFit is not picklable; parallelize via _fit_predict_chunked.
+    _picklable_fit = False
 
 
 class GQIModel(BaseDWIModel):
