@@ -572,7 +572,12 @@ class DKIModel(BaseDWIModel):
 
     _modelargs = DTIModel._modelargs
     _model_class = "dipy.reconst.dki.DiffusionKurtosisModel"
-    # DKI's MultiVoxelFit is not picklable; parallelize via _fit_predict_chunked.
+    # DKI's MultiVoxelFit is not picklable, so it is parallelized via the
+    # in-worker fit+predict path (BaseDWIModel._fit_predict_chunked).
+    # Follow-up (gh-442): once a DIPY release supports ``DKIModel.fit(data,
+    # engine=...)`` cleanly (forwarding ``engine`` and not leaking orchestration
+    # kwargs into the per-voxel kernel — both broken in DIPY <= 1.10.0), this
+    # NiFreeze-side chunking can be dropped in favor of DIPY's own parallelization.
     _picklable_fit = False
 
 
