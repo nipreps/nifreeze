@@ -218,7 +218,7 @@ class BaseDWIModel(BaseModel):
     _picklable_fit: bool = True
     """Whether the fitted object can be pickled (sent across a process boundary).
 
-    Models whose fit cannot be pickled (e.g. DKI) use the in-worker
+    Models whose fit cannot be pickled (e.g., DKI on DIPY 1.5) use the in-worker
     fit-and-predict path (:meth:`_fit_predict_chunked`) for parallelization.
     """
 
