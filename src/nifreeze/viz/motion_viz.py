@@ -23,11 +23,11 @@
 
 from typing import Union
 
-import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib import colormaps
 from matplotlib.axes import Axes
 from scipy.ndimage import gaussian_filter
 
@@ -109,7 +109,7 @@ def plot_framewise_displacement(
     # Plot the framewise displacement
     n_frames = fd.index.to_numpy()
 
-    cmap = cm.get_cmap(cmap_name, n_cols)
+    cmap = colormaps[cmap_name].resampled(n_cols)
     colors = [mcolors.to_hex(cmap(i)) for i in range(n_cols)]
 
     for i, col in enumerate(fd.columns):
