@@ -117,7 +117,11 @@ Three-layer design: **Data → Model → Estimator**
 ## Git etiquette and conventions
 
 - Semantic commit format: `<type>[(<scope>)]: <message>` — types: `fix:`, `enh:`, `sty:`, `doc:`, `mnt:`, etc. Scope parenthetical is optional.
+- Commit messages must be terse — as short as possible. Add a longer body only when the commit signals something genuinely important (something broken, a security-affecting change, major API/concern changes).
 - PR titles use uppercase (e.g., `FIX: <description>`, `ENH: <description>`, description is title-case). PRs link existing issues and other PRs if necessary in the message body, using GitHub's keywords, e.g., `Resolves: #17`, `Fixes: #19`, `X-Refs: #29`.
+- PR bodies can be less terse than commits, but must stay direct and to the point.
+- Before opening a PR, always check that there is an open issue the PR responds to. If there is none, do not open the PR — offer to open an issue instead.
+- Always open PRs as drafts, so humans do not start reviewing before the PR is ready for human review.
 - Branch names follow the convention `<type>/<identifier>[-gh<issue-number>]`. If the new branch addresses a bug/feature with an existing issue open, the issue is referenced with the optional suffix (e.g., `fix/memory-leak-gh127` for a memory leak reported in issue \#127).
 
 ## Key Conventions
