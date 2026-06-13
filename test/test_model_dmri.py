@@ -993,6 +993,48 @@ def test_dki_model_predict(multi_shell_test_data, index, ignore_bzero, use_mask)
 
 
 @pytest.mark.parametrize(
+    "multi_shell_test_data",
+    [
+        {
+            "bval_shell": (1000, 2000, 3000),
+            "S0": 1,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": (5, 6, 7),
+            "snr": None,
+            "vol_shape": (4, 4, 3),
+            "add_bzero": True,
+        },
+    ],
+    indirect=True,
+)
+@pytest.mark.parametrize("index", (4, 9))
+@pytest.mark.parametrize("use_mask", (False, True))
+def test_dki_parallel_matches_serial(multi_shell_test_data, index, use_mask):
+    """Parallel (chunked) DKI fit/predict must match the serial path exactly.
+
+    DKI's fitted object cannot be pickled, so ``n_jobs > 1`` is routed through
+    ``_fit_predict_chunked`` (fit + predict inside each worker). Because
+    voxel-wise fitting is independent, the result must be numerically identical
+    to the serial (``n_jobs == 1``) path. Regression test for gh-442.
+    """
+    dataset, _, _, _ = setup_multi_shell_fit_predict_data(
+        multi_shell_test_data, ignore_bzero=False, use_mask=use_mask
+    )
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
+        # Serial path (n_jobs == 1) -> _fit + _exec_predict
+        serial = model.DKIModel(dataset).fit_predict(index, n_jobs=1)
+        # Parallel path (n_jobs > 1) -> _fit_predict_chunked (in-worker fit+predict)
+        parallel = model.DKIModel(dataset).fit_predict(index, n_jobs=4)
+
+    assert serial is not None
+    assert parallel is not None
+    assert serial.shape == parallel.shape
+    assert np.allclose(serial, parallel, rtol=1e-5, atol=1e-6, equal_nan=True)
+
+
+@pytest.mark.parametrize(
     ("bval_shell", "S0", "evals"),
     [(1000, 100, (0.0015, 0.0003, 0.0003))],
 )
