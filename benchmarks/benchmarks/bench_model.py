@@ -28,11 +28,59 @@ import numpy as np
 from dipy.core.gradients import get_bval_indices
 from dipy.io import read_bvals_bvecs
 from dipy.segment.mask import median_otsu
+from joblib import cpu_count
 from scipy.ndimage import binary_dilation
 from skimage.morphology import ball
 
+from nifreeze.data.dmri import DWI
+from nifreeze.model.dmri import DKIModel
 from nifreeze.model.gpr import DiffusionGPR, SphericalKriging
 from nifreeze.utils.ndimage import load_api
+
+
+class DKIBenchmark:
+    params = ([1000, 5000, 10000], [1, min(8, cpu_count())])
+    param_names = ["n_voxels", "n_jobs"]
+
+    def __init__(self):
+        self._dataset = None
+        self._index = None
+
+    def setup(self, n_voxels, n_jobs):
+        name = "sherbrooke_3shell"
+
+        dwi_fname, bval_fname, bvec_fname = dpd.get_fnames(name=name)
+        img = load_api(dwi_fname, nb.Nifti1Image)
+        dwi_data = img.get_fdata()
+        bvals, bvecs = read_bvals_bvecs(bval_fname, bvec_fname)
+
+        _, brain_mask = median_otsu(dwi_data, vol_idx=[0])
+        brain_mask = binary_dilation(brain_mask, ball(8))
+
+        flat_mask = np.flatnonzero(brain_mask)
+        n_voxels = min(n_voxels, flat_mask.size)
+
+        subset_mask = np.zeros(brain_mask.shape, dtype=bool)
+        subset_mask[np.unravel_index(flat_mask[:n_voxels], brain_mask.shape)] = True
+
+        gradients = np.hstack((bvecs, bvals[..., np.newaxis]))
+        bzero = dwi_data[..., bvals < 50].mean(axis=-1)
+
+        self._dataset = DWI(
+            dataobj=dwi_data,
+            affine=img.affine,
+            brainmask=subset_mask,
+            gradients=gradients,
+            bzero=bzero,
+        )
+
+        shell_1000 = get_bval_indices(bvals, 1000, tol=20)
+        self._index = shell_1000[len(shell_1000) // 2]
+
+    def time_fit_predict(self, n_voxels, n_jobs):
+        assert self._dataset is not None
+        assert self._index is not None
+        DKIModel(self._dataset).fit_predict(self._index, n_jobs=n_jobs)
 
 
 class DiffusionGPRBenchmark:
