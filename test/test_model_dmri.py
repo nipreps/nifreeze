@@ -24,12 +24,13 @@
 
 import functools
 import re
+import time
 import warnings
 from contextlib import nullcontext
 
 import numpy as np
 import pytest
-from dipy.core.gradients import check_multi_b, gradient_table_from_bvals_bvecs
+from dipy.core.gradients import check_multi_b, get_bval_indices, gradient_table_from_bvals_bvecs
 from dipy.reconst import dki, dti
 from dipy.sims.voxel import single_tensor
 
@@ -45,6 +46,15 @@ from nifreeze.model.base import MASK_ABSENCE_WARN_MSG
 from nifreeze.model.dki import DiffusionKurtosisModel as _NFDKIModel
 from nifreeze.model.gpr import MultiShellKernel
 from nifreeze.testing import simulations as _sim
+
+import dipy.data as dpd
+import nibabel as nb
+from dipy.io import read_bvals_bvecs
+from dipy.segment.mask import median_otsu
+from joblib import cpu_count
+from scipy.ndimage import binary_dilation
+from skimage.morphology import ball
+from nifreeze.utils.ndimage import load_api
 
 B_MATRIX = np.array(
     [
@@ -992,6 +1002,89 @@ def test_dki_model_predict(multi_shell_test_data, index, ignore_bzero, use_mask)
 
         assert predicted_nf is not None
         assert np.allclose(predicted_nf, predicted_dp[..., 0])
+
+
+
+_MIN_CPUS_REQUIRED = 4
+_N_JOBS = min(_MIN_CPUS_REQUIRED, cpu_count())
+_SPEEDUP_THRESHOLD = 2.0
+
+
+def _build_dki_dataset():
+    """Load the sherbrooke_3shell dataset and return a DWI object and leave-one-out index."""
+    name = "sherbrooke_3shell"
+    dwi_fname, bval_fname, bvec_fname = dpd.get_fnames(name=name)
+
+    img = load_api(dwi_fname, nb.Nifti1Image)
+    dwi_data = img.get_fdata()
+    bvals, bvecs = read_bvals_bvecs(bval_fname, bvec_fname)
+
+    _, brain_mask = median_otsu(dwi_data, vol_idx=[0])
+    brain_mask = binary_dilation(brain_mask, ball(8))
+
+    gradients = np.hstack((bvecs, bvals[..., np.newaxis]))
+    bzero = dwi_data[..., bvals < 50].mean(axis=-1)
+
+    dataset = DWI(
+        dataobj=dwi_data,
+        affine=img.affine,
+        brainmask=brain_mask,
+        gradients=gradients,
+        bzero=bzero,
+    )
+
+    shell_1000 = get_bval_indices(bvals, 1000, tol=20)
+    index = shell_1000[len(shell_1000) // 2]
+
+    return dataset, index
+
+@pytest.mark.slow
+def test_dki_parallel_speedup():
+    """DKIModel with n_jobs > 1 should be meaningfully faster than n_jobs=1.
+
+    Specifically, running with ``n_jobs=_N_JOBS`` should yield a wall-clock
+    speedup of at least ``_SPEEDUP_THRESHOLD``x over the serial baseline.
+
+    The test is skipped when fewer than ``_MIN_CPUS_REQUIRED`` logical CPUs are
+    available, since the parallelism overhead dominates on underpowered hardware.
+    """
+    if cpu_count() < _MIN_CPUS_REQUIRED:
+        pytest.skip(
+            f"Parallel scaling test requires >= {_MIN_CPUS_REQUIRED} CPUs "
+            f"(found {cpu_count()}); skipping."
+        )
+
+    dataset, index = _build_dki_dataset()
+
+    # --- Serial run ---
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=r".*(invalid value encountered in divide|divide by zero encountered in log).*",
+            category=RuntimeWarning,
+        )
+        t0 = time.perf_counter()
+        DKIModel(dataset).fit_predict(index, n_jobs=1)
+        t_serial = time.perf_counter() - t0
+
+    # --- Parallel run ---
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=r".*(invalid value encountered in divide|divide by zero encountered in log).*",
+            category=RuntimeWarning,
+        )
+        t0 = time.perf_counter()
+        DKIModel(dataset).fit_predict(index, n_jobs=_N_JOBS)
+        t_parallel = time.perf_counter() - t0
+
+    speedup = t_serial / t_parallel if t_parallel > 0 else float("inf")
+
+    assert speedup >= _SPEEDUP_THRESHOLD, (
+        f"DKIModel parallel speedup too low: {speedup:.2f}x "
+        f"(serial={t_serial:.2f}s, parallel={t_parallel:.2f}s with n_jobs={_N_JOBS}). "
+        f"Expected >= {_SPEEDUP_THRESHOLD}x."
+    )
 
 
 @pytest.mark.parametrize(
