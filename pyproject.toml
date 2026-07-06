@@ -21,7 +21,7 @@ license-files = ["LICEN[CS]E*"]
 requires-python = ">=3.10"
 dependencies = [
   "attrs>=24.1.0",
-  "dipy>=1.5.0",
+  "dipy @ git+https://github.com/dipy/dipy.git@2ecd3655",
   "joblib",
   "matplotlib>=2.2.0,<3.11; python_version == '3.10'",
   "matplotlib>=3.11; python_version > '3.10'",
