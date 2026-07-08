@@ -133,15 +133,12 @@ class DummyDataset(BaseDataset):
         return (self.dataobj[..., idx],)
 
 
-@pytest.mark.parametrize(
-    "setup_random_uniform_spatial_data",
-    [
-        (DEFAULT_RANDOM_DATASET_SHAPE, 0.0, 1.0),
-    ],
-)
 @pytest.fixture
-def random_dataset(setup_random_uniform_spatial_data) -> BaseDataset:
+def random_dataset(request, setup_random_uniform_spatial_data) -> BaseDataset:
     """Create a BaseDataset with random data for testing."""
+
+    shape, low, high = getattr(request, "param", (DEFAULT_RANDOM_DATASET_SHAPE, 0.0, 1.0))
+    request.node.add_marker(pytest.mark.random_uniform_spatial_data(shape, low, high))
 
     data, affine = setup_random_uniform_spatial_data
     return BaseDataset(dataobj=data, affine=affine)
