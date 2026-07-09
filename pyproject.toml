@@ -99,7 +99,7 @@ antsopt = [
 benchmark = [
   "asv",
   "pyperf",
-  "virtualenv==20.30",
+  "virtualenv==20.38.0",
 ]
 
 # Aliases
