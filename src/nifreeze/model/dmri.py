@@ -255,6 +255,9 @@ class BaseDWIModel(BaseModel):
             dataset.dataobj, self._data_mask, dataset.bzero, ignore_bzero=ignore_bzero
         )
 
+        # Fitted model instance(s); populated in ``_fit``.
+        self._models: list[Any] = []
+
         super().__init__(dataset, **kwargs)
 
     def _fit(self, index: int | None = None, n_jobs: int | None = None, **kwargs) -> int:
