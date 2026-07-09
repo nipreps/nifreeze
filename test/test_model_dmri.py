@@ -1141,6 +1141,49 @@ def test_dki_single_fit_locked_reuse(multi_shell_test_data):
 
 
 @pytest.mark.parametrize(
+    "single_shell_test_data",
+    [
+        {
+            "bval_shell": 1000,
+            "S0": 100,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": 30,
+            "snr": None,
+            "vol_shape": (4, 4, 3),
+        },
+    ],
+    indirect=True,
+)
+@pytest.mark.parametrize("index", (4, 9))
+def test_dti_parallel_matches_serial(single_shell_test_data, index):
+    """Non-multivoxel models parallelize by chunking the data across workers.
+
+    Exercises the ``n_jobs > 1`` data-chunking branch of ``_fit`` taken by
+    models that do not use DIPY's ``multi_voxel_fit`` (here, DTI). Because
+    voxel-wise fitting is independent, the chunked result must match the serial
+    (``n_jobs == 1``) path.
+    """
+    dataset, _, _, _ = setup_single_shell_fit_predict_data(
+        single_shell_test_data, ignore_bzero=False, use_mask=False
+    )
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
+        warnings.filterwarnings(
+            "ignore",
+            message=r".*(invalid value encountered in divide|divide by zero encountered in log).*",
+            category=RuntimeWarning,
+        )
+        serial = model.DTIModel(dataset).fit_predict(index, n_jobs=1)
+        parallel = model.DTIModel(dataset).fit_predict(index, n_jobs=2)
+
+    assert serial is not None
+    assert parallel is not None
+    assert serial.shape == parallel.shape
+    assert np.allclose(serial, parallel, rtol=1e-5, atol=1e-6, equal_nan=True)
+
+
+@pytest.mark.parametrize(
     ("bval_shell", "S0", "evals"),
     [(1000, 100, (0.0015, 0.0003, 0.0003))],
 )
