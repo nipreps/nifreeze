@@ -198,6 +198,12 @@ class BaseDWIModel(BaseModel):
         "_models": "List with one or more (if parallel execution) model instances",
     }
 
+    _multivoxel_engine: bool = False
+    """Whether the underlying model fits per-voxel through DIPY's
+    ``multi_voxel_fit`` and therefore supports DIPY-native parallelization
+    (``engine``/``n_jobs``). Models that do not (DTI, GQI, GP) are parallelized
+    by chunking the data across workers instead."""
+
     def __init__(self, dataset: DWI, max_b: float | int | None = None, **kwargs):
         """Initialization.
 
@@ -257,7 +263,7 @@ class BaseDWIModel(BaseModel):
         n_jobs = n_jobs or 1
 
         if self._locked_fit is not None:
-            return n_jobs
+            return len(self._models)
 
         brainmask = self._dataset.brainmask
         idxmask = np.ones(len(self._dataset), dtype=bool)
@@ -279,7 +285,8 @@ class BaseDWIModel(BaseModel):
         # Append the b0 (if existing) to the gradients and the data for the
         # kurtosis model.
         # Appending instead of prepending avoids index manipulation.
-        if "DiffusionKurtosisModel" in model_str:
+        is_dki = "DiffusionKurtosisModel" in model_str
+        if is_dki:
             bzero = self._dataset.bzero
             if bzero is not None:
                 bzero = (
@@ -291,6 +298,10 @@ class BaseDWIModel(BaseModel):
 
         if model_str:
             module_name, class_name = model_str.rsplit(".", 1)
+
+            if self._multivoxel_engine and n_jobs > 1:
+                kwargs = kwargs | {"engine": "joblib", "n_jobs": n_jobs}
+
             model = getattr(
                 import_module(module_name),
                 class_name,
@@ -300,16 +311,9 @@ class BaseDWIModel(BaseModel):
 
         fit_kwargs: dict[str, Any] = {}  # Add here keyword arguments
 
-        is_dki = model_str == "dipy.reconst.dki.DiffusionKurtosisModel"
-
-        # One single CPU - linear execution (full model)
-        # DKI model does not allow parallelization as implemented here
-        if n_jobs == 1 or is_dki:
+        # Models not using DIPY's multi_voxel_fit split the fitting.
+        if n_jobs == 1 or self._multivoxel_engine:
             _modelfit, _ = _exec_fit(model, data, **fit_kwargs)
-            self._models = [_modelfit]
-            return 1
-        elif is_dki:
-            _modelfit = model.multi_fit(data, **fit_kwargs)
             self._models = [_modelfit]
             return 1
 
@@ -473,6 +477,7 @@ class DKIModel(BaseDWIModel):
 
     _modelargs = DTIModel._modelargs
     _model_class = "dipy.reconst.dki.DiffusionKurtosisModel"
+    _multivoxel_engine = True
 
 
 class GQIModel(BaseDWIModel):
