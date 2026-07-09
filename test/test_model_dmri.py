@@ -1099,6 +1099,48 @@ def test_dki_parallel_matches_serial(multi_shell_test_data, index, use_mask):
 
 
 @pytest.mark.parametrize(
+    "multi_shell_test_data",
+    [
+        {
+            "bval_shell": (1000, 2000, 3000),
+            "S0": 1,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": (5, 6, 7),
+            "snr": None,
+            "vol_shape": (4, 4, 3),
+            "add_bzero": True,
+        },
+    ],
+    indirect=True,
+)
+def test_dki_single_fit_locked_reuse(multi_shell_test_data):
+    """Single-fit mode locks one DKI model and reuses it for every prediction.
+
+    Exercises the ``_locked_fit`` early return in ``_fit``
+    (``return len(self._models)``): it must yield 1 for DKI's single,
+    internally-parallel model so the single-model predict path is taken and the
+    whole volume is predicted (not just ``1 / n_jobs`` of it).
+    """
+    dataset, _, _, _ = setup_multi_shell_fit_predict_data(
+        multi_shell_test_data, ignore_bzero=False, use_mask=False
+    )
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
+        dkimodel = model.DKIModel(dataset)
+        # Single-fit (index=None) locks a single, internally-parallel model.
+        assert dkimodel.fit_predict(None, n_jobs=2) is None
+        assert dkimodel._locked_fit is not None
+        assert len(dkimodel._models) == 1
+        # Subsequent predictions reuse the locked fit via the early return.
+        predicted = dkimodel.fit_predict(4, n_jobs=2)
+
+    assert predicted is not None
+    assert predicted.shape == dataset.dataobj.shape[:-1]
+    assert np.any(predicted != 0)
+
+
+@pytest.mark.parametrize(
     ("bval_shell", "S0", "evals"),
     [(1000, 100, (0.0015, 0.0003, 0.0003))],
 )
