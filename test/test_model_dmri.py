@@ -993,6 +993,197 @@ def test_dki_model_predict(multi_shell_test_data, index, ignore_bzero, use_mask)
 
 
 @pytest.mark.parametrize(
+    "multi_shell_test_data",
+    [
+        {
+            "bval_shell": (1000, 2000, 3000),
+            "S0": 1,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": (5, 6, 7),
+            "snr": None,
+            "vol_shape": (4, 4, 3),
+            "add_bzero": True,
+        },
+    ],
+    indirect=True,
+)
+def test_dki_dispatches_dipy_native_parallel(multi_shell_test_data, monkeypatch):
+    """``n_jobs > 1`` must switch DKI onto DIPY's parallel ``multi_voxel_fit``.
+
+    The switch is observable as the ``DiffusionKurtosisModel`` being constructed
+    with ``engine="joblib", n_jobs=N``, which routes ``multi_fit`` through the
+    parallel branch of DIPY's ``multi_voxel_fit`` decorator. With ``n_jobs == 1``
+    no ``engine`` is passed and DKI fits serially. See gh-442.
+    """
+
+    class _SpyDKIModel(dki.DiffusionKurtosisModel):
+        calls: list[dict] = []
+
+        def __init__(self, gtab, *args, **kwargs):
+            type(self).calls.append(dict(kwargs))
+            # Strip the orchestration kwargs so the (serial) real fit runs and
+            # the assertion stays a pure dispatch contract.
+            for key in ("engine", "n_jobs", "vox_per_chunk", "verbose"):
+                kwargs.pop(key, None)
+            super().__init__(gtab, *args, **kwargs)
+
+    dataset, _, _, _ = setup_multi_shell_fit_predict_data(
+        multi_shell_test_data, ignore_bzero=False, use_mask=False
+    )
+
+    # NiFreeze builds the model via ``import_module(...).DiffusionKurtosisModel``,
+    # so patching the module attribute intercepts construction inside ``_fit``.
+    monkeypatch.setattr("dipy.reconst.dki.DiffusionKurtosisModel", _SpyDKIModel)
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
+
+        _SpyDKIModel.calls = []
+        model.DKIModel(dataset).fit_predict(4, n_jobs=1)
+        assert _SpyDKIModel.calls
+        assert all("engine" not in call for call in _SpyDKIModel.calls)
+
+        # With n_jobs > 1, an engine argument is passed to DIPY's DKI model
+        _SpyDKIModel.calls = []
+        model.DKIModel(dataset).fit_predict(4, n_jobs=4)
+        assert any(
+            call.get("engine") == "joblib" and call.get("n_jobs") == 4
+            for call in _SpyDKIModel.calls
+        )
+
+    # The DIPY-native engine is a per-model capability: only multi_voxel_fit
+    # models declare it. DTI/GQI/GP keep the data-chunking path.
+    assert model.dmri.DKIModel._multivoxel_engine is True
+    assert model.dmri.DTIModel._multivoxel_engine is False
+    assert model.dmri.GQIModel._multivoxel_engine is False
+    assert model.dmri.GPModel._multivoxel_engine is False
+
+
+@pytest.mark.parametrize(
+    "multi_shell_test_data",
+    [
+        {
+            "bval_shell": (1000, 2000, 3000),
+            "S0": 1,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": (5, 6, 7),
+            "snr": None,
+            "vol_shape": (4, 4, 3),
+            "add_bzero": True,
+        },
+    ],
+    indirect=True,
+)
+@pytest.mark.parametrize("index", (4, 9))
+@pytest.mark.parametrize("use_mask", (False, True))
+def test_dki_parallel_matches_serial(multi_shell_test_data, index, use_mask):
+    """DIPY-native parallel DKI fit/predict must match the serial path exactly.
+
+    Voxel-wise fitting is independent, so ``n_jobs > 1`` (DIPY's ``joblib``
+    engine) must be numerically identical to the serial (``n_jobs == 1``) path.
+    Regression test for gh-442.
+    """
+    dataset, _, _, _ = setup_multi_shell_fit_predict_data(
+        multi_shell_test_data, ignore_bzero=False, use_mask=use_mask
+    )
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
+        serial = model.DKIModel(dataset).fit_predict(index, n_jobs=1)
+        parallel = model.DKIModel(dataset).fit_predict(index, n_jobs=4)
+
+    assert serial is not None
+    assert parallel is not None
+    assert serial.shape == parallel.shape
+    assert np.allclose(serial, parallel, rtol=1e-5, atol=1e-6, equal_nan=True)
+
+
+@pytest.mark.parametrize(
+    "multi_shell_test_data",
+    [
+        {
+            "bval_shell": (1000, 2000, 3000),
+            "S0": 1,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": (5, 6, 7),
+            "snr": None,
+            "vol_shape": (4, 4, 3),
+            "add_bzero": True,
+        },
+    ],
+    indirect=True,
+)
+def test_dki_single_fit_locked_reuse(multi_shell_test_data):
+    """Single-fit mode locks one DKI model and reuses it for every prediction.
+
+    Exercises the ``_locked_fit`` early return in ``_fit``
+    (``return len(self._models)``): it must yield 1 for DKI's single,
+    internally-parallel model so the single-model predict path is taken and the
+    whole volume is predicted (not just ``1 / n_jobs`` of it).
+    """
+    dataset, _, _, _ = setup_multi_shell_fit_predict_data(
+        multi_shell_test_data, ignore_bzero=False, use_mask=False
+    )
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
+        dkimodel = model.DKIModel(dataset)
+        # Single-fit (index=None) locks a single, internally-parallel model.
+        assert dkimodel.fit_predict(None, n_jobs=2) is None
+        assert dkimodel._locked_fit is not None
+        assert len(dkimodel._models) == 1
+        # Subsequent predictions reuse the locked fit via the early return.
+        predicted = dkimodel.fit_predict(4, n_jobs=2)
+
+    assert predicted is not None
+    assert predicted.shape == dataset.dataobj.shape[:-1]
+    assert np.any(predicted != 0)
+
+
+@pytest.mark.parametrize(
+    "single_shell_test_data",
+    [
+        {
+            "bval_shell": 1000,
+            "S0": 100,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": 30,
+            "snr": None,
+            "vol_shape": (4, 4, 3),
+        },
+    ],
+    indirect=True,
+)
+@pytest.mark.parametrize("index", (4, 9))
+def test_dti_parallel_matches_serial(single_shell_test_data, index):
+    """Non-multivoxel models parallelize by chunking the data across workers.
+
+    Exercises the ``n_jobs > 1`` data-chunking branch of ``_fit`` taken by
+    models that do not use DIPY's ``multi_voxel_fit`` (here, DTI). Because
+    voxel-wise fitting is independent, the chunked result must match the serial
+    (``n_jobs == 1``) path.
+    """
+    dataset, _, _, _ = setup_single_shell_fit_predict_data(
+        single_shell_test_data, ignore_bzero=False, use_mask=False
+    )
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
+        warnings.filterwarnings(
+            "ignore",
+            message=r".*(invalid value encountered in divide|divide by zero encountered in log).*",
+            category=RuntimeWarning,
+        )
+        serial = model.DTIModel(dataset).fit_predict(index, n_jobs=1)
+        parallel = model.DTIModel(dataset).fit_predict(index, n_jobs=2)
+
+    assert serial is not None
+    assert parallel is not None
+    assert serial.shape == parallel.shape
+    assert np.allclose(serial, parallel, rtol=1e-5, atol=1e-6, equal_nan=True)
+
+
+@pytest.mark.parametrize(
     ("bval_shell", "S0", "evals"),
     [(1000, 100, (0.0015, 0.0003, 0.0003))],
 )

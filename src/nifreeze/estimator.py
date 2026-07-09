@@ -159,10 +159,6 @@ class Estimator:
             if self._model.endswith("dti"):
                 self._model_kwargs["step"] = chunk_size
 
-            # Example: change model parameters only for DKI
-            # if self._model.endswith("dki"):
-            #     self._model_kwargs["fit_model"] = "CWLS"
-
             # Factory creates the appropriate model and pipes arguments
             model = ModelFactory.init(
                 model=self._model,
