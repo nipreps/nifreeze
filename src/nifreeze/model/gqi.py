@@ -104,7 +104,7 @@ class GeneralizedQSamplingModel(ReconstModel):
             method=self.method,
         ).T
 
-    def fit(self, data, **kwargs):
+    def fit(self, data, *, mask=None):
         return GeneralizedQSamplingFit(self, data)
 
     def predict(self, odf, *, S0=None):
