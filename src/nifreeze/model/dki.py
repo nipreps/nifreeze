@@ -27,25 +27,10 @@ from dipy.reconst.dki import DiffusionKurtosisModel as _DipyDKIModel
 
 
 class DiffusionKurtosisModel(_DipyDKIModel):
-    """A :obj:`~dipy.reconst.dki.DiffusionKurtosisModel` accepting engine kwargs at fit time.
-
-    DIPY decorates DKI's ``multi_fit`` (not ``fit``) with ``multi_voxel_fit``, so
-    stock DKI only accepts the parallelization arguments (``engine``, ``n_jobs``,
-    ...) through the *constructor*, unlike every other multi-voxel model, which
-    accepts them at *fit* time. This subclass overrides ``fit`` to forward
-    call-time orchestration kwargs into the already-decorated ``multi_fit``,
-    giving DKI the same decorated-``fit`` interface and letting NiFreeze
-    parallelize it uniformly with the other models.
-    """
+    """A :obj:`~dipy.reconst.dki.DiffusionKurtosisModel` with uniform API."""
 
     def fit(self, data, *, mask=None, **kwargs):
-        """Fit the DKI model, forwarding orchestration kwargs to ``multi_fit``.
-
-        The serial/delegate path (no orchestration kwargs) preserves stock
-        behavior, including populating ``self.extra`` for iterative/robust fits.
-        The parallel path is only taken for the standard (WLS/OLS) multi-voxel
-        methods, whose ``multi_fit`` carries no ``extra`` diagnostics.
-        """
+        """Fit the model to data."""
         # No orchestration kwargs, or a path multi_fit does not cover: delegate.
         if not kwargs or not self.is_multi_method or self.is_iter_method:
             return super().fit(data, mask=mask)
