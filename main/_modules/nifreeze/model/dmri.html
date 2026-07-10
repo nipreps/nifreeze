@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.dmri - nifreeze 26.0.0.dev113 documentation</title>
+        <title>nifreeze.model.dmri - nifreeze 26.0.0.dev116 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev113 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev116 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev113</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev116</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev113</span>
+  <span class="sidebar-brand-text">26.0.0.dev116</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -248,6 +248,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../api/nifreeze.exceptions.html">nifreeze.exceptions module</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/nifreeze.model.html">nifreeze.model package</a><input aria-label="Toggle navigation of nifreeze.model package" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.model.base.html">nifreeze.model.base module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.model.dki.html">nifreeze.model.dki module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.model.dmri.html">nifreeze.model.dmri module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.model.gpr.html">nifreeze.model.gpr module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.model.gqi.html">nifreeze.model.gqi module</a></li>
@@ -513,12 +514,6 @@
         <span class="s2">&quot;_models&quot;</span><span class="p">:</span> <span class="s2">&quot;List with one or more (if parallel execution) model instances&quot;</span><span class="p">,</span>
     <span class="p">}</span>
 
-    <span class="n">_multivoxel_engine</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether the underlying model fits per-voxel through DIPY&#39;s</span>
-<span class="sd">    ``multi_voxel_fit`` and therefore supports DIPY-native parallelization</span>
-<span class="sd">    (``engine``/``n_jobs``). Models that do not (DTI, GQI, GP) are parallelized</span>
-<span class="sd">    by chunking the data across workers instead.&quot;&quot;&quot;</span>
-
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">DWI</span><span class="p">,</span> <span class="n">max_b</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialization.</span>
 
@@ -578,8 +573,6 @@
     <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Fit the model chunk-by-chunk asynchronously&quot;&quot;&quot;</span>
 
-        <span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span> <span class="ow">or</span> <span class="mi">1</span>
-
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_models</span><span class="p">)</span>
 
@@ -595,10 +588,10 @@
         <span class="c1"># Select voxels within mask or just unravel 3D if no mask</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">brainmask</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="k">if</span> <span class="n">brainmask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
 
-        <span class="c1"># DIPY models (or one with a fully-compliant interface)</span>
+        <span class="c1"># Replace the gradient table with a DIPY object</span>
+        <span class="n">gtab</span> <span class="o">=</span> <span class="n">gradient_table_from_bvals_bvecs</span><span class="p">(</span><span class="n">gtab</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">gtab</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
         <span class="n">model_str</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_model_class&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="s2">&quot;dipy&quot;</span> <span class="ow">in</span> <span class="n">model_str</span> <span class="ow">or</span> <span class="s2">&quot;GeneralizedQSamplingModel&quot;</span> <span class="ow">in</span> <span class="n">model_str</span><span class="p">:</span>
-            <span class="n">gtab</span> <span class="o">=</span> <span class="n">gradient_table_from_bvals_bvecs</span><span class="p">(</span><span class="n">gtab</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">gtab</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
 
         <span class="c1"># Append the b0 (if existing) to the gradients and the data for the</span>
         <span class="c1"># kurtosis model.</span>
@@ -614,28 +607,23 @@
                 <span class="p">)</span>
             <span class="n">data</span><span class="p">,</span> <span class="n">gtab</span> <span class="o">=</span> <span class="n">_append_bzero</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">gtab</span><span class="p">,</span> <span class="n">bzero</span><span class="o">=</span><span class="n">bzero</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">model_str</span><span class="p">:</span>
-            <span class="n">module_name</span><span class="p">,</span> <span class="n">class_name</span> <span class="o">=</span> <span class="n">model_str</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_multivoxel_engine</span> <span class="ow">and</span> <span class="n">n_jobs</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">kwargs</span> <span class="o">=</span> <span class="n">kwargs</span> <span class="o">|</span> <span class="p">{</span><span class="s2">&quot;engine&quot;</span><span class="p">:</span> <span class="s2">&quot;joblib&quot;</span><span class="p">,</span> <span class="s2">&quot;n_jobs&quot;</span><span class="p">:</span> <span class="n">n_jobs</span><span class="p">}</span>
-
-            <span class="n">model</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span>
-                <span class="n">import_module</span><span class="p">(</span><span class="n">module_name</span><span class="p">),</span>
-                <span class="n">class_name</span><span class="p">,</span>
-            <span class="p">)(</span><span class="n">gtab</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
+        <span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span> <span class="ow">or</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">model_str</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">model_str</span><span class="si">}</span><span class="s2"> not implemented.&quot;</span><span class="p">)</span>
 
-        <span class="n">fit_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># Add here keyword arguments</span>
+        <span class="n">module_name</span><span class="p">,</span> <span class="n">class_name</span> <span class="o">=</span> <span class="n">model_str</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">import_module</span><span class="p">(</span><span class="n">module_name</span><span class="p">),</span> <span class="n">class_name</span><span class="p">)(</span><span class="n">gtab</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-        <span class="c1"># Models not using DIPY&#39;s multi_voxel_fit split the fitting.</span>
-        <span class="k">if</span> <span class="n">n_jobs</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_multivoxel_engine</span><span class="p">:</span>
-            <span class="n">_modelfit</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_exec_fit</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_kwargs</span><span class="p">)</span>
+        <span class="n">pargs</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">n_jobs</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">{</span><span class="s2">&quot;engine&quot;</span><span class="p">:</span> <span class="s2">&quot;joblib&quot;</span><span class="p">,</span> <span class="s2">&quot;n_jobs&quot;</span><span class="p">:</span> <span class="n">n_jobs</span><span class="p">}</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">_modelfit</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_exec_fit</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">pargs</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_models</span> <span class="o">=</span> <span class="p">[</span><span class="n">_modelfit</span><span class="p">]</span>
             <span class="k">return</span> <span class="mi">1</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">n_jobs</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span>
 
-        <span class="c1"># Split data into chunks of group of slices</span>
+        <span class="c1"># Fallback to nifreeze&#39;s parallelization if standard raised</span>
         <span class="n">data_chunks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array_split</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_models</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_jobs</span>
@@ -643,8 +631,7 @@
         <span class="c1"># Parallelize process with joblib</span>
         <span class="k">with</span> <span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
             <span class="n">results</span> <span class="o">=</span> <span class="n">executor</span><span class="p">(</span>
-                <span class="n">delayed</span><span class="p">(</span><span class="n">_exec_fit</span><span class="p">)(</span><span class="n">model</span><span class="p">,</span> <span class="n">dchunk</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_kwargs</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dchunk</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data_chunks</span><span class="p">)</span>
+                <span class="n">delayed</span><span class="p">(</span><span class="n">_exec_fit</span><span class="p">)(</span><span class="n">model</span><span class="p">,</span> <span class="n">dchunk</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dchunk</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data_chunks</span><span class="p">)</span>
             <span class="p">)</span>
         <span class="k">for</span> <span class="n">submodel</span><span class="p">,</span> <span class="n">rindex</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_models</span><span class="p">[</span><span class="n">rindex</span><span class="p">]</span> <span class="o">=</span> <span class="n">submodel</span>
@@ -676,11 +663,9 @@
 
         <span class="n">gradient</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">gradients</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="p">:]</span>
 
-        <span class="n">model_str</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_model_class&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="s2">&quot;dipy&quot;</span> <span class="ow">in</span> <span class="n">model_str</span> <span class="ow">or</span> <span class="s2">&quot;GeneralizedQSamplingModel&quot;</span> <span class="ow">in</span> <span class="n">model_str</span><span class="p">:</span>
-            <span class="n">gradient</span> <span class="o">=</span> <span class="n">gradient_table_from_bvals_bvecs</span><span class="p">(</span>
-                <span class="n">gradient</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">gradient</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-            <span class="p">)</span>
+        <span class="n">gradient</span> <span class="o">=</span> <span class="n">gradient_table_from_bvals_bvecs</span><span class="p">(</span>
+            <span class="n">gradient</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">gradient</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">n_models</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">predicted</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_exec_predict</span><span class="p">(</span>
@@ -806,11 +791,10 @@
 <div class="viewcode-block" id="DKIModel">
 <a class="viewcode-back" href="../../../api/nifreeze.model.dmri.html#nifreeze.model.DKIModel">[docs]</a>
 <span class="k">class</span> <span class="nc">DKIModel</span><span class="p">(</span><span class="n">BaseDWIModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A wrapper of :obj:`dipy.reconst.dki.DiffusionKurtosisModel`.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A wrapper of :obj:`~nifreeze.model.dki.DiffusionKurtosisModel`.&quot;&quot;&quot;</span>
 
     <span class="n">_modelargs</span> <span class="o">=</span> <span class="n">DTIModel</span><span class="o">.</span><span class="n">_modelargs</span>
-    <span class="n">_model_class</span> <span class="o">=</span> <span class="s2">&quot;dipy.reconst.dki.DiffusionKurtosisModel&quot;</span>
-    <span class="n">_multivoxel_engine</span> <span class="o">=</span> <span class="kc">True</span></div>
+    <span class="n">_model_class</span> <span class="o">=</span> <span class="s2">&quot;nifreeze.model.dki.DiffusionKurtosisModel&quot;</span></div>
 
 
 
@@ -868,7 +852,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=660d5cfc"></script>
+</div><script src="../../../_static/documentation_options.js?v=3e04c242"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

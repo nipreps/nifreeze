@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.base - nifreeze 26.0.0.dev116 documentation</title>
+        <title>nifreeze.model.dki - nifreeze 26.0.0.dev116 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -311,7 +311,7 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <h1>Source code for nifreeze.model.base</h1><div class="highlight"><pre>
+          <h1>Source code for nifreeze.model.dki</h1><div class="highlight"><pre>
 <span></span><span class="c1"># emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-</span>
 <span class="c1"># vi: set ft=python sts=4 ts=4 sw=4 et:</span>
 <span class="c1">#</span>
@@ -334,196 +334,29 @@
 <span class="c1">#</span>
 <span class="c1">#     https://www.nipreps.org/community/licensing/</span>
 <span class="c1">#</span>
-<span class="sd">&quot;&quot;&quot;Base infrastructure for nifreeze&#39;s models.&quot;&quot;&quot;</span>
-
-<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
-<span class="kn">from</span> <span class="nn">warnings</span> <span class="kn">import</span> <span class="n">warn</span>
+<span class="sd">&quot;&quot;&quot;A diffusion kurtosis imaging (DKI) model with a normalized ``fit`` interface.&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-
-<span class="n">MASK_ABSENCE_WARN_MSG</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="s2">&quot;No mask provided; consider using a mask to avoid issues in model optimization.&quot;</span>
-<span class="p">)</span>
-<span class="sd">&quot;&quot;&quot;Mask warning message.&quot;&quot;&quot;</span>
-<span class="n">PREDICTED_MAP_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;This model requires the predicted map at initialization&quot;</span>
-<span class="sd">&quot;&quot;&quot;Oracle requirement error message.&quot;&quot;&quot;</span>
-<span class="n">UNSUPPORTED_MODEL_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;Unsupported model &lt;</span><span class="si">{model}</span><span class="s2">&gt;.&quot;</span>
-<span class="sd">&quot;&quot;&quot;Unsupported model error message&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">dipy.reconst.dki</span> <span class="kn">import</span> <span class="n">DiffusionKurtosisModel</span> <span class="k">as</span> <span class="n">_DipyDKIModel</span>
 
 
-<div class="viewcode-block" id="ModelFactory">
-<a class="viewcode-back" href="../../../api/nifreeze.model.base.html#nifreeze.model.ModelFactory">[docs]</a>
-<span class="k">class</span> <span class="nc">ModelFactory</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A factory for instantiating data models.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="DiffusionKurtosisModel">
+<a class="viewcode-back" href="../../../api/nifreeze.model.dki.html#nifreeze.model.dki.DiffusionKurtosisModel">[docs]</a>
+<span class="k">class</span> <span class="nc">DiffusionKurtosisModel</span><span class="p">(</span><span class="n">_DipyDKIModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A :obj:`~dipy.reconst.dki.DiffusionKurtosisModel` with uniform API.&quot;&quot;&quot;</span>
 
-<div class="viewcode-block" id="ModelFactory.init">
-<a class="viewcode-back" href="../../../api/nifreeze.model.base.html#nifreeze.model.ModelFactory.init">[docs]</a>
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Instantiate a diffusion model.</span>
+<div class="viewcode-block" id="DiffusionKurtosisModel.fit">
+<a class="viewcode-back" href="../../../api/nifreeze.model.dki.html#nifreeze.model.dki.DiffusionKurtosisModel.fit">[docs]</a>
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fit the model to data.&quot;&quot;&quot;</span>
+        <span class="c1"># No orchestration kwargs, or a path multi_fit does not cover: delegate.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">kwargs</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_multi_method</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_iter_method</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">)</span>
 
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        model : :obj:`str`</span>
-<span class="sd">            Diffusion model.</span>
-<span class="sd">            Options: ``&quot;DTI&quot;``, ``&quot;DKI&quot;``, ``&quot;S0&quot;``, ``&quot;AverageDWI&quot;``</span>
-
-<span class="sd">        Return</span>
-<span class="sd">        ------</span>
-<span class="sd">        model : :obj:`~dipy.reconst.ReconstModel`</span>
-<span class="sd">            A model object compliant with DIPY&#39;s interface.</span>
-
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;No model identifier provided.&quot;</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;trivial&quot;</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">TrivialModel</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;dataset&quot;</span><span class="p">),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;avg&quot;</span><span class="p">,</span> <span class="s2">&quot;average&quot;</span><span class="p">,</span> <span class="s2">&quot;mean&quot;</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">ExpectationModel</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;dataset&quot;</span><span class="p">),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;avgdwi&quot;</span><span class="p">,</span> <span class="s2">&quot;averagedwi&quot;</span><span class="p">,</span> <span class="s2">&quot;meandwi&quot;</span><span class="p">):</span>
-            <span class="kn">from</span> <span class="nn">nifreeze.model.dmri</span> <span class="kn">import</span> <span class="n">AverageDWIModel</span>
-
-            <span class="k">return</span> <span class="n">AverageDWIModel</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;dataset&quot;</span><span class="p">),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;gqi&quot;</span><span class="p">,</span> <span class="s2">&quot;dti&quot;</span><span class="p">,</span> <span class="s2">&quot;dki&quot;</span><span class="p">,</span> <span class="s2">&quot;pet&quot;</span><span class="p">):</span>
-            <span class="kn">from</span> <span class="nn">importlib</span> <span class="kn">import</span> <span class="n">import_module</span>
-
-            <span class="n">thismod</span> <span class="o">=</span> <span class="n">import_module</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;nifreeze.model.</span><span class="si">{</span><span class="s1">&#39;pet&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">model</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s1">&#39;pet&#39;</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;dmri&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="p">)</span>
-            <span class="n">Model</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">thismod</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">Model&quot;</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">Model</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;dataset&quot;</span><span class="p">),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="n">UNSUPPORTED_MODEL_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">))</span></div>
-</div>
-
-
-
-<div class="viewcode-block" id="BaseModel">
-<a class="viewcode-back" href="../../../api/nifreeze.model.base.html#nifreeze.model.BaseModel">[docs]</a>
-<span class="k">class</span> <span class="nc">BaseModel</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Defines the interface and default methods.</span>
-
-<span class="sd">    Implements the interface of :obj:`dipy.reconst.base.ReconstModel`.</span>
-<span class="sd">    Instead of inheriting from the abstract base, this implementation</span>
-<span class="sd">    follows type adaptation principles, as it is easier to maintain</span>
-<span class="sd">    and to read (see https://www.youtube.com/watch?v=3MNVP9-hglc).</span>
-
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">ABCMeta</span>
-
-    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;_dataset&quot;</span><span class="p">,</span> <span class="s2">&quot;_locked_fit&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Base initialization.&quot;&quot;&quot;</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span> <span class="o">=</span> <span class="n">dataset</span>
-        <span class="c1"># Warn if mask not present</span>
-        <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="n">brainmask</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">warn</span><span class="p">(</span><span class="n">MASK_ABSENCE_WARN_MSG</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
-
-<div class="viewcode-block" id="BaseModel.fit_predict">
-<a class="viewcode-back" href="../../../api/nifreeze.model.base.html#nifreeze.model.BaseModel.fit_predict">[docs]</a>
-    <span class="nd">@abstractmethod</span>
-    <span class="k">def</span> <span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Fit and predict the indicated index of the dataset (abstract signature).</span>
-
-<span class="sd">        If ``index`` is :obj:`None`, then the model is executed in *single-fit mode* meaning</span>
-<span class="sd">        that it will be run only once in all the data available.</span>
-<span class="sd">        Please note that all the predictions of this model will suffer from data leakage</span>
-<span class="sd">        from the original volume.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        index : :obj:`int`, optional</span>
-<span class="sd">            The index to predict.</span>
-<span class="sd">            If :obj:`None`, no prediction will be executed.</span>
-
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="kc">None</span></div>
-</div>
-
-
-
-<div class="viewcode-block" id="TrivialModel">
-<a class="viewcode-back" href="../../../api/nifreeze.model.base.html#nifreeze.model.TrivialModel">[docs]</a>
-<span class="k">class</span> <span class="nc">TrivialModel</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A trivial model that returns a given map always.&quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">predicted</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Implement object initialization.&quot;&quot;&quot;</span>
-
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">predicted</span>
-            <span class="k">if</span> <span class="n">predicted</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-            <span class="c1"># Infer from dataset if not provided at initialization</span>
-            <span class="k">else</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="s2">&quot;reference&quot;</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="s2">&quot;bzero&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
-        <span class="p">)</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">PREDICTED_MAP_ERROR_MSG</span><span class="p">)</span>
-
-<div class="viewcode-block" id="TrivialModel.fit_predict">
-<a class="viewcode-back" href="../../../api/nifreeze.model.base.html#nifreeze.model.TrivialModel.fit_predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the reference map.&quot;&quot;&quot;</span>
-
-        <span class="c1"># No need to check fit (if not fitted, has raised already)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span></div>
-</div>
-
-
-
-<div class="viewcode-block" id="ExpectationModel">
-<a class="viewcode-back" href="../../../api/nifreeze.model.base.html#nifreeze.model.ExpectationModel">[docs]</a>
-<span class="k">class</span> <span class="nc">ExpectationModel</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A trivial model that returns an expectation map (for example, average).&quot;&quot;&quot;</span>
-
-    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;_stat&quot;</span><span class="p">,)</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="s2">&quot;median&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a new model.&quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_stat</span> <span class="o">=</span> <span class="n">stat</span>
-
-<div class="viewcode-block" id="ExpectationModel.fit_predict">
-<a class="viewcode-back" href="../../../api/nifreeze.model.base.html#nifreeze.model.ExpectationModel.fit_predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return the expectation map.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        index : :obj:`int`</span>
-<span class="sd">            The volume index that is left-out in fitting, and then predicted.</span>
-
-<span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span>
-
-        <span class="c1"># Select the summary statistic</span>
-        <span class="n">avg_func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">np</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;stat&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stat</span><span class="p">))</span>
-
-        <span class="c1"># Create index mask</span>
-        <span class="n">index_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">index_mask</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-            <span class="c1"># Calculate the average</span>
-            <span class="k">return</span> <span class="n">avg_func</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="p">[</span><span class="n">index_mask</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span> <span class="o">=</span> <span class="n">avg_func</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="p">[</span><span class="n">index_mask</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span></div>
+        <span class="n">data_thres</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_signal</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">multi_fit</span><span class="p">(</span>
+            <span class="n">data_thres</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">}</span>
+        <span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
 </div>
 
 </pre></div>

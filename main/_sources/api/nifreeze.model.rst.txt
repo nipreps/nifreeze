@@ -13,6 +13,7 @@ Submodules
    :maxdepth: 1
 
    nifreeze.model.base
+   nifreeze.model.dki
    nifreeze.model.dmri
    nifreeze.model.gpr
    nifreeze.model.gqi
