@@ -1070,7 +1070,7 @@ def test_serial_fit_typeerror_reraises(multi_shell_test_data, monkeypatch):
 
     class _RaisingDKIModel(_NFDKIModel):
         def fit(self, data, *, mask=None, **kwargs):
-            raise TypeError("boom")
+            raise TypeError("mock type error")
 
     dataset, _, _, _ = setup_multi_shell_fit_predict_data(
         multi_shell_test_data, ignore_bzero=False, use_mask=False
@@ -1079,7 +1079,7 @@ def test_serial_fit_typeerror_reraises(multi_shell_test_data, monkeypatch):
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
-        with pytest.raises(TypeError, match="boom"):
+        with pytest.raises(TypeError, match="mock type error"):
             model.DKIModel(dataset).fit_predict(4, n_jobs=1)
 
 
