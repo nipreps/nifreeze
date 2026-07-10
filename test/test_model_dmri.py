@@ -1065,6 +1065,39 @@ def test_dki_dispatches_dipy_native_parallel(multi_shell_test_data, monkeypatch)
     ],
     indirect=True,
 )
+def test_serial_fit_typeerror_reraises(multi_shell_test_data, monkeypatch):
+    """A ``TypeError`` raised from a serial (``n_jobs == 1``) fit must propagate."""
+
+    class _RaisingDKIModel(_NFDKIModel):
+        def fit(self, data, *, mask=None, **kwargs):
+            raise TypeError("boom")
+
+    dataset, _, _, _ = setup_multi_shell_fit_predict_data(
+        multi_shell_test_data, ignore_bzero=False, use_mask=False
+    )
+    monkeypatch.setattr("nifreeze.model.dki.DiffusionKurtosisModel", _RaisingDKIModel)
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
+        with pytest.raises(TypeError, match="boom"):
+            model.DKIModel(dataset).fit_predict(4, n_jobs=1)
+
+
+@pytest.mark.parametrize(
+    "multi_shell_test_data",
+    [
+        {
+            "bval_shell": (1000, 2000, 3000),
+            "S0": 1,
+            "evals": (0.0015, 0.0003, 0.0003),
+            "hsph_dirs": (5, 6, 7),
+            "snr": None,
+            "vol_shape": (4, 4, 3),
+            "add_bzero": True,
+        },
+    ],
+    indirect=True,
+)
 @pytest.mark.parametrize("index", (4, 9))
 @pytest.mark.parametrize("use_mask", (False, True))
 def test_dki_parallel_matches_serial(multi_shell_test_data, index, use_mask):
