@@ -198,12 +198,6 @@ class BaseDWIModel(BaseModel):
         "_models": "List with one or more (if parallel execution) model instances",
     }
 
-    _multivoxel_engine: bool = False
-    """Whether the underlying model fits per-voxel through DIPY's
-    ``multi_voxel_fit`` and therefore supports DIPY-native parallelization
-    (``engine``/``n_jobs``). Models that do not (DTI, GQI, GP) are parallelized
-    by chunking the data across workers instead."""
-
     def __init__(self, dataset: DWI, max_b: float | int | None = None, **kwargs):
         """Initialization.
 
@@ -263,8 +257,6 @@ class BaseDWIModel(BaseModel):
     def _fit(self, index: int | None = None, n_jobs: int | None = None, **kwargs) -> int:
         """Fit the model chunk-by-chunk asynchronously"""
 
-        n_jobs = n_jobs or 1
-
         if self._locked_fit is not None:
             return len(self._models)
 
@@ -280,10 +272,10 @@ class BaseDWIModel(BaseModel):
         # Select voxels within mask or just unravel 3D if no mask
         data = data[brainmask, ...] if brainmask is not None else data.reshape(-1, data.shape[-1])
 
-        # DIPY models (or one with a fully-compliant interface)
+        # Replace the gradient table with a DIPY object
+        gtab = gradient_table_from_bvals_bvecs(gtab[:, -1], gtab[:, :-1])
+
         model_str = getattr(self, "_model_class", "")
-        if "dipy" in model_str or "GeneralizedQSamplingModel" in model_str:
-            gtab = gradient_table_from_bvals_bvecs(gtab[:, -1], gtab[:, :-1])
 
         # Append the b0 (if existing) to the gradients and the data for the
         # kurtosis model.
@@ -299,28 +291,23 @@ class BaseDWIModel(BaseModel):
                 )
             data, gtab = _append_bzero(data, gtab, bzero=bzero)
 
-        if model_str:
-            module_name, class_name = model_str.rsplit(".", 1)
-
-            if self._multivoxel_engine and n_jobs > 1:
-                kwargs = kwargs | {"engine": "joblib", "n_jobs": n_jobs}
-
-            model = getattr(
-                import_module(module_name),
-                class_name,
-            )(gtab, **kwargs)
-        else:
+        n_jobs = n_jobs or 1
+        if not model_str:
             raise NotImplementedError(f"{model_str} not implemented.")
 
-        fit_kwargs: dict[str, Any] = {}  # Add here keyword arguments
+        module_name, class_name = model_str.rsplit(".", 1)
+        model = getattr(import_module(module_name), class_name)(gtab, **kwargs)
 
-        # Models not using DIPY's multi_voxel_fit split the fitting.
-        if n_jobs == 1 or self._multivoxel_engine:
-            _modelfit, _ = _exec_fit(model, data, **fit_kwargs)
+        pargs = {} if n_jobs == 1 else {"engine": "joblib", "n_jobs": n_jobs}
+        try:
+            _modelfit, _ = _exec_fit(model, data, **pargs)
             self._models = [_modelfit]
             return 1
+        except TypeError:
+            if n_jobs == 1:
+                raise
 
-        # Split data into chunks of group of slices
+        # Fallback to nifreeze's parallelization if standard raised
         data_chunks = np.array_split(data, n_jobs)
 
         self._models = [None] * n_jobs
@@ -328,8 +315,7 @@ class BaseDWIModel(BaseModel):
         # Parallelize process with joblib
         with Parallel(n_jobs=n_jobs) as executor:
             results = executor(
-                delayed(_exec_fit)(model, dchunk, i, **fit_kwargs)
-                for i, dchunk in enumerate(data_chunks)
+                delayed(_exec_fit)(model, dchunk, i) for i, dchunk in enumerate(data_chunks)
             )
         for submodel, rindex in results:
             self._models[rindex] = submodel
@@ -359,11 +345,9 @@ class BaseDWIModel(BaseModel):
 
         gradient = self._dataset.gradients[index, :]
 
-        model_str = getattr(self, "_model_class", "")
-        if "dipy" in model_str or "GeneralizedQSamplingModel" in model_str:
-            gradient = gradient_table_from_bvals_bvecs(
-                gradient[np.newaxis, -1], gradient[np.newaxis, :-1]
-            )
+        gradient = gradient_table_from_bvals_bvecs(
+            gradient[np.newaxis, -1], gradient[np.newaxis, :-1]
+        )
 
         if n_models == 1:
             predicted, _ = _exec_predict(
@@ -476,11 +460,10 @@ class DTIModel(BaseDWIModel):
 
 
 class DKIModel(BaseDWIModel):
-    """A wrapper of :obj:`dipy.reconst.dki.DiffusionKurtosisModel`."""
+    """A wrapper of :obj:`~nifreeze.model.dki.DiffusionKurtosisModel`."""
 
     _modelargs = DTIModel._modelargs
-    _model_class = "dipy.reconst.dki.DiffusionKurtosisModel"
-    _multivoxel_engine = True
+    _model_class = "nifreeze.model.dki.DiffusionKurtosisModel"
 
 
 class GQIModel(BaseDWIModel):

@@ -261,7 +261,7 @@ def test_parsed_dwimodel_instatiation(setup_random_dwi_data, datadir, models):
     elif models == "dki":
         assert (
             DKIModel(dataset, **model_kwargs)._model_class
-            == "dipy.reconst.dki.DiffusionKurtosisModel"
+            == "nifreeze.model.dki.DiffusionKurtosisModel"
         )
 
 
