@@ -87,7 +87,17 @@ def _build_parser() -> ArgumentParser:
         action="store",
         nargs="+",
         default=["trivial"],
-        help="Select the data model to generate registration targets.",
+        help=(
+            "Select the data model(s) used to generate registration targets; "
+            "multiple models run as a cascade. By default each model runs in "
+            "Leave-One-Volume-Out mode (refit per held-out volume). Prefix a "
+            "model name with 'single' (e.g. 'singledti') to run it in "
+            "single-fit mode: fit once on all volumes and reuse that locked "
+            "prediction for every volume. Single-fit is faster but leaks the "
+            "held-out volume into its own target (biasing motion toward zero); "
+            "use it for development, testing, or coarse initialization only, "
+            "not for accuracy-critical estimation."
+        ),
     )
     parser.add_argument(
         "--nthreads",
@@ -168,11 +178,14 @@ def _build_parser() -> ArgumentParser:
 
 def _determine_single_fit_mode(model_name: str) -> bool:
     """Determine if a model is to be run in *single-fit mode*.
-    If a model is requested to be run in *single-fit mode*, it will be run only
-    once in all the data available.
+    A model is run in *single-fit mode* (fit once on all data, reuse the locked
+    prediction for every volume) when its name is prefixed with ``single``. See
+    :class:`~nifreeze.estimator.Estimator` for when this mode is appropriate —
+    it leaks the held-out volume into its own target, so it is for
+    development/testing/initialization, not accuracy-critical estimation.
     Parameters
     ----------
-    model_name : :obj:`str
+    model_name : :obj:`str`
         Model name.
     Returns
     -------

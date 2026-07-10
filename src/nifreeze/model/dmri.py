@@ -420,10 +420,21 @@ class AverageDWIModel(ExpectationModel):
         self._detrend = detrend
 
     def fit_predict(self, index: int | None = None, *_, **kwargs) -> np.ndarray:
-        """Return the average map."""
+        """
+        Return the shell-wise average map for the held-out ``index``.
+
+        This model is inherently Leave-One-Volume-Out: the target for ``index``
+        is the average of the *other* volumes on the same shell. It therefore
+        does not support single-fit mode (``index=None``) — a single locked
+        average would mix shells and include the held-out volume in its own
+        target — and raises if locking is requested.
+        """
 
         if index is None:
-            raise RuntimeError(f"Model {self.__class__.__name__} does not allow locking.")
+            raise RuntimeError(
+                f"Model {self.__class__.__name__} does not allow locking "
+                "(single-fit mode): its target is a shell-wise leave-one-out average."
+            )
 
         shellmask = dwi_select_shells(
             self._dataset.gradients,

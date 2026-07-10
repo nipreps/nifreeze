@@ -28,7 +28,9 @@ against and volume-to-volume registration is ill-posed. LOVO solves this by
 *synthesising* the target: leave volume $k$ out, fit the GP to the rest,
 evaluate the predictive mean at $(\mathbf{g}_k, b_k)$, and register volume $k$
 to it ([[concept-image-registration]]). Every volume thus gets a
-same-contrast target derived from the data itself.
+same-contrast target derived from the data itself. That the target is built
+*without* volume $k$ is not incidental — the held-out independence is the
+validity guarantee of the whole scheme; see [[concept-leave-one-volume-out]].
 
 ## The loop is necessarily iterative
 

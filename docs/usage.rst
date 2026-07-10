@@ -77,6 +77,12 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
    - ``strategy``: strategy used to traverse the 4D sequence. The list of
      supported strategies can be found at :doc:`api/nifreeze.utils.iterators`.
    - ``prev``: estimators can be stacked and be run sequentially.
+   - ``single_fit``: when ``True``, fit the model once on all volumes and reuse
+     that locked prediction for every index instead of refitting per held-out
+     volume. This leaks the target volume into its own reference, so it is meant
+     for development, testing, or coarse initialization — not accuracy-critical
+     estimation (see :doc:`design`). On the CLI, prefix the model name with
+     ``single`` (e.g. ``singledti``) to enable it.
 
 4. **Fit the Models to Estimate the Affine Transformation**:
 
@@ -95,7 +101,7 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
           seed=seed,
       )
 
-   The ``run`` method employs the Leave-One-Volume-Out (LOVO) splitting technique to iteratively process DWI data volumes for each specified model. Affine transformations align the volumes, updating the `DWI` object with the estimated parameters. This method accepts several parameters:
+   The ``run`` method employs the Leave-One-Volume-Out (LOVO) splitting technique to iteratively process DWI data volumes for each specified model: each volume is registered to a prediction fit on all the *other* volumes, so the target is independent of the volume being aligned. (In the opt-in single-fit mode above, that per-volume refit is replaced by a single locked prediction — faster, but no longer held-out-independent.) Affine transformations align the volumes, updating the `DWI` object with the estimated parameters. This method accepts several parameters:
 
    - ``dataset``: The target dataset, represented by this tool's internal type.
    - ``align_kwargs``: Parameters to configure the image registration process.

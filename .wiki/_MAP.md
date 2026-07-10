@@ -23,6 +23,11 @@ A page that is the target of any edge here is exempt from the orphan rule
 | refs/andersson-2016-outlier-replacement.md | informs | pages/entity/concept-outlier-detection-replacement.md | theory grounding |
 | pages/synthesis/gp-prediction-underpins-lovo.md | depends_on | refs/andersson-2015-gp-dmri.md | predictive mean = LOVO target |
 | pages/synthesis/andersson-eddy-framework-lineage.md | depends_on | refs/andersson-2016-integrated-eddy.md | methodological template |
+| refs/andersson-2015-gp-dmri.md | informs | pages/entity/concept-leave-one-volume-out.md | theory grounding |
+| refs/andersson-2016-integrated-eddy.md | informs | pages/entity/concept-leave-one-volume-out.md | theory grounding |
+| pages/synthesis/gp-prediction-underpins-lovo.md | depends_on | pages/entity/concept-leave-one-volume-out.md | independence invariant |
+| pages/synthesis/single-fit-mode-admissibility.md | depends_on | pages/entity/concept-leave-one-volume-out.md | admissibility hinges on independence |
+| pages/synthesis/single-fit-mode-admissibility.md | depends_on | refs/andersson-2015-gp-dmri.md | LOVO/predictor grounding |
 | refs/andersson-2015-gp-dmri.md | cites | refs/minka-2017-learning-how-learn-learning-point-sets.md |  |
 | refs/andersson-2015-gp-dmri.md | cites | refs/setsompop-2013-pushing-limits-vivo-diffusion-mri-human.md |  |
 | refs/andersson-2016-integrated-eddy.md | cites | refs/setsompop-2013-pushing-limits-vivo-diffusion-mri-human.md |  |

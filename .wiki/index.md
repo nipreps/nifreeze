@@ -18,6 +18,7 @@ Theory concepts grounding nifreeze (literature-sourced, `namespace: paper`):
 - [Rigid-body head motion](pages/entity/concept-rigid-body-motion.md)
 - [Image registration to a model prediction](pages/entity/concept-image-registration.md)
 - [Outlier (signal-dropout) detection and replacement](pages/entity/concept-outlier-detection-replacement.md)
+- [Leave-One-Volume-Out (LOVO) estimation](pages/entity/concept-leave-one-volume-out.md)
 
 ## Synthesis
 
@@ -25,6 +26,7 @@ Project-level technical claims integrating the concepts and references:
 
 - [GP prediction underpins Leave-One-Volume-Out estimation](pages/synthesis/gp-prediction-underpins-lovo.md)
 - [The Andersson eddy framework and nifreeze’s lineage from it](pages/synthesis/andersson-eddy-framework-lineage.md)
+- [When single-fit mode is admissible (and when it is not)](pages/synthesis/single-fit-mode-admissibility.md)
 
 ## References
 

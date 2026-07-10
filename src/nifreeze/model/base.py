@@ -101,6 +101,12 @@ class BaseModel(ABC):
     def __init__(self, dataset, **kwargs):
         """Base initialization."""
 
+        # ``_locked_fit`` holds the single-fit (locked) state and is overloaded
+        # across subclasses: an ndarray prediction map in Trivial/Expectation
+        # models, a boolean sentinel (the fit lives in ``self._models``) in the
+        # DIPY-backed DWI models, and always ``None`` in models that do not
+        # support locking (e.g. the PET B-spline model). ``None`` means "not
+        # locked" — i.e. per-index LOVO fitting.
         self._locked_fit = None
         self._dataset = dataset
         # Warn if mask not present
@@ -112,16 +118,33 @@ class BaseModel(ABC):
         """
         Fit and predict the indicated index of the dataset (abstract signature).
 
-        If ``index`` is :obj:`None`, then the model is executed in *single-fit mode* meaning
-        that it will be run only once in all the data available.
-        Please note that all the predictions of this model will suffer from data leakage
-        from the original volume.
+        In the default Leave-One-Volume-Out (LOVO) mode, ``index`` names the
+        volume to hold out: the model is fit on every *other* volume and used to
+        predict the held-out one. This held-out independence is load-bearing —
+        the prediction must not depend on the volume it becomes the registration
+        target for.
+
+        If ``index`` is :obj:`None`, the model is executed in *single-fit mode*:
+        it is fit **once** on all available data and locked, so every subsequent
+        prediction returns that same fit regardless of index. Because the target
+        volume is then included in the fit that generates its own reference, all
+        predictions suffer from data leakage from the original volume, biasing
+        the downstream transform toward the identity. Single-fit mode is
+        therefore **not** a substitute for LOVO in accuracy-critical estimation;
+        its legitimate uses are:
+
+        - target-independent references (e.g.
+          :class:`~nifreeze.model.base.TrivialModel`), where no leakage can occur;
+        - fast, deterministic development / CI / integration tests; and
+        - coarse, low-DOF linear registration used only to *initialize* a
+          later, independence-respecting LOVO stage.
 
         Parameters
         ----------
         index : :obj:`int`, optional
-            The index to predict.
-            If :obj:`None`, no prediction will be executed.
+            The volume index to hold out and predict (LOVO mode).
+            If :obj:`None`, single-fit mode is used and no held-out prediction is
+            produced.
 
         """
         return None

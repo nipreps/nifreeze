@@ -28,3 +28,13 @@ followed by bullets. See [`schema.md`](schema.md) for the format contract
 - upgraded `refs/andersson-2016-outlier-replacement.md`: confidence 0.8→0.95, removed `refresh_needed_if`, added source provenance
 - **reference reconciliation**: parsed the paper's 55-entry bibliography from the PDF and cross-checked against `refs/`; all entries already covered (6 initial mismatches were year-parse artefacts — Rasmussen 2003/2006, Van Essen→essen-2013, Vu 2015, Zwiers 2010, Graham 2016 — or a sentence fragment). No new refs needed.
 - deleted both consumed PDFs from `_inbox/` (content fully captured; papers are published/retrievable)
+
+## 2026-07-10 — wiki-expansion — LOVO validity + single-fit admissibility
+- added entity page [[concept-leave-one-volume-out]] stating the **held-out independence invariant**: the target for volume $k$ must not depend on $k$'s own signal; violating it (single-fit on a data-driven model) is a self-registration biased toward the identity ("no motion detected"), a circularity rather than a numerical approximation
+- added synthesis page [[single-fit-mode-admissibility]]: single-fit is **not** a lossless $\times N$ speed-up, but IS admissible for target-independent references (`TrivialModel`), development/CI/integration tests, and coarse low-DOF initialisation; the real DKI levers (exact closed-form LOO for linear WLS fits, voxel-chunk parallelism, BLAS control) are captured as a flagged method note
+- cross-linked [[gp-prediction-underpins-lovo]] to the new concept; registered both pages in `index.md`; wired 5 `_MAP.md` edges (`informs`/`depends_on`)
+- filed flag on the manuscript/wiki gap (held-out independence must be stated explicitly; exact LOO exists for the linear models)
+
+## 2026-07-10 — /wiki-flags — opened F0001 (content)
+- summary: State explicitly that held-out independence is load-bearing for LOVO validity (target for volume k must not depend on k's own signal); note exact closed-form LOO exists for the linear DTI/DKI WLS fits.
+- target: pages/entity/concept-leave-one-volume-out.md
