@@ -248,7 +248,7 @@ def multi_shell_test_data(request):
     n_voxels = np.prod(vol_shape)
 
     gtab = []
-    for bval, dirs in zip(bval_shell, hsph_dirs):
+    for bval, dirs in zip(bval_shell, hsph_dirs, strict=False):
         gtab.append(_sim.create_single_shell_gradient_table(dirs, bval))
 
     # Combine the bvals and bvecs to create the final gradient table
@@ -1222,13 +1222,14 @@ def test_dti_parallel_matches_serial(single_shell_test_data, index):
     indirect=True,
 )
 @pytest.mark.parametrize("index", (4, 9))
-def test_gqi_fit_predict(single_shell_test_data, index):
+@pytest.mark.parametrize("method", ("standard", "gqi2"))
+def test_gqi_fit_predict(single_shell_test_data, index, method):
     """GQI (a NiFreeze-custom model) parallelizes by chunking the data.
 
     Its ``fit`` does not accept the DIPY-native ``engine`` kwargs, so ``_fit``
     must fall back to the data-chunking path. The chunked (``n_jobs=2``) result
     must match the serial (``n_jobs=1``) path since voxel-wise fitting is
-    independent.
+    independent. Both GQI variants (``"standard"`` and ``"gqi2"``) are covered.
     """
     dataset, _, _, _ = setup_single_shell_fit_predict_data(
         single_shell_test_data, ignore_bzero=False, use_mask=False
@@ -1236,8 +1237,8 @@ def test_gqi_fit_predict(single_shell_test_data, index):
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
-        serial = model.dmri.GQIModel(dataset).fit_predict(index, n_jobs=1)
-        parallel = model.dmri.GQIModel(dataset).fit_predict(index, n_jobs=2)
+        serial = model.dmri.GQIModel(dataset, method=method).fit_predict(index, n_jobs=1)
+        parallel = model.dmri.GQIModel(dataset, method=method).fit_predict(index, n_jobs=2)
 
     assert serial is not None
     assert parallel is not None

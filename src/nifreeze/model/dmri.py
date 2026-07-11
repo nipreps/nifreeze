@@ -467,12 +467,11 @@ class DKIModel(BaseDWIModel):
 
 
 class GQIModel(BaseDWIModel):
-    """A wrapper of :obj:`dipy.reconst.gqi.GeneralizedQSamplingModel`."""
+    """A wrapper of :obj:`nifreeze.model.gqi.GeneralizedQSamplingModel`."""
 
     _modelargs = (
         "method",
         "sampling_length",
-        "normalize_peaks",
     )
     _model_class = "nifreeze.model.gqi.GeneralizedQSamplingModel"
 
