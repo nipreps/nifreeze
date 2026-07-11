@@ -41,6 +41,7 @@ from dipy.data import dsi_voxels, get_fnames, get_sphere
 
 from nifreeze import model
 from nifreeze.data.dmri import DWI
+from nifreeze.data.dmri.base import DWI_B0_MULTIPLE_VOLUMES_WARN_MSG
 from nifreeze.data.dmri.utils import format_gradients
 from nifreeze.model.base import MASK_ABSENCE_WARN_MSG
 from nifreeze.model.gqi import (
@@ -319,15 +320,18 @@ def test_gqi_lovo_prediction_stanford_hardi(method):
     leave-one-volume-out mode through the NiFreeze wrapper, and checks that the
     predicted volume correlates with the actual left-out volume within the mask.
     """
+    from typing import cast
+
     import nibabel as nb
     from dipy.io.gradients import read_bvals_bvecs
+    from nibabel.spatialimages import SpatialImage
 
     try:
         fdwi, fbval, fbvec = get_fnames(name="stanford_hardi")
     except Exception as exc:  # pragma: no cover - network/cache guard
         pytest.skip(f"Stanford HARDI not available: {exc}")
 
-    img = nb.load(fdwi)
+    img = cast(SpatialImage, nb.load(fdwi))
     # Crop a small central slab to keep the test fast.
     sl = (slice(28, 52), slice(50, 74), slice(35, 40))
     dataobj = np.asarray(img.dataobj[sl].astype(np.float32))
@@ -336,9 +340,13 @@ def test_gqi_lovo_prediction_stanford_hardi(method):
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
+        warnings.filterwarnings(
+            "ignore", message=DWI_B0_MULTIPLE_VOLUMES_WARN_MSG, category=UserWarning
+        )
         dataset = DWI(dataobj=dataobj, affine=img.affine, gradients=gradients)
 
     # A simple intensity mask from the b=0 reference confines the comparison.
+    assert dataset.bzero is not None
     brainmask = dataset.bzero > np.percentile(dataset.bzero, 60)
 
     index = dataset.dataobj.shape[-1] // 2
