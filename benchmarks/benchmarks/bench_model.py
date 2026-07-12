@@ -90,10 +90,8 @@ class DKIBenchmark:
         if n_jobs == 1:
             return 1.0
 
-        dataset = self._dataset
-        index = self._index
-        assert dataset is not None
-        assert index is not None
+        assert self._dataset is not None
+        assert self._index is not None
 
         t_serial_start = time.perf_counter()
         DKIModel(self._dataset).fit_predict(self._index, n_jobs=1)
@@ -104,8 +102,6 @@ class DKIBenchmark:
         t_parallel = time.perf_counter() - t_parallel_start
 
         return t_serial / t_parallel if t_parallel > 0 else float("inf")
-
-    track_parallel_speedup.unit = "ratio"
 
 
 class DiffusionGPRBenchmark:
