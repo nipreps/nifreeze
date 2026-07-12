@@ -194,3 +194,9 @@ A page that is the target of any edge here is exempt from the orphan rule
 | refs/andersson-2016-outlier-replacement.md | cites | refs/jones-2011-diffusion-mri-theory-methods-applications.md |  |
 | refs/andersson-2016-outlier-replacement.md | cites | refs/anon-2010-tortoise-integrated-software-package-processing-diffusion.md |  |
 | refs/andersson-2016-outlier-replacement.md | cites | refs/cook-2006-camino-open-source-diffusion-mri-reconstruction-processing.md |  |
+| refs/yeh-2010-generalized-q-sampling-imaging.md | informs | pages/entity/concept-generalized-q-sampling-imaging.md | theory grounding |
+| refs/yeh-2010-generalized-q-sampling-imaging.md | extends | refs/tuch-2004-q-ball-imaging.md | QBI is the infinite-L limit of GQI |
+| pages/entity/concept-generalized-q-sampling-imaging.md | depends_on | pages/entity/concept-diffusion-mri-signal.md | inherits q-space / signal symbols |
+| pages/synthesis/q-space-reconstruction-landscape.md | depends_on | refs/yeh-2010-generalized-q-sampling-imaging.md | GQI unifies the landscape |
+| pages/synthesis/q-space-reconstruction-landscape.md | cites | refs/tuch-2004-q-ball-imaging.md | QBI shell method |
+| pages/synthesis/q-space-reconstruction-landscape.md | informs | pages/entity/concept-generalized-q-sampling-imaging.md | positions GQI vs QBI/DSI |

@@ -35,6 +35,14 @@ followed by bullets. See [`schema.md`](schema.md) for the format contract
 - cross-linked [[gp-prediction-underpins-lovo]] to the new concept; registered both pages in `index.md`; wired 5 `_MAP.md` edges (`informs`/`depends_on`)
 - filed flag on the manuscript/wiki gap (held-out independence must be stated explicitly; exact LOO exists for the linear models)
 
+## 2026-07-12 — /wiki-inbox-sweep — GQI deep expansion from dropped PDF
+- consumed `_inbox/Generalized__q-Sampling_Imaging.pdf` (Yeh, Wedeen & Tseng, IEEE TMI 2010; DOI 10.1109/TMI.2010.2045126), read in full
+- wrote deep concept page [[concept-generalized-q-sampling-imaging]] transcribing equations 1–12 verbatim (Fourier foundation, cosine transform, SDF, GQI sinc quadrature Eq. 6, L² basis Eq. 8, diffusion sampling length, b-value form Eq. 9, balanced requirement Eq. 10, QA Eq. 11, simulation model Eq. 12) plus SDF-vs-ODF distinction, QBI/DSI relation, and validation status
+- added ref page `refs/yeh-2010-generalized-q-sampling-imaging.md` (confidence 0.9, primary source read) and a metadata stub `refs/tuch-2004-q-ball-imaging.md` (QBI, referenced as the L→∞ limit of GQI)
+- added synthesis page [[q-space-reconstruction-landscape]] (DSI vs QBI vs GQI: what each reconstructs, sampling, core operation, regularizer; GQI as unifier; inter-voxel SDF comparability)
+- wired `index.md` (1 entity, 1 synthesis, 2 refs) and `_MAP.md` (6 edges: `informs`/`extends`/`depends_on`/`cites`)
+- parked the source PDF at `.wiki/_sources/yeh-2010-generalized-q-sampling-imaging.pdf` and added `.wiki/_sources/` to `.gitignore` (verified via `git check-ignore`); `_inbox/` cleared
+
 ## 2026-07-10 — /wiki-flags — opened F0001 (content)
 - summary: State explicitly that held-out independence is load-bearing for LOVO validity (target for volume k must not depend on k's own signal); note exact closed-form LOO exists for the linear DTI/DKI WLS fits.
 - target: pages/entity/concept-leave-one-volume-out.md

@@ -19,6 +19,7 @@ Theory concepts grounding nifreeze (literature-sourced, `namespace: paper`):
 - [Image registration to a model prediction](pages/entity/concept-image-registration.md)
 - [Outlier (signal-dropout) detection and replacement](pages/entity/concept-outlier-detection-replacement.md)
 - [Leave-One-Volume-Out (LOVO) estimation](pages/entity/concept-leave-one-volume-out.md)
+- [Generalized q-Sampling Imaging (GQI)](pages/entity/concept-generalized-q-sampling-imaging.md)
 
 ## Synthesis
 
@@ -27,6 +28,7 @@ Project-level technical claims integrating the concepts and references:
 - [GP prediction underpins Leave-One-Volume-Out estimation](pages/synthesis/gp-prediction-underpins-lovo.md)
 - [The Andersson eddy framework and nifreeze’s lineage from it](pages/synthesis/andersson-eddy-framework-lineage.md)
 - [When single-fit mode is admissible (and when it is not)](pages/synthesis/single-fit-mode-admissibility.md)
+- [The q-space reconstruction landscape: DSI, QBI, and GQI](pages/synthesis/q-space-reconstruction-landscape.md)
 
 ## References
 
@@ -172,3 +174,8 @@ Project-level technical claims integrating the concepts and references:
 - [Correction of eddy‐current distortions in diffusion tensor images using the known directions…](refs/zhuang-2006-correction-eddycurrent-distortions-diffusion-tensor-images.md)
 - [Correction of eddy current distortions in high angular resolution diffusion imaging](refs/zhuang-2013-correction-eddy-current-distortions-high-angular.md)
 - [Patching cardiac and head motion artefacts in diffusion-weighted images](refs/zwiers-2010-patching-cardiac-head-motion-artefacts-diffusion-weighted.md)
+
+### Inbox intake (q-space reconstruction expansion)
+
+- [Yeh, Wedeen & Tseng (2010) — Generalized q-Sampling Imaging](refs/yeh-2010-generalized-q-sampling-imaging.md)
+- [Tuch (2004) — Q-ball imaging](refs/tuch-2004-q-ball-imaging.md)
