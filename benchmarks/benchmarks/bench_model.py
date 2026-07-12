@@ -43,6 +43,7 @@ from nifreeze.utils.ndimage import load_api
 class DKIBenchmark:
     params = ([1000, 5000, 10000], [1, min(8, cpu_count())])
     param_names = ["n_voxels", "n_jobs"]
+    unit = "ratio"
 
     def __init__(self):
         self._dataset = None
@@ -88,6 +89,11 @@ class DKIBenchmark:
 
         if n_jobs == 1:
             return 1.0
+
+        dataset = self._dataset
+        index = self._index
+        assert dataset is not None
+        assert index is not None
 
         t_serial_start = time.perf_counter()
         DKIModel(self._dataset).fit_predict(self._index, n_jobs=1)
