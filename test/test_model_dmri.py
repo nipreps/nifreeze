@@ -74,8 +74,7 @@ B_MATRIX = np.array(
 
 _N_REPEATS = 5
 _MIN_CPUS_REQUIRED = 4  # Protect against parallelization overhead if underpowered
-_PARALLEL_JOBS = 4      # Target workers for parallel fit
-
+_PARALLEL_JOBS = 4  # Target workers for parallel fit
 
 
 def ignore_dipy_divide_warning(func):
@@ -1103,9 +1102,7 @@ def test_dki_parallel_speedup():
 
     # Ignore warning due to multiple b0 volumes
     with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore", message=DWI_REDUNDANT_B0_WARN_MSG, category=UserWarning
-        )
+        warnings.filterwarnings("ignore", message=DWI_REDUNDANT_B0_WARN_MSG, category=UserWarning)
         dataset, index = _build_dki_dataset()
 
     serial_ts = []
@@ -1117,7 +1114,9 @@ def test_dki_parallel_speedup():
             _, t_serial = _fit_predict_once(model.DKIModel, dataset, index, n_jobs=1)
 
             # Parallel run
-            _, t_parallel = _fit_predict_once(model.DKIModel, dataset, index, n_jobs=min(_PARALLEL_JOBS, cpu_count()))
+            _, t_parallel = _fit_predict_once(
+                model.DKIModel, dataset, index, n_jobs=min(_PARALLEL_JOBS, cpu_count())
+            )
 
             serial_ts.append(t_serial)
             parallel_ts.append(t_parallel)

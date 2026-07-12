@@ -107,6 +107,7 @@ class DKIBenchmark:
 
     track_parallel_speedup.unit = "ratio"
 
+
 class DiffusionGPRBenchmark:
     def __init__(self):
         self._estimator = None
