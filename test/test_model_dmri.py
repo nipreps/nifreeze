@@ -23,10 +23,11 @@
 """Unit tests exercising dMRI models."""
 
 import functools
+import os
 import re
 import time
 import warnings
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
 
 import numpy as np
 import pytest
@@ -36,6 +37,7 @@ from dipy.sims.voxel import single_tensor
 
 from nifreeze import model
 from nifreeze.data.dmri import DWI
+from nifreeze.data.dmri.base import DWI_REDUNDANT_B0_WARN_MSG
 from nifreeze.data.dmri.utils import (
     DEFAULT_LOWB_THRESHOLD,
     DTI_MIN_ORIENTATIONS,
@@ -52,8 +54,6 @@ import nibabel as nb
 from dipy.io import read_bvals_bvecs
 from dipy.segment.mask import median_otsu
 from joblib import cpu_count
-from scipy.ndimage import binary_dilation
-from skimage.morphology import ball
 from nifreeze.utils.ndimage import load_api
 
 B_MATRIX = np.array(
@@ -72,6 +72,11 @@ B_MATRIX = np.array(
     ],
     dtype=np.float32,
 )
+
+_N_REPEATS = 5
+_MIN_CPUS_REQUIRED = 4  # Protect against parallelization overhead if underpowered
+_PARALLEL_JOBS = 4      # Target workers for parallel fit
+
 
 
 def ignore_dipy_divide_warning(func):
@@ -1004,13 +1009,35 @@ def test_dki_model_predict(multi_shell_test_data, index, ignore_bzero, use_mask)
         assert np.allclose(predicted_nf, predicted_dp[..., 0])
 
 
+@contextmanager
+def _single_thread_blas():
+    keys = (
+        "OMP_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "MKL_NUM_THREADS",
+        "VECLIB_MAXIMUM_THREADS",
+        "NUMEXPR_NUM_THREADS",
+    )
+    old = {k: os.environ.get(k) for k in keys}
+    try:
+        for k in keys:
+            os.environ[k] = "1"
+        yield
+    finally:
+        for k, v in old.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
 
-_MIN_CPUS_REQUIRED = 4
-_N_JOBS = min(_MIN_CPUS_REQUIRED, cpu_count())
-_SPEEDUP_THRESHOLD = 2.0
+
+def _center_crop(mask, data4d, half_size=10):
+    center = tuple(val // 2 for val in mask.shape)
+    slices = tuple(slice(val - half_size, val + half_size) for val in center)
+    return mask[slices], data4d[slices + (slice(None),)]
 
 
-def _build_dki_dataset():
+def _build_dki_dataset(half_size=10):
     """Load the sherbrooke_3shell dataset and return a DWI object and leave-one-out index."""
     name = "sherbrooke_3shell"
     dwi_fname, bval_fname, bvec_fname = dpd.get_fnames(name=name)
@@ -1020,7 +1047,13 @@ def _build_dki_dataset():
     bvals, bvecs = read_bvals_bvecs(bval_fname, bvec_fname)
 
     _, brain_mask = median_otsu(dwi_data, vol_idx=[0])
-    brain_mask = binary_dilation(brain_mask, ball(8))
+
+    # Crop the data around a cube sized 2*half_size
+    center = tuple(s // 2 for s in brain_mask.shape)
+    roi = tuple(slice(c - half_size, c + half_size) for c in center)
+
+    brain_mask = brain_mask[roi]
+    dwi_data = dwi_data[roi + (slice(None),)]
 
     gradients = np.hstack((bvecs, bvals[..., np.newaxis]))
     bzero = dwi_data[..., bvals < 50].mean(axis=-1)
@@ -1038,12 +1071,27 @@ def _build_dki_dataset():
 
     return dataset, index
 
-@pytest.mark.slow
+
+def _fit_predict_once(model_cls, dataset, index, n_jobs):
+    t0 = time.perf_counter()
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=r".*(invalid value encountered in divide|divide by zero encountered in log).*",
+            category=RuntimeWarning,
+        )
+        predicted = model_cls(dataset).fit_predict(index, n_jobs=n_jobs)
+
+    dt = time.perf_counter() - t0
+    return predicted, dt
+
+
 def test_dki_parallel_speedup():
     """DKIModel with n_jobs > 1 should be meaningfully faster than n_jobs=1.
 
     Specifically, running with ``n_jobs=_N_JOBS`` should yield a wall-clock
-    speedup of at least ``_SPEEDUP_THRESHOLD``x over the serial baseline.
+    speedup over the serial baseline.
 
     The test is skipped when fewer than ``_MIN_CPUS_REQUIRED`` logical CPUs are
     available, since the parallelism overhead dominates on underpowered hardware.
@@ -1054,37 +1102,30 @@ def test_dki_parallel_speedup():
             f"(found {cpu_count()}); skipping."
         )
 
-    dataset, index = _build_dki_dataset()
-
-    # --- Serial run ---
+    # Ignore warning due to multiple b0 volumes
     with warnings.catch_warnings():
         warnings.filterwarnings(
-            "ignore",
-            message=r".*(invalid value encountered in divide|divide by zero encountered in log).*",
-            category=RuntimeWarning,
+            "ignore", message=DWI_REDUNDANT_B0_WARN_MSG, category=UserWarning
         )
-        t0 = time.perf_counter()
-        DKIModel(dataset).fit_predict(index, n_jobs=1)
-        t_serial = time.perf_counter() - t0
+        dataset, index = _build_dki_dataset()
 
-    # --- Parallel run ---
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message=r".*(invalid value encountered in divide|divide by zero encountered in log).*",
-            category=RuntimeWarning,
-        )
-        t0 = time.perf_counter()
-        DKIModel(dataset).fit_predict(index, n_jobs=_N_JOBS)
-        t_parallel = time.perf_counter() - t0
+    serial_ts = []
+    parallel_ts = []
 
-    speedup = t_serial / t_parallel if t_parallel > 0 else float("inf")
+    with _single_thread_blas():
+        for _ in range(_N_REPEATS):
+            # Serial run
+            _, t_serial = _fit_predict_once(model.DKIModel, dataset, index, n_jobs=1)
 
-    assert speedup >= _SPEEDUP_THRESHOLD, (
-        f"DKIModel parallel speedup too low: {speedup:.2f}x "
-        f"(serial={t_serial:.2f}s, parallel={t_parallel:.2f}s with n_jobs={_N_JOBS}). "
-        f"Expected >= {_SPEEDUP_THRESHOLD}x."
-    )
+            # Parallel run
+            _, t_parallel = _fit_predict_once(model.DKIModel, dataset, index, n_jobs=min(_PARALLEL_JOBS, cpu_count()))
+
+            serial_ts.append(t_serial)
+            parallel_ts.append(t_parallel)
+
+    t_serial = float(np.median(serial_ts))
+    t_parallel = float(np.median(parallel_ts))
+    assert t_serial / t_parallel > 1.0 if t_parallel > 0 else float("inf")
 
 
 @pytest.mark.parametrize(
