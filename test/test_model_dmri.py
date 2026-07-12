@@ -29,11 +29,16 @@ import time
 import warnings
 from contextlib import contextmanager, nullcontext
 
+import dipy.data as dpd
+import nibabel as nb
 import numpy as np
 import pytest
 from dipy.core.gradients import check_multi_b, get_bval_indices, gradient_table_from_bvals_bvecs
+from dipy.io import read_bvals_bvecs
 from dipy.reconst import dki, dti
+from dipy.segment.mask import median_otsu
 from dipy.sims.voxel import single_tensor
+from joblib import cpu_count
 
 from nifreeze import model
 from nifreeze.data.dmri import DWI
@@ -48,12 +53,6 @@ from nifreeze.model.base import MASK_ABSENCE_WARN_MSG
 from nifreeze.model.dki import DiffusionKurtosisModel as _NFDKIModel
 from nifreeze.model.gpr import MultiShellKernel
 from nifreeze.testing import simulations as _sim
-
-import dipy.data as dpd
-import nibabel as nb
-from dipy.io import read_bvals_bvecs
-from dipy.segment.mask import median_otsu
-from joblib import cpu_count
 from nifreeze.utils.ndimage import load_api
 
 B_MATRIX = np.array(
