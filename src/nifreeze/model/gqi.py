@@ -186,7 +186,7 @@ class GeneralizedQSamplingFit(ReconstFit):
 
 
 def gqi_kernel(gtab, param_lambda, sphere, method="standard"):
-    r"""Forward GQI kernel, shape ``(n_gradients, n_vertices)``.
+    r"""Compute the forward GQI kernel, shape ``(n_gradients, n_vertices)``.
 
     ``method="standard"`` implements the sinc reconstruction of Yeh et al.
     (2010), Eq. 6/9 (verified to machine precision against the paper and DIPY);
