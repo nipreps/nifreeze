@@ -69,6 +69,7 @@ import warnings
 import numpy as np
 from dipy.core.subdivide_octahedron import create_unit_sphere
 from dipy.reconst.base import ReconstFit, ReconstModel
+from dipy.reconst.gqi import squared_radial_component
 
 INVERSE_LAMBDA = 1e-6
 DEFAULT_SPHERE_RECURSION_LEVEL = 5
@@ -191,7 +192,7 @@ def gqi_kernel(gtab, param_lambda, sphere, method="standard"):
     ``method="standard"`` implements the sinc reconstruction of Yeh et al.
     (2010), Eq. 6/9 (verified to machine precision against the paper and DIPY);
     ``method="gqi2"`` uses the :math:`L^2`-weighted basis of Eq. 8
-    (:func:`squared_radial_component`).
+    (:func:`~dipy.reconst.gqi.squared_radial_component`, imported from DIPY).
     """
     # 0.01506 = 6*D where D is the free water diffusion coefficient
     # l_values sqrt(6 D tau) D free water diffusion coefficient and
@@ -248,12 +249,3 @@ def prediction_kernel(gtab, param_lambda, sphere, method="standard"):
     GtG = K @ K.T
     identity = np.eye(GtG.shape[0])
     return np.linalg.inv(GtG + INVERSE_LAMBDA * identity) @ K
-
-
-def squared_radial_component(x, *, tol=0.01):
-    """Part of the GQI2 integral."""
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        result = (2 * x * np.cos(x) + (x * x - 2) * np.sin(x)) / (x**3)
-    x_near_zero = (x < tol) & (x > -tol)
-    return np.where(x_near_zero, 1.0 / 3, result)
