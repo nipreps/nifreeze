@@ -14,6 +14,7 @@ Contents
 
     installation
     design
+    models
     usage
     running
     developers
