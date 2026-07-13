@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.model.pet module" href="nifreeze.model.pet.html"><link rel="prev" title="nifreeze.model.gpr module" href="nifreeze.model.gpr.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.gqi module - nifreeze 26.0.0.dev126 documentation</title>
+        <title>nifreeze.model.gqi module - nifreeze 26.0.0.dev142 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev126 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev142 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev126</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev142</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev126</span>
+  <span class="sidebar-brand-text">26.0.0.dev142</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -206,6 +206,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../design.html">Design Principles</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../design.html#extending-nifreeze">Extending <em>NiFreeze</em></a></li>
 <li class="toctree-l1"><a class="reference internal" href="../design.html#contributing-to-nifreeze">Contributing to NiFreeze</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../models.html">Model implementation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../usage.html">How to Use</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../running.html">Running <em>NiFreeze</em></a></li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="../developers.html">For developers</a><input aria-label="Toggle navigation of For developers" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
@@ -321,179 +322,188 @@
           <section id="module-nifreeze.model.gqi">
 <span id="nifreeze-model-gqi-module"></span><h1>nifreeze.model.gqi module<a class="headerlink" href="#module-nifreeze.model.gqi" title="Link to this heading">¶</a></h1>
 <p>Classes and functions for generalized q-sampling</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.model.gqi.DEFAULT_SPHERE_RECURSION_LEVEL">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">DEFAULT_SPHERE_RECURSION_LEVEL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">5</span></em><a class="headerlink" href="#nifreeze.model.gqi.DEFAULT_SPHERE_RECURSION_LEVEL" title="Link to this definition">¶</a></dt>
+<dd><p>Default icosahedral subdivision level of the ODF sampling sphere (1026
+vertices); see <a class="reference internal" href="../models.html#gqi-sphere-density"><span class="std std-ref">Sphere density and the default recursion level</span></a> for the experiment justifying it.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.model.gqi.FREE_WATER_DIFFUSIVITY_6D">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">FREE_WATER_DIFFUSIVITY_6D</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.01506</span></em><a class="headerlink" href="#nifreeze.model.gqi.FREE_WATER_DIFFUSIVITY_6D" title="Link to this definition">¶</a></dt>
+<dd><p><span class="math notranslate nohighlight">\(6 D\)</span> where <span class="math notranslate nohighlight">\(D\)</span> is the free-water diffusion coefficient; the GQI
+scaling factor <span class="math notranslate nohighlight">\(\sqrt{6 D \tau}\)</span> with <span class="math notranslate nohighlight">\(\tau\)</span> folded into the b-value.</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="nifreeze.model.gqi.GeneralizedQSamplingFit">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">GeneralizedQSamplingFit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#GeneralizedQSamplingFit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.GeneralizedQSamplingFit" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.reconst.html#dipy.reconst.base.ReconstFit" title="(in dipy v1.12.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReconstFit</span></code></a></p>
-<p>Calculates PDF and ODF for a single voxel</p>
+<dd><p>Bases: <a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.reconst.html#dipy.reconst.odf.OdfFit" title="(in dipy v1.12.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">OdfFit</span></code></a></p>
+<p>Store the model and signal data for a fitted voxel (or voxels).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>model</strong> (<em>object,</em>) – DiffusionSpectrumModel</p></li>
-<li><p><strong>data</strong> (<em>1d ndarray,</em>) – signal values</p></li>
+<li><p><strong>model</strong> (<a class="reference internal" href="#nifreeze.model.gqi.GeneralizedQSamplingModel" title="nifreeze.model.gqi.GeneralizedQSamplingModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GeneralizedQSamplingModel</span></code></a>) – The GQI model instance this fit belongs to.</p></li>
+<li><p><strong>data</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – Signal values, shaped <code class="docutils literal notranslate"><span class="pre">(n_gradients,)</span></code> for a single voxel or
+<code class="docutils literal notranslate"><span class="pre">(n_voxels,</span> <span class="pre">n_gradients)</span></code> for a masked volume.</p></li>
 </ul>
 </dd>
 </dl>
 <dl class="py method">
-<dt class="sig sig-object py" id="nifreeze.model.gqi.GeneralizedQSamplingFit.fit">
-<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#GeneralizedQSamplingFit.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.GeneralizedQSamplingFit.fit" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="nifreeze.model.gqi.GeneralizedQSamplingFit.odf">
-<span class="sig-name descname"><span class="pre">odf</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#GeneralizedQSamplingFit.odf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.GeneralizedQSamplingFit.odf" title="Link to this definition">¶</a></dt>
-<dd><p>Calculates the discrete ODF for a given discrete sphere.</p>
+<span class="sig-name descname"><span class="pre">odf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sphere</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#GeneralizedQSamplingFit.odf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.GeneralizedQSamplingFit.odf" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the discrete orientation distribution function (ODF/SDF).</p>
+<p>Applies the forward GQI kernel to the fitted signal, implementing the
+signal-to-SDF transform of Yeh et al. (2010). This satisfies the
+<a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.reconst.html#dipy.reconst.odf.OdfFit" title="(in dipy v1.12.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OdfFit</span></code></a> contract shared by DIPY’s ODF models and
+is distinct from <a class="reference internal" href="#nifreeze.model.gqi.GeneralizedQSamplingFit.predict" title="nifreeze.model.gqi.GeneralizedQSamplingFit.predict"><code class="xref py py-meth docutils literal notranslate"><span class="pre">predict()</span></code></a>, which maps signal back to signal.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>sphere</strong> (<a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.core.html#dipy.core.sphere.Sphere" title="(in dipy v1.12.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sphere</span></code></a>, optional) – ODF sampling sphere. When <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a> (default), the model’s sphere
+is reused and the pre-computed forward kernel is applied directly,
+avoiding recomputation.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The discrete ODF, shaped <code class="docutils literal notranslate"><span class="pre">(n_vertices,)</span></code> for a single voxel or
+<code class="docutils literal notranslate"><span class="pre">(n_voxels,</span> <span class="pre">n_vertices)</span></code> for a masked volume. Unlike
+<a class="reference internal" href="#nifreeze.model.gqi.GeneralizedQSamplingFit.predict" title="nifreeze.model.gqi.GeneralizedQSamplingFit.predict"><code class="xref py py-meth docutils literal notranslate"><span class="pre">predict()</span></code></a>, the result is <strong>not</strong> clamped to non-negative
+values (matching DIPY).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nifreeze.model.gqi.GeneralizedQSamplingFit.predict">
 <span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gtab</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">S0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#GeneralizedQSamplingFit.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.GeneralizedQSamplingFit.predict" title="Link to this definition">¶</a></dt>
-<dd><p>Predict using the fit model.</p>
+<dd><p>Predict the diffusion signal on <code class="docutils literal notranslate"><span class="pre">gtab</span></code> from the fitted data.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This signal-to-signal prediction is a <strong>NiFreeze extension</strong> of GQI;
+Yeh et al. (2010) defines only the forward signal-to-SDF transform.
+It maps the fitted signal to the SDF and back via a
+Tikhonov-regularized reconstruction kernel
+(<a class="reference internal" href="#nifreeze.model.gqi.prediction_kernel" title="nifreeze.model.gqi.prediction_kernel"><code class="xref py py-func docutils literal notranslate"><span class="pre">prediction_kernel()</span></code></a>). See <a class="reference internal" href="../models.html#gqi-models"><span class="std std-ref">Generalized q-Sampling Imaging (GQI)</span></a> for the
+construction.</p>
+</div>
+<p>The result is clamped to non-negative values. <code class="docutils literal notranslate"><span class="pre">S0</span></code> is accepted for
+API compatibility with the other NiFreeze DWI models but is unused.</p>
+<p class="rubric">Notes</p>
+<p>The kernel round-trip approximately preserves signal scale for the
+<code class="docutils literal notranslate"><span class="pre">&quot;standard&quot;</span></code> (sinc) kernel, but not for <code class="docutils literal notranslate"><span class="pre">&quot;gqi2&quot;</span></code>; prefer
+<code class="docutils literal notranslate"><span class="pre">&quot;standard&quot;</span></code> when the predicted amplitude matters. See
+<a class="reference internal" href="../models.html#gqi-reconstruction-fidelity"><span class="std std-ref">Reconstruction fidelity and the intercept behaviour</span></a>.</p>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nifreeze.model.gqi.GeneralizedQSamplingModel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">GeneralizedQSamplingModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gtab</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'standard'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize_peaks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sphere</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#GeneralizedQSamplingModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.GeneralizedQSamplingModel" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.reconst.html#dipy.reconst.base.ReconstModel" title="(in dipy v1.12.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ReconstModel</span></code></a></p>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">GeneralizedQSamplingModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gtab</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'standard'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sphere</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recursion_level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#GeneralizedQSamplingModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.GeneralizedQSamplingModel" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.reconst.html#dipy.reconst.odf.OdfModel" title="(in dipy v1.12.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">OdfModel</span></code></a></p>
 <p>Generalized Q-Sampling Imaging.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul>
+<li><p><strong>gtab</strong> (<a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.core.html#dipy.core.gradients.GradientTable" title="(in dipy v1.12.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GradientTable</span></code></a>) – Gradient table of the data to fit.</p></li>
+<li><p><strong>method</strong> (<em>{“standard”, “gqi2”}, optional</em>) – GQI reconstruction variant. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;standard&quot;</span></code> (the sinc
+basis of Yeh et al., 2010, Eq. 6/9).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This default <strong>deliberately deviates from DIPY</strong>, whose GQI
+model defaults to <code class="docutils literal notranslate"><span class="pre">&quot;gqi2&quot;</span></code>. NiFreeze uses GQI as a <em>signal
+predictor</em>, and <code class="docutils literal notranslate"><span class="pre">&quot;standard&quot;</span></code> round-trips the diffusion signal
+more faithfully than <code class="docutils literal notranslate"><span class="pre">&quot;gqi2&quot;</span></code> (see
+<a class="reference internal" href="../models.html#gqi-reconstruction-fidelity"><span class="std std-ref">Reconstruction fidelity and the intercept behaviour</span></a>). Anyone cross-referencing
+DIPY should note the changed default.</p>
+</div>
+</li>
+<li><p><strong>sampling_length</strong> (<em>float, optional</em>) – Diffusion sampling length <span class="math notranslate nohighlight">\(\sigma\)</span> (<code class="docutils literal notranslate"><span class="pre">lambda</span></code> in Yeh Eq. 9);
+recommended range 1–1.3.</p></li>
+<li><p><strong>sphere</strong> (<a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.core.html#dipy.core.sphere.Sphere" title="(in dipy v1.12.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sphere</span></code></a>, optional) – ODF sampling sphere. When given, <code class="docutils literal notranslate"><span class="pre">recursion_level</span></code> is ignored.</p></li>
+<li><p><strong>recursion_level</strong> (<em>int, optional</em>) – Subdivision level of the icosahedral ODF sampling sphere built when
+<code class="docutils literal notranslate"><span class="pre">sphere</span></code> is not provided; higher values give a denser sphere.
+Defaults to <a class="reference internal" href="#nifreeze.model.gqi.DEFAULT_SPHERE_RECURSION_LEVEL" title="nifreeze.model.gqi.DEFAULT_SPHERE_RECURSION_LEVEL"><code class="xref py py-data docutils literal notranslate"><span class="pre">DEFAULT_SPHERE_RECURSION_LEVEL</span></code></a>. See
+<a class="reference internal" href="../models.html#gqi-sphere-density"><span class="std std-ref">Sphere density and the default recursion level</span></a> for the experiment justifying the default
+(past the fidelity knee for both single-shell and grid acquisitions,
+while denser spheres only keep paying off for grid/multi-shell data).</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="nifreeze.model.gqi.GeneralizedQSamplingModel.fit">
 <span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#GeneralizedQSamplingModel.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.GeneralizedQSamplingModel.fit" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="py method">
-<dt class="sig sig-object py" id="nifreeze.model.gqi.GeneralizedQSamplingModel.predict">
-<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">odf</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">S0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#GeneralizedQSamplingModel.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.GeneralizedQSamplingModel.predict" title="Link to this definition">¶</a></dt>
-<dd><p>Predict a signal for this GeneralizedQSamplingModel instance given parameters.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>odf</strong> (<em>ndarray</em>) – Map of ODFs.</p></li>
-<li><p><strong>gtab</strong> (<em>ndarray</em>) – Orientations where signal will be simulated</p></li>
-<li><p><strong>sphere</strong> (<a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.core.html#dipy.core.sphere.Sphere" title="(in dipy v1.12.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sphere</span></code></a>) – A sphere object, must be the same used for calculating the ODFs.</p></li>
-</ul>
-</dd>
-</dl>
 </dd></dl>
 
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.model.gqi.equatorial_maximum">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">equatorial_maximum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vertices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">odf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pole</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#equatorial_maximum"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.equatorial_maximum" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.model.gqi.equatorial_zone_vertices">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">equatorial_zone_vertices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vertices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pole</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#equatorial_zone_vertices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.equatorial_zone_vertices" title="Link to this definition">¶</a></dt>
-<dd><p>finds the ‘vertices’ in the equatorial zone conjugate
-to ‘pole’ with width half ‘width’ degrees</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.model.gqi.INVERSE_LAMBDA">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">INVERSE_LAMBDA</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1e-06</span></em><a class="headerlink" href="#nifreeze.model.gqi.INVERSE_LAMBDA" title="Link to this definition">¶</a></dt>
+<dd><p>Tikhonov regularization weight <span class="math notranslate nohighlight">\(\lambda_0\)</span> for the reconstruction kernel
+<span class="math notranslate nohighlight">\((\mathbf{K}\mathbf{K}^{\mathsf T} + \lambda_0\mathbf{I})^{-1}\mathbf{K}\)</span>
+(see <a class="reference internal" href="#nifreeze.model.gqi.prediction_kernel" title="nifreeze.model.gqi.prediction_kernel"><code class="xref py py-func docutils literal notranslate"><span class="pre">prediction_kernel()</span></code></a>).</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.model.gqi.gqi_kernel">
 <span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">gqi_kernel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gtab</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_lambda</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sphere</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'standard'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#gqi_kernel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.gqi_kernel" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.model.gqi.normalize_qa">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">normalize_qa</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">qa</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_qa</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#normalize_qa"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.normalize_qa" title="Link to this definition">¶</a></dt>
-<dd><p>Normalize quantitative anisotropy.</p>
-<p>Used mostly with GQI rather than GQI2.</p>
+<dd><p>Forward GQI kernel, shape <code class="docutils literal notranslate"><span class="pre">(n_gradients,</span> <span class="pre">n_vertices)</span></code>.</p>
+<p>Ported from DIPY’s <a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.reconst.html#module-dipy.reconst.gqi" title="(in dipy v1.12.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dipy.reconst.gqi</span></code></a>, modularized as a function.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>qa</strong> (<em>array, shape (X, Y, Z, N)</em>) – where N is the maximum number of peaks stored</p></li>
-<li><p><strong>max_qa</strong> (<em>float,</em>) – maximum qa value. Usually found in the CSF (corticospinal fluid).</p></li>
+<li><p><strong>gtab</strong> (<a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.core.html#dipy.core.gradients.GradientTable" title="(in dipy v1.12.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GradientTable</span></code></a>) – The gradient table for which the kernel is computed.</p></li>
+<li><p><strong>param_lambda</strong> (<em>float</em>) – The GQI sampling length (<span class="math notranslate nohighlight">\(\lambda\)</span>).</p></li>
+<li><p><strong>sphere</strong> (<a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.core.html#dipy.core.sphere.Sphere" title="(in dipy v1.12.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sphere</span></code></a>) – The sphere whose vertices define the ODF sampling directions.</p></li>
+<li><p><strong>method</strong> (<em>{“standard”, “gqi2”}, optional</em>) – GQI variant. <code class="docutils literal notranslate"><span class="pre">&quot;standard&quot;</span></code> implements the sinc reconstruction of Yeh
+et al. (2010), Eq. 6/9 (verified to machine precision against the paper
+and DIPY); <code class="docutils literal notranslate"><span class="pre">&quot;gqi2&quot;</span></code> uses the <span class="math notranslate nohighlight">\(L^2\)</span>-weighted basis of Eq. 8
+(<a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.reconst.html#dipy.reconst.gqi.squared_radial_component" title="(in dipy v1.12.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">squared_radial_component()</span></code></a>, imported from DIPY).
+An unknown value falls back to <code class="docutils literal notranslate"><span class="pre">&quot;standard&quot;</span></code> with a warning.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>nqa</strong> – normalized quantitative anisotropy</p>
+<dd class="field-even"><p>The forward GQI kernel with shape <code class="docutils literal notranslate"><span class="pre">(n_gradients,</span> <span class="pre">n_vertices)</span></code>.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>array, shape (x, Y, Z, N)</p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></p>
 </dd>
 </dl>
-<p class="rubric">Notes</p>
-<p>Normalized quantitative anisotropy has the very useful property
-to be very small near gray matter and background areas. Therefore,
-it can be used to mask out white matter areas.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.model.gqi.npa">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">npa</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">odf</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#npa"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.npa" title="Link to this definition">¶</a></dt>
-<dd><p>non-parametric anisotropy</p>
-<p>Nimmo-Smith et al.  ISMRM 2011</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.model.gqi.odf_sum">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">odf_sum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">odf</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#odf_sum"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.odf_sum" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.model.gqi.patch_maximum">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">patch_maximum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vertices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">odf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pole</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#patch_maximum"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.patch_maximum" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.model.gqi.patch_sum">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">patch_sum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vertices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">odf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pole</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#patch_sum"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.patch_sum" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.model.gqi.patch_vertices">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">patch_vertices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vertices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pole</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#patch_vertices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.patch_vertices" title="Link to this definition">¶</a></dt>
-<dd><p>find ‘vertices’ within the cone of ‘width’ degrees around ‘pole’</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.model.gqi.polar_zone_vertices">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">polar_zone_vertices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vertices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pole</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#polar_zone_vertices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.polar_zone_vertices" title="Link to this definition">¶</a></dt>
-<dd><p>finds the ‘vertices’ in the equatorial band around
-the ‘pole’ of radius ‘width’ degrees</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.model.gqi.prediction_kernel">
 <span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">prediction_kernel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gtab</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_lambda</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sphere</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'standard'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#prediction_kernel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.prediction_kernel" title="Link to this definition">¶</a></dt>
-<dd><p>Predict a signal given the ODF.</p>
+<dd><p>Compute the Tikhonov-regularized reconstruction kernel for GQI.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>odf</strong> (<em>ndarray</em>) – ODF parameters.</p></li>
-<li><p><strong>gtab</strong> (<em>GradientTable</em>) – The gradient table for this prediction</p></li>
+<li><p><strong>gtab</strong> (<a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.core.html#dipy.core.gradients.GradientTable" title="(in dipy v1.12.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GradientTable</span></code></a>) – The gradient table for which the kernel is computed.</p></li>
+<li><p><strong>param_lambda</strong> (<em>float</em>) – The GQI sampling length (<span class="math notranslate nohighlight">\(\lambda\)</span>).</p></li>
+<li><p><strong>sphere</strong> (<a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.core.html#dipy.core.sphere.Sphere" title="(in dipy v1.12.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sphere</span></code></a>) – The sphere whose vertices define the ODF sampling directions.</p></li>
+<li><p><strong>method</strong> (<em>str, optional</em>) – GQI variant, either <code class="docutils literal notranslate"><span class="pre">&quot;standard&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;gqi2&quot;</span></code>.</p></li>
 </ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The reconstruction kernel with shape <code class="docutils literal notranslate"><span class="pre">(n_gradients,</span> <span class="pre">n_vertices)</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></p>
 </dd>
 </dl>
 <p class="rubric">Notes</p>
-<p>The predicted signal is given by:</p>
+<p>With the forward GQI kernel <span class="math notranslate nohighlight">\(\mathbf{K} \in \mathbb{R}^{n_g \times n_v}\)</span>,
+the reconstruction kernel is</p>
 <div class="math-wrapper docutils container">
 <div class="math notranslate nohighlight">
-\[S(\theta, b) = K_{ii}^{-1} \cdot ODF\]</div>
+\[\mathbf{K}^{+} = (\mathbf{K} \mathbf{K}^T + \lambda_0 \mathbf{I})^{-1} \mathbf{K}\]</div>
 </div>
-<p>where <span class="math notranslate nohighlight">\(K_{ii}^{-1}\)</span>, is the inverse of the GQI kernels for the
-direction(s) <span class="math notranslate nohighlight">\(ii\)</span> given by <code class="docutils literal notranslate"><span class="pre">gtab</span></code>.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.model.gqi.squared_radial_component">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">squared_radial_component</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#squared_radial_component"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.squared_radial_component" title="Link to this definition">¶</a></dt>
-<dd><p>Part of the GQI2 integral.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.model.gqi.triple_odf_maxima">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">triple_odf_maxima</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vertices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">odf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#triple_odf_maxima"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.triple_odf_maxima" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.model.gqi.upper_hemi_map">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">upper_hemi_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#upper_hemi_map"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.upper_hemi_map" title="Link to this definition">¶</a></dt>
-<dd><p>maps a 3-vector into the z-upper hemisphere</p>
+<p>where <span class="math notranslate nohighlight">\(\lambda_0 = 10^{-6}\)</span> (<code class="docutils literal notranslate"><span class="pre">INVERSE_LAMBDA</span></code>) regularizes the
+inversion and <span class="math notranslate nohighlight">\(\mathbf{I}\)</span> is the <span class="math notranslate nohighlight">\(n_g \times n_g\)</span> identity.</p>
 </dd></dl>
 
 </section>
@@ -554,31 +564,20 @@ direction(s) <span class="math notranslate nohighlight">\(ii\)</span> given by <
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">nifreeze.model.gqi module</a><ul>
+<li><a class="reference internal" href="#nifreeze.model.gqi.DEFAULT_SPHERE_RECURSION_LEVEL"><code class="docutils literal notranslate"><span class="pre">DEFAULT_SPHERE_RECURSION_LEVEL</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.model.gqi.FREE_WATER_DIFFUSIVITY_6D"><code class="docutils literal notranslate"><span class="pre">FREE_WATER_DIFFUSIVITY_6D</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.model.gqi.GeneralizedQSamplingFit"><code class="docutils literal notranslate"><span class="pre">GeneralizedQSamplingFit</span></code></a><ul>
-<li><a class="reference internal" href="#nifreeze.model.gqi.GeneralizedQSamplingFit.fit"><code class="docutils literal notranslate"><span class="pre">GeneralizedQSamplingFit.fit()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.model.gqi.GeneralizedQSamplingFit.odf"><code class="docutils literal notranslate"><span class="pre">GeneralizedQSamplingFit.odf()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.model.gqi.GeneralizedQSamplingFit.predict"><code class="docutils literal notranslate"><span class="pre">GeneralizedQSamplingFit.predict()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#nifreeze.model.gqi.GeneralizedQSamplingModel"><code class="docutils literal notranslate"><span class="pre">GeneralizedQSamplingModel</span></code></a><ul>
 <li><a class="reference internal" href="#nifreeze.model.gqi.GeneralizedQSamplingModel.fit"><code class="docutils literal notranslate"><span class="pre">GeneralizedQSamplingModel.fit()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.gqi.GeneralizedQSamplingModel.predict"><code class="docutils literal notranslate"><span class="pre">GeneralizedQSamplingModel.predict()</span></code></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#nifreeze.model.gqi.equatorial_maximum"><code class="docutils literal notranslate"><span class="pre">equatorial_maximum()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.gqi.equatorial_zone_vertices"><code class="docutils literal notranslate"><span class="pre">equatorial_zone_vertices()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.model.gqi.INVERSE_LAMBDA"><code class="docutils literal notranslate"><span class="pre">INVERSE_LAMBDA</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.model.gqi.gqi_kernel"><code class="docutils literal notranslate"><span class="pre">gqi_kernel()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.gqi.normalize_qa"><code class="docutils literal notranslate"><span class="pre">normalize_qa()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.gqi.npa"><code class="docutils literal notranslate"><span class="pre">npa()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.gqi.odf_sum"><code class="docutils literal notranslate"><span class="pre">odf_sum()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.gqi.patch_maximum"><code class="docutils literal notranslate"><span class="pre">patch_maximum()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.gqi.patch_sum"><code class="docutils literal notranslate"><span class="pre">patch_sum()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.gqi.patch_vertices"><code class="docutils literal notranslate"><span class="pre">patch_vertices()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.gqi.polar_zone_vertices"><code class="docutils literal notranslate"><span class="pre">polar_zone_vertices()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.model.gqi.prediction_kernel"><code class="docutils literal notranslate"><span class="pre">prediction_kernel()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.gqi.squared_radial_component"><code class="docutils literal notranslate"><span class="pre">squared_radial_component()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.gqi.triple_odf_maxima"><code class="docutils literal notranslate"><span class="pre">triple_odf_maxima()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.gqi.upper_hemi_map"><code class="docutils literal notranslate"><span class="pre">upper_hemi_map()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -590,7 +589,7 @@ direction(s) <span class="math notranslate nohighlight">\(ii\)</span> given by <
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=9354b28e"></script>
+</div><script src="../_static/documentation_options.js?v=eef44ff0"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

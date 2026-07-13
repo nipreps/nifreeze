@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.gqi - nifreeze 26.0.0.dev126 documentation</title>
+        <title>nifreeze.model.gqi - nifreeze 26.0.0.dev142 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev126 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev142 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev126</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev142</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev126</span>
+  <span class="sidebar-brand-text">26.0.0.dev142</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -205,6 +205,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../design.html">Design Principles</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../design.html#extending-nifreeze">Extending <em>NiFreeze</em></a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../design.html#contributing-to-nifreeze">Contributing to NiFreeze</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../models.html">Model implementation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../usage.html">How to Use</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../running.html">Running <em>NiFreeze</em></a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../developers.html">For developers</a><input aria-label="Toggle navigation of For developers" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -382,134 +383,225 @@
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">dipy.core.subdivide_octahedron</span> <span class="kn">import</span> <span class="n">create_unit_sphere</span>
-<span class="kn">from</span> <span class="nn">dipy.reconst.base</span> <span class="kn">import</span> <span class="n">ReconstFit</span><span class="p">,</span> <span class="n">ReconstModel</span>
+<span class="kn">from</span> <span class="nn">dipy.reconst.gqi</span> <span class="kn">import</span> <span class="n">squared_radial_component</span>
+<span class="kn">from</span> <span class="nn">dipy.reconst.odf</span> <span class="kn">import</span> <span class="n">OdfFit</span><span class="p">,</span> <span class="n">OdfModel</span>
 
 <span class="n">INVERSE_LAMBDA</span> <span class="o">=</span> <span class="mf">1e-6</span>
+<span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Tikhonov regularization weight :math:`\lambda_0` for the reconstruction kernel</span>
+<span class="sd">:math:`(\mathbf{K}\mathbf{K}^{\mathsf T} + \lambda_0\mathbf{I})^{-1}\mathbf{K}`</span>
+<span class="sd">(see :func:`prediction_kernel`).</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
 <span class="n">DEFAULT_SPHERE_RECURSION_LEVEL</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Default icosahedral subdivision level of the ODF sampling sphere (1026</span>
+<span class="sd">vertices); see :ref:`gqi-sphere-density` for the experiment justifying it.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">FREE_WATER_DIFFUSIVITY_6D</span> <span class="o">=</span> <span class="mf">0.01506</span>
+<span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">:math:`6 D` where :math:`D` is the free-water diffusion coefficient; the GQI</span>
+<span class="sd">scaling factor :math:`\sqrt{6 D \tau}` with :math:`\tau` folded into the b-value.</span>
+<span class="sd">&quot;&quot;&quot;</span>
 
 
 <div class="viewcode-block" id="GeneralizedQSamplingModel">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.GeneralizedQSamplingModel">[docs]</a>
-<span class="k">class</span> <span class="nc">GeneralizedQSamplingModel</span><span class="p">(</span><span class="n">ReconstModel</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">GeneralizedQSamplingModel</span><span class="p">(</span><span class="n">OdfModel</span><span class="p">):</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">gtab</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">method</span><span class="o">=</span><span class="s2">&quot;standard&quot;</span><span class="p">,</span>
         <span class="n">sampling_length</span><span class="o">=</span><span class="mf">1.2</span><span class="p">,</span>
-        <span class="n">normalize_peaks</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
         <span class="n">sphere</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">recursion_level</span><span class="o">=</span><span class="n">DEFAULT_SPHERE_RECURSION_LEVEL</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generalized Q-Sampling Imaging.&quot;&quot;&quot;</span>
-        <span class="n">ReconstModel</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gtab</span><span class="p">)</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Generalized Q-Sampling Imaging.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        gtab : :obj:`~dipy.core.gradients.GradientTable`</span>
+<span class="sd">            Gradient table of the data to fit.</span>
+<span class="sd">        method : {&quot;standard&quot;, &quot;gqi2&quot;}, optional</span>
+<span class="sd">            GQI reconstruction variant. Defaults to ``&quot;standard&quot;`` (the sinc</span>
+<span class="sd">            basis of Yeh et al., 2010, Eq. 6/9).</span>
+
+<span class="sd">            .. note::</span>
+
+<span class="sd">               This default **deliberately deviates from DIPY**, whose GQI</span>
+<span class="sd">               model defaults to ``&quot;gqi2&quot;``. NiFreeze uses GQI as a *signal</span>
+<span class="sd">               predictor*, and ``&quot;standard&quot;`` round-trips the diffusion signal</span>
+<span class="sd">               more faithfully than ``&quot;gqi2&quot;`` (see</span>
+<span class="sd">               :ref:`gqi-reconstruction-fidelity`). Anyone cross-referencing</span>
+<span class="sd">               DIPY should note the changed default.</span>
+<span class="sd">        sampling_length : float, optional</span>
+<span class="sd">            Diffusion sampling length :math:`\sigma` (``lambda`` in Yeh Eq. 9);</span>
+<span class="sd">            recommended range 1--1.3.</span>
+<span class="sd">        sphere : :obj:`~dipy.core.sphere.Sphere`, optional</span>
+<span class="sd">            ODF sampling sphere. When given, ``recursion_level`` is ignored.</span>
+<span class="sd">        recursion_level : int, optional</span>
+<span class="sd">            Subdivision level of the icosahedral ODF sampling sphere built when</span>
+<span class="sd">            ``sphere`` is not provided; higher values give a denser sphere.</span>
+<span class="sd">            Defaults to :data:`DEFAULT_SPHERE_RECURSION_LEVEL`. See</span>
+<span class="sd">            :ref:`gqi-sphere-density` for the experiment justifying the default</span>
+<span class="sd">            (past the fidelity knee for both single-shell and grid acquisitions,</span>
+<span class="sd">            while denser spheres only keep paying off for grid/multi-shell data).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">OdfModel</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gtab</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="n">method</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">Lambda</span> <span class="o">=</span> <span class="n">sampling_length</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">normalize_peaks</span> <span class="o">=</span> <span class="n">normalize_peaks</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">gtab</span> <span class="o">=</span> <span class="n">gtab</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sphere</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">create_unit_sphere</span><span class="p">(</span><span class="n">recursion_level</span><span class="o">=</span><span class="n">DEFAULT_SPHERE_RECURSION_LEVEL</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">sphere</span> <span class="ow">is</span> <span class="kc">None</span>
-            <span class="k">else</span> <span class="n">sphere</span>
+            <span class="n">create_unit_sphere</span><span class="p">(</span><span class="n">recursion_level</span><span class="o">=</span><span class="n">recursion_level</span><span class="p">)</span> <span class="k">if</span> <span class="n">sphere</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">sphere</span>
         <span class="p">)</span>
 
-        <span class="c1"># The gQI vector has shape (n_vertices, n_orientations)</span>
+        <span class="c1"># Forward GQI kernel, shape (n_gradients, n_vertices). Stored in this</span>
+        <span class="c1"># (un-transposed) orientation to match DIPY&#39;s ``GeneralizedQSamplingFit``</span>
+        <span class="c1"># so the eventual upstreaming (dipy/dipy#3553) needs no reshuffling.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">=</span> <span class="n">gqi_kernel</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">gtab</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">Lambda</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">sphere</span><span class="p">,</span>
             <span class="n">method</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="p">,</span>
-        <span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="p">)</span>
 
 <div class="viewcode-block" id="GeneralizedQSamplingModel.fit">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.GeneralizedQSamplingModel.fit">[docs]</a>
     <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">GeneralizedQSamplingFit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="GeneralizedQSamplingModel.predict">
-<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.GeneralizedQSamplingModel.predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">odf</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">S0</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Predict a signal for this GeneralizedQSamplingModel instance given parameters.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        odf : ndarray</span>
-<span class="sd">            Map of ODFs.</span>
-<span class="sd">        gtab : ndarray</span>
-<span class="sd">            Orientations where signal will be simulated</span>
-<span class="sd">        sphere : :obj:`~dipy.core.sphere.Sphere`</span>
-<span class="sd">            A sphere object, must be the same used for calculating the ODFs.</span>
-
-<span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="k">return</span> <span class="n">prediction_kernel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gtab</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Lambda</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sphere</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="p">)</span></div>
 </div>
 
 
 
 <div class="viewcode-block" id="GeneralizedQSamplingFit">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.GeneralizedQSamplingFit">[docs]</a>
-<span class="k">class</span> <span class="nc">GeneralizedQSamplingFit</span><span class="p">(</span><span class="n">ReconstFit</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">GeneralizedQSamplingFit</span><span class="p">(</span><span class="n">OdfFit</span><span class="p">):</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculates PDF and ODF for a single voxel</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Store the model and signal data for a fitted voxel (or voxels).</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        model : object,</span>
-<span class="sd">            DiffusionSpectrumModel</span>
-<span class="sd">        data : 1d ndarray,</span>
-<span class="sd">            signal values</span>
+<span class="sd">        model : :obj:`GeneralizedQSamplingModel`</span>
+<span class="sd">            The GQI model instance this fit belongs to.</span>
+<span class="sd">        data : :obj:`~numpy.ndarray`</span>
+<span class="sd">            Signal values, shaped ``(n_gradients,)`` for a single voxel or</span>
+<span class="sd">            ``(n_voxels, n_gradients)`` for a masked volume.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">ReconstFit</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_gfa</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">npeaks</span> <span class="o">=</span> <span class="mi">5</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_peak_values</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_peak_indices</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_qa</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">odf_fit</span> <span class="o">=</span> <span class="kc">None</span>
-
-<div class="viewcode-block" id="GeneralizedQSamplingFit.fit">
-<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.GeneralizedQSamplingFit.fit">[docs]</a>
-    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">odf_fit</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">odf_fit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">odf</span><span class="p">()</span>
-        <span class="k">return</span> <span class="bp">self</span></div>
-
+        <span class="n">OdfFit</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
 
 <div class="viewcode-block" id="GeneralizedQSamplingFit.odf">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.GeneralizedQSamplingFit.odf">[docs]</a>
-    <span class="k">def</span> <span class="nf">odf</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculates the discrete ODF for a given discrete sphere.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">kernel</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span></div>
+    <span class="k">def</span> <span class="nf">odf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sphere</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Compute the discrete orientation distribution function (ODF/SDF).</span>
+
+<span class="sd">        Applies the forward GQI kernel to the fitted signal, implementing the</span>
+<span class="sd">        signal-to-SDF transform of Yeh et al. (2010). This satisfies the</span>
+<span class="sd">        :obj:`~dipy.reconst.odf.OdfFit` contract shared by DIPY&#39;s ODF models and</span>
+<span class="sd">        is distinct from :meth:`predict`, which maps signal back to signal.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sphere : :obj:`~dipy.core.sphere.Sphere`, optional</span>
+<span class="sd">            ODF sampling sphere. When :obj:`None` (default), the model&#39;s sphere</span>
+<span class="sd">            is reused and the pre-computed forward kernel is applied directly,</span>
+<span class="sd">            avoiding recomputation.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :obj:`~numpy.ndarray`</span>
+<span class="sd">            The discrete ODF, shaped ``(n_vertices,)`` for a single voxel or</span>
+<span class="sd">            ``(n_voxels, n_vertices)`` for a masked volume. Unlike</span>
+<span class="sd">            :meth:`predict`, the result is **not** clamped to non-negative</span>
+<span class="sd">            values (matching DIPY).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">sphere</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># ``model.kernel`` is the forward (n_gradients, n_vertices) kernel,</span>
+            <span class="c1"># applied directly (matching DIPY&#39;s ``odf``).</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">kernel</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">@</span> <span class="n">gqi_kernel</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">gtab</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">Lambda</span><span class="p">,</span>
+            <span class="n">sphere</span><span class="p">,</span>
+            <span class="n">method</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">method</span><span class="p">,</span>
+        <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="GeneralizedQSamplingFit.predict">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.GeneralizedQSamplingFit.predict">[docs]</a>
     <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gtab</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">S0</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Predict using the fit model.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Predict the diffusion signal on ``gtab`` from the fitted data.</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           This signal-to-signal prediction is a **NiFreeze extension** of GQI;</span>
+<span class="sd">           Yeh et al. (2010) defines only the forward signal-to-SDF transform.</span>
+<span class="sd">           It maps the fitted signal to the SDF and back via a</span>
+<span class="sd">           Tikhonov-regularized reconstruction kernel</span>
+<span class="sd">           (:func:`prediction_kernel`). See :ref:`gqi-models` for the</span>
+<span class="sd">           construction.</span>
+
+<span class="sd">        The result is clamped to non-negative values. ``S0`` is accepted for</span>
+<span class="sd">        API compatibility with the other NiFreeze DWI models but is unused.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The kernel round-trip approximately preserves signal scale for the</span>
+<span class="sd">        ``&quot;standard&quot;`` (sinc) kernel, but not for ``&quot;gqi2&quot;``; prefer</span>
+<span class="sd">        ``&quot;standard&quot;`` when the predicted amplitude matters. See</span>
+<span class="sd">        :ref:`gqi-reconstruction-fidelity`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># ``model.kernel`` is (n_gradients_in, n_vertices); transpose it to</span>
+        <span class="c1"># contract the shared vertex axis against the reconstruction kernel,</span>
+        <span class="c1"># yielding the fused (n_gradients_out, n_gradients_in) operator.</span>
         <span class="n">K</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">prediction_kernel</span><span class="p">(</span>
                 <span class="n">gtab</span><span class="p">,</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">Lambda</span><span class="p">,</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sphere</span><span class="p">,</span>
+                <span class="n">method</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">method</span><span class="p">,</span>
             <span class="p">)</span>
 <div class="viewcode-block" id="gqi_kernel">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.gqi_kernel">[docs]</a>
-            <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">kernel</span>
+            <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">kernel</span><span class="o">.</span><span class="n">T</span>
         <span class="p">)</span>
 
-        <span class="k">return</span> <span class="p">(</span><span class="n">K</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span></div>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">((</span><span class="n">K</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span></div>
 </div>
 
 
 
 <span class="k">def</span> <span class="nf">gqi_kernel</span><span class="p">(</span><span class="n">gtab</span><span class="p">,</span> <span class="n">param_lambda</span><span class="p">,</span> <span class="n">sphere</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;standard&quot;</span><span class="p">):</span>
-    <span class="c1"># 0.01506 = 6*D where D is the free water diffusion coefficient</span>
-    <span class="c1"># l_values sqrt(6 D tau) D free water diffusion coefficient and</span>
-    <span class="c1"># tau included in the b-value</span>
-    <span class="n">scaling</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">gtab</span><span class="o">.</span><span class="n">bvals</span> <span class="o">*</span> <span class="mf">0.01506</span><span class="p">)</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Forward GQI kernel, shape ``(n_gradients, n_vertices)``.</span>
+
+<span class="sd">    Ported from DIPY&#39;s :obj:`dipy.reconst.gqi`, modularized as a function.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    gtab : :obj:`~dipy.core.gradients.GradientTable`</span>
+<span class="sd">        The gradient table for which the kernel is computed.</span>
+<span class="sd">    param_lambda : float</span>
+<span class="sd">        The GQI sampling length (:math:`\lambda`).</span>
+<span class="sd">    sphere : :obj:`~dipy.core.sphere.Sphere`</span>
+<span class="sd">        The sphere whose vertices define the ODF sampling directions.</span>
+<span class="sd">    method : {&quot;standard&quot;, &quot;gqi2&quot;}, optional</span>
+<span class="sd">        GQI variant. ``&quot;standard&quot;`` implements the sinc reconstruction of Yeh</span>
+<span class="sd">        et al. (2010), Eq. 6/9 (verified to machine precision against the paper</span>
+<span class="sd">        and DIPY); ``&quot;gqi2&quot;`` uses the :math:`L^2`-weighted basis of Eq. 8</span>
+<span class="sd">        (:func:`~dipy.reconst.gqi.squared_radial_component`, imported from DIPY).</span>
+<span class="sd">        An unknown value falls back to ``&quot;standard&quot;`` with a warning.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    :obj:`~numpy.ndarray`</span>
+<span class="sd">        The forward GQI kernel with shape ``(n_gradients, n_vertices)``.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">scaling</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">gtab</span><span class="o">.</span><span class="n">bvals</span> <span class="o">*</span> <span class="n">FREE_WATER_DIFFUSIVITY_6D</span><span class="p">)</span>
     <span class="n">b_vector</span> <span class="o">=</span> <span class="n">gtab</span><span class="o">.</span><span class="n">bvecs</span> <span class="o">*</span> <span class="n">scaling</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
 
     <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;gqi2&quot;</span><span class="p">:</span>
@@ -528,26 +620,35 @@
 <a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.prediction_kernel">[docs]</a>
 <span class="k">def</span> <span class="nf">prediction_kernel</span><span class="p">(</span><span class="n">gtab</span><span class="p">,</span> <span class="n">param_lambda</span><span class="p">,</span> <span class="n">sphere</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;standard&quot;</span><span class="p">):</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Predict a signal given the ODF.</span>
+<span class="sd">    Compute the Tikhonov-regularized reconstruction kernel for GQI.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    odf : ndarray</span>
-<span class="sd">        ODF parameters.</span>
+<span class="sd">    gtab : :obj:`~dipy.core.gradients.GradientTable`</span>
+<span class="sd">        The gradient table for which the kernel is computed.</span>
+<span class="sd">    param_lambda : float</span>
+<span class="sd">        The GQI sampling length (:math:`\lambda`).</span>
+<span class="sd">    sphere : :obj:`~dipy.core.sphere.Sphere`</span>
+<span class="sd">        The sphere whose vertices define the ODF sampling directions.</span>
+<span class="sd">    method : str, optional</span>
+<span class="sd">        GQI variant, either ``&quot;standard&quot;`` or ``&quot;gqi2&quot;``.</span>
 
-<span class="sd">    gtab : GradientTable</span>
-<span class="sd">        The gradient table for this prediction</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    :obj:`~numpy.ndarray`</span>
+<span class="sd">        The reconstruction kernel with shape ``(n_gradients, n_vertices)``.</span>
 
 <span class="sd">    Notes</span>
 <span class="sd">    -----</span>
-<span class="sd">    The predicted signal is given by:</span>
+<span class="sd">    With the forward GQI kernel :math:`\mathbf{K} \in \mathbb{R}^{n_g \times n_v}`,</span>
+<span class="sd">    the reconstruction kernel is</span>
 
 <span class="sd">    .. math::</span>
 
-<span class="sd">        S(\theta, b) = K_{ii}^{-1} \cdot ODF</span>
+<span class="sd">        \mathbf{K}^{+} = (\mathbf{K} \mathbf{K}^T + \lambda_0 \mathbf{I})^{-1} \mathbf{K}</span>
 
-<span class="sd">    where :math:`K_{ii}^{-1}`, is the inverse of the GQI kernels for the</span>
-<span class="sd">    direction(s) :math:`ii` given by ``gtab``.</span>
+<span class="sd">    where :math:`\lambda_0 = 10^{-6}` (``INVERSE_LAMBDA``) regularizes the</span>
+<span class="sd">    inversion and :math:`\mathbf{I}` is the :math:`n_g \times n_g` identity.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># K.shape = (n_gradients, n_vertices)</span>
@@ -555,196 +656,6 @@
     <span class="n">GtG</span> <span class="o">=</span> <span class="n">K</span> <span class="o">@</span> <span class="n">K</span><span class="o">.</span><span class="n">T</span>
     <span class="n">identity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">GtG</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">GtG</span> <span class="o">+</span> <span class="n">INVERSE_LAMBDA</span> <span class="o">*</span> <span class="n">identity</span><span class="p">)</span> <span class="o">@</span> <span class="n">K</span></div>
-
-
-
-<div class="viewcode-block" id="normalize_qa">
-<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.normalize_qa">[docs]</a>
-<span class="k">def</span> <span class="nf">normalize_qa</span><span class="p">(</span><span class="n">qa</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">max_qa</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize quantitative anisotropy.</span>
-
-<span class="sd">    Used mostly with GQI rather than GQI2.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    qa : array, shape (X, Y, Z, N)</span>
-<span class="sd">        where N is the maximum number of peaks stored</span>
-<span class="sd">    max_qa : float,</span>
-<span class="sd">        maximum qa value. Usually found in the CSF (corticospinal fluid).</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    nqa : array, shape (x, Y, Z, N)</span>
-<span class="sd">        normalized quantitative anisotropy</span>
-
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    Normalized quantitative anisotropy has the very useful property</span>
-<span class="sd">    to be very small near gray matter and background areas. Therefore,</span>
-<span class="sd">    it can be used to mask out white matter areas.</span>
-
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">max_qa</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">qa</span> <span class="o">/</span> <span class="n">qa</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">qa</span> <span class="o">/</span> <span class="n">max_qa</span></div>
-
-
-
-<div class="viewcode-block" id="squared_radial_component">
-<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.squared_radial_component">[docs]</a>
-<span class="k">def</span> <span class="nf">squared_radial_component</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">0.01</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Part of the GQI2 integral.&quot;&quot;&quot;</span>
-    <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
-        <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">x</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="n">x</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span>
-    <span class="n">x_near_zero</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="n">tol</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;</span> <span class="o">-</span><span class="n">tol</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">x_near_zero</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="mi">3</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span></div>
-
-
-
-<div class="viewcode-block" id="npa">
-<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.npa">[docs]</a>
-<span class="k">def</span> <span class="nf">npa</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">odf</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;non-parametric anisotropy</span>
-
-<span class="sd">    Nimmo-Smith et al.  ISMRM 2011</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># odf = self.odf(s)</span>
-    <span class="n">t0</span><span class="p">,</span> <span class="n">t1</span><span class="p">,</span> <span class="n">t2</span> <span class="o">=</span> <span class="n">triple_odf_maxima</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">odf_vertices</span><span class="p">,</span> <span class="n">odf</span><span class="p">,</span> <span class="n">width</span><span class="p">)</span>
-    <span class="n">psi0</span> <span class="o">=</span> <span class="n">t0</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
-    <span class="n">psi1</span> <span class="o">=</span> <span class="n">t1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
-    <span class="n">psi2</span> <span class="o">=</span> <span class="n">t2</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
-    <span class="n">npa</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">psi0</span> <span class="o">-</span> <span class="n">psi1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">psi1</span> <span class="o">-</span> <span class="n">psi2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">psi2</span> <span class="o">-</span> <span class="n">psi0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
-        <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">psi0</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">psi1</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">psi2</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
-    <span class="p">)</span>
-    <span class="c1"># print &#39;tom &gt;&gt;&gt;&gt; &#39;,t0,t1,t2,npa</span>
-
-    <span class="k">return</span> <span class="n">t0</span><span class="p">,</span> <span class="n">t1</span><span class="p">,</span> <span class="n">t2</span><span class="p">,</span> <span class="n">npa</span></div>
-
-
-
-<div class="viewcode-block" id="equatorial_zone_vertices">
-<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.equatorial_zone_vertices">[docs]</a>
-<span class="k">def</span> <span class="nf">equatorial_zone_vertices</span><span class="p">(</span><span class="n">vertices</span><span class="p">,</span> <span class="n">pole</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    finds the &#39;vertices&#39; in the equatorial zone conjugate</span>
-<span class="sd">    to &#39;pole&#39; with width half &#39;width&#39; degrees</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="p">[</span>
-        <span class="n">i</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">vertices</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">pole</span><span class="p">))</span> <span class="o">&lt;</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">width</span> <span class="o">/</span> <span class="mi">180</span><span class="p">))</span>
-    <span class="p">]</span></div>
-
-
-
-<div class="viewcode-block" id="polar_zone_vertices">
-<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.polar_zone_vertices">[docs]</a>
-<span class="k">def</span> <span class="nf">polar_zone_vertices</span><span class="p">(</span><span class="n">vertices</span><span class="p">,</span> <span class="n">pole</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    finds the &#39;vertices&#39; in the equatorial band around</span>
-<span class="sd">    the &#39;pole&#39; of radius &#39;width&#39; degrees</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="p">[</span>
-        <span class="n">i</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">vertices</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">pole</span><span class="p">))</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">width</span> <span class="o">/</span> <span class="mi">180</span><span class="p">))</span>
-    <span class="p">]</span></div>
-
-
-
-<div class="viewcode-block" id="upper_hemi_map">
-<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.upper_hemi_map">[docs]</a>
-<span class="k">def</span> <span class="nf">upper_hemi_map</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    maps a 3-vector into the z-upper hemisphere</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="n">v</span></div>
-
-
-
-<div class="viewcode-block" id="equatorial_maximum">
-<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.equatorial_maximum">[docs]</a>
-<span class="k">def</span> <span class="nf">equatorial_maximum</span><span class="p">(</span><span class="n">vertices</span><span class="p">,</span> <span class="n">odf</span><span class="p">,</span> <span class="n">pole</span><span class="p">,</span> <span class="n">width</span><span class="p">):</span>
-    <span class="n">eqvert</span> <span class="o">=</span> <span class="n">equatorial_zone_vertices</span><span class="p">(</span><span class="n">vertices</span><span class="p">,</span> <span class="n">pole</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">)</span>
-    <span class="c1"># need to test for whether eqvert is empty or not</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">eqvert</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;empty equatorial band at </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">array_str</span><span class="p">(</span><span class="n">pole</span><span class="p">)</span><span class="si">}</span><span class="s2">  pole with width </span><span class="si">{</span><span class="n">width</span><span class="si">:</span><span class="s2">f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
-    <span class="n">eqvals</span> <span class="o">=</span> <span class="p">[</span><span class="n">odf</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">eqvert</span><span class="p">]</span>
-    <span class="n">eqargmax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">eqvals</span><span class="p">)</span>
-    <span class="n">eqvertmax</span> <span class="o">=</span> <span class="n">eqvert</span><span class="p">[</span><span class="n">eqargmax</span><span class="p">]</span>
-    <span class="n">eqvalmax</span> <span class="o">=</span> <span class="n">eqvals</span><span class="p">[</span><span class="n">eqargmax</span><span class="p">]</span>
-
-    <span class="k">return</span> <span class="n">eqvertmax</span><span class="p">,</span> <span class="n">eqvalmax</span></div>
-
-
-
-<div class="viewcode-block" id="patch_vertices">
-<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.patch_vertices">[docs]</a>
-<span class="k">def</span> <span class="nf">patch_vertices</span><span class="p">(</span><span class="n">vertices</span><span class="p">,</span> <span class="n">pole</span><span class="p">,</span> <span class="n">width</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    find &#39;vertices&#39; within the cone of &#39;width&#39; degrees around &#39;pole&#39;</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="p">[</span>
-        <span class="n">i</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">vertices</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">pole</span><span class="p">))</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">width</span> <span class="o">/</span> <span class="mi">180</span><span class="p">))</span>
-    <span class="p">]</span></div>
-
-
-
-<div class="viewcode-block" id="patch_maximum">
-<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.patch_maximum">[docs]</a>
-<span class="k">def</span> <span class="nf">patch_maximum</span><span class="p">(</span><span class="n">vertices</span><span class="p">,</span> <span class="n">odf</span><span class="p">,</span> <span class="n">pole</span><span class="p">,</span> <span class="n">width</span><span class="p">):</span>
-    <span class="n">eqvert</span> <span class="o">=</span> <span class="n">patch_vertices</span><span class="p">(</span><span class="n">vertices</span><span class="p">,</span> <span class="n">pole</span><span class="p">,</span> <span class="n">width</span><span class="p">)</span>
-    <span class="c1"># need to test for whether eqvert is empty or not</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">eqvert</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;empty cone around pole </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">array_str</span><span class="p">(</span><span class="n">pole</span><span class="p">)</span><span class="si">}</span><span class="s2"> with with width </span><span class="si">{</span><span class="n">width</span><span class="si">:</span><span class="s2">f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
-    <span class="n">eqvals</span> <span class="o">=</span> <span class="p">[</span><span class="n">odf</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">eqvert</span><span class="p">]</span>
-    <span class="n">eqargmax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">eqvals</span><span class="p">)</span>
-    <span class="n">eqvertmax</span> <span class="o">=</span> <span class="n">eqvert</span><span class="p">[</span><span class="n">eqargmax</span><span class="p">]</span>
-    <span class="n">eqvalmax</span> <span class="o">=</span> <span class="n">eqvals</span><span class="p">[</span><span class="n">eqargmax</span><span class="p">]</span>
-    <span class="k">return</span> <span class="n">eqvertmax</span><span class="p">,</span> <span class="n">eqvalmax</span></div>
-
-
-
-<div class="viewcode-block" id="odf_sum">
-<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.odf_sum">[docs]</a>
-<span class="k">def</span> <span class="nf">odf_sum</span><span class="p">(</span><span class="n">odf</span><span class="p">):</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">odf</span><span class="p">)</span></div>
-
-
-
-<div class="viewcode-block" id="patch_sum">
-<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.patch_sum">[docs]</a>
-<span class="k">def</span> <span class="nf">patch_sum</span><span class="p">(</span><span class="n">vertices</span><span class="p">,</span> <span class="n">odf</span><span class="p">,</span> <span class="n">pole</span><span class="p">,</span> <span class="n">width</span><span class="p">):</span>
-    <span class="n">eqvert</span> <span class="o">=</span> <span class="n">patch_vertices</span><span class="p">(</span><span class="n">vertices</span><span class="p">,</span> <span class="n">pole</span><span class="p">,</span> <span class="n">width</span><span class="p">)</span>
-    <span class="c1"># need to test for whether eqvert is empty or not</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">eqvert</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;empty cone around pole </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">array_str</span><span class="p">(</span><span class="n">pole</span><span class="p">)</span><span class="si">}</span><span class="s2"> with with width </span><span class="si">{</span><span class="n">width</span><span class="si">:</span><span class="s2">f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="kc">None</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="n">odf</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">eqvert</span><span class="p">])</span></div>
-
-
-
-<div class="viewcode-block" id="triple_odf_maxima">
-<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.triple_odf_maxima">[docs]</a>
-<span class="k">def</span> <span class="nf">triple_odf_maxima</span><span class="p">(</span><span class="n">vertices</span><span class="p">,</span> <span class="n">odf</span><span class="p">,</span> <span class="n">width</span><span class="p">):</span>
-    <span class="n">indmax1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">([</span><span class="n">odf</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">vertices</span><span class="p">)])</span>
-    <span class="n">odfmax1</span> <span class="o">=</span> <span class="n">odf</span><span class="p">[</span><span class="n">indmax1</span><span class="p">]</span>
-    <span class="n">pole</span> <span class="o">=</span> <span class="n">vertices</span><span class="p">[</span><span class="n">indmax1</span><span class="p">]</span>
-    <span class="n">eqvert</span> <span class="o">=</span> <span class="n">equatorial_zone_vertices</span><span class="p">(</span><span class="n">vertices</span><span class="p">,</span> <span class="n">pole</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">)</span>
-    <span class="n">indmax2</span><span class="p">,</span> <span class="n">odfmax2</span> <span class="o">=</span> <span class="n">equatorial_maximum</span><span class="p">(</span><span class="n">vertices</span><span class="p">,</span> <span class="n">odf</span><span class="p">,</span> <span class="n">pole</span><span class="p">,</span> <span class="n">width</span><span class="p">)</span>
-    <span class="n">indmax3</span> <span class="o">=</span> <span class="n">eqvert</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">vertices</span><span class="p">[</span><span class="n">indmax2</span><span class="p">],</span> <span class="n">vertices</span><span class="p">[</span><span class="n">p</span><span class="p">]))</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">eqvert</span><span class="p">])]</span>
-    <span class="n">odfmax3</span> <span class="o">=</span> <span class="n">odf</span><span class="p">[</span><span class="n">indmax3</span><span class="p">]</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    cross12 = np.cross(vertices[indmax1],vertices[indmax2])</span>
-<span class="sd">    cross12 = cross12/np.sqrt(np.sum(cross12**2))</span>
-<span class="sd">    indmax3, odfmax3 = patch_maximum(vertices, odf, cross12, 2*width)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="p">[(</span><span class="n">indmax1</span><span class="p">,</span> <span class="n">odfmax1</span><span class="p">),</span> <span class="p">(</span><span class="n">indmax2</span><span class="p">,</span> <span class="n">odfmax2</span><span class="p">),</span> <span class="p">(</span><span class="n">indmax3</span><span class="p">,</span> <span class="n">odfmax3</span><span class="p">)]</span></div>
 
 </pre></div>
         </article>
@@ -778,7 +689,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=9354b28e"></script>
+</div><script src="../../../_static/documentation_options.js?v=eef44ff0"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
