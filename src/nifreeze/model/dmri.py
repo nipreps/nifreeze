@@ -195,6 +195,7 @@ class BaseDWIModel(BaseModel):
         "_S0": "The S0 (b=0 reference signal) that will be fed into DIPY models",
         "_model_class": "Defining a model class, DIPY models are instantiated automagically",
         "_modelargs": "Arguments acceptable by the underlying DIPY-like model",
+        "_model_kwargs": "Construction kwargs (filtered by ``_modelargs``) forwarded to the model",
         "_models": "List with one or more (if parallel execution) model instances",
     }
 
@@ -252,6 +253,14 @@ class BaseDWIModel(BaseModel):
         # Fitted model instance(s); populated in ``_fit``.
         self._models: list[Any] = []
 
+        # Persist the model-construction kwargs declared in ``_modelargs`` (e.g.
+        # ``method``, ``sampling_length``, ``recursion_level``). ``BaseModel``
+        # ignores ``**kwargs``, so without this they would be silently dropped and
+        # never reach the underlying model at fit time.
+        self._model_kwargs = {
+            key: kwargs.pop(key) for key in getattr(self, "_modelargs", ()) if key in kwargs
+        }
+
         super().__init__(dataset, **kwargs)
 
     def _fit(self, index: int | None = None, n_jobs: int | None = None, **kwargs) -> int:
@@ -296,7 +305,13 @@ class BaseDWIModel(BaseModel):
             raise NotImplementedError(f"{model_str} not implemented.")
 
         module_name, class_name = model_str.rsplit(".", 1)
-        model = getattr(import_module(module_name), class_name)(gtab, **kwargs)
+        # Model-construction kwargs come from ``__init__`` (filtered by
+        # ``_modelargs``); allow fit-time overrides for those same keys.
+        model_kwargs = {
+            **self._model_kwargs,
+            **{key: kwargs.pop(key) for key in getattr(self, "_modelargs", ()) if key in kwargs},
+        }
+        model = getattr(import_module(module_name), class_name)(gtab, **model_kwargs)
 
         pargs = {} if n_jobs == 1 else {"engine": "joblib", "n_jobs": n_jobs}
         try:
@@ -342,6 +357,11 @@ class BaseDWIModel(BaseModel):
 
         if index is None:
             return None
+
+        # Model-construction kwargs (consumed by ``_fit``) must not leak into
+        # ``predict``, which would raise an unexpected-keyword ``TypeError``.
+        _modelargs = getattr(self, "_modelargs", ())
+        kwargs = {key: value for key, value in kwargs.items() if key not in _modelargs}
 
         gradient = self._dataset.gradients[index, :]
 
@@ -467,12 +487,13 @@ class DKIModel(BaseDWIModel):
 
 
 class GQIModel(BaseDWIModel):
-    """A wrapper of :obj:`dipy.reconst.gqi.GeneralizedQSamplingModel`."""
+    """A wrapper of :obj:`nifreeze.model.gqi.GeneralizedQSamplingModel`."""
 
     _modelargs = (
         "method",
         "sampling_length",
-        "normalize_peaks",
+        "sphere",
+        "recursion_level",
     )
     _model_class = "nifreeze.model.gqi.GeneralizedQSamplingModel"
 

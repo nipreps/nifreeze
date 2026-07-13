@@ -68,111 +68,208 @@ import warnings
 
 import numpy as np
 from dipy.core.subdivide_octahedron import create_unit_sphere
-from dipy.reconst.base import ReconstFit, ReconstModel
+from dipy.reconst.gqi import squared_radial_component
+from dipy.reconst.odf import OdfFit, OdfModel
 
 INVERSE_LAMBDA = 1e-6
+r"""
+Tikhonov regularization weight :math:`\lambda_0` for the reconstruction kernel
+:math:`(\mathbf{K}\mathbf{K}^{\mathsf T} + \lambda_0\mathbf{I})^{-1}\mathbf{K}`
+(see :func:`prediction_kernel`).
+"""
+
 DEFAULT_SPHERE_RECURSION_LEVEL = 5
+"""
+Default icosahedral subdivision level of the ODF sampling sphere (1026
+vertices); see :ref:`gqi-sphere-density` for the experiment justifying it.
+"""
+
+FREE_WATER_DIFFUSIVITY_6D = 0.01506
+r"""
+:math:`6 D` where :math:`D` is the free-water diffusion coefficient; the GQI
+scaling factor :math:`\sqrt{6 D \tau}` with :math:`\tau` folded into the b-value.
+"""
 
 
-class GeneralizedQSamplingModel(ReconstModel):
+class GeneralizedQSamplingModel(OdfModel):
     def __init__(
         self,
         gtab,
         *,
         method="standard",
         sampling_length=1.2,
-        normalize_peaks=False,
         sphere=None,
+        recursion_level=DEFAULT_SPHERE_RECURSION_LEVEL,
     ):
-        """Generalized Q-Sampling Imaging."""
-        ReconstModel.__init__(self, gtab)
+        r"""Generalized Q-Sampling Imaging.
+
+        Parameters
+        ----------
+        gtab : :obj:`~dipy.core.gradients.GradientTable`
+            Gradient table of the data to fit.
+        method : {"standard", "gqi2"}, optional
+            GQI reconstruction variant. Defaults to ``"standard"`` (the sinc
+            basis of Yeh et al., 2010, Eq. 6/9).
+
+            .. note::
+
+               This default **deliberately deviates from DIPY**, whose GQI
+               model defaults to ``"gqi2"``. NiFreeze uses GQI as a *signal
+               predictor*, and ``"standard"`` round-trips the diffusion signal
+               more faithfully than ``"gqi2"`` (see
+               :ref:`gqi-reconstruction-fidelity`). Anyone cross-referencing
+               DIPY should note the changed default.
+        sampling_length : float, optional
+            Diffusion sampling length :math:`\sigma` (``lambda`` in Yeh Eq. 9);
+            recommended range 1--1.3.
+        sphere : :obj:`~dipy.core.sphere.Sphere`, optional
+            ODF sampling sphere. When given, ``recursion_level`` is ignored.
+        recursion_level : int, optional
+            Subdivision level of the icosahedral ODF sampling sphere built when
+            ``sphere`` is not provided; higher values give a denser sphere.
+            Defaults to :data:`DEFAULT_SPHERE_RECURSION_LEVEL`. See
+            :ref:`gqi-sphere-density` for the experiment justifying the default
+            (past the fidelity knee for both single-shell and grid acquisitions,
+            while denser spheres only keep paying off for grid/multi-shell data).
+        """
+        OdfModel.__init__(self, gtab)
         self.method = method
         self.Lambda = sampling_length
-        self.normalize_peaks = normalize_peaks
         self.gtab = gtab
         self.sphere = (
-            create_unit_sphere(recursion_level=DEFAULT_SPHERE_RECURSION_LEVEL)
-            if sphere is None
-            else sphere
+            create_unit_sphere(recursion_level=recursion_level) if sphere is None else sphere
         )
 
-        # The gQI vector has shape (n_vertices, n_orientations)
+        # Forward GQI kernel, shape (n_gradients, n_vertices). Stored in this
+        # (un-transposed) orientation to match DIPY's ``GeneralizedQSamplingFit``
+        # so the eventual upstreaming (dipy/dipy#3553) needs no reshuffling.
         self.kernel = gqi_kernel(
             self.gtab,
             self.Lambda,
             self.sphere,
             method=self.method,
-        ).T
+        )
 
     def fit(self, data, *, mask=None):
         return GeneralizedQSamplingFit(self, data)
 
-    def predict(self, odf, *, S0=None):
-        """
-        Predict a signal for this GeneralizedQSamplingModel instance given parameters.
 
-        Parameters
-        ----------
-        odf : ndarray
-            Map of ODFs.
-        gtab : ndarray
-            Orientations where signal will be simulated
-        sphere : :obj:`~dipy.core.sphere.Sphere`
-            A sphere object, must be the same used for calculating the ODFs.
-
-        """
-
-        return prediction_kernel(self.gtab, self.Lambda, self.sphere, method=self.method)
-
-
-class GeneralizedQSamplingFit(ReconstFit):
+class GeneralizedQSamplingFit(OdfFit):
     def __init__(self, model, data):
-        """Calculates PDF and ODF for a single voxel
+        """Store the model and signal data for a fitted voxel (or voxels).
 
         Parameters
         ----------
-        model : object,
-            DiffusionSpectrumModel
-        data : 1d ndarray,
-            signal values
+        model : :obj:`GeneralizedQSamplingModel`
+            The GQI model instance this fit belongs to.
+        data : :obj:`~numpy.ndarray`
+            Signal values, shaped ``(n_gradients,)`` for a single voxel or
+            ``(n_voxels, n_gradients)`` for a masked volume.
 
         """
-        ReconstFit.__init__(self, model, data)
-        self._gfa = None
-        self.npeaks = 5
-        self._peak_values = None
-        self._peak_indices = None
-        self._qa = None
-        self.odf_fit = None
+        OdfFit.__init__(self, model, data)
 
-    def fit(self, data, *, mask=None):
-        if self.odf_fit is None:
-            self.odf_fit = self.odf()
-        return self
+    def odf(self, sphere=None):
+        r"""Compute the discrete orientation distribution function (ODF/SDF).
 
-    def odf(self):
-        """Calculates the discrete ODF for a given discrete sphere."""
-        return self.model.kernel @ self.data
+        Applies the forward GQI kernel to the fitted signal, implementing the
+        signal-to-SDF transform of Yeh et al. (2010). This satisfies the
+        :obj:`~dipy.reconst.odf.OdfFit` contract shared by DIPY's ODF models and
+        is distinct from :meth:`predict`, which maps signal back to signal.
+
+        Parameters
+        ----------
+        sphere : :obj:`~dipy.core.sphere.Sphere`, optional
+            ODF sampling sphere. When :obj:`None` (default), the model's sphere
+            is reused and the pre-computed forward kernel is applied directly,
+            avoiding recomputation.
+
+        Returns
+        -------
+        :obj:`~numpy.ndarray`
+            The discrete ODF, shaped ``(n_vertices,)`` for a single voxel or
+            ``(n_voxels, n_vertices)`` for a masked volume. Unlike
+            :meth:`predict`, the result is **not** clamped to non-negative
+            values (matching DIPY).
+        """
+        if sphere is None:
+            # ``model.kernel`` is the forward (n_gradients, n_vertices) kernel,
+            # applied directly (matching DIPY's ``odf``).
+            return self.data @ self.model.kernel
+
+        return self.data @ gqi_kernel(
+            self.model.gtab,
+            self.model.Lambda,
+            sphere,
+            method=self.model.method,
+        )
 
     def predict(self, gtab, *, S0=None):
-        """Predict using the fit model."""
+        r"""Predict the diffusion signal on ``gtab`` from the fitted data.
+
+        .. note::
+
+           This signal-to-signal prediction is a **NiFreeze extension** of GQI;
+           Yeh et al. (2010) defines only the forward signal-to-SDF transform.
+           It maps the fitted signal to the SDF and back via a
+           Tikhonov-regularized reconstruction kernel
+           (:func:`prediction_kernel`). See :ref:`gqi-models` for the
+           construction.
+
+        The result is clamped to non-negative values. ``S0`` is accepted for
+        API compatibility with the other NiFreeze DWI models but is unused.
+
+        Notes
+        -----
+        The kernel round-trip approximately preserves signal scale for the
+        ``"standard"`` (sinc) kernel, but not for ``"gqi2"``; prefer
+        ``"standard"`` when the predicted amplitude matters. See
+        :ref:`gqi-reconstruction-fidelity`.
+        """
+        # ``model.kernel`` is (n_gradients_in, n_vertices); transpose it to
+        # contract the shared vertex axis against the reconstruction kernel,
+        # yielding the fused (n_gradients_out, n_gradients_in) operator.
         K = (
             prediction_kernel(
                 gtab,
                 self.model.Lambda,
                 self.model.sphere,
+                method=self.model.method,
             )
-            @ self.model.kernel
+            @ self.model.kernel.T
         )
 
-        return (K @ self.data.T).T
+        return np.maximum((K @ self.data.T).T, 0)
 
 
 def gqi_kernel(gtab, param_lambda, sphere, method="standard"):
-    # 0.01506 = 6*D where D is the free water diffusion coefficient
-    # l_values sqrt(6 D tau) D free water diffusion coefficient and
-    # tau included in the b-value
-    scaling = np.sqrt(gtab.bvals * 0.01506)
+    r"""
+    Forward GQI kernel, shape ``(n_gradients, n_vertices)``.
+
+    Ported from DIPY's :obj:`dipy.reconst.gqi`, modularized as a function.
+
+    Parameters
+    ----------
+    gtab : :obj:`~dipy.core.gradients.GradientTable`
+        The gradient table for which the kernel is computed.
+    param_lambda : float
+        The GQI sampling length (:math:`\lambda`).
+    sphere : :obj:`~dipy.core.sphere.Sphere`
+        The sphere whose vertices define the ODF sampling directions.
+    method : {"standard", "gqi2"}, optional
+        GQI variant. ``"standard"`` implements the sinc reconstruction of Yeh
+        et al. (2010), Eq. 6/9 (verified to machine precision against the paper
+        and DIPY); ``"gqi2"`` uses the :math:`L^2`-weighted basis of Eq. 8
+        (:func:`~dipy.reconst.gqi.squared_radial_component`, imported from DIPY).
+        An unknown value falls back to ``"standard"`` with a warning.
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        The forward GQI kernel with shape ``(n_gradients, n_vertices)``.
+
+    """
+    scaling = np.sqrt(gtab.bvals * FREE_WATER_DIFFUSIVITY_6D)
     b_vector = gtab.bvecs * scaling[:, None]
 
     if method == "gqi2":
@@ -188,26 +285,35 @@ def gqi_kernel(gtab, param_lambda, sphere, method="standard"):
 
 def prediction_kernel(gtab, param_lambda, sphere, method="standard"):
     r"""
-    Predict a signal given the ODF.
+    Compute the Tikhonov-regularized reconstruction kernel for GQI.
 
     Parameters
     ----------
-    odf : ndarray
-        ODF parameters.
+    gtab : :obj:`~dipy.core.gradients.GradientTable`
+        The gradient table for which the kernel is computed.
+    param_lambda : float
+        The GQI sampling length (:math:`\lambda`).
+    sphere : :obj:`~dipy.core.sphere.Sphere`
+        The sphere whose vertices define the ODF sampling directions.
+    method : str, optional
+        GQI variant, either ``"standard"`` or ``"gqi2"``.
 
-    gtab : GradientTable
-        The gradient table for this prediction
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        The reconstruction kernel with shape ``(n_gradients, n_vertices)``.
 
     Notes
     -----
-    The predicted signal is given by:
+    With the forward GQI kernel :math:`\mathbf{K} \in \mathbb{R}^{n_g \times n_v}`,
+    the reconstruction kernel is
 
     .. math::
 
-        S(\theta, b) = K_{ii}^{-1} \cdot ODF
+        \mathbf{K}^{+} = (\mathbf{K} \mathbf{K}^T + \lambda_0 \mathbf{I})^{-1} \mathbf{K}
 
-    where :math:`K_{ii}^{-1}`, is the inverse of the GQI kernels for the
-    direction(s) :math:`ii` given by ``gtab``.
+    where :math:`\lambda_0 = 10^{-6}` (``INVERSE_LAMBDA``) regularizes the
+    inversion and :math:`\mathbf{I}` is the :math:`n_g \times n_g` identity.
 
     """
     # K.shape = (n_gradients, n_vertices)
@@ -215,157 +321,3 @@ def prediction_kernel(gtab, param_lambda, sphere, method="standard"):
     GtG = K @ K.T
     identity = np.eye(GtG.shape[0])
     return np.linalg.inv(GtG + INVERSE_LAMBDA * identity) @ K
-
-
-def normalize_qa(qa, *, max_qa=None):
-    """Normalize quantitative anisotropy.
-
-    Used mostly with GQI rather than GQI2.
-
-    Parameters
-    ----------
-    qa : array, shape (X, Y, Z, N)
-        where N is the maximum number of peaks stored
-    max_qa : float,
-        maximum qa value. Usually found in the CSF (corticospinal fluid).
-
-    Returns
-    -------
-    nqa : array, shape (x, Y, Z, N)
-        normalized quantitative anisotropy
-
-    Notes
-    -----
-    Normalized quantitative anisotropy has the very useful property
-    to be very small near gray matter and background areas. Therefore,
-    it can be used to mask out white matter areas.
-
-    """
-    if max_qa is None:
-        return qa / qa.max()
-    return qa / max_qa
-
-
-def squared_radial_component(x, *, tol=0.01):
-    """Part of the GQI2 integral."""
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        result = (2 * x * np.cos(x) + (x * x - 2) * np.sin(x)) / (x**3)
-    x_near_zero = (x < tol) & (x > -tol)
-    return np.where(x_near_zero, 1.0 / 3, result)
-
-
-def npa(self, odf, *, width=5):
-    """non-parametric anisotropy
-
-    Nimmo-Smith et al.  ISMRM 2011
-    """
-    # odf = self.odf(s)
-    t0, t1, t2 = triple_odf_maxima(self.odf_vertices, odf, width)
-    psi0 = t0[1] ** 2
-    psi1 = t1[1] ** 2
-    psi2 = t2[1] ** 2
-    npa = np.sqrt((psi0 - psi1) ** 2 + (psi1 - psi2) ** 2 + (psi2 - psi0) ** 2) / np.sqrt(
-        2 * (psi0**2 + psi1**2 + psi2**2)
-    )
-    # print 'tom >>>> ',t0,t1,t2,npa
-
-    return t0, t1, t2, npa
-
-
-def equatorial_zone_vertices(vertices, pole, *, width=5):
-    """
-    finds the 'vertices' in the equatorial zone conjugate
-    to 'pole' with width half 'width' degrees
-    """
-    return [
-        i
-        for i, v in enumerate(vertices)
-        if np.abs(np.dot(v, pole)) < np.abs(np.sin(np.pi * width / 180))
-    ]
-
-
-def polar_zone_vertices(vertices, pole, *, width=5):
-    """
-    finds the 'vertices' in the equatorial band around
-    the 'pole' of radius 'width' degrees
-    """
-    return [
-        i
-        for i, v in enumerate(vertices)
-        if np.abs(np.dot(v, pole)) > np.abs(np.cos(np.pi * width / 180))
-    ]
-
-
-def upper_hemi_map(v):
-    """
-    maps a 3-vector into the z-upper hemisphere
-    """
-    return np.sign(v[2]) * v
-
-
-def equatorial_maximum(vertices, odf, pole, width):
-    eqvert = equatorial_zone_vertices(vertices, pole, width=width)
-    # need to test for whether eqvert is empty or not
-    if len(eqvert) == 0:
-        print(f"empty equatorial band at {np.array_str(pole)}  pole with width {width:f}")
-        return None, None
-    eqvals = [odf[i] for i in eqvert]
-    eqargmax = np.argmax(eqvals)
-    eqvertmax = eqvert[eqargmax]
-    eqvalmax = eqvals[eqargmax]
-
-    return eqvertmax, eqvalmax
-
-
-def patch_vertices(vertices, pole, width):
-    """
-    find 'vertices' within the cone of 'width' degrees around 'pole'
-    """
-    return [
-        i
-        for i, v in enumerate(vertices)
-        if np.abs(np.dot(v, pole)) > np.abs(np.cos(np.pi * width / 180))
-    ]
-
-
-def patch_maximum(vertices, odf, pole, width):
-    eqvert = patch_vertices(vertices, pole, width)
-    # need to test for whether eqvert is empty or not
-    if len(eqvert) == 0:
-        print(f"empty cone around pole {np.array_str(pole)} with with width {width:f}")
-        return None, None
-    eqvals = [odf[i] for i in eqvert]
-    eqargmax = np.argmax(eqvals)
-    eqvertmax = eqvert[eqargmax]
-    eqvalmax = eqvals[eqargmax]
-    return eqvertmax, eqvalmax
-
-
-def odf_sum(odf):
-    return np.sum(odf)
-
-
-def patch_sum(vertices, odf, pole, width):
-    eqvert = patch_vertices(vertices, pole, width)
-    # need to test for whether eqvert is empty or not
-    if len(eqvert) == 0:
-        print(f"empty cone around pole {np.array_str(pole)} with with width {width:f}")
-        return None
-    return np.sum([odf[i] for i in eqvert])
-
-
-def triple_odf_maxima(vertices, odf, width):
-    indmax1 = np.argmax([odf[i] for i, v in enumerate(vertices)])
-    odfmax1 = odf[indmax1]
-    pole = vertices[indmax1]
-    eqvert = equatorial_zone_vertices(vertices, pole, width=width)
-    indmax2, odfmax2 = equatorial_maximum(vertices, odf, pole, width)
-    indmax3 = eqvert[np.argmin([np.abs(np.dot(vertices[indmax2], vertices[p])) for p in eqvert])]
-    odfmax3 = odf[indmax3]
-    """
-    cross12 = np.cross(vertices[indmax1],vertices[indmax2])
-    cross12 = cross12/np.sqrt(np.sum(cross12**2))
-    indmax3, odfmax3 = patch_maximum(vertices, odf, cross12, 2*width)
-    """
-    return [(indmax1, odfmax1), (indmax2, odfmax2), (indmax3, odfmax3)]
