@@ -173,7 +173,9 @@ def test_gqi_odf_family(method, keep_b0):
 
     # Default sphere reuses the pre-computed forward kernel (kernel stored as
     # (n_vertices, n_gradients); ``.T`` recovers the forward orientation).
-    default_odf = voxel_fit.odf()
+    # ``None`` explicitly requests the model's sphere; it also satisfies the base
+    # ``OdfFit.odf(sphere)`` signature that ``voxel_fit`` is narrowed to above.
+    default_odf = voxel_fit.odf(None)
     assert default_odf.shape == (n_default,)
     assert np.allclose(default_odf, voxel_data @ gq.kernel)
 
