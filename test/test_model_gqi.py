@@ -60,28 +60,73 @@ TESTED_VOXELS = [(0, 0, 0), (0, 0, 1), (0, 1, 0), (1, 0, 0)]
 SAMPLING_LENGTH = 1.2
 
 
-def _b0_excluded_train_gtab(gtab):
-    """Return the gradient table and index mask with b=0 volumes removed."""
-    non_b0 = np.where(~gtab.b0s_mask)[0]
-    train_gtab = gradient_table(bvals=gtab.bvals[non_b0], bvecs=gtab.bvecs[non_b0])
-    return train_gtab, non_b0
+def _train_gtab(gtab, *, keep_b0):
+    """Return a gradient table and the index mask selecting its volumes.
+
+    With ``keep_b0=False`` the b=0/low-b volumes are dropped (the NiFreeze
+    pipeline contract, which strips them before any model runs); with
+    ``keep_b0=True`` the full table is kept so the b0-fed path is exercised
+    directly on :class:`~nifreeze.model.gqi.GeneralizedQSamplingModel`.
+    """
+    idx = np.arange(len(gtab.bvals)) if keep_b0 else np.where(~gtab.b0s_mask)[0]
+    train_gtab = gradient_table(bvals=gtab.bvals[idx], bvecs=gtab.bvecs[idx])
+    return train_gtab, idx
+
+
+#: ``keep_b0`` parametrization shared by the b0-included/excluded tests.
+_KEEP_B0 = pytest.mark.parametrize("keep_b0", [False, True], ids=["no_b0", "with_b0"])
 
 
 # ---------------------------------------------------------------------------
 # Forward kernel
 # ---------------------------------------------------------------------------
+@_KEEP_B0
 @pytest.mark.parametrize("method", ["standard", "gqi2"])
-def test_gqi_kernel_shape_and_values(method):
+def test_gqi_kernel_shape_and_values(method, keep_b0):
     """The forward GQI kernel is real, finite, and ``(n_gradients, n_vertices)``."""
     _, gtab = dsi_voxels()
+    train_gtab, _ = _train_gtab(gtab, keep_b0=keep_b0)
     sphere = get_sphere(name="symmetric724")
 
-    K = gqi_kernel(gtab, SAMPLING_LENGTH, sphere, method=method)
+    K = gqi_kernel(train_gtab, SAMPLING_LENGTH, sphere, method=method)
 
-    assert K.shape == (len(gtab.bvals), len(sphere.vertices))
+    assert K.shape == (len(train_gtab.bvals), len(sphere.vertices))
     assert np.isrealobj(K)
     assert np.all(np.isfinite(K))
     assert np.any(K != 0)
+
+
+@pytest.mark.parametrize(
+    "method, constant", [("standard", 1.0), ("gqi2", 1.0 / 3)], ids=["standard", "gqi2"]
+)
+def test_gqi_kernel_b0_row_is_constant(method, constant):
+    """A true b=0 volume yields an angularly flat, collinear kernel row.
+
+    At b=0 the sampling vector is zero, so every vertex sees the same argument:
+    ``sinc(0) = 1`` (``standard``) and ``squared_radial_component(0) = 1/3``
+    (``gqi2``). Two b=0 volumes therefore produce identical rows carrying no
+    angular information -- the rank-deficiency that motivates excluding b=0 from
+    the fit (see ``docs/models.rst``, "Reconstruction fidelity and the intercept
+    behaviour"). ``dsi_voxels`` only carries a single low-b b0 (b=15), so this
+    uses a synthetic pair of true b=0 volumes.
+    """
+    _, gtab = dsi_voxels()
+    sphere = get_sphere(name="symmetric724")
+    dw = np.where(~gtab.b0s_mask)[0]
+    # Prepend two true b=0 volumes; their (distinct) bvecs are irrelevant at b=0.
+    bvals = np.concatenate(([0.0, 0.0], gtab.bvals[dw]))
+    bvecs = np.vstack(([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], gtab.bvecs[dw]))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        g0 = gradient_table(bvals=bvals, bvecs=bvecs)
+
+    K = gqi_kernel(g0, SAMPLING_LENGTH, sphere, method=method)
+
+    b0_rows = K[:2]
+    assert np.allclose(b0_rows, constant), f"b0 row is not the constant {constant}"
+    assert np.allclose(b0_rows[0], b0_rows[1]), "b0 rows are not identical (collinear)"
+    # By contrast, diffusion-weighted rows vary across vertices (carry structure).
+    assert K[2:].std(axis=1).min() > 1e-2, "DW rows are unexpectedly flat"
 
 
 def test_gqi_kernel_unknown_method_warns():
@@ -99,22 +144,25 @@ def test_gqi_kernel_unknown_method_warns():
 # ---------------------------------------------------------------------------
 # Reconstruction (prediction) kernel — analytical validity
 # ---------------------------------------------------------------------------
+@_KEEP_B0
 @pytest.mark.parametrize("method", ["standard", "gqi2"])
-def test_prediction_kernel_properties(method):
+def test_prediction_kernel_properties(method, keep_b0):
     """The reconstruction kernel is a valid Tikhonov-regularized pseudo-inverse.
 
     Ported from ``test_prediction_kernel``.  NiFreeze returns
     ``K_plus`` with shape ``(n_gradients, n_vertices)`` (the transpose of the
-    DIPY-branch orientation), hence the ``.T`` on ``K_plus`` below.
+    DIPY-branch orientation), hence the ``.T`` on ``K_plus`` below.  The
+    pseudo-inverse properties hold whether or not b=0/low-b volumes are present.
     """
     _, gtab = dsi_voxels()
+    train_gtab, _ = _train_gtab(gtab, keep_b0=keep_b0)
     sphere = get_sphere(name="symmetric724")
 
-    K = gqi_kernel(gtab, SAMPLING_LENGTH, sphere, method=method)
-    K_plus = prediction_kernel(gtab, SAMPLING_LENGTH, sphere, method=method)
+    K = gqi_kernel(train_gtab, SAMPLING_LENGTH, sphere, method=method)
+    K_plus = prediction_kernel(train_gtab, SAMPLING_LENGTH, sphere, method=method)
 
     # Shape: (n_gradients, n_vertices) — same shape as the forward kernel here.
-    assert K_plus.shape == (len(gtab.bvals), len(sphere.vertices))
+    assert K_plus.shape == (len(train_gtab.bvals), len(sphere.vertices))
     assert K_plus.shape == K.shape
 
     # Finite and non-zero.
@@ -142,29 +190,32 @@ def test_prediction_kernel_properties(method):
 # ---------------------------------------------------------------------------
 # Prediction API — shape & non-negativity
 # ---------------------------------------------------------------------------
+@_KEEP_B0
 @pytest.mark.parametrize("method", ["standard", "gqi2"])
 @pytest.mark.parametrize("voxel_coordinate", TESTED_VOXELS)
-def test_predict_single_voxel(method, voxel_coordinate):
+def test_predict_single_voxel(method, voxel_coordinate, keep_b0):
     """Single-voxel prediction has the right shape and is non-negative."""
     data, gtab = dsi_voxels()
+    train_gtab, idx = _train_gtab(gtab, keep_b0=keep_b0)
 
-    gq = GeneralizedQSamplingModel(gtab, method=method, sampling_length=SAMPLING_LENGTH)
-    voxel_fit = gq.fit(data[voxel_coordinate])
-    voxel_predicted = voxel_fit.predict(gtab)
+    gq = GeneralizedQSamplingModel(train_gtab, method=method, sampling_length=SAMPLING_LENGTH)
+    voxel_fit = gq.fit(data[voxel_coordinate][idx])
+    voxel_predicted = voxel_fit.predict(train_gtab)
 
-    assert voxel_predicted.shape == (len(gtab.bvals),)
+    assert voxel_predicted.shape == (len(train_gtab.bvals),)
     assert np.all(voxel_predicted >= 0), "Predicted signals should be non-negative"
 
     # Prediction on a subset of gradients.
-    subset_gtab = gradient_table(gtab.bvals[::2], bvecs=gtab.bvecs[::2])
+    subset_gtab = gradient_table(train_gtab.bvals[::2], bvecs=train_gtab.bvecs[::2])
     subset_predicted = voxel_fit.predict(subset_gtab)
 
     assert subset_predicted.shape == (len(subset_gtab.bvals),)
     assert np.all(subset_predicted >= 0), "Subset predictions should be non-negative"
 
 
+@_KEEP_B0
 @pytest.mark.parametrize("method", ["standard", "gqi2"])
-def test_predict_multi_voxel(method):
+def test_predict_multi_voxel(method, keep_b0):
     """Multi-voxel prediction round-trips shape over NiFreeze's 2D contract.
 
     NiFreeze always feeds ``predict`` a 2D ``(n_voxels, n_gradients)`` array
@@ -172,16 +223,17 @@ def test_predict_multi_voxel(method):
     here rather than passed as a 4D volume.
     """
     data, gtab = dsi_voxels()
-    n_gradients = len(gtab.bvals)
-    data_2d = data.reshape(-1, n_gradients)
+    train_gtab, idx = _train_gtab(gtab, keep_b0=keep_b0)
+    n_gradients = len(train_gtab.bvals)
+    data_2d = data[..., idx].reshape(-1, n_gradients)
 
-    gq = GeneralizedQSamplingModel(gtab, method=method, sampling_length=SAMPLING_LENGTH)
-    multi_predicted = gq.fit(data_2d).predict(gtab)
+    gq = GeneralizedQSamplingModel(train_gtab, method=method, sampling_length=SAMPLING_LENGTH)
+    multi_predicted = gq.fit(data_2d).predict(train_gtab)
 
     assert multi_predicted.shape == data_2d.shape
     assert np.all(multi_predicted >= 0), "Predicted signals should be non-negative"
 
-    subset_gtab = gradient_table(gtab.bvals[::2], bvecs=gtab.bvecs[::2])
+    subset_gtab = gradient_table(train_gtab.bvals[::2], bvecs=train_gtab.bvecs[::2])
     subset_predicted = gq.fit(data_2d).predict(subset_gtab)
 
     assert subset_predicted.shape == (data_2d.shape[0], len(subset_gtab.bvals))
@@ -191,15 +243,20 @@ def test_predict_multi_voxel(method):
 # ---------------------------------------------------------------------------
 # Prediction round-trip — analytical validity on real DSI data
 # ---------------------------------------------------------------------------
+@_KEEP_B0
 @pytest.mark.parametrize("voxel_coordinate", TESTED_VOXELS)
-def test_predict_roundtrip_single_voxel(voxel_coordinate):
+def test_predict_roundtrip_single_voxel(voxel_coordinate, keep_b0):
     """Single-voxel predictions correlate strongly with the original signal.
 
-    The b=0 volumes are excluded from both train and test sets.
+    Runs with b=0 excluded (the NiFreeze pipeline contract) and with the b=0/
+    low-b volume fed directly to the model. Correlation is evaluated on the
+    diffusion-weighted subset: including the b0 volume must not corrupt the DW
+    reconstruction. (``dsi_voxels`` carries a single low-b b0 at b=15; the DW
+    reconstruction is robust to it.)
     """
     data, gtab = dsi_voxels()
-    train_gtab, non_b0 = _b0_excluded_train_gtab(gtab)
-    train_data = data[..., non_b0]
+    train_gtab, idx = _train_gtab(gtab, keep_b0=keep_b0)
+    train_data = data[..., idx]
 
     gq = GeneralizedQSamplingModel(train_gtab, method="standard", sampling_length=SAMPLING_LENGTH)
     voxel_data = train_data[voxel_coordinate]
@@ -208,7 +265,10 @@ def test_predict_roundtrip_single_voxel(voxel_coordinate):
     assert voxel_predicted.shape == (len(train_gtab.bvals),)
     assert np.all(voxel_predicted >= 0), "Predicted signals should be non-negative"
 
-    correlation = np.corrcoef(voxel_data, voxel_predicted)[0, 1]
+    # Evaluate on the DW subset (all volumes when ``keep_b0=False``) so the b0-fed
+    # case measures DW fidelity, not the single high-leverage b0 point.
+    dw = ~train_gtab.b0s_mask
+    correlation = np.corrcoef(voxel_data[dw], voxel_predicted[dw])[0, 1]
     assert correlation > SINGLE_VOXEL_CORRELATION_THRESHOLD, (
         f"Poor single voxel correlation {correlation:.3f}"
     )
@@ -219,15 +279,21 @@ def test_predict_roundtrip_single_voxel(voxel_coordinate):
     assert 0.1 < ratio < 10, f"Signal magnitude unrealistic: ratio={ratio:.3f}"
 
 
-def test_predict_roundtrip_multi_voxel():
+@_KEEP_B0
+def test_predict_roundtrip_multi_voxel(keep_b0):
     """Whole-phantom predictions maintain high per-voxel correlation.
 
-    The b=0 volumes are excluded from both train and test sets, and the DSI
-    grid is reshaped to NiFreeze's 2D ``(n_voxels, n_gradients)`` contract.
+    Runs with b=0 excluded (the NiFreeze pipeline contract) and with the b=0/
+    low-b volume fed directly to the model; the DSI grid is reshaped to
+    NiFreeze's 2D ``(n_voxels, n_gradients)`` contract. Correlation is evaluated
+    on the diffusion-weighted subset so the b0-fed case measures whether the b0
+    volume corrupts the DW reconstruction (it does not). When b0 is fed, the b0
+    volume itself is additionally characterized: it is reconstructed within a
+    loose factor (a characterization bound, not a quality target).
     """
     data, gtab = dsi_voxels()
-    train_gtab, non_b0 = _b0_excluded_train_gtab(gtab)
-    train_data = data[..., non_b0]
+    train_gtab, idx = _train_gtab(gtab, keep_b0=keep_b0)
+    train_data = data[..., idx]
 
     vol_shape = train_data.shape[:-1]
     n_gradients = train_data.shape[-1]
@@ -239,6 +305,8 @@ def test_predict_roundtrip_multi_voxel():
 
     assert np.all(multi_predicted >= 0), "Predicted signals should be non-negative"
 
+    # DW subset (all volumes when ``keep_b0=False``) for the correlation gates.
+    dw = ~train_gtab.b0s_mask
     correlations = []
     poor_correlation_voxels = []
     for i in range(vol_shape[0]):
@@ -246,7 +314,7 @@ def test_predict_roundtrip_multi_voxel():
             for k in range(vol_shape[2]):
                 original_voxel = train_data[i, j, k]
                 predicted_voxel = multi_predicted[i, j, k]
-                correlation = np.corrcoef(original_voxel, predicted_voxel)[0, 1]
+                correlation = np.corrcoef(original_voxel[dw], predicted_voxel[dw])[0, 1]
                 correlations.append(correlation)
 
                 if np.sum(original_voxel) == 0:
@@ -261,6 +329,14 @@ def test_predict_roundtrip_multi_voxel():
     assert not poor_correlation_voxels, (
         f"Found {len(poor_correlation_voxels)} voxels with poor correlation"
     )
+
+    # When the b0 is fed, characterize its own reconstruction: the large, near-flat
+    # b0 volume is recovered within a loose factor (not exactly -- the sinc basis
+    # cannot fully represent it), while the DW reconstruction above is unharmed.
+    if keep_b0:
+        b0 = train_gtab.b0s_mask
+        b0_ratio = predicted_2d[:, b0].mean() / train_data_2d[:, b0].mean()
+        assert 0.3 < b0_ratio < 3.0, f"b0 reconstruction ratio out of range: {b0_ratio:.3f}"
 
     orig_mean = np.mean(train_data)
     pred_mean = np.mean(multi_predicted)
