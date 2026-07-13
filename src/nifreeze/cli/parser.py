@@ -177,21 +177,26 @@ def _build_parser() -> ArgumentParser:
 
 
 def _determine_single_fit_mode(model_name: str) -> bool:
-    """Determine if a model is to be run in *single-fit mode*.
+    """
+    Determine if a model is to be run in *single-fit mode*.
+
     A model is run in *single-fit mode* (fit once on all data, reuse the locked
     prediction for every volume) when its name is prefixed with ``single``. See
     :class:`~nifreeze.estimator.Estimator` for when this mode is appropriate —
     it leaks the held-out volume into its own target, so it is for
     development/testing/initialization, not accuracy-critical estimation.
+
     Parameters
     ----------
     model_name : :obj:`str`
         Model name.
+
     Returns
     -------
     :obj:`bool`
         :obj:`True` if the model is to be run in *single-fit mode*, :obj:`False`
         otherwise.
+
     """
 
     return model_name.lower().startswith("single")

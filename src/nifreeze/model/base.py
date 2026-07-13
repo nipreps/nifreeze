@@ -96,17 +96,19 @@ class BaseModel(ABC):
 
     __metaclass__ = ABCMeta
 
-    __slots__ = ("_dataset", "_locked_fit")
+    __slots__ = {
+        "_dataset": "The NiFreeze dataset instance this model operates on",
+        "_locked_fit": (
+            "If resolves ``True`` as a boolean, indicates that the "
+            "single-fit (locked) state is active. "
+            "See :obj:`~nifreeze.model.base.BaseModel.fit_predict` "
+            "for a description of the single-fit mode."
+        ),
+    }
 
     def __init__(self, dataset, **kwargs):
         """Base initialization."""
 
-        # ``_locked_fit`` holds the single-fit (locked) state and is overloaded
-        # across subclasses: an ndarray prediction map in Trivial/Expectation
-        # models, a boolean sentinel (the fit lives in ``self._models``) in the
-        # DIPY-backed DWI models, and always ``None`` in models that do not
-        # support locking (e.g. the PET B-spline model). ``None`` means "not
-        # locked" — i.e. per-index LOVO fitting.
         self._locked_fit = None
         self._dataset = dataset
         # Warn if mask not present
