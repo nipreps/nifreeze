@@ -72,7 +72,35 @@ class Filter:
 
 
 class Estimator:
-    """Orchestrates components for a single estimation step."""
+    """
+    Orchestrates components for a single estimation step.
+
+    The estimator traverses the 4D sequence with a Leave-One-Volume-Out (LOVO)
+    strategy: for each target volume it fits the model on the *remaining*
+    volumes, predicts the held-out volume, and registers the observed volume to
+    that prediction. Held-out independence is what makes the estimated transform
+    valid (see :meth:`~nifreeze.model.base.BaseModel.fit_predict`).
+
+    Parameters
+    ----------
+    model : :obj:`~nifreeze.model.base.BaseModel` or :obj:`str`
+        The model (or model name) used to generate the registration target.
+    strategy : :obj:`str`, optional
+        Name of the iterator used to traverse the 4D sequence.
+    prev : :obj:`~nifreeze.estimator.Estimator`, :obj:`~nifreeze.estimator.Filter`, optional
+        A previous estimator/filter whose output initializes this one (cascade).
+    model_kwargs : :obj:`dict`, optional
+        Extra keyword arguments passed through to the model at construction.
+    single_fit : :obj:`bool`, optional
+        Run the model in *single-fit mode*: fit **once** on all volumes up front
+        (via ``model.fit_predict(None)``) and lock that *fit* instead of
+        refitting per held-out volume. Prediction is no longer unbiased.
+    start_index : :obj:`int`, optional
+        First volume index to process.
+    stop_index : :obj:`int`, optional
+        One-past-last volume index to process (``None`` = to the end).
+
+    """
 
     __slots__ = (
         "_model",

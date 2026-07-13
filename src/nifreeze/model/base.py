@@ -96,7 +96,15 @@ class BaseModel(ABC):
 
     __metaclass__ = ABCMeta
 
-    __slots__ = ("_dataset", "_locked_fit")
+    __slots__ = {
+        "_dataset": "The NiFreeze dataset instance this model operates on",
+        "_locked_fit": (
+            "If resolves ``True`` as a boolean, indicates that the "
+            "single-fit (locked) state is active. "
+            "See :obj:`~nifreeze.model.base.BaseModel.fit_predict` "
+            "for a description of the single-fit mode."
+        ),
+    }
 
     def __init__(self, dataset, **kwargs):
         """Base initialization."""
@@ -112,16 +120,22 @@ class BaseModel(ABC):
         """
         Fit and predict the indicated index of the dataset (abstract signature).
 
-        If ``index`` is :obj:`None`, then the model is executed in *single-fit mode* meaning
-        that it will be run only once in all the data available.
-        Please note that all the predictions of this model will suffer from data leakage
-        from the original volume.
+        In the default Leave-One-Volume-Out (LOVO) mode, ``index`` names the
+        volume to hold out: the model is fit on every *other* volume and used to
+        predict the held-out one. This held-out independence sets a base to
+        claim that predictions are *unbiased*.
+
+        If ``index`` is :obj:`None`, the model is executed in *single-fit mode*:
+        it is fit **once** on all available data (no volume held out). The fit
+        is *locked* (``_locked_fit`` evaluates to true), such that later calls
+        reuse the fit object without refitting.
 
         Parameters
         ----------
         index : :obj:`int`, optional
-            The index to predict.
-            If :obj:`None`, no prediction will be executed.
+            The volume index to hold out and predict (LOVO mode).
+            If :obj:`None`, single-fit mode is used and no held-out prediction is
+            produced.
 
         """
         return None

@@ -69,8 +69,13 @@ such as *NiPreps* [6]_.
 In addition, *FSL*'s development model discourages the implementation of alternative data-modeling
 approaches to broaden the scope of application (e.g., modalities beyond dMRI).
 *NiFreeze* is an open-source implementation of ``eddy``'s approach to estimate artifacts
-that permits alternative models that apply to, for instance, head motion estimation in fMRI 
+that permits alternative models that apply to, for instance, head motion estimation in fMRI
 and positron-emission tomography (PET) data.
+Like ``eddy``, *NiFreeze* estimates each volume's motion and distortion with a
+leave-one-volume-out scheme: a signal model fit on all the *other* volumes
+synthesizes an independent, same-contrast registration target for the held-out
+volume, sidestepping the ill-posed volume-to-volume registration of
+direction-varying dMRI contrast.
 
 .. BEGIN FLOWCHART
 
