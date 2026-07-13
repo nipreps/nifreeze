@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Running NiFreeze" href="running.html"><link rel="prev" title="Design Principles" href="design.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>How to Use - nifreeze 26.0.0.dev116 documentation</title>
+        <title>How to Use - nifreeze 26.0.0.dev124 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev116 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev124 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev116</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev124</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev116</span>
+  <span class="sidebar-brand-text">26.0.0.dev124</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -388,6 +388,8 @@ available models, see <a class="reference internal" href="api/nifreeze.model.htm
 <li><p><code class="docutils literal notranslate"><span class="pre">strategy</span></code>: strategy used to traverse the 4D sequence. The list of
 supported strategies can be found at <a class="reference internal" href="api/nifreeze.utils.iterators.html"><span class="doc">nifreeze.utils.iterators module</span></a>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">prev</span></code>: estimators can be stacked and be run sequentially.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">single_fit</span></code>: when <code class="docutils literal notranslate"><span class="pre">True</span></code>, fit the model once on all volumes instead of
+refitting per held-out volume. Use carefully.</p></li>
 </ul>
 </li>
 <li><p><strong>Fit the Models to Estimate the Affine Transformation</strong>:</p>
@@ -404,7 +406,7 @@ transformation parameters:</p>
 <span class="p">)</span>
 </pre></div>
 </div>
-<p>The <code class="docutils literal notranslate"><span class="pre">run</span></code> method employs the Leave-One-Volume-Out (LOVO) splitting technique to iteratively process DWI data volumes for each specified model. Affine transformations align the volumes, updating the <cite>DWI</cite> object with the estimated parameters. This method accepts several parameters:</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">run</span></code> method employs the Leave-One-Volume-Out (LOVO) splitting technique to iteratively process DWI data volumes for each specified model: each volume is registered to a prediction fit on all the <em>other</em> volumes, so the target is independent of the volume being aligned. Affine transformations align the volumes, updating the <cite>DWI</cite> object with the estimated parameters. This method accepts several parameters:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">dataset</span></code>: The target dataset, represented by this tool’s internal type.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">align_kwargs</span></code>: Parameters to configure the image registration process.</p></li>
@@ -539,7 +541,7 @@ visualize diffusion gradients.</p></li>
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=3e04c242"></script>
+</div><script src="_static/documentation_options.js?v=00d4bcfd"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

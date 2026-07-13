@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.estimator - nifreeze 26.0.0.dev116 documentation</title>
+        <title>nifreeze.estimator - nifreeze 26.0.0.dev124 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">nifreeze 26.0.0.dev116 documentation</div></a>
+      <a href="../../index.html"><div class="brand">nifreeze 26.0.0.dev124 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev116</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev124</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev116</span>
+  <span class="sidebar-brand-text">26.0.0.dev124</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -394,7 +394,35 @@
 <div class="viewcode-block" id="Estimator">
 <a class="viewcode-back" href="../../api/nifreeze.estimator.html#nifreeze.estimator.Estimator">[docs]</a>
 <span class="k">class</span> <span class="nc">Estimator</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Orchestrates components for a single estimation step.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Orchestrates components for a single estimation step.</span>
+
+<span class="sd">    The estimator traverses the 4D sequence with a Leave-One-Volume-Out (LOVO)</span>
+<span class="sd">    strategy: for each target volume it fits the model on the *remaining*</span>
+<span class="sd">    volumes, predicts the held-out volume, and registers the observed volume to</span>
+<span class="sd">    that prediction. Held-out independence is what makes the estimated transform</span>
+<span class="sd">    valid (see :meth:`~nifreeze.model.base.BaseModel.fit_predict`).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    model : :obj:`~nifreeze.model.base.BaseModel` or :obj:`str`</span>
+<span class="sd">        The model (or model name) used to generate the registration target.</span>
+<span class="sd">    strategy : :obj:`str`, optional</span>
+<span class="sd">        Name of the iterator used to traverse the 4D sequence.</span>
+<span class="sd">    prev : :obj:`~nifreeze.estimator.Estimator`, :obj:`~nifreeze.estimator.Filter`, optional</span>
+<span class="sd">        A previous estimator/filter whose output initializes this one (cascade).</span>
+<span class="sd">    model_kwargs : :obj:`dict`, optional</span>
+<span class="sd">        Extra keyword arguments passed through to the model at construction.</span>
+<span class="sd">    single_fit : :obj:`bool`, optional</span>
+<span class="sd">        Run the model in *single-fit mode*: fit **once** on all volumes up front</span>
+<span class="sd">        (via ``model.fit_predict(None)``) and lock that *fit* instead of</span>
+<span class="sd">        refitting per held-out volume. Prediction is no longer unbiased.</span>
+<span class="sd">    start_index : :obj:`int`, optional</span>
+<span class="sd">        First volume index to process.</span>
+<span class="sd">    stop_index : :obj:`int`, optional</span>
+<span class="sd">        One-past-last volume index to process (``None`` = to the end).</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span>
         <span class="s2">&quot;_model&quot;</span><span class="p">,</span>
@@ -603,7 +631,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=3e04c242"></script>
+</div><script src="../../_static/documentation_options.js?v=00d4bcfd"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>

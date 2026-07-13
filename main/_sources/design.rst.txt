@@ -199,16 +199,30 @@ Usage
 Fitting and Prediction
 ----------------------
 
-Models have a ``_locked_fit`` property that allows to fit all available data if no index is provided. This is achieved
-by calling::
+In the default Leave-One-Volume-Out (LOVO) mode described above, each call to a
+model's ``fit_predict(index)`` fits on every volume *except* ``index`` and
+predicts the held-out one. This held-out independence is what makes the
+registration target valid: the prediction volume ``k`` is registered against
+must not itself depend on volume ``k``.
 
-   .. code-block:: python
+Models also support a *single-fit mode*, activated by calling
 
-   model.fit_predict(None)
+.. code-block:: python
 
-In this case, the predicted data will always be the same regardless of the index. The ``single_`` prefix in the fitting
-strategy provided to the :class:`api/nifreeze.estimator.Estimator` instances tells the estimator to proceed this way.
+    model.fit_predict(None)
 
+which fits the model once on all available data (that is, no volume is held out) and *locks* that fit (stored in ``_locked_fit``). Subsequent calls reuse the
+locked model fit instead of refitting.
+Do not confuse the *single-fit mode* with *returning the same volume regardless
+of the index*.
+
+Single-fit forfeits *independence*: because the queried volume was part
+of the data the locked fit was trained on, its prediction is no longer the
+unbiased, out-of-sample estimate LOVO provides. Therefore, single-fit can be
+used where this bias is either absent or tolerable. For example, contexts where
+the bias is anticipated to be negligible, such as a coarse, low-DOF early
+rigid-body realignment that a subsequent LOVO stage refines, or trading accuracy
+for speed during development or debugging.
 
 Usage
 -----
