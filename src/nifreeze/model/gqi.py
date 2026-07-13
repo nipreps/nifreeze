@@ -83,7 +83,31 @@ class GeneralizedQSamplingModel(ReconstModel):
         sampling_length=1.2,
         sphere=None,
     ):
-        """Generalized Q-Sampling Imaging."""
+        r"""Generalized Q-Sampling Imaging.
+
+        Parameters
+        ----------
+        gtab : :obj:`~dipy.core.gradients.GradientTable`
+            Gradient table of the data to fit.
+        method : {"standard", "gqi2"}, optional
+            GQI reconstruction variant. Defaults to ``"standard"`` (the sinc
+            basis of Yeh et al., 2010, Eq. 6/9).
+
+            .. note::
+
+               This default **deliberately deviates from DIPY**, whose GQI
+               model defaults to ``"gqi2"``. NiFreeze uses GQI as a *signal
+               predictor* rather than for ODF/SDF reconstruction, and the
+               ``"standard"`` sinc kernel round-trips the diffusion signal far
+               more faithfully than ``"gqi2"`` (which is oscillatory and
+               ill-conditioned as a signal-reconstruction operator). Anyone
+               cross-referencing DIPY should note the changed default.
+        sampling_length : float, optional
+            Diffusion sampling length :math:`\sigma` (``lambda`` in Yeh Eq. 9);
+            recommended range 1--1.3.
+        sphere : :obj:`~dipy.core.sphere.Sphere`, optional
+            ODF sampling sphere; defaults to a unit sphere at recursion level 5.
+        """
         ReconstModel.__init__(self, gtab)
         self.method = method
         self.Lambda = sampling_length
@@ -124,11 +148,27 @@ class GeneralizedQSamplingFit(ReconstFit):
     def predict(self, gtab, *, S0=None):
         r"""Predict the diffusion signal on ``gtab`` from the fitted data.
 
-        The prediction composes the fitted signal with the forward GQI kernel
-        and the Tikhonov-regularized reconstruction kernel of ``gtab``, then
-        clamps to non-negative values. ``S0`` is accepted for API compatibility
-        with the other NiFreeze DWI models but is unused (the round-trip through
-        the kernels preserves signal scale).
+        .. note::
+
+           This signal-to-signal prediction is a **NiFreeze extension** of GQI
+           and is *not* part of Yeh et al. (2010), which defines only the
+           forward signal-to-SDF transform (Eq. 6/9). Here the fitted signal is
+           mapped to the SDF by the forward GQI kernel and then back to the
+           signal domain by a Tikhonov-regularized reconstruction kernel
+           (:func:`prediction_kernel`) -- i.e. the regularized least-squares
+           signal whose forward GQI transform reproduces the fitted SDF.
+
+        The result is clamped to non-negative values. ``S0`` is accepted for
+        API compatibility with the other NiFreeze DWI models but is unused.
+
+        Notes
+        -----
+        The kernel round-trip approximately preserves signal scale for the
+        ``"standard"`` (sinc) kernel, but **not** for ``"gqi2"``: the gqi2
+        kernel is more oscillatory/ill-conditioned as a reconstruction
+        operator, so re-predicting a gqi2 prediction drifts substantially.
+        Prefer ``"standard"`` when the prediction itself is the quantity of
+        interest.
         """
         K = (
             prediction_kernel(
