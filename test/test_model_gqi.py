@@ -38,6 +38,7 @@ import numpy as np
 import pytest
 from dipy.core.gradients import gradient_table
 from dipy.data import dsi_voxels, get_fnames, get_sphere
+from dipy.reconst.odf import OdfFit, OdfModel
 
 from nifreeze import model
 from nifreeze.data.dmri import DWI
@@ -139,6 +140,59 @@ def test_gqi_kernel_unknown_method_warns():
 
     K_standard = gqi_kernel(gtab, SAMPLING_LENGTH, sphere, method="standard")
     assert np.array_equal(K_unknown, K_standard)
+
+
+# ---------------------------------------------------------------------------
+# ODF-family alignment — OdfModel/OdfFit membership and the ``odf`` transform
+# ---------------------------------------------------------------------------
+@_KEEP_B0
+@pytest.mark.parametrize("method", ["standard", "gqi2"])
+def test_gqi_odf_family(method, keep_b0):
+    """GQI joins DIPY's ``OdfModel``/``OdfFit`` family and exposes ``odf``.
+
+    Guards the base-class alignment (a silent regression to ``ReconstModel``/
+    ``ReconstFit`` would break family membership) and checks that ``Fit.odf``
+    applies the forward GQI kernel (``data @ gqi_kernel``) for both the model's
+    default sphere (reusing the pre-computed kernel) and an explicit sphere,
+    over single-voxel and NiFreeze's 2D ``(n_voxels, n_gradients)`` data.
+    """
+    data, gtab = dsi_voxels()
+    train_gtab, idx = _train_gtab(gtab, keep_b0=keep_b0)
+    sphere = get_sphere(name="symmetric724")
+
+    gq = GeneralizedQSamplingModel(train_gtab, method=method, sampling_length=SAMPLING_LENGTH)
+    assert isinstance(gq, OdfModel)
+
+    n_default = len(gq.sphere.vertices)
+    n_sphere = len(sphere.vertices)
+
+    # Single voxel.
+    voxel_data = data[(0, 0, 0)][idx]
+    voxel_fit = gq.fit(voxel_data)
+    assert isinstance(voxel_fit, OdfFit)
+
+    # Default sphere reuses the pre-computed forward kernel (kernel stored as
+    # (n_vertices, n_gradients); ``.T`` recovers the forward orientation).
+    default_odf = voxel_fit.odf()
+    assert default_odf.shape == (n_default,)
+    assert np.allclose(default_odf, voxel_data @ gq.kernel.T)
+
+    # Explicit sphere recomputes the forward kernel.
+    explicit_odf = voxel_fit.odf(sphere)
+    assert explicit_odf.shape == (n_sphere,)
+    assert np.allclose(
+        explicit_odf,
+        voxel_data @ gqi_kernel(train_gtab, SAMPLING_LENGTH, sphere, method=method),
+    )
+
+    # 2D batch (NiFreeze's masked/flattened contract).
+    data_2d = data[..., idx].reshape(-1, len(train_gtab.bvals))
+    batch_odf = gq.fit(data_2d).odf(sphere)
+    assert batch_odf.shape == (data_2d.shape[0], n_sphere)
+    assert np.allclose(
+        batch_odf,
+        data_2d @ gqi_kernel(train_gtab, SAMPLING_LENGTH, sphere, method=method),
+    )
 
 
 # ---------------------------------------------------------------------------

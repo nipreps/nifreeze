@@ -68,8 +68,8 @@ import warnings
 
 import numpy as np
 from dipy.core.subdivide_octahedron import create_unit_sphere
-from dipy.reconst.base import ReconstFit, ReconstModel
 from dipy.reconst.gqi import squared_radial_component
+from dipy.reconst.odf import OdfFit, OdfModel
 
 INVERSE_LAMBDA = 1e-6
 r"""
@@ -91,7 +91,7 @@ scaling factor :math:`\sqrt{6 D \tau}` with :math:`\tau` folded into the b-value
 """
 
 
-class GeneralizedQSamplingModel(ReconstModel):
+class GeneralizedQSamplingModel(OdfModel):
     def __init__(
         self,
         gtab,
@@ -132,7 +132,7 @@ class GeneralizedQSamplingModel(ReconstModel):
             (past the fidelity knee for both single-shell and grid acquisitions,
             while denser spheres only keep paying off for grid/multi-shell data).
         """
-        ReconstModel.__init__(self, gtab)
+        OdfModel.__init__(self, gtab)
         self.method = method
         self.Lambda = sampling_length
         self.gtab = gtab
@@ -149,10 +149,15 @@ class GeneralizedQSamplingModel(ReconstModel):
         ).T
 
     def fit(self, data, *, mask=None):
+        # Unlike DIPY's ODF models (and NiFreeze's DTI/DKI), GQI deliberately
+        # opts out of ``@multi_voxel_fit``: the fit is a linear operator that
+        # simply stores ``data``, and prediction is a single vectorized matmul
+        # over all voxels (see ``GeneralizedQSamplingFit.predict``). Per-voxel
+        # looping would discard that vectorization for no gain.
         return GeneralizedQSamplingFit(self, data)
 
 
-class GeneralizedQSamplingFit(ReconstFit):
+class GeneralizedQSamplingFit(OdfFit):
     def __init__(self, model, data):
         """Store the model and signal data for a fitted voxel (or voxels).
 
@@ -165,7 +170,42 @@ class GeneralizedQSamplingFit(ReconstFit):
             ``(n_voxels, n_gradients)`` for a masked volume.
 
         """
-        ReconstFit.__init__(self, model, data)
+        OdfFit.__init__(self, model, data)
+
+    def odf(self, sphere=None):
+        r"""Compute the discrete orientation distribution function (ODF/SDF).
+
+        Applies the forward GQI kernel to the fitted signal, implementing the
+        signal-to-SDF transform of Yeh et al. (2010). This satisfies the
+        :obj:`~dipy.reconst.odf.OdfFit` contract shared by DIPY's ODF models and
+        is distinct from :meth:`predict`, which maps signal back to signal.
+
+        Parameters
+        ----------
+        sphere : :obj:`~dipy.core.sphere.Sphere`, optional
+            ODF sampling sphere. When :obj:`None` (default), the model's sphere
+            is reused and the pre-computed forward kernel is applied directly,
+            avoiding recomputation.
+
+        Returns
+        -------
+        :obj:`~numpy.ndarray`
+            The discrete ODF, shaped ``(n_vertices,)`` for a single voxel or
+            ``(n_voxels, n_vertices)`` for a masked volume. Unlike
+            :meth:`predict`, the result is **not** clamped to non-negative
+            values (matching DIPY).
+        """
+        if sphere is None:
+            # ``model.kernel`` is stored transposed as (n_vertices, n_gradients);
+            # ``.T`` recovers the forward (n_gradients, n_vertices) kernel.
+            return self.data @ self.model.kernel.T
+
+        return self.data @ gqi_kernel(
+            self.model.gtab,
+            self.model.Lambda,
+            sphere,
+            method=self.model.method,
+        )
 
     def predict(self, gtab, *, S0=None):
         r"""Predict the diffusion signal on ``gtab`` from the fitted data.

@@ -23,6 +23,15 @@ the paper's spin-distribution-function reconstruction (Eq. 6/9) verbatim — it
 matches DIPY's ``standard`` kernel and a direct transcription of Eq. 9 to machine
 precision.
 
+The model and its fit descend from DIPY's ODF-model family
+(:class:`~dipy.reconst.odf.OdfModel` / :class:`~dipy.reconst.odf.OdfFit`), and
+:meth:`~nifreeze.model.gqi.GeneralizedQSamplingFit.odf` provides the forward
+signal → SDF transform expected of that family. Unlike DIPY's ODF models (and
+*NiFreeze*'s DTI/DKI), GQI deliberately does **not** use the ``@multi_voxel_fit``
+decorator: its fit is a linear operator that merely stores the data, and
+prediction is a single vectorized matmul over all voxels, so per-voxel looping
+would only discard that vectorization.
+
 GQI as a signal predictor (a NiFreeze extension)
 ------------------------------------------------
 Yeh (2010) defines only the *forward* map signal → SDF. *NiFreeze* additionally
