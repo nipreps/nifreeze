@@ -72,7 +72,23 @@ from dipy.reconst.base import ReconstFit, ReconstModel
 from dipy.reconst.gqi import squared_radial_component
 
 INVERSE_LAMBDA = 1e-6
+r"""
+Tikhonov regularization weight :math:`\lambda_0` for the reconstruction kernel
+:math:`(\mathbf{K}\mathbf{K}^{\mathsf T} + \lambda_0\mathbf{I})^{-1}\mathbf{K}`
+(see :func:`prediction_kernel`).
+"""
+
 DEFAULT_SPHERE_RECURSION_LEVEL = 5
+"""
+Default icosahedral subdivision level of the ODF sampling sphere (1026
+vertices); see :ref:`gqi-sphere-density` for the experiment justifying it.
+"""
+
+FREE_WATER_DIFFUSIVITY_6D = 0.01506
+r"""
+:math:`6 D` where :math:`D` is the free-water diffusion coefficient; the GQI
+scaling factor :math:`\sqrt{6 D \tau}` with :math:`\tau` folded into the b-value.
+"""
 
 
 class GeneralizedQSamplingModel(ReconstModel):
@@ -187,17 +203,33 @@ class GeneralizedQSamplingFit(ReconstFit):
 
 
 def gqi_kernel(gtab, param_lambda, sphere, method="standard"):
-    r"""Compute the forward GQI kernel, shape ``(n_gradients, n_vertices)``.
+    r"""
+    Forward GQI kernel, shape ``(n_gradients, n_vertices)``.
 
-    ``method="standard"`` implements the sinc reconstruction of Yeh et al.
-    (2010), Eq. 6/9 (verified to machine precision against the paper and DIPY);
-    ``method="gqi2"`` uses the :math:`L^2`-weighted basis of Eq. 8
-    (:func:`~dipy.reconst.gqi.squared_radial_component`, imported from DIPY).
+    Ported from DIPY's :obj:`dipy.reconst.gqi`, modularized as a function.
+
+    Parameters
+    ----------
+    gtab : :obj:`~dipy.core.gradients.GradientTable`
+        The gradient table for which the kernel is computed.
+    param_lambda : float
+        The GQI sampling length (:math:`\lambda`).
+    sphere : :obj:`~dipy.core.sphere.Sphere`
+        The sphere whose vertices define the ODF sampling directions.
+    method : {"standard", "gqi2"}, optional
+        GQI variant. ``"standard"`` implements the sinc reconstruction of Yeh
+        et al. (2010), Eq. 6/9 (verified to machine precision against the paper
+        and DIPY); ``"gqi2"`` uses the :math:`L^2`-weighted basis of Eq. 8
+        (:func:`~dipy.reconst.gqi.squared_radial_component`, imported from DIPY).
+        An unknown value falls back to ``"standard"`` with a warning.
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        The forward GQI kernel with shape ``(n_gradients, n_vertices)``.
+
     """
-    # 0.01506 = 6*D where D is the free water diffusion coefficient
-    # l_values sqrt(6 D tau) D free water diffusion coefficient and
-    # tau included in the b-value
-    scaling = np.sqrt(gtab.bvals * 0.01506)
+    scaling = np.sqrt(gtab.bvals * FREE_WATER_DIFFUSIVITY_6D)
     b_vector = gtab.bvecs * scaling[:, None]
 
     if method == "gqi2":
