@@ -122,31 +122,13 @@ class BaseModel(ABC):
 
         In the default Leave-One-Volume-Out (LOVO) mode, ``index`` names the
         volume to hold out: the model is fit on every *other* volume and used to
-        predict the held-out one. This held-out independence is load-bearing —
-        the prediction must not depend on the volume it becomes the registration
-        target for.
+        predict the held-out one. This held-out independence sets a base to
+        claim that predictions are *unbiased*.
 
         If ``index`` is :obj:`None`, the model is executed in *single-fit mode*:
-        it is fit **once** on all available data — no volume held out — and that
-        fit is locked (see ``_locked_fit``). Later calls reuse the locked fit
-        instead of refitting; what is shared across indices is the *fit*, not the
-        prediction. Data-driven models still evaluate a **distinct** volume for
-        each ``index`` (e.g. at that volume's gradient direction and b-value), so
-        single-fit is not "one volume for every index" — that only holds for
-        target-independent models such as
-        :class:`~nifreeze.model.base.TrivialModel`. What single-fit forfeits is
-        *independence*: because the requested volume was part of the data the fit
-        was trained on, its prediction is no longer the unbiased, out-of-sample
-        estimate LOVO provides, leaking toward the moving volume and biasing the
-        downstream transform toward the identity. Single-fit mode is therefore
-        **not** a substitute for LOVO in accuracy-critical estimation; its
-        legitimate uses are:
-
-        - target-independent references (e.g.
-          :class:`~nifreeze.model.base.TrivialModel`), where no leakage can occur;
-        - fast, deterministic development / CI / integration tests; and
-        - coarse, low-DOF linear registration used only to *initialize* a
-          later, independence-respecting LOVO stage.
+        it is fit **once** on all available data (no volume held out). The fit
+        is *locked* (``_locked_fit`` evaluates to true), such that later calls
+        reuse the fit object without refitting.
 
         Parameters
         ----------

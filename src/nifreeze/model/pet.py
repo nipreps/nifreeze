@@ -222,9 +222,6 @@ class BSplinePETModel(BasePETModel):
 
         Predictions for times earlier than the configured start time will return
         the prediction for the start time.
-
-        Only Leave-One-Volume-Out mode is supported: ``index`` must be an
-        integer. Single-fit mode (``index=None``) is not implemented and raises.
         """
 
         if index is None:
