@@ -20,6 +20,22 @@ Theory concepts grounding nifreeze (literature-sourced, `namespace: paper`):
 - [Outlier (signal-dropout) detection and replacement](pages/entity/concept-outlier-detection-replacement.md)
 - [Leave-One-Volume-Out (LOVO) estimation](pages/entity/concept-leave-one-volume-out.md)
 - [Generalized q-Sampling Imaging (GQI)](pages/entity/concept-generalized-q-sampling-imaging.md)
+- [Diffusion tensor imaging (DTI)](pages/entity/concept-diffusion-tensor-imaging.md)
+- [Diffusion kurtosis imaging (DKI)](pages/entity/concept-diffusion-kurtosis-imaging.md)
+- [Sphere sampling: electrostatic repulsion and octahedral subdivision](pages/entity/concept-sphere-sampling-electrostatic-repulsion.md)
+- [Multi-tensor signal simulation](pages/entity/concept-multi-tensor-signal-simulation.md)
+
+### DIPY integration surface (tool pages — pinned to DIPY commit 2ecd3655)
+
+Dependency-integration knowledge: the DIPY API surface nifreeze consumes,
+cached at the pinned commit (see the schema's dependency-integration scope clause).
+
+- [DIPY — umbrella / integration surface](pages/entity/tool-dipy.md)
+- [DIPY gradient-table API](pages/entity/tool-dipy-gradient-table.md)
+- [DIPY ReconstModel / ReconstFit contract](pages/entity/tool-dipy-reconst-contract.md)
+- [DIPY reconstruction models (DTI / DKI / GQI)](pages/entity/tool-dipy-reconst-models.md)
+- [DIPY sphere & direction machinery](pages/entity/tool-dipy-sphere-directions.md)
+- [DIPY signal simulation API](pages/entity/tool-dipy-sims-voxel.md)
 
 ## Synthesis
 
@@ -29,6 +45,10 @@ Project-level technical claims integrating the concepts and references:
 - [The Andersson eddy framework and nifreeze’s lineage from it](pages/synthesis/andersson-eddy-framework-lineage.md)
 - [When single-fit mode is admissible (and when it is not)](pages/synthesis/single-fit-mode-admissibility.md)
 - [The q-space reconstruction landscape: DSI, QBI, and GQI](pages/synthesis/q-space-reconstruction-landscape.md)
+- [nifreeze implements DIPY's ReconstModel fit/predict contract](pages/synthesis/nifreeze-dipy-reconst-contract.md)
+- [The GradientTable rebuild is nifreeze's DIPY interop seam and a hot path](pages/synthesis/gradient-table-interop-hotpath.md)
+- [The vendored GQI model: lineage and divergence from DIPY](pages/synthesis/vendored-gqi-lineage.md)
+- [DIPY version-pin fragility and the wiki-cache sync procedure](pages/synthesis/dipy-version-pin-fragility.md)
 
 ## References
 
@@ -37,6 +57,11 @@ Project-level technical claims integrating the concepts and references:
 - [Andersson & Sotiropoulos (2015) — GP representation of DWI](refs/andersson-2015-gp-dmri.md)
 - [Andersson & Sotiropoulos (2016) — the integrated `eddy` framework](refs/andersson-2016-integrated-eddy.md)
 - [Andersson et al. (2016) — outlier detection and replacement](refs/andersson-2016-outlier-replacement.md)
+
+### DIPY & reconstruction models
+
+- [Garyfallidis et al. (2014) — Dipy, a library for the analysis of diffusion MRI data](refs/garyfallidis-2014-dipy.md)
+- [Jensen et al. (2005) — Diffusional kurtosis imaging (DKI)](refs/jensen-2005-diffusional-kurtosis.md)
 
 ### Cited works (134 references investigated via `/s2-query`)
 

@@ -200,3 +200,31 @@ A page that is the target of any edge here is exempt from the orphan rule
 | pages/synthesis/q-space-reconstruction-landscape.md | depends_on | refs/yeh-2010-generalized-q-sampling-imaging.md | GQI unifies the landscape |
 | pages/synthesis/q-space-reconstruction-landscape.md | cites | refs/tuch-2004-q-ball-imaging.md | QBI shell method |
 | pages/synthesis/q-space-reconstruction-landscape.md | informs | pages/entity/concept-generalized-q-sampling-imaging.md | positions GQI vs QBI/DSI |
+| refs/garyfallidis-2014-dipy.md | informs | pages/entity/tool-dipy.md | software citation |
+| refs/jensen-2005-diffusional-kurtosis.md | informs | pages/entity/concept-diffusion-kurtosis-imaging.md | theory grounding |
+| refs/basser-1994-estimation-effective-self-diffusion-tensor-nmr-spin.md | informs | pages/entity/concept-diffusion-tensor-imaging.md | theory grounding |
+| refs/jones-1999-optimal-strategies-measuring-diffusion-anisotropic-systems.md | informs | pages/entity/concept-sphere-sampling-electrostatic-repulsion.md | direction sampling |
+| pages/entity/concept-diffusion-tensor-imaging.md | depends_on | pages/entity/concept-diffusion-mri-signal.md | inherits signal symbols |
+| pages/entity/concept-diffusion-kurtosis-imaging.md | extends | pages/entity/concept-diffusion-tensor-imaging.md | adds kurtosis term |
+| pages/entity/concept-multi-tensor-signal-simulation.md | depends_on | pages/entity/concept-diffusion-tensor-imaging.md | per-compartment tensor |
+| pages/entity/tool-dipy.md | informs | pages/entity/tool-dipy-gradient-table.md | integration facet |
+| pages/entity/tool-dipy.md | informs | pages/entity/tool-dipy-reconst-contract.md | integration facet |
+| pages/entity/tool-dipy.md | informs | pages/entity/tool-dipy-reconst-models.md | integration facet |
+| pages/entity/tool-dipy.md | informs | pages/entity/tool-dipy-sphere-directions.md | integration facet |
+| pages/entity/tool-dipy.md | informs | pages/entity/tool-dipy-sims-voxel.md | integration facet |
+| pages/entity/tool-dipy-reconst-models.md | implements | pages/entity/concept-diffusion-tensor-imaging.md | TensorModel |
+| pages/entity/tool-dipy-reconst-models.md | implements | pages/entity/concept-diffusion-kurtosis-imaging.md | DiffusionKurtosisModel |
+| pages/entity/tool-dipy-reconst-models.md | implements | pages/entity/concept-generalized-q-sampling-imaging.md | vendored GeneralizedQSamplingModel |
+| pages/entity/tool-dipy-reconst-models.md | depends_on | pages/entity/tool-dipy-reconst-contract.md | fit/predict contract |
+| pages/entity/tool-dipy-sphere-directions.md | implements | pages/entity/concept-sphere-sampling-electrostatic-repulsion.md | disperse_charges / create_unit_sphere |
+| pages/entity/tool-dipy-sims-voxel.md | implements | pages/entity/concept-multi-tensor-signal-simulation.md | single/multi_tensor |
+| pages/entity/tool-dipy-gradient-table.md | informs | pages/entity/concept-diffusion-mri-signal.md | b-value/b-vector geometry |
+| pages/synthesis/nifreeze-dipy-reconst-contract.md | implements | pages/entity/tool-dipy-reconst-contract.md | BaseDWIModel standardizes on it |
+| pages/synthesis/nifreeze-dipy-reconst-contract.md | depends_on | pages/entity/tool-dipy-reconst-models.md | dotted-string models |
+| pages/synthesis/nifreeze-dipy-reconst-contract.md | depends_on | pages/entity/concept-leave-one-volume-out.md | predictor role |
+| pages/synthesis/gradient-table-interop-hotpath.md | depends_on | pages/entity/tool-dipy-gradient-table.md | interop seam |
+| pages/synthesis/gradient-table-interop-hotpath.md | depends_on | pages/entity/concept-leave-one-volume-out.md | per-volume rebuild |
+| pages/synthesis/vendored-gqi-lineage.md | replicates | pages/entity/tool-dipy-reconst-models.md | vendored gqi copy |
+| pages/synthesis/vendored-gqi-lineage.md | informs | pages/entity/concept-generalized-q-sampling-imaging.md | GQI theory |
+| pages/synthesis/dipy-version-pin-fragility.md | depends_on | pages/entity/tool-dipy.md | pin 2ecd3655 |
+| pages/synthesis/dipy-version-pin-fragility.md | critiques | pages/entity/tool-dipy-reconst-contract.md | dotted-string silent break |

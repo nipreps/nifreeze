@@ -154,6 +154,32 @@ correct — to someone who has never read nifreeze's code. References to specifi
 nifreeze modules/equations are allowed only as pointers ("this is where the
 project uses the technique"), never as the substance of a page.
 
+**Dependency-integration knowledge (in scope; distinct from nifreeze's own code).**
+The boundary above forbids memorizing *nifreeze's* source and API. It does **not**
+forbid documenting the **integration surface of a third-party dependency** that
+nifreeze builds on — the concrete classes, functions, contracts, invariants, and
+gotchas nifreeze relies upon, captured at a specific pinned version. This is
+legitimate wiki content because it is knowledge nifreeze does not own and cannot
+regenerate from its own theory pages: it is the shape of the ground nifreeze
+stands on, not a description of nifreeze itself.
+
+Such knowledge is recorded as `entity_type: tool` pages
+(`pages/entity/tool-<dep>-<area>.md`): one umbrella page per dependency plus one
+page per integration area. A tool page (1) names the exact pinned revision it
+describes and declares `refresh_needed_if:` keyed to that pin advancing; (2) links
+its `source_urls:` to the upstream docs/source at that revision; (3) documents the
+contract nifreeze consumes (signatures, shapes, invariants, failure modes) —
+**not** nifreeze's wrapping code. Tool pages `implements`/`depends_on`/`informs`
+the theory concept pages that give them meaning; synthesis pages then state how
+nifreeze `implements` those contracts. The generic "no nifreeze source/API" rule
+is unchanged: nifreeze's own modules appear only as pointers, never as page
+substance.
+
+Currently the only such dependency is **DIPY**, pinned in `pyproject.toml` to
+commit `2ecd3655`. Treat the DIPY tool pages as a *cache* of that pinned surface,
+kept in sync when the pin advances (see the sync procedure in
+[[dipy-version-pin-fragility]]).
+
 Concept pages in this wiki use `namespace: paper` (concepts are
 literature-sourced). If a future concept is purely internal to the project
 rather than drawn from the literature, revisit the E007 `{rr, paper}` enum.
