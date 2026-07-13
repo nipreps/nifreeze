@@ -175,7 +175,7 @@ def test_gqi_odf_family(method, keep_b0):
     # (n_vertices, n_gradients); ``.T`` recovers the forward orientation).
     default_odf = voxel_fit.odf()
     assert default_odf.shape == (n_default,)
-    assert np.allclose(default_odf, voxel_data @ gq.kernel.T)
+    assert np.allclose(default_odf, voxel_data @ gq.kernel)
 
     # Explicit sphere recomputes the forward kernel.
     explicit_odf = voxel_fit.odf(sphere)
@@ -432,7 +432,7 @@ def test_gqi2_method_propagates():
             voxel_data
             @ (
                 prediction_kernel(gtab, SAMPLING_LENGTH, fit.model.sphere, method=method)
-                @ fit.model.kernel
+                @ fit.model.kernel.T
             ).T,
             0,
         )

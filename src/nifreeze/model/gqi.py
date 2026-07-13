@@ -140,20 +140,17 @@ class GeneralizedQSamplingModel(OdfModel):
             create_unit_sphere(recursion_level=recursion_level) if sphere is None else sphere
         )
 
-        # The gQI vector has shape (n_vertices, n_orientations)
+        # Forward GQI kernel, shape (n_gradients, n_vertices). Stored in this
+        # (un-transposed) orientation to match DIPY's ``GeneralizedQSamplingFit``
+        # so the eventual upstreaming (dipy/dipy#3553) needs no reshuffling.
         self.kernel = gqi_kernel(
             self.gtab,
             self.Lambda,
             self.sphere,
             method=self.method,
-        ).T
+        )
 
     def fit(self, data, *, mask=None):
-        # Unlike DIPY's ODF models (and NiFreeze's DTI/DKI), GQI deliberately
-        # opts out of ``@multi_voxel_fit``: the fit is a linear operator that
-        # simply stores ``data``, and prediction is a single vectorized matmul
-        # over all voxels (see ``GeneralizedQSamplingFit.predict``). Per-voxel
-        # looping would discard that vectorization for no gain.
         return GeneralizedQSamplingFit(self, data)
 
 
@@ -196,9 +193,9 @@ class GeneralizedQSamplingFit(OdfFit):
             values (matching DIPY).
         """
         if sphere is None:
-            # ``model.kernel`` is stored transposed as (n_vertices, n_gradients);
-            # ``.T`` recovers the forward (n_gradients, n_vertices) kernel.
-            return self.data @ self.model.kernel.T
+            # ``model.kernel`` is the forward (n_gradients, n_vertices) kernel,
+            # applied directly (matching DIPY's ``odf``).
+            return self.data @ self.model.kernel
 
         return self.data @ gqi_kernel(
             self.model.gtab,
@@ -229,6 +226,9 @@ class GeneralizedQSamplingFit(OdfFit):
         ``"standard"`` when the predicted amplitude matters. See
         :ref:`gqi-reconstruction-fidelity`.
         """
+        # ``model.kernel`` is (n_gradients_in, n_vertices); transpose it to
+        # contract the shared vertex axis against the reconstruction kernel,
+        # yielding the fused (n_gradients_out, n_gradients_in) operator.
         K = (
             prediction_kernel(
                 gtab,
@@ -236,7 +236,7 @@ class GeneralizedQSamplingFit(OdfFit):
                 self.model.sphere,
                 method=self.model.method,
             )
-            @ self.model.kernel
+            @ self.model.kernel.T
         )
 
         return np.maximum((K @ self.data.T).T, 0)
