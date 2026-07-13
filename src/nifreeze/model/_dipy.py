@@ -28,12 +28,17 @@ import numpy as np
 from dipy.core.gradients import GradientTable
 from dipy.reconst.base import ReconstModel
 from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import WhiteKernel
 
 from nifreeze.model.gpr import (
     DiffusionGPR,
     ExponentialKriging,
     SphericalKriging,
 )
+
+#: Small nugget kept on ``alpha`` for numerical stability once the measurement
+#: noise is modeled explicitly by a :obj:`~sklearn.gaussian_process.kernels.WhiteKernel`.
+GP_JITTER = 1e-10
 
 
 def _cartesian_components(gtab: GradientTable | np.ndarray) -> np.ndarray:
@@ -120,16 +125,21 @@ class GaussianProcessModel(ReconstModel):
 
         Parameters
         ----------
-        kernel_model : :obj:`~sklearn.gaussian_process.kernels.Kernel`, optional
-            Kernel model to calculate the GP's covariance matrix.
-        lambda_s : :obj:`float`, optional
+        kernel_model : :obj:`str`, optional
+            Angular covariance model, ``"spherical"`` (default) or
+            ``"exponential"``.
+        beta_l : :obj:`float`, optional
             Signal scale parameter determining the variability of the signal.
-        a : :obj:`float`, optional
+        beta_a : :obj:`float`, optional
             Distance scale parameter determining how fast the covariance
             decreases as one moves along the surface of the sphere. Must have a
             positive value.
         sigma_sq : :obj:`float`, optional
-            Uncertainty of the measured values.
+            Initial measurement-noise variance (:math:`\\sigma^2`). It is the
+            starting ``noise_level`` of a
+            :obj:`~sklearn.gaussian_process.kernels.WhiteKernel` added to the
+            covariance kernel, and is *optimized* along with the other
+            hyperparameters (rather than held fixed as in a plain ``alpha``).
 
         References
         ----------
@@ -142,10 +152,13 @@ class GaussianProcessModel(ReconstModel):
         self.sigma_sq = sigma_sq
 
         KernelType = SphericalKriging if kernel_model == "spherical" else ExponentialKriging
+        # Add the measurement noise as a WhiteKernel so it lives *inside* the
+        # covariance and is tuned by the analytical-gradient optimizer (a fixed
+        # ``alpha`` nugget has zero kernel-gradient and cannot be optimized).
         self.kernel = KernelType(
             beta_a=beta_a,
             beta_l=beta_l,
-        )
+        ) + WhiteKernel(noise_level=sigma_sq)
 
     def fit(
         self,
@@ -198,7 +211,9 @@ class GaussianProcessModel(ReconstModel):
             kernel=self.kernel,
             random_state=random_state,
             n_targets=y.shape[1],
-            alpha=self.sigma_sq,
+            # Noise is now carried by the WhiteKernel; keep ``alpha`` as a small
+            # numerical-stability jitter only.
+            alpha=GP_JITTER,
         )
         self._modelfit = GPFit(
             model=gpr.fit(X, y),
