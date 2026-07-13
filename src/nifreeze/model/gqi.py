@@ -82,6 +82,7 @@ class GeneralizedQSamplingModel(ReconstModel):
         method="standard",
         sampling_length=1.2,
         sphere=None,
+        recursion_level=DEFAULT_SPHERE_RECURSION_LEVEL,
     ):
         r"""Generalized Q-Sampling Imaging.
 
@@ -105,16 +106,21 @@ class GeneralizedQSamplingModel(ReconstModel):
             Diffusion sampling length :math:`\sigma` (``lambda`` in Yeh Eq. 9);
             recommended range 1--1.3.
         sphere : :obj:`~dipy.core.sphere.Sphere`, optional
-            ODF sampling sphere; defaults to a unit sphere at recursion level 5.
+            ODF sampling sphere. When given, ``recursion_level`` is ignored.
+        recursion_level : int, optional
+            Subdivision level of the icosahedral ODF sampling sphere built when
+            ``sphere`` is not provided; higher values give a denser sphere.
+            Defaults to :data:`DEFAULT_SPHERE_RECURSION_LEVEL`. See
+            :ref:`gqi-sphere-density` for the experiment justifying the default
+            (past the fidelity knee for both single-shell and grid acquisitions,
+            while denser spheres only keep paying off for grid/multi-shell data).
         """
         ReconstModel.__init__(self, gtab)
         self.method = method
         self.Lambda = sampling_length
         self.gtab = gtab
         self.sphere = (
-            create_unit_sphere(recursion_level=DEFAULT_SPHERE_RECURSION_LEVEL)
-            if sphere is None
-            else sphere
+            create_unit_sphere(recursion_level=recursion_level) if sphere is None else sphere
         )
 
         # The gQI vector has shape (n_vertices, n_orientations)

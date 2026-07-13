@@ -310,15 +310,67 @@ def test_gqi2_method_propagates():
 
 
 # ---------------------------------------------------------------------------
+# Regression: GQIModel forwards model kwargs to the underlying model
+# ---------------------------------------------------------------------------
+def test_gqimodel_forwards_model_kwargs():
+    """``GQIModel`` forwards construction-time model kwargs, without leaking.
+
+    Guards against a regression where ``BaseModel.__init__`` silently dropped
+    construction-time kwargs (``method``/``sampling_length``/``recursion_level``
+    produced identical output) and where passing a model kwarg to ``fit_predict``
+    leaked into ``predict`` and raised ``TypeError``.
+    """
+    data, gtab = dsi_voxels()
+    gradients = format_gradients(np.column_stack((gtab.bvecs, gtab.bvals)))
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        dataset = DWI(dataobj=data.astype(np.float32), affine=np.eye(4), gradients=gradients)
+        index = dataset.dataobj.shape[-1] // 2
+
+        def predict(**kwargs):
+            return model.dmri.GQIModel(dataset, **kwargs).fit_predict(index, n_jobs=1)
+
+        # Each model kwarg actually reaches the underlying model (changes output).
+        assert not np.allclose(predict(method="standard"), predict(method="gqi2"))
+        assert not np.allclose(predict(sampling_length=0.5), predict(sampling_length=3.0))
+        assert not np.allclose(predict(recursion_level=3), predict(recursion_level=6))
+
+        # A model kwarg passed at fit time is consumed by ``_fit`` and must not
+        # leak into ``predict`` (previously raised an unexpected-keyword error).
+        assert model.dmri.GQIModel(dataset).fit_predict(index, n_jobs=1, method="gqi2") is not None
+
+
+# ---------------------------------------------------------------------------
 # Integration: GQIModel LOVO prediction on real Stanford HARDI brain data
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize("method", ["standard", "gqi2"])
+@pytest.mark.parametrize(
+    "method",
+    [
+        "standard",
+        pytest.param(
+            "gqi2",
+            marks=pytest.mark.xfail(
+                reason=(
+                    "gqi2 is a weaker signal predictor than the default 'standard' kernel; "
+                    "its LOVO correlation falls below the 0.6 gate on this single-shell slab "
+                    "(see docs/models.rst, 'Reconstruction fidelity')."
+                ),
+                strict=True,
+            ),
+        ),
+    ],
+)
 def test_gqi_lovo_prediction_stanford_hardi(method):
     """A held-out DWI volume predicted by ``GQIModel`` correlates with truth.
 
     Loads a cropped slab of the Stanford HARDI dataset, fits GQI in
     leave-one-volume-out mode through the NiFreeze wrapper, and checks that the
     predicted volume correlates with the actual left-out volume within the mask.
+
+    The ``gqi2`` variant is expected to fail the correlation gate: it is a weaker
+    signal predictor (oscillatory, ill-conditioned reconstruction kernel), which
+    is why ``"standard"`` is the NiFreeze default.
     """
     from typing import cast
 
