@@ -211,20 +211,31 @@ Models also support a *single-fit mode*, activated by calling
 
     model.fit_predict(None)
 
-which fits the model once on all available data and locks that fit (stored in
-``_locked_fit``), so every subsequent prediction returns the same volume
-regardless of the index. On the command line and through
+which fits the model once on all available data — with no volume held out — and
+locks that fit (stored in ``_locked_fit``). Subsequent calls reuse the locked
+fit instead of refitting; what is shared across indices is the *fit*, not the
+prediction. Data-driven models (DTI, DKI, GQI, GP) still predict a **distinct**
+volume for each ``index``, evaluated at that volume's gradient direction and
+b-value — so single-fit does *not* return "the same volume regardless of the
+index." (That literal behaviour holds only for target-independent models such as
+:class:`~nifreeze.model.base.TrivialModel`, whose prediction never depends on the
+index.) On the command line and through
 :class:`~nifreeze.estimator.Estimator`, single-fit mode is requested by
 prefixing the model name with ``single`` (e.g. ``singledti``), or by passing
 ``single_fit=True`` to the estimator.
 
-Because single-fit includes the target volume in the fit that produces its own
-reference, its predictions suffer from data leakage from the held-out volume,
+What single-fit forfeits is *independence*: because the queried volume was part
+of the data the locked fit was trained on, its prediction is no longer the
+unbiased, out-of-sample estimate LOVO provides. The direction being predicted
+informed the fit, so the registration target leaks toward the moving volume,
 biasing the estimated transform toward the identity. It is therefore **not** a
-substitute for LOVO in accuracy-critical estimation; its legitimate uses are
-target-independent references (e.g. :class:`~nifreeze.model.base.TrivialModel`),
-fast development and integration testing, and coarse low-DOF initialization of a
-subsequent LOVO stage.
+substitute for LOVO in accuracy-critical estimation. Its legitimate uses are
+those where this bias is either absent or tolerable: target-independent
+references (e.g. :class:`~nifreeze.model.base.TrivialModel`, where no leakage can
+occur); contexts where the bias is anticipated to be negligible, such as a
+coarse, low-DOF early rigid-body realignment that a subsequent LOVO stage
+refines; and trading accuracy for speed during development or debugging (e.g.
+exercising the estimator while assuming the model itself is correct).
 
 
 Usage

@@ -93,8 +93,8 @@ def _build_parser() -> ArgumentParser:
             "Leave-One-Volume-Out mode (refit per held-out volume). Prefix a "
             "model name with 'single' (e.g. 'singledti') to run it in "
             "single-fit mode: fit once on all volumes and reuse that locked "
-            "prediction for every volume. Single-fit is faster but leaks the "
-            "held-out volume into its own target (biasing motion toward zero); "
+            "fit (still predicting per volume from it). Single-fit is faster but "
+            "leaks the queried volume into its own target (biasing motion toward zero); "
             "use it for development, testing, or coarse initialization only, "
             "not for accuracy-critical estimation."
         ),
@@ -181,9 +181,10 @@ def _determine_single_fit_mode(model_name: str) -> bool:
     Determine if a model is to be run in *single-fit mode*.
 
     A model is run in *single-fit mode* (fit once on all data, reuse the locked
-    prediction for every volume) when its name is prefixed with ``single``. See
+    fit — still predicting per volume from it) when its name is prefixed with
+    ``single``. See
     :class:`~nifreeze.estimator.Estimator` for when this mode is appropriate —
-    it leaks the held-out volume into its own target, so it is for
+    it leaks the queried volume into its own target, so it is for
     development/testing/initialization, not accuracy-critical estimation.
 
     Parameters

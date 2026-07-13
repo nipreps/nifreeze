@@ -1,7 +1,7 @@
 ---
 title: "When single-fit mode is admissible (and when it is not)"
 entity_type: synthesis
-last_verified: 2026-07-10
+last_verified: 2026-07-13
 confidence_score: 0.85
 derived_from:
   - refs/andersson-2015-gp-dmri.md
@@ -11,13 +11,19 @@ derived_from:
 # When single-fit mode is admissible (and when it is not)
 
 **Technical claim.** nifreeze's *single-fit mode* — fit the model **once** on
-all available volumes and reuse that one locked prediction as the registration
-target for every index, instead of refitting leave-one-out per volume — trades
+all available volumes and reuse that locked **fit**, still evaluating a per-index
+prediction from it, instead of refitting leave-one-out per volume — trades
 away the held-out independence that makes Leave-One-Volume-Out valid
-([[concept-leave-one-volume-out]]). It is therefore **not** a lossless ~$N\times$
-speed-up for data-driven predictors, but it *is* a legitimate tool with a real
-and currently under-documented role. The distinction is about **whether the
-target depends on the volume it is registered against**, not about speed.
+([[concept-leave-one-volume-out]]). Single-fit locks the *fit* (the shared
+parameters), **not** the prediction: for a data-driven model the target still
+varies per index, evaluated at each volume's $(\mathbf{g}_k, b_k)$; the bias
+comes from the queried volume having informed the fit, not from the target being
+identical across indices. (Only target-independent models such as `TrivialModel`
+genuinely return the same volume for every index.) It is therefore **not** a
+lossless ~$N\times$ speed-up for data-driven predictors, but it *is* a legitimate
+tool with a real and currently under-documented role. The distinction is about
+**whether the target depends on the volume it is registered against**, not about
+speed.
 
 ## Why it is not a free speed-up
 
@@ -37,11 +43,11 @@ cost" reproduces exactly this error and should be rejected.
    moving volume — a fixed $b\!=\!0$ / reference map (nifreeze's `TrivialModel`)
    — the independence invariant holds *by construction*, so fitting once is not
    an approximation at all. This is single-fit's principled home.
-2. **Development, CI and integration tests.** A locked prediction makes the
+2. **Development, CI and integration tests.** A locked fit makes the
    estimator loop cheap and deterministic to exercise end-to-end without paying
    the per-volume refit, which is what you want when testing the *plumbing*
    (iteration, registration wiring, I/O) rather than measuring accuracy.
-3. **Coarse, low-DOF initialisation.** A single locked target is an acceptable
+3. **Coarse, low-DOF initialisation.** A single locked fit is an acceptable
    seed for a rough, low-degree-of-freedom linear pre-alignment whose only job
    is to get volumes approximately aligned before a subsequent, independence-
    respecting LOVO stage refines them. The identity bias is tolerable here
@@ -50,8 +56,8 @@ cost" reproduces exactly this error and should be rejected.
 
 The common thread: single-fit is fine wherever the resulting bias either cannot
 occur (case 1) or does not reach the final motion estimate (cases 2–3). It is
-inadmissible precisely when the locked prediction *is* the accuracy-critical
-target for a data-driven model.
+inadmissible precisely when the prediction from the locked fit *is* the
+accuracy-critical target for a data-driven model.
 
 ## The real levers for the DKI slowness
 

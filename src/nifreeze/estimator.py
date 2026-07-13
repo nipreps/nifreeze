@@ -93,11 +93,12 @@ class Estimator:
         Extra keyword arguments passed through to the model at construction.
     single_fit : :obj:`bool`, optional
         Run the model in *single-fit mode*: fit **once** on all volumes up front
-        (via ``model.fit_predict(None)``) and reuse that one locked prediction as
-        the registration target for every index, instead of refitting per volume.
-        This is **not** a free speed-up for data-driven models — because the
-        held-out volume then informs its own target, the estimated transform is
-        biased toward the identity ("no motion detected"); see
+        (via ``model.fit_predict(None)``) and reuse that locked *fit* — still
+        evaluating a distinct per-index prediction from it — instead of refitting
+        per held-out volume. This is **not** a free speed-up for data-driven
+        models — because the queried volume then informs its own target, the
+        prediction is no longer unbiased and the estimated transform is biased
+        toward the identity ("no motion detected"); see
         :meth:`~nifreeze.model.base.BaseModel.fit_predict`. It is appropriate for
         target-independent references (e.g. :class:`~nifreeze.model.base.TrivialModel`),
         fast development/CI and integration tests, and coarse low-DOF

@@ -46,3 +46,8 @@ followed by bullets. See [`schema.md`](schema.md) for the format contract
 ## 2026-07-10 — /wiki-flags — opened F0001 (content)
 - summary: State explicitly that held-out independence is load-bearing for LOVO validity (target for volume k must not depend on k's own signal); note exact closed-form LOO exists for the linear DTI/DKI WLS fits.
 - target: pages/entity/concept-leave-one-volume-out.md
+
+## 2026-07-13 — correction — single-fit locks the *fit*, not the *prediction*
+- fixed a misconception (surfaced in PR #454 review) that single-fit "reuses one locked prediction / the same volume for every index": single-fit locks the **fit** (shared parameters), but data-driven models (DTI/DKI/GQI/GP) still evaluate a **distinct** per-index prediction at each volume's $(\mathbf{g}_k, b_k)$; only target-independent models (`TrivialModel`) return the same volume for all indices. The bias is from the queried volume having informed the fit (not out-of-sample), not from an identical target.
+- reworded [[single-fit-mode-admissibility]] (L13-15 technical claim + added clarifying sentence; L40/L44/L53 "locked prediction/target" → "locked fit"); bumped `last_verified` to 2026-07-13. Argument structure and admissibility cases unchanged; [[concept-leave-one-volume-out]] and [[gp-prediction-underpins-lovo]] were already correct and untouched.
+- same correction applied outside the wiki (PR #454): `docs/design.rst`, `docs/usage.rst`, `src/nifreeze/model/base.py`, `src/nifreeze/estimator.py`, `src/nifreeze/cli/parser.py` (×2).

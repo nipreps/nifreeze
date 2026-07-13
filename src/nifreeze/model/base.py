@@ -127,13 +127,20 @@ class BaseModel(ABC):
         target for.
 
         If ``index`` is :obj:`None`, the model is executed in *single-fit mode*:
-        it is fit **once** on all available data and locked, so every subsequent
-        prediction returns that same fit regardless of index. Because the target
-        volume is then included in the fit that generates its own reference, all
-        predictions suffer from data leakage from the original volume, biasing
-        the downstream transform toward the identity. Single-fit mode is
-        therefore **not** a substitute for LOVO in accuracy-critical estimation;
-        its legitimate uses are:
+        it is fit **once** on all available data — no volume held out — and that
+        fit is locked (see ``_locked_fit``). Later calls reuse the locked fit
+        instead of refitting; what is shared across indices is the *fit*, not the
+        prediction. Data-driven models still evaluate a **distinct** volume for
+        each ``index`` (e.g. at that volume's gradient direction and b-value), so
+        single-fit is not "one volume for every index" — that only holds for
+        target-independent models such as
+        :class:`~nifreeze.model.base.TrivialModel`. What single-fit forfeits is
+        *independence*: because the requested volume was part of the data the fit
+        was trained on, its prediction is no longer the unbiased, out-of-sample
+        estimate LOVO provides, leaking toward the moving volume and biasing the
+        downstream transform toward the identity. Single-fit mode is therefore
+        **not** a substitute for LOVO in accuracy-critical estimation; its
+        legitimate uses are:
 
         - target-independent references (e.g.
           :class:`~nifreeze.model.base.TrivialModel`), where no leakage can occur;
