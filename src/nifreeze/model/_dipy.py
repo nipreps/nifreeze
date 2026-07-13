@@ -24,15 +24,18 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 from dipy.core.gradients import GradientTable
 from dipy.reconst.base import ReconstModel
 from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import WhiteKernel
+from sklearn.gaussian_process.kernels import RBF, Kernel, KernelOperator, WhiteKernel
 
 from nifreeze.model.gpr import (
     DiffusionGPR,
     ExponentialKriging,
+    MultiShellKernel,
     SphericalKriging,
 )
 
@@ -40,18 +43,42 @@ GP_JITTER = 1e-10
 """Small nugget kept on ``alpha`` for numerical stability."""
 
 
-def _cartesian_components(gtab: GradientTable | np.ndarray) -> np.ndarray:
-    """Return the gradient directions as Cartesian components."""
+def _cartesian_components(gtab: GradientTable | np.ndarray, keep_bval: bool = False) -> np.ndarray:
+    """Return the gradient directions as Cartesian components.
+
+    When ``keep_bval`` is :obj:`True`, the b-value is appended as a trailing
+    column (layout ``[gx, gy, gz, bval]``) so multi-shell kernels can access it;
+    otherwise only the 3 orientation components are returned.
+    """
 
     if hasattr(gtab, "bvecs"):
+        gtab = cast(GradientTable, gtab)
         components = gtab.bvecs
+        if keep_bval:
+            components = np.column_stack([components, np.asarray(gtab.bvals)])
     else:
         components = np.asarray(gtab)
         if components.ndim == 1:
             components = components[np.newaxis, :]
-        if components.shape[-1] > 3:
+        if not keep_bval and components.shape[-1] > 3:
             components = components[:, :-1]
     return components
+
+
+def _kernel_uses_bval(kernel: Kernel | None) -> bool:
+    """Return whether ``kernel`` (possibly compound) contains a multi-shell kernel.
+
+    The b-value column is only needed in the design matrix when a
+    :obj:`~nifreeze.model.gpr.MultiShellKernel` is somewhere in the kernel. Because
+    the measurement-noise :obj:`~sklearn.gaussian_process.kernels.WhiteKernel` is
+    added as a :obj:`~sklearn.gaussian_process.kernels.KernelOperator`, the check
+    must recurse into the operands.
+    """
+    if isinstance(kernel, MultiShellKernel):
+        return True
+    if isinstance(kernel, KernelOperator):
+        return _kernel_uses_bval(kernel.k1) or _kernel_uses_bval(kernel.k2)
+    return False
 
 
 def gp_prediction(
@@ -85,7 +112,8 @@ def gp_prediction(
 
     """
 
-    X = _cartesian_components(gtab)
+    keep_bval = _kernel_uses_bval(getattr(model, "kernel", None))
+    X = _cartesian_components(gtab, keep_bval=keep_bval)
 
     # Check it's fitted as they do in sklearn internally
     # https://github.com/scikit-learn/scikit-learn/blob/972e17fe1aa12d481b120ad4a3dc076bae736931/\
@@ -93,7 +121,7 @@ def gp_prediction(
     if not hasattr(model, "X_train_"):
         raise RuntimeError("Model is not yet fitted.")
 
-    # Extract orientations from bvecs, and highly likely, the b-value too.
+    # X holds the gradient orientations (and the b-value too, for multi-shell).
     orientations = model.predict(X, return_std=return_std)
     assert isinstance(orientations, np.ndarray)
     return orientations
@@ -114,6 +142,7 @@ class GaussianProcessModel(ReconstModel):
         beta_l: float = 2.0,
         beta_a: float = 0.1,
         sigma_sq: float = 1.0,
+        ell: float = 1.0,
         *args,
         **kwargs,
     ) -> None:
@@ -125,8 +154,11 @@ class GaussianProcessModel(ReconstModel):
         Parameters
         ----------
         kernel_model : :obj:`str`, optional
-            Angular covariance model, ``"spherical"`` (default) or
-            ``"exponential"``.
+            Angular covariance model. One of ``"spherical"`` (default),
+            ``"exponential"``, or ``"multishell"``. ``"multishell"`` builds a
+            :obj:`~nifreeze.model.gpr.MultiShellKernel` (angular × radial product,
+            Eqs. 14–15) and expects the b-value to be preserved in the design
+            matrix.
         beta_l : :obj:`float`, optional
             Signal scale parameter determining the variability of the signal.
         beta_a : :obj:`float`, optional
@@ -139,6 +171,9 @@ class GaussianProcessModel(ReconstModel):
             :obj:`~sklearn.gaussian_process.kernels.WhiteKernel` added to the
             covariance kernel, and is *optimized* along with the other
             hyperparameters (rather than held fixed as in a plain ``alpha``).
+        ell : :obj:`float`, optional
+            Radial (log-b) length scale for the multi-shell kernel (:math:`\\ell`
+            in Eq. 15). Only used when ``kernel_model == "multishell"``.
 
         References
         ----------
@@ -150,12 +185,18 @@ class GaussianProcessModel(ReconstModel):
 
         self.sigma_sq = sigma_sq
 
-        KernelType = SphericalKriging if kernel_model == "spherical" else ExponentialKriging
-        # Add the :math:`\sigma^2` term of Andersson et al. (2015) as a WhiteKernel
-        self.kernel = KernelType(
-            beta_a=beta_a,
-            beta_l=beta_l,
-        ) + WhiteKernel(noise_level=sigma_sq)
+        if kernel_model == "multishell":
+            self.kernel = MultiShellKernel(
+                orientation_kernel=SphericalKriging(beta_a=beta_a, beta_l=beta_l),
+                radial_kernel=RBF(length_scale=ell),
+            )
+        else:
+            KernelType = SphericalKriging if kernel_model == "spherical" else ExponentialKriging
+            # Add the :math:`\sigma^2` term of Andersson et al. (2015) as a WhiteKernel
+            self.kernel = KernelType(
+                beta_a=beta_a,
+                beta_l=beta_l,
+            ) + WhiteKernel(noise_level=sigma_sq)
 
     def fit(
         self,
@@ -186,10 +227,12 @@ class GaussianProcessModel(ReconstModel):
 
         """
 
-        # Extract b-vecs: scikit-learn wants (n_samples, n_features)
-        # where n_features is 3, and n_samples the different diffusion-encoding
-        # gradient orientations.
-        X = _cartesian_components(gtab)
+        # Extract b-vecs: scikit-learn wants (n_samples, n_features) where
+        # n_samples is the different diffusion-encoding gradient orientations.
+        # n_features is 3 (orientation only), or 4 ([gx, gy, gz, bval]) when a
+        # multi-shell kernel needs the b-value.
+        keep_bval = _kernel_uses_bval(self.kernel)
+        X = _cartesian_components(gtab, keep_bval=keep_bval)
 
         # Data must have shape (n_samples, n_targets) where n_samples is
         # the number of diffusion-encoding gradient orientations, and n_targets

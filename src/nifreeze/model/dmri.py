@@ -501,5 +501,5 @@ class GQIModel(BaseDWIModel):
 class GPModel(BaseDWIModel):
     """A wrapper of :obj:`~nifreeze.model.dipy.GaussianProcessModel`."""
 
-    _modelargs = ("kernel_model",)
+    _modelargs = ("kernel_model", "beta_l", "beta_a", "sigma_sq", "ell")
     _model_class = "nifreeze.model._dipy.GaussianProcessModel"

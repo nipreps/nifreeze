@@ -41,6 +41,16 @@ from sklearn.gaussian_process.kernels import (
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.utils._param_validation import Interval, StrOptions
 
+__all__ = [
+    "DiffusionGPR",
+    "ExponentialKriging",
+    "SphericalKriging",
+    "MultiShellKernel",
+    "exponential_covariance",
+    "spherical_covariance",
+    "compute_pairwise_angles",
+]
+
 BOUNDS_A: tuple[float, float] = (0.1, 2.35)
 """The limits for the parameter *a* (angular distance in rad)."""
 BOUNDS_LAMBDA: tuple[float, float] = (1e-3, 1000)
@@ -66,6 +76,13 @@ SUPPORTED_OPTIMIZERS = set(CONFIGURABLE_OPTIONS.keys()) | {"fmin_l_bfgs_b"}
 
 UNKNOWN_OPTIMIZER_ERROR_MSG = "Unknown optimizer {optimizer}."
 """Unknown optimizer error message."""
+
+NONPOSITIVE_BVAL_ERROR_MSG = (
+    "MultiShellKernel requires strictly positive b-values (the radial covariance "
+    "is a squared-exponential on log-b); b0/non-positive volumes must be excluded "
+    "before fitting."
+)
+"""Error raised when a non-positive b-value reaches the multi-shell kernel."""
 
 
 class DiffusionGPR(GaussianProcessRegressor):
@@ -114,9 +131,10 @@ class DiffusionGPR(GaussianProcessRegressor):
         Hence, that was the method we used for all optimisations in the present
         paper.
 
-    **Multi-shell regression (TODO).**
-    For multi-shell modeling, the kernel :math:`k(\textbf{x}, \textbf{x'})`
-    is updated following Eq. (14) in :footcite:p:`andersson_non-parametric_2015`.
+    **Multi-shell regression.**
+    For multi-shell modeling, use :obj:`~nifreeze.model.gpr.MultiShellKernel`,
+    which updates the kernel :math:`k(\textbf{x}, \textbf{x'})` following Eq. (14)
+    in :footcite:p:`andersson_non-parametric_2015`.
 
     .. math::
         k(\textbf{x}, \textbf{x'}) = C_{\theta}(\mathbf{g}, \mathbf{g'}; a) C_{b}(|b - b'|; \ell)
@@ -437,7 +455,9 @@ class SphericalKriging(Kernel):
         if not eval_gradient:
             return self.beta_l * C_theta
 
-        # scikit-learn expects gradients w.r.t. the *log* of each hyperparameter.
+        # scikit-learn expects gradients w.r.t. the *log* of each hyperparameter
+        # (``Kernel.theta`` is log-transformed), hence the chain-rule factors of
+        # ``beta_a`` and ``beta_l``.
         deriv_a = np.zeros_like(thetas)
         nonzero = thetas <= self.beta_a
         deriv_a[nonzero] = (
@@ -477,7 +497,33 @@ class SphericalKriging(Kernel):
 
 
 class MultiShellKernel(KernelOperator):
-    """Composite kernel for multi-shell diffusion data."""
+    r"""Composite kernel for multi-shell diffusion data.
+
+    Implements the multi-shell covariance of :footcite:p:`andersson_non-parametric_2015`
+    (Eq. 14) as the product of an angular (orientation) kernel and a radial
+    (b-value) kernel,
+
+    .. math::
+        k(\mathbf{x}, \mathbf{x'}) =
+        C_{\theta}(\mathbf{g}, \mathbf{g'}; a)\, C_{b}(b, b'; \ell),
+
+    where the design matrix ``X`` is expected to hold the diffusion-encoding
+    gradient components in ``orientation_dims`` and the b-value in ``bval_index``
+    (default layout ``[gx, gy, gz, bval]``). The default ``radial_kernel``
+    (:obj:`~sklearn.gaussian_process.kernels.RBF`) applied to :math:`\log b`
+    reproduces Eq. (15),
+
+    .. math::
+        C_{b}(b, b'; \ell) = \exp\!\left(-\frac{(\log b - \log b')^2}{2\ell^2}\right).
+
+    The b-value column must be strictly positive: :math:`\log b` is undefined for
+    b0 volumes, which must be handled/excluded upstream.
+
+    References
+    ----------
+    .. footbibliography::
+
+    """
 
     k1: Kernel
     k2: Kernel
@@ -499,20 +545,50 @@ class MultiShellKernel(KernelOperator):
 
         super().__init__(self.orientation_kernel, self.radial_kernel)
 
-    def get_params(self, deep: bool = True):  # noqa: D401
-        # Return only __init__ parameters (sklearn clone() relies on this)
-        return {
+    def get_params(self, deep: bool = True) -> dict:
+        # ``clone()`` calls ``get_params(deep=False)`` and re-invokes ``__init__``,
+        # so the shallow keys must match the constructor signature (not the
+        # inherited ``k1``/``k2``). With ``deep=True`` we also surface the
+        # sub-kernels' parameters, keeping ``get_params``/``set_params`` and
+        # ``hyperparameters`` consistent under the constructor's names.
+        params: dict = {
             "orientation_kernel": self.orientation_kernel,
             "radial_kernel": self.radial_kernel,
             "orientation_dims": self.orientation_dims,
             "bval_index": self.bval_index,
         }
+        if deep:
+            for prefix, kernel in (
+                ("orientation_kernel", self.orientation_kernel),
+                ("radial_kernel", self.radial_kernel),
+            ):
+                params.update(
+                    (f"{prefix}__{name}", value) for name, value in kernel.get_params().items()
+                )
+        return params
+
+    @property
+    def hyperparameters(self) -> list[Hyperparameter]:
+        """Expose sub-kernel hyperparameters under the constructor's names."""
+        r = []
+        for prefix, kernel in (
+            ("orientation_kernel", self.orientation_kernel),
+            ("radial_kernel", self.radial_kernel),
+        ):
+            for hp in kernel.hyperparameters:
+                r.append(
+                    Hyperparameter(f"{prefix}__{hp.name}", hp.value_type, hp.bounds, hp.n_elements)
+                )
+        return r
 
     def _split(self, X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         X = np.asarray(X)
+        bvals = X[:, self.bval_index]
+        if np.any(bvals <= 0):
+            raise ValueError(NONPOSITIVE_BVAL_ERROR_MSG)
         orient = X[:, self.orientation_dims]
-        bvals = np.log(X[:, self.bval_index]).reshape(-1, 1)
-        return orient, bvals
+        log_bvals = np.log(bvals).reshape(-1, 1)
+        return orient, log_bvals
 
     def __call__(
         self,

@@ -26,6 +26,7 @@ from typing import cast
 import numpy as np
 import pytest
 from dipy.io import read_bvals_bvecs
+from sklearn.gaussian_process.kernels import RBF
 
 from nifreeze.model import gpr
 
@@ -633,21 +634,88 @@ def test_multishellkernel_column_selection(orientation_dims, bval_index, nuisanc
     assert not np.allclose(Kxy0, Kxy1)
 
 
-@pytest.mark.parametrize(
-    ("bad_bval", "match"),
-    [
-        (0.0, "divide by zero"),
-        (-1.0, "invalid value"),
-    ],
-)
-def test_multishellkernel_nonpositive_bval(bad_bval, match):
+@pytest.mark.parametrize("bad_bval", [0.0, -1.0])
+def test_multishellkernel_nonpositive_bval(bad_bval):
+    """Non-positive b-values (e.g. b0) must be rejected, not silently -inf/nan."""
     k = gpr.MultiShellKernel()
     X = _make_multishell_X(3)
     X[0, 3] = bad_bval
 
-    with pytest.warns(RuntimeWarning, match=match):
-        # Current behavior: log(bval) -inf/nan propagates into K
+    with pytest.raises(ValueError, match="strictly positive b-values"):
         k(X)
+
+
+def _numeric_kernel_gradient(kernel, X, eps: float = 1e-6) -> np.ndarray:
+    """Finite-difference gradient of K(X) w.r.t. the (log-space) kernel theta."""
+    from sklearn.base import clone
+
+    theta = kernel.theta
+    _, analytic = kernel(X, eval_gradient=True)
+    numeric = np.zeros_like(analytic)
+    for i in range(len(theta)):
+        tp, tm = theta.copy(), theta.copy()
+        tp[i] += eps
+        tm[i] -= eps
+        kp, km = clone(kernel), clone(kernel)
+        kp.theta = tp
+        km.theta = tm
+        numeric[..., i] = (kp(X) - km(X)) / (2 * eps)
+    return numeric
+
+
+@pytest.mark.parametrize(
+    "kernel",
+    [
+        gpr.SphericalKriging(),
+        gpr.ExponentialKriging(),
+        gpr.MultiShellKernel(),
+        gpr.MultiShellKernel(orientation_kernel=gpr.ExponentialKriging()),
+    ],
+)
+def test_kernel_gradient_matches_finite_differences(kernel):
+    """Analytical gradients must match numerical ones (log-space, as sklearn expects)."""
+    orient = _make_multishell_X(5)[:, :3]
+    if isinstance(kernel, gpr.MultiShellKernel):
+        X = _make_multishell_X(5)
+    else:
+        X = orient
+
+    _, analytic = kernel(X, eval_gradient=True)
+    numeric = _numeric_kernel_gradient(kernel, X)
+    assert np.allclose(analytic, numeric, atol=1e-5)
+
+
+def test_multishellkernel_reduces_to_radial_when_orientations_identical():
+    """With identical orientations, K = lambda * C_b(log b) (Andersson Eq. 15)."""
+    n = 4
+    orient = np.tile([1.0, 0.0, 0.0], (n, 1))
+    bvals = np.array([1000.0, 2000.0, 3000.0, 1000.0])
+    X = np.column_stack([orient, bvals])
+
+    lam, ell = 0.7, 1.3
+    k = gpr.MultiShellKernel(
+        orientation_kernel=gpr.SphericalKriging(beta_l=lam),
+        radial_kernel=RBF(length_scale=ell),
+    )
+    K = cast(np.ndarray, k(X))
+
+    logb = np.log(bvals)
+    C_b = np.exp(-((logb[:, None] - logb[None, :]) ** 2) / (2 * ell**2))
+    assert np.allclose(K, lam * C_b)
+
+
+def test_multishellkernel_clone_theta_roundtrip():
+    """clone_with_theta must preserve structure and set sub-kernel hyperparameters."""
+    k = gpr.MultiShellKernel()
+    theta = k.theta
+    new_theta = theta + 0.1
+    k2 = k.clone_with_theta(new_theta)
+
+    assert isinstance(k2, gpr.MultiShellKernel)
+    assert np.allclose(k2.theta, new_theta)
+    assert k2.bounds.shape == k.bounds.shape
+    # The original kernel is untouched (clone semantics).
+    assert np.allclose(k.theta, theta)
 
 
 @pytest.mark.parametrize("n_samples", [8])
@@ -669,3 +737,28 @@ def test_multishellkernel_gp(n_samples):
     assert std.shape == (2,)
     assert np.isfinite(mean).all()
     assert np.isfinite(std).all()
+
+
+@pytest.mark.parametrize("n_samples", [12])
+def test_multishellkernel_gp_optimizes(n_samples):
+    """The gradient-based optimizer path runs and tunes theta with MultiShellKernel."""
+    X = _make_multishell_X(n_samples)
+    rng = np.random.default_rng(42)
+    y = X[:, 3] / 3000.0 + 0.05 * rng.standard_normal(n_samples)
+
+    kernel = gpr.MultiShellKernel()
+    theta0 = kernel.theta.copy()
+    model = gpr.DiffusionGPR(
+        kernel=kernel,
+        alpha=1e-3,
+        optimizer="fmin_l_bfgs_b",
+        eval_gradient=True,
+        maxiter=50,
+    )
+    model.fit(X, y)
+
+    # Optimizer actually moved the hyperparameters and produced a valid fit.
+    assert not np.allclose(model.kernel_.theta, theta0)
+    mean = cast(np.ndarray, model.predict(X[:3]))
+    assert mean.shape == (3,)
+    assert np.isfinite(mean).all()
