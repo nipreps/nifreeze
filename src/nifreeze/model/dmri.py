@@ -401,10 +401,6 @@ class BaseDWIModel(BaseModel):
 class AverageDWIModel(ExpectationModel):
     """A trivial model that returns an average DWI volume."""
 
-    # Shell-averaging needs the held-out index to pick the shell, so there is
-    # no single-fit (locked) mode (see :meth:`fit_predict`).
-    supports_single_fit = False
-
     __slots__ = ("_atol_low", "_atol_high", "_detrend")
 
     def __init__(
