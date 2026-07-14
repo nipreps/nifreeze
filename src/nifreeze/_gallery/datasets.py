@@ -81,6 +81,8 @@ class DatasetSpec:
     """Callable choosing which held-out indices to render."""
     notes: str = ""
     """Free-form caveats surfaced on the gallery page (e.g. ``b=1000`` HARDI)."""
+    url: str = ""
+    """Link to the source dataset (e.g. its OpenNeuro page)."""
 
     def load(self) -> DWI:
         """Load the dataset and assert its scheme matches the declaration."""
@@ -320,34 +322,67 @@ def _sidecars(nii: Path) -> tuple[Path, Path, Path]:
     return nii, Path(base + ".bval"), Path(base + ".bvec")
 
 
+# Each ``_resolve_*`` returns ``(dataset_path, [(dwi, bval, bvec), ...])`` so the
+# exact subject/run used can be both loaded and reported on the gallery page.
+def _resolve_ds000206(cache_root=None) -> tuple[Path, list[tuple[Path, Path, Path]]]:
+    ds = _ensure_clone("ds000206", cache_root)
+    return ds, [_sidecars(_first(ds, "sub-THP0001/ses-*/dwi/*acq-GD31*_dwi.nii.gz"))]
+
+
+def _resolve_ds000114(cache_root=None) -> tuple[Path, list[tuple[Path, Path, Path]]]:
+    ds = _ensure_clone("ds000114", cache_root)
+    nii = ds / "sub-01" / "ses-test" / "dwi" / "sub-01_ses-test_dwi.nii.gz"
+    return ds, [(nii, ds / "dwi.bval", ds / "dwi.bvec")]
+
+
+def _resolve_ds003138(cache_root=None) -> tuple[Path, list[tuple[Path, Path, Path]]]:
+    ds = _ensure_clone("ds003138", cache_root)
+    dwidir = _first(ds, "sub-*/ses-*/dwi/*acq-shell1*_dwi.nii.gz").parent
+    return ds, [_sidecars(_first(dwidir, f"*acq-shell{k}*_dwi.nii.gz")) for k in (1, 2, 3)]
+
+
+def _resolve_ds004737(cache_root=None) -> tuple[Path, list[tuple[Path, Path, Path]]]:
+    ds = _ensure_clone("ds004737", cache_root)
+    return ds, [_sidecars(_first(ds, "sub-001/ses-*/dwi/*acq-HASC92*_dwi.nii.gz"))]
+
+
+#: Dataset name -> resolver returning the concrete files to load.
+RESOLVERS = {
+    "ds000206": _resolve_ds000206,
+    "ds000114": _resolve_ds000114,
+    "ds003138": _resolve_ds003138,
+    "ds004737": _resolve_ds004737,
+}
+
+
+def source_relpaths(name: str, cache_root: str | Path | None = None) -> list[str]:
+    """Return the DWI file path(s) (relative to the dataset) actually loaded."""
+    ds, triples = RESOLVERS[name](cache_root)
+    return [str(dwi.relative_to(ds)) for dwi, _, _ in triples]
+
+
 def load_ds000206(cache_root: str | Path | None = None) -> DWI:
     """Legacy DTI: ds000206 traveling phantom, 30 dir @ b=1000 (GD31)."""
-    ds = _ensure_clone("ds000206", cache_root)
-    nii = _first(ds, "sub-THP0001/ses-*/dwi/*acq-GD31*_dwi.nii.gz")
-    return _load_dwi([_sidecars(nii)], ds)
+    ds, triples = _resolve_ds000206(cache_root)
+    return _load_dwi(triples, ds)
 
 
 def load_ds000114(cache_root: str | Path | None = None) -> DWI:
     """Single-shell HARDI: ds000114, 64 dir @ b=1000 (bval/bvec at the root)."""
-    ds = _ensure_clone("ds000114", cache_root)
-    nii = ds / "sub-01" / "ses-test" / "dwi" / "sub-01_ses-test_dwi.nii.gz"
-    return _load_dwi([(nii, ds / "dwi.bval", ds / "dwi.bvec")], ds)
+    ds, triples = _resolve_ds000114(cache_root)
+    return _load_dwi(triples, ds)
 
 
 def load_ds003138(cache_root: str | Path | None = None) -> DWI:
     """Multi-shell: ds003138, b=1000/2000/3000 stored as three separate files."""
-    ds = _ensure_clone("ds003138", cache_root)
-    shell1 = _first(ds, "sub-*/ses-*/dwi/*acq-shell1*_dwi.nii.gz")
-    dwidir = shell1.parent
-    triples = [_sidecars(_first(dwidir, f"*acq-shell{k}*_dwi.nii.gz")) for k in (1, 2, 3)]
+    ds, triples = _resolve_ds003138(cache_root)
     return _load_dwi(triples, ds)
 
 
 def load_ds004737(cache_root: str | Path | None = None) -> DWI:
     """DSI (compressed-sensing q-space): ds004737, HASC92 acquisition."""
-    ds = _ensure_clone("ds004737", cache_root)
-    nii = _first(ds, "sub-001/ses-*/dwi/*acq-HASC92*_dwi.nii.gz")
-    return _load_dwi([_sidecars(nii)], ds)
+    ds, triples = _resolve_ds004737(cache_root)
+    return _load_dwi(triples, ds)
 
 
 #: The gallery's OpenNeuro datasets, one per acquisition scheme (issue #458).
@@ -358,6 +393,7 @@ DATASETS: list[DatasetSpec] = [
         scheme=SINGLE_SHELL,
         loader=load_ds000206,
         notes="Traveling human phantom; 30 directions at b=1000 s/mm² (GD31).",
+        url="https://openneuro.org/datasets/ds000206",
     ),
     DatasetSpec(
         name="ds000114",
@@ -365,6 +401,7 @@ DATASETS: list[DatasetSpec] = [
         scheme=SINGLE_SHELL,
         loader=load_ds000114,
         notes="64 directions at b=1000 s/mm² (milder than textbook high-b HARDI).",
+        url="https://openneuro.org/datasets/ds000114",
     ),
     DatasetSpec(
         name="ds003138",
@@ -372,6 +409,7 @@ DATASETS: list[DatasetSpec] = [
         scheme=MULTI_SHELL,
         loader=load_ds003138,
         notes="Three shells (b=1000/2000/3000 s/mm²) stored as separate files, merged on load.",
+        url="https://openneuro.org/datasets/ds003138",
     ),
     DatasetSpec(
         name="ds004737",
@@ -379,5 +417,6 @@ DATASETS: list[DatasetSpec] = [
         scheme=DSI,
         loader=load_ds004737,
         notes="Compressed-sensing DSI (q-space grid, HASC92), not a full 258-point grid.",
+        url="https://openneuro.org/datasets/ds004737",
     ),
 ]

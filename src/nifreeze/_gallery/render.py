@@ -69,6 +69,34 @@ def _checkerboard(a: np.ndarray, b: np.ndarray, block: int = CHECKER_BLOCK) -> n
     return np.where(pattern.astype(bool), a, b)
 
 
+def select_cut_coords(
+    mask: np.ndarray | None, affine: np.ndarray, n_cuts: int, *, min_frac: float = 0.5
+) -> list[float] | None:
+    """Choose fixed axial cut positions over the high-mass part of the brain mask.
+
+    Deriving the cuts from the **mask** (not each volume's signal) keeps the
+    slices identical across every panel on a page. Thresholding on the per-slice
+    voxel count keeps the cuts on the substantive cerebrum and drops thin
+    cerebellum/edge slices that carry little information. Returns world-space z
+    coordinates, or ``None`` if no mask is available.
+    """
+    if mask is None:
+        return None
+    mask = np.asarray(mask, dtype=bool)
+    counts = mask.sum(axis=(0, 1))  # voxel count per axial (k) slice
+    if counts.max() == 0:
+        return None
+    valid = np.where(counts >= min_frac * counts.max())[0]
+    if valid.size == 0:
+        valid = np.where(counts > 0)[0]
+    lo, hi = int(valid.min()), int(valid.max())
+    xs, ys, _ = np.where(mask)
+    cx, cy = int(round(xs.mean())), int(round(ys.mean()))
+    ks = np.linspace(lo, hi, n_cuts + 2)[1:-1]  # interior, evenly spaced
+    coords = [float((affine @ np.array([cx, cy, k, 1.0]))[2]) for k in ks]
+    return sorted(coords)
+
+
 def save_slice_panel(
     observed: np.ndarray,
     predicted: np.ndarray,
@@ -133,15 +161,16 @@ def save_slice_panel(
         ("difference", difference, {"cmap": "RdBu_r", "vmin": -dmax, "vmax": dmax}),
     ]
 
-    # Choose the axial cut positions ONCE (from the observed volume) and reuse
-    # the exact same world-space coordinates for every row, so the observed,
-    # predicted, checkerboard, and difference stripes are directly comparable.
-    observed_img = nb.Nifti1Image(observed.astype(np.float32), affine)
-    cut_coords: list | int = n_cuts
-    try:
-        cut_coords = list(plotting.find_cut_slices(observed_img, direction="z", n_cuts=n_cuts))
-    except Exception:  # pragma: no cover - degenerate volumes
-        pass
+    # Choose axial cut positions from the brain MASK (not each volume's signal),
+    # so the exact same world-space slices are used for every row *and* across
+    # every panel on the page, focused on the high-mass cerebrum.
+    cut_coords: list | int | None = select_cut_coords(mask, affine, n_cuts)
+    if cut_coords is None:
+        observed_img = nb.Nifti1Image(observed.astype(np.float32), affine)
+        try:
+            cut_coords = list(plotting.find_cut_slices(observed_img, direction="z", n_cuts=n_cuts))
+        except Exception:  # pragma: no cover - degenerate volumes
+            cut_coords = n_cuts
 
     fig, axes = plt.subplots(len(rows), 1, figsize=(2.2 * n_cuts, 2.4 * len(rows)))
     for ax, (label, data, kw) in zip(axes, rows, strict=True):

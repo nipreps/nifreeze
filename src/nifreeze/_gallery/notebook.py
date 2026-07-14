@@ -34,7 +34,7 @@ import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 
-from nifreeze._gallery.datasets import DATASETS
+from nifreeze._gallery.datasets import DATASETS, source_relpaths
 from nifreeze._gallery.manifest import STATUS_RAN, GalleryManifest
 from nifreeze._gallery.run import run_gallery
 
@@ -71,10 +71,19 @@ def show_dataset(
     spec = specs[0]
 
     out = Path(out_dir) if out_dir is not None else Path(tempfile.mkdtemp())
-    manifest = run_gallery([spec], out_dir=out, model_keys=model_keys, render=True)
 
+    # Report the exact OpenNeuro subject/run being used.
+    try:
+        paths = source_relpaths(name)
+        files = ", ".join(f"`{p}`" for p in paths)
+        src = f"[OpenNeuro {name}]({spec.url})" if spec.url else name
+        display(Markdown(f"**Source:** {src} — {files}"))
+    except Exception:  # pragma: no cover - display best-effort
+        pass
     if spec.notes:
         display(Markdown(f"*{spec.notes}*"))
+
+    manifest = run_gallery([spec], out_dir=out, model_keys=model_keys, render=True)
     display(Markdown(manifest.coverage_table_markdown()))
 
     for cell in manifest.cells:

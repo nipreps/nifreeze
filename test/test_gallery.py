@@ -172,14 +172,38 @@ def _ds000206_cached() -> bool:
     return bool(matches) and matches[0].exists()
 
 
+def test_select_cut_coords():
+    """Cut coords come from the mask's high-mass slices, in world-z order."""
+    import numpy as np
+
+    from nifreeze._gallery.render import select_cut_coords
+
+    assert select_cut_coords(None, np.eye(4), 4) is None
+
+    mask = np.zeros((10, 10, 20), dtype=bool)
+    mask[3:7, 3:7, 5:15] = True  # substantive content only in slices z=5..14
+    coords = select_cut_coords(mask, np.eye(4), 4)
+    assert coords is not None
+    assert len(coords) == 4
+    assert coords == sorted(coords)
+    # With an identity affine, world-z == voxel-k; all cuts sit in the mass band.
+    assert all(5 <= c <= 14 for c in coords)
+
+
 @pytest.mark.skipif(not _ds000206_cached(), reason="ds000206 data not fetched locally")
 def test_load_ds000206_real():
     """The ds000206 loader builds a valid single-shell DWI from real data."""
+    from nifreeze._gallery.datasets import source_relpaths
+
     dwi = load_ds000206()
     assert verify_scheme(dwi, SINGLE_SHELL) == SINGLE_SHELL
     assert len(dwi) >= 6
     assert dwi.brainmask is not None
     assert dwi.brainmask.shape == dwi.dataobj.shape[:3]
+
+    # The exact subject/run is resolvable for the gallery page.
+    paths = source_relpaths("ds000206")
+    assert paths and paths[0].startswith("sub-THP0001/") and "acq-GD31" in paths[0]
 
 
 def test_run_gallery_dki_scheme_gating():
