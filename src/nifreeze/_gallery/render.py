@@ -133,13 +133,23 @@ def save_slice_panel(
         ("difference", difference, {"cmap": "RdBu_r", "vmin": -dmax, "vmax": dmax}),
     ]
 
+    # Choose the axial cut positions ONCE (from the observed volume) and reuse
+    # the exact same world-space coordinates for every row, so the observed,
+    # predicted, checkerboard, and difference stripes are directly comparable.
+    observed_img = nb.Nifti1Image(observed.astype(np.float32), affine)
+    cut_coords: list | int = n_cuts
+    try:
+        cut_coords = list(plotting.find_cut_slices(observed_img, direction="z", n_cuts=n_cuts))
+    except Exception:  # pragma: no cover - degenerate volumes
+        pass
+
     fig, axes = plt.subplots(len(rows), 1, figsize=(2.2 * n_cuts, 2.4 * len(rows)))
     for ax, (label, data, kw) in zip(axes, rows, strict=True):
         img = nb.Nifti1Image(np.asarray(data, dtype=np.float32), affine)
         plotting.plot_img(
             img,
             display_mode="z",
-            cut_coords=n_cuts,
+            cut_coords=cut_coords,
             axes=ax,
             black_bg=True,
             annotate=False,
