@@ -190,6 +190,32 @@ def test_select_cut_coords():
     assert all(5 <= c <= 14 for c in coords)
 
 
+def test_local_correlation():
+    """Sliding-window correlation is full-resolution, ~1 for a linear map."""
+    import numpy as np
+
+    from nifreeze._gallery.render import _local_correlation
+
+    rng = np.random.default_rng(0)
+    observed = rng.normal(size=(16, 16, 16))
+    predicted = 2.0 * observed + 1.0  # perfectly (linearly) correlated
+
+    full = np.ones((16, 16, 16), dtype=bool)
+    corr = _local_correlation(observed, predicted, full, window=7)
+    # Full resolution: same shape as the inputs (stride 1).
+    assert corr.shape == observed.shape
+    vals = corr[np.isfinite(corr)]
+    assert vals.size > 0
+    assert np.all(vals > 0.99)
+
+    # Voxels outside the mask stay NaN; in-mask voxels are computed.
+    partial = np.zeros((16, 16, 16), dtype=bool)
+    partial[:8, :8, :8] = True
+    corr2 = _local_correlation(observed, predicted, partial, window=7)
+    assert np.isnan(corr2[12, 12, 12])
+    assert np.isfinite(corr2[2, 2, 2])
+
+
 @pytest.mark.skipif(not _ds000206_cached(), reason="ds000206 data not fetched locally")
 def test_load_ds000206_real():
     """The ds000206 loader builds a valid single-shell DWI from real data."""

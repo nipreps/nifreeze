@@ -43,6 +43,8 @@ N_CUTS = 6
 """Number of axial (z) cuts per row."""
 CHECKER_BLOCK = 12
 """Checkerboard block size in voxels."""
+CORR_WINDOW = 7
+"""Odd side length (voxels) of the sliding window for the local correlation map."""
 DPI = 150
 """Output resolution for rendered figures."""
 
@@ -69,6 +71,51 @@ def _checkerboard(a: np.ndarray, b: np.ndarray, block: int = CHECKER_BLOCK) -> n
     idx = np.indices(a.shape)
     pattern = ((idx[0] // block) + (idx[1] // block) + (idx[2] // block)) % 2
     return np.where(pattern.astype(bool), a, b)
+
+
+def _local_correlation(
+    observed: np.ndarray,
+    predicted: np.ndarray,
+    mask: np.ndarray | None,
+    window: int = CORR_WINDOW,
+    *,
+    min_count: int = 27,
+) -> np.ndarray:
+    """Per-voxel local Pearson correlation in a sliding ``window``³ neighbourhood.
+
+    For every voxel, correlate observed vs. predicted intensities over the (odd)
+    cubic window centered on it, using only in-mask voxels. Computed with box
+    filters (stride 1), so the result is a full-resolution map — the same shape
+    as the inputs — of *where* the prediction locally tracks the data. Voxels
+    outside the mask, or with fewer than ``min_count`` neighbours, are ``NaN``.
+    """
+    from scipy.ndimage import uniform_filter
+
+    obs = np.asarray(observed, dtype=float)
+    pred = np.asarray(predicted, dtype=float)
+    m = np.ones(obs.shape) if mask is None else np.asarray(mask, dtype=bool).astype(float)
+    x = obs * m
+    y = pred * m
+
+    def _box(arr: np.ndarray) -> np.ndarray:
+        return uniform_filter(arr, size=window, mode="constant", cval=0.0)
+
+    # ``uniform_filter`` returns the box *mean*; ratios of means over the same box
+    # cancel the box size, yielding per-window masked statistics directly.
+    fm = _box(m)  # fraction of masked voxels in the window
+    count = fm * window**3
+    with np.errstate(divide="ignore", invalid="ignore"):
+        mean_x = _box(x) / fm
+        mean_y = _box(y) / fm
+        cov = _box(x * y) / fm - mean_x * mean_y
+        var_x = _box(x * x) / fm - mean_x**2
+        var_y = _box(y * y) / fm - mean_y**2
+        corr = cov / np.sqrt(var_x * var_y)
+
+    valid = (count >= min_count) & np.isfinite(corr)
+    if mask is not None:
+        valid &= np.asarray(mask, dtype=bool)
+    return np.where(valid, np.clip(corr, -1.0, 1.0), np.nan)
 
 
 def select_cut_coords(
@@ -148,19 +195,37 @@ def save_slice_panel(
     predicted = np.asarray(predicted, dtype=float)
     matched = _match_intensity(predicted, observed, mask)
     checker = _checkerboard(observed, matched)
-    difference = observed - matched
 
+    m = np.asarray(mask, dtype=bool) if mask is not None else np.ones(observed.shape, dtype=bool)
     finite = observed[np.isfinite(observed)]
     vmax = float(np.percentile(finite, 99)) if finite.size else 1.0
+
+    # Relative difference: normalize both maps by the observed dynamic range so the
+    # residual is a fraction of signal (interpretable, comparable), computed only
+    # within the mask (background noise would otherwise eat the dynamic range).
+    lo, hi = np.percentile(observed[m], [1, 99]) if m.any() else (0.0, 1.0)
+    scale = float(hi - lo) or 1.0
+    difference = np.where(m, (observed - matched) / scale, np.nan)
     dvals = np.abs(difference[np.isfinite(difference)])
-    dmax = float(np.percentile(dvals, 99)) if dvals.size else 1.0
-    dmax = dmax or 1.0
+    dmax = (float(np.percentile(dvals, 99)) if dvals.size else 1.0) or 1.0
+
+    # Per-voxel local correlation (stride 1); bilateral [-1, 1] like the difference.
+    correlation = _local_correlation(observed, matched, mask)
 
     rows = [
-        ("observed", observed, {"cmap": "gray", "vmin": 0.0, "vmax": vmax}),
-        ("predicted", matched, {"cmap": "gray", "vmin": 0.0, "vmax": vmax}),
-        ("checkerboard", checker, {"cmap": "gray", "vmin": 0.0, "vmax": vmax}),
-        ("difference", difference, {"cmap": "RdBu_r", "vmin": -dmax, "vmax": dmax}),
+        ("observed", observed, {"cmap": "gray", "vmin": 0.0, "vmax": vmax, "colorbar": False}),
+        ("predicted", matched, {"cmap": "gray", "vmin": 0.0, "vmax": vmax, "colorbar": False}),
+        ("checkerboard", checker, {"cmap": "gray", "vmin": 0.0, "vmax": vmax, "colorbar": False}),
+        (
+            "difference (relative)",
+            difference,
+            {"cmap": "RdBu_r", "vmin": -dmax, "vmax": dmax, "colorbar": True},
+        ),
+        (
+            f"local correlation ({CORR_WINDOW}³ sliding window)",
+            correlation,
+            {"cmap": "RdBu_r", "vmin": -1.0, "vmax": 1.0, "colorbar": True},
+        ),
     ]
 
     # Choose axial cut positions from the brain MASK (not each volume's signal),
@@ -184,7 +249,6 @@ def save_slice_panel(
             axes=ax,
             black_bg=True,
             annotate=False,
-            colorbar=False,
             **kw,
         )
         ax.set_title(label, color="black", fontsize=11)
