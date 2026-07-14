@@ -32,13 +32,17 @@ used for fast, network-free testing.
 
 from __future__ import annotations
 
+import os
+import shutil
+import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 
 from nifreeze.data.dmri import DWI
-from nifreeze.data.dmri.utils import find_shelling_scheme
+from nifreeze.data.dmri.utils import find_shelling_scheme, format_gradients
 
 SINGLE_SHELL = "single-shell"
 MULTI_SHELL = "multi-shell"
@@ -173,5 +177,202 @@ def synthetic_spec(scheme: str = SINGLE_SHELL, **kwargs) -> DatasetSpec:
     )
 
 
-#: Real OpenNeuro datasets are registered here in a later phase.
-DATASETS: list[DatasetSpec] = []
+# ---------------------------------------------------------------------------
+# OpenNeuro data provisioning (DataLad) + minimal preprocessing
+# ---------------------------------------------------------------------------
+
+DEFAULT_CACHE = Path.home() / ".cache" / "nifreeze-gallery"
+"""Default location for fetched OpenNeuro datasets."""
+
+DEFAULT_LOWB_THRESHOLD = 50
+"""b-values at or below this are treated as ``b=0`` for masking."""
+
+
+def _cache_root(cache_root: str | Path | None = None) -> Path:
+    """Resolve the dataset cache directory (env ``NIFREEZE_GALLERY_DATA``)."""
+    return Path(cache_root or os.environ.get("NIFREEZE_GALLERY_DATA") or DEFAULT_CACHE)
+
+
+def _ensure_clone(accession: str, cache_root: str | Path | None = None) -> Path:
+    """Ensure the OpenNeuro dataset is cloned (metadata only) and return its path.
+
+    Cloning fetches the file tree (git-annex symlinks) but not the data; the
+    actual NIfTIs are pulled on demand by :func:`_get`. Requires ``datalad`` on
+    ``PATH`` only if the clone is not already present.
+    """
+    ds_path = _cache_root(cache_root) / accession
+    if not (ds_path / ".datalad").exists():
+        datalad = shutil.which("datalad")
+        if not datalad:
+            raise RuntimeError(
+                f"{accession} is not present at {ds_path} and 'datalad' is not on "
+                "PATH. Install nifreeze[gallery] or pre-clone the dataset."
+            )
+        ds_path.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            [datalad, "clone", f"https://github.com/OpenNeuroDatasets/{accession}", str(ds_path)],
+            check=True,
+        )
+    return ds_path
+
+
+def _get(ds_path: Path, files: Sequence[Path]) -> None:
+    """Fetch the given annexed files via ``datalad get`` (skips ones present)."""
+    missing = [f for f in files if not Path(f).exists()]
+    if not missing:
+        return
+    datalad = shutil.which("datalad")
+    if not datalad:
+        raise RuntimeError(
+            f"Missing data files and 'datalad' is not on PATH: {missing}. "
+            "Install nifreeze[gallery] or pre-fetch the files."
+        )
+    subprocess.run([datalad, "-C", str(ds_path), "get", *[str(f) for f in missing]], check=True)
+
+
+def _brain_mask(data: np.ndarray, bvals: np.ndarray, *, median_radius: int, numpass: int):
+    """Compute a brain mask from the ``b=0`` volumes via ``median_otsu``."""
+    from dipy.segment.mask import median_otsu
+
+    b0_idx = np.where(np.asarray(bvals) <= DEFAULT_LOWB_THRESHOLD)[0]
+    vol_idx = b0_idx if b0_idx.size else np.arange(min(3, data.shape[-1]))
+    _, mask = median_otsu(data, vol_idx=vol_idx, median_radius=median_radius, numpass=numpass)
+    return mask
+
+
+def _crop_to_mask(
+    data: np.ndarray, mask: np.ndarray, affine: np.ndarray, *, margin: int = 2
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Crop ``data``/``mask`` to the mask bounding box (+margin), fixing the affine."""
+    xs, ys, zs = np.where(mask)
+    lo = np.maximum([xs.min(), ys.min(), zs.min()] - np.array(margin), 0)
+    hi = np.minimum([xs.max(), ys.max(), zs.max()] + np.array(margin) + 1, mask.shape)
+    sl = tuple(slice(int(lo[k]), int(hi[k])) for k in range(3))
+    new_affine = affine.copy()
+    new_affine[:3, 3] = affine[:3, :3] @ lo + affine[:3, 3]
+    return data[sl], mask[sl], new_affine
+
+
+def _load_dwi(
+    triples: Sequence[tuple[Path, Path, Path]],
+    ds_path: Path,
+    *,
+    crop: bool = True,
+    median_radius: int = 2,
+    numpass: int = 1,
+) -> DWI:
+    """Fetch, load, (optionally merge shells,) mask, and crop into a :class:`DWI`.
+
+    ``triples`` is a list of ``(dwi_nii, bval, bvec)``; multiple entries are
+    concatenated along the volume axis (used for datasets that store shells as
+    separate files, e.g. ds003138).
+    """
+    from typing import cast
+
+    import nibabel as nb
+    from dipy.io import read_bvals_bvecs
+    from nibabel.spatialimages import SpatialImage
+
+    _get(ds_path, [f for triple in triples for f in triple])
+
+    data_list: list[np.ndarray] = []
+    bvals_list: list[np.ndarray] = []
+    bvecs_list: list[np.ndarray] = []
+    affine: np.ndarray | None = None
+    for dwi_file, bval_file, bvec_file in triples:
+        img = cast(SpatialImage, nb.load(str(dwi_file)))
+        affine = img.affine
+        data_list.append(np.asarray(img.dataobj, dtype=np.float32))
+        bvals, bvecs = read_bvals_bvecs(str(bval_file), str(bvec_file))
+        bvals_list.append(np.asarray(bvals))
+        bvecs_list.append(np.asarray(bvecs))
+
+    assert affine is not None  # triples is always non-empty
+
+    data = np.concatenate(data_list, axis=-1) if len(data_list) > 1 else data_list[0]
+    bvals = np.concatenate(bvals_list)
+    bvecs = np.vstack(bvecs_list)
+    gradients = format_gradients(np.column_stack([bvecs, bvals]))
+
+    mask = _brain_mask(data, bvals, median_radius=median_radius, numpass=numpass)
+    if crop:
+        data, mask, affine = _crop_to_mask(data, mask, affine)
+
+    return DWI(dataobj=data, affine=affine, brainmask=mask, gradients=gradients)
+
+
+def _first(ds_path: Path, pattern: str) -> Path:
+    """Return the first (sorted) path matching ``pattern`` under ``ds_path``."""
+    matches = sorted(ds_path.glob(pattern))
+    if not matches:
+        raise FileNotFoundError(f"No file matching {pattern!r} under {ds_path}.")
+    return matches[0]
+
+
+def _sidecars(nii: Path) -> tuple[Path, Path, Path]:
+    """Return ``(nii, bval, bvec)`` for a ``*_dwi.nii.gz`` file."""
+    base = str(nii)[: -len(".nii.gz")]
+    return nii, Path(base + ".bval"), Path(base + ".bvec")
+
+
+def load_ds000206(cache_root: str | Path | None = None) -> DWI:
+    """Legacy DTI: ds000206 traveling phantom, 30 dir @ b=1000 (GD31)."""
+    ds = _ensure_clone("ds000206", cache_root)
+    nii = _first(ds, "sub-THP0001/ses-*/dwi/*acq-GD31*_dwi.nii.gz")
+    return _load_dwi([_sidecars(nii)], ds)
+
+
+def load_ds000114(cache_root: str | Path | None = None) -> DWI:
+    """Single-shell HARDI: ds000114, 64 dir @ b=1000 (bval/bvec at the root)."""
+    ds = _ensure_clone("ds000114", cache_root)
+    nii = ds / "sub-01" / "ses-test" / "dwi" / "sub-01_ses-test_dwi.nii.gz"
+    return _load_dwi([(nii, ds / "dwi.bval", ds / "dwi.bvec")], ds)
+
+
+def load_ds003138(cache_root: str | Path | None = None) -> DWI:
+    """Multi-shell: ds003138, b=1000/2000/3000 stored as three separate files."""
+    ds = _ensure_clone("ds003138", cache_root)
+    shell1 = _first(ds, "sub-*/ses-*/dwi/*acq-shell1*_dwi.nii.gz")
+    dwidir = shell1.parent
+    triples = [_sidecars(_first(dwidir, f"*acq-shell{k}*_dwi.nii.gz")) for k in (1, 2, 3)]
+    return _load_dwi(triples, ds)
+
+
+def load_ds004737(cache_root: str | Path | None = None) -> DWI:
+    """DSI (compressed-sensing q-space): ds004737, HASC92 acquisition."""
+    ds = _ensure_clone("ds004737", cache_root)
+    nii = _first(ds, "sub-001/ses-*/dwi/*acq-HASC92*_dwi.nii.gz")
+    return _load_dwi([_sidecars(nii)], ds)
+
+
+#: The gallery's OpenNeuro datasets, one per acquisition scheme (issue #458).
+DATASETS: list[DatasetSpec] = [
+    DatasetSpec(
+        name="ds000206",
+        title="Legacy DTI (ds000206)",
+        scheme=SINGLE_SHELL,
+        loader=load_ds000206,
+        notes="Traveling human phantom; 30 directions at b=1000 s/mm² (GD31).",
+    ),
+    DatasetSpec(
+        name="ds000114",
+        title="Single-shell HARDI (ds000114)",
+        scheme=SINGLE_SHELL,
+        loader=load_ds000114,
+        notes="64 directions at b=1000 s/mm² (milder than textbook high-b HARDI).",
+    ),
+    DatasetSpec(
+        name="ds003138",
+        title="Multi-shell (ds003138)",
+        scheme=MULTI_SHELL,
+        loader=load_ds003138,
+        notes="Three shells (b=1000/2000/3000 s/mm²) stored as separate files, merged on load.",
+    ),
+    DatasetSpec(
+        name="ds004737",
+        title="DSI (ds004737)",
+        scheme=DSI,
+        loader=load_ds004737,
+        notes="Compressed-sensing DSI (q-space grid, HASC92), not a full 258-point grid.",
+    ),
+]

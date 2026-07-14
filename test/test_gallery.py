@@ -27,10 +27,13 @@ from __future__ import annotations
 import pytest
 
 from nifreeze._gallery.datasets import (
+    DATASETS,
     DSI,
     MULTI_SHELL,
     SINGLE_SHELL,
+    _cache_root,
     default_lovo_indices,
+    load_ds000206,
     synthetic_dwi,
     synthetic_spec,
     verify_scheme,
@@ -159,6 +162,36 @@ def test_run_gallery_dti_renders(tmp_path):
         assert (tmp_path / rel).is_file()
     assert (tmp_path / "gallery_manifest.json").is_file()
     assert (tmp_path / "coverage.rst").is_file()
+
+
+def test_datasets_registry():
+    """The OpenNeuro registry declares the four expected scheme datasets."""
+    by_name = {d.name: d for d in DATASETS}
+    assert set(by_name) == {"ds000206", "ds000114", "ds003138", "ds004737"}
+    assert by_name["ds000206"].scheme == SINGLE_SHELL
+    assert by_name["ds000114"].scheme == SINGLE_SHELL
+    assert by_name["ds003138"].scheme == MULTI_SHELL
+    assert by_name["ds004737"].scheme == DSI
+    assert all(callable(d.loader) for d in DATASETS)
+
+
+def _ds000206_cached() -> bool:
+    """Whether ds000206's GD31 volume has been fetched into the local cache."""
+    root = _cache_root() / "ds000206"
+    # Mirror the loader's ``_first`` (sorted) so we check the file it will pick.
+    matches = sorted(root.glob("sub-THP0001/ses-*/dwi/*acq-GD31*_dwi.nii.gz"))
+    # ``exists()`` follows the annex symlink: True only if the data is present.
+    return bool(matches) and matches[0].exists()
+
+
+@pytest.mark.skipif(not _ds000206_cached(), reason="ds000206 data not fetched locally")
+def test_load_ds000206_real():
+    """The ds000206 loader builds a valid single-shell DWI from real data."""
+    dwi = load_ds000206()
+    assert verify_scheme(dwi, SINGLE_SHELL) == SINGLE_SHELL
+    assert len(dwi) >= 6
+    assert dwi.brainmask is not None
+    assert dwi.brainmask.shape == dwi.dataobj.shape[:3]
 
 
 def test_run_gallery_dki_scheme_gating():
