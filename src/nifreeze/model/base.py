@@ -49,7 +49,11 @@ class ModelFactory:
         ----------
         model : :obj:`str`
             Diffusion model.
-            Options: ``"DTI"``, ``"DKI"``, ``"S0"``, ``"AverageDWI"``
+            Options: ``"DTI"``, ``"DKI"``, ``"GQI"``, ``"GP"``, ``"S0"``,
+            ``"AverageDWI"``. ``"GP"`` (aliases ``"GPR"``,
+            ``"GaussianProcess"``) builds a
+            :obj:`~nifreeze.model.dmri.GPModel`; pass ``kernel_model`` through
+            ``kwargs`` to select the covariance.
 
         Return
         ------
@@ -70,6 +74,11 @@ class ModelFactory:
             from nifreeze.model.dmri import AverageDWIModel
 
             return AverageDWIModel(kwargs.pop("dataset"), **kwargs)
+
+        if model.lower() in ("gp", "gpr", "gaussianprocess"):
+            from nifreeze.model.dmri import GPModel
+
+            return GPModel(kwargs.pop("dataset"), **kwargs)
 
         if model.lower() in ("gqi", "dti", "dki", "pet"):
             from importlib import import_module
@@ -95,6 +104,21 @@ class BaseModel(ABC):
     """
 
     __metaclass__ = ABCMeta
+
+    #: Declarative capability contract (read by callers such as the prediction
+    #: gallery to decide, *before* instantiation, whether a model applies to a
+    #: given dataset and mode). Subclasses override the class attributes below;
+    #: they are intrinsic model properties, centralizing constraints that were
+    #: otherwise only enforced by scattered runtime guards.
+    supports_single_fit: bool = True
+    """Whether the model can be fit once on all volumes (``index=None``)."""
+    applicable_schemes: frozenset[str] = frozenset({"single-shell", "multi-shell", "DSI"})
+    """Acquisition schemes (as labelled by
+    :func:`~nifreeze.data.dmri.utils.find_shelling_scheme`) the model supports."""
+    requires_multishell: bool = False
+    """Whether the model requires more than one non-zero shell."""
+    excludes_b0: bool = False
+    """Whether ``b=0`` volumes are excluded from fitting/prediction."""
 
     __slots__ = {
         "_dataset": "The NiFreeze dataset instance this model operates on",

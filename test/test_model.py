@@ -362,6 +362,117 @@ def test_model_factory_valid_models(monkeypatch, model_name, expected_cls):
         )
 
 
+@pytest.mark.parametrize("name", ["gp", "gpr", "gaussianprocess", "GP", "GaussianProcess"])
+def test_factory_gp_variants(name, setup_random_dwi_data):
+    """The factory resolves the GP aliases to :class:`~nifreeze.model.dmri.GPModel`."""
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
+
+    dataset = DWI(
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        gradients=gradients,
+    )
+
+    # Dummy class to simulate GPModel (avoids constructing a real DIPY model)
+    class DummyGP:
+        def __init__(self, _dataset, **kwargs):
+            self._dataset = _dataset
+            self._kwargs = kwargs
+
+    import sys
+    import types as _types
+
+    old_module = sys.modules.get("nifreeze.model.dmri")
+    dmri_module = _types.ModuleType("nifreeze.model.dmri")
+    dmri_module.GPModel = DummyGP  # type: ignore[attr-defined]
+    sys.modules["nifreeze.model.dmri"] = dmri_module
+
+    try:
+        model_instance = model.ModelFactory.init(name, dataset=dataset, kernel_model="spherical")
+        assert isinstance(model_instance, DummyGP)
+        # ``kernel_model`` is forwarded through to the model constructor.
+        assert model_instance._kwargs.get("kernel_model") == "spherical"
+    finally:
+        if old_module is not None:
+            sys.modules["nifreeze.model.dmri"] = old_module
+        else:
+            del sys.modules["nifreeze.model.dmri"]
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def test_gpmodel_fit_predict(request):
+    """``GPModel`` fits/predicts through the wrapper (LOVO and single-fit)."""
+    from nifreeze.model.dmri import GPModel
+
+    rng = request.node.rng
+    size = (2, 2, 2)
+    n_dirs = 12
+
+    bvecs = rng.normal(size=(n_dirs, 3))
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+    # Prepend a b=0 volume so ``DWI`` can extract a b0 reference.
+    bvecs = np.vstack([np.zeros((1, 3)), bvecs])
+    bvals = np.concatenate([[0.0], np.full(n_dirs, 1000.0)])
+    gradients = np.column_stack([bvecs, bvals])
+
+    dataobj = rng.uniform(50.0, 1000.0, size=(*size, n_dirs + 1)).astype("float32")
+    dwi = DWI(
+        dataobj=dataobj,
+        affine=np.eye(4),
+        brainmask=np.ones(size, dtype=bool),
+        gradients=gradients,
+    )
+
+    # LOVO: predict the held-out orientation.
+    gp = GPModel(dwi, kernel_model="spherical")
+    predicted = gp.fit_predict(0)
+    assert predicted is not None
+    assert predicted.shape == size
+    assert np.all(np.isfinite(predicted))
+
+    # Single-fit: locks the fit (returns None), then predicts from the locked fit.
+    gp2 = GPModel(dwi, kernel_model="spherical")
+    assert gp2.fit_predict(None) is None
+    assert gp2._locked_fit is True
+    predicted2 = gp2.fit_predict(0)
+    assert predicted2.shape == size
+
+
+def test_model_capability_contract():
+    """The declarative capability attributes match each model's real constraints."""
+    from nifreeze.model.base import BaseModel
+    from nifreeze.model.dmri import (
+        AverageDWIModel,
+        DKIModel,
+        DTIModel,
+        GPModel,
+        GQIModel,
+    )
+
+    # Defaults: permissive on the base class.
+    assert BaseModel.supports_single_fit is True
+    assert BaseModel.requires_multishell is False
+    assert BaseModel.excludes_b0 is False
+    assert BaseModel.applicable_schemes == frozenset({"single-shell", "multi-shell", "DSI"})
+
+    # Shell-averaging has no locked/single-fit mode.
+    assert AverageDWIModel.supports_single_fit is False
+
+    # DTI is a low-b tensor fit; DSI is out of scope.
+    assert DTIModel.applicable_schemes == frozenset({"single-shell", "multi-shell"})
+
+    # DKI needs >= 3 b-values (multi-shell only).
+    assert DKIModel.requires_multishell is True
+    assert DKIModel.applicable_schemes == frozenset({"multi-shell"})
+
+    # GQI drops b=0 volumes.
+    assert GQIModel.excludes_b0 is True
+
+    # GP targets orientation data (kernel picks the concrete scheme).
+    assert GPModel.applicable_schemes == frozenset({"single-shell", "multi-shell"})
+
+
 def test_factory_initializations(datadir):
     """Check that the two different initialisations result in the same models"""
 
