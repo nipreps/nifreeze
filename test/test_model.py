@@ -436,6 +436,7 @@ def test_gpmodel_fit_predict(request):
     assert gp2.fit_predict(None) is None
     assert gp2._locked_fit is True
     predicted2 = gp2.fit_predict(0)
+    assert predicted2 is not None
     assert predicted2.shape == size
 
 

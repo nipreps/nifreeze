@@ -105,7 +105,8 @@ def test_capability_filtering_helpers():
 
     # AverageDWI has no single-fit mode.
     ok, reason = check_mode(specs["average"], "single-fit")
-    assert not ok and "single-fit" in reason
+    assert not ok
+    assert reason is not None and "single-fit" in reason
     assert check_mode(specs["average"], "lovo")[0]
 
     # DKI is multi-shell only.

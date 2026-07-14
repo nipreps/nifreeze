@@ -156,6 +156,7 @@ check_untyped_defs = true
 
 [[tool.mypy.overrides]]
 module = [
+  "IPython.*",
   "nipype.*",
   "nilearn.*",
   "nireports.*",
