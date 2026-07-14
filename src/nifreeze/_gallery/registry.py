@@ -31,7 +31,7 @@ the two GP entries carry an explicit ``scheme_override``.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from nifreeze.data.dmri import DWI
@@ -46,24 +46,6 @@ from nifreeze.model.dmri import (
 
 #: Gallery prediction modes.
 GALLERY_MODES = ("lovo", "single-fit")
-
-
-def _multishell_gp_reason() -> str | None:
-    """Return a skip reason if the multi-shell GP kernel is unavailable.
-
-    The ``"multishell"`` covariance (``MultiShellKernel``) lands with PR #175;
-    on trees without it, ``GaussianProcessModel`` silently falls back to a
-    single-shell kernel, so the cell is gated out rather than run misleadingly.
-    """
-    import importlib
-
-    try:
-        gpr = importlib.import_module("nifreeze.model.gpr")
-    except Exception:  # pragma: no cover - gpr always importable
-        gpr = None
-    if gpr is None or getattr(gpr, "MultiShellKernel", None) is None:
-        return "multi-shell GP kernel unavailable (requires MultiShellKernel, PR #175)"
-    return None
 
 
 @dataclass(frozen=True)
@@ -82,8 +64,6 @@ class ModelSpec:
     """Extra construction kwargs (e.g. ``{"kernel_model": "multishell"}``)."""
     scheme_override: frozenset[str] | None = None
     """Overrides ``model_cls.applicable_schemes`` (used for GP kernels)."""
-    precondition: Callable[[], str | None] | None = None
-    """Optional runtime gate; returns a skip reason string, or ``None`` if OK."""
 
     @property
     def applicable_schemes(self) -> frozenset[str]:
@@ -118,7 +98,6 @@ GALLERY_MODELS: list[ModelSpec] = [
         GPModel,
         {"kernel_model": "multishell"},
         frozenset({"multi-shell"}),
-        _multishell_gp_reason,
     ),
 ]
 
@@ -128,8 +107,6 @@ def check_applicability(spec: ModelSpec, scheme: str) -> tuple[bool, str | None]
     if scheme not in spec.applicable_schemes:
         allowed = ", ".join(sorted(spec.applicable_schemes))
         return False, f"{spec.label} not applicable to {scheme} (supports: {allowed})"
-    if spec.precondition is not None and (reason := spec.precondition()):
-        return False, reason
     return True, None
 
 

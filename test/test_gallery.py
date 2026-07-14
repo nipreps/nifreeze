@@ -116,20 +116,8 @@ def test_capability_filtering_helpers():
     # GP kernels are scheme-specific.
     assert check_applicability(specs["gp-spherical"], SINGLE_SHELL)[0]
     assert not check_applicability(specs["gp-spherical"], MULTI_SHELL)[0]
+    assert check_applicability(specs["gp-multishell"], MULTI_SHELL)[0]
     assert not check_applicability(specs["gp-multishell"], SINGLE_SHELL)[0]
-
-    # gp-multishell is additionally gated on the multi-shell kernel being present
-    # (it ships with PR #175); the outcome depends on that availability.
-    try:
-        from nifreeze.model.gpr import MultiShellKernel  # noqa: F401
-
-        multishell_kernel = True
-    except Exception:
-        multishell_kernel = False
-    ok, reason = check_applicability(specs["gp-multishell"], MULTI_SHELL)
-    assert ok is multishell_kernel
-    if not multishell_kernel:
-        assert "MultiShellKernel" in reason
 
     # DTI excludes DSI.
     assert not check_applicability(specs["dti"], DSI)[0]
