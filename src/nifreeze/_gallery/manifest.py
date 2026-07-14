@@ -137,3 +137,17 @@ class GalleryManifest:
                 f"     - {cell.reason or ''}\n"
             )
         return header + "".join(rows)
+
+    def coverage_table_markdown(self) -> str:
+        """Render the coverage matrix as a GitHub-flavored Markdown table."""
+        symbol = {STATUS_RAN: "✓", STATUS_SKIPPED: "—", STATUS_ERROR: "✗"}
+        lines = [
+            "| Dataset | Scheme | Model | Mode | Ran | Reason |",
+            "| --- | --- | --- | --- | :-: | --- |",
+        ]
+        for cell in self.cells:
+            lines.append(
+                f"| {cell.dataset} | {cell.scheme} | {cell.model} | {cell.mode} "
+                f"| {symbol.get(cell.status, cell.status)} | {cell.reason or ''} |"
+            )
+        return "\n".join(lines)

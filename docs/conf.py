@@ -41,7 +41,13 @@ extensions = [
     "sphinxcontrib.apidoc",
     "sphinxarg.ext",
     "sphinxcontrib.bibtex",
+    "nbsphinx",
 ]
+
+# The prediction gallery notebooks ship with stored outputs produced by the
+# scheduled gallery job; the docs build renders those outputs and never executes
+# the notebooks (which would need the full scientific stack + data downloads).
+nbsphinx_execute = "never"
 
 autodoc_mock_imports = [
     "dipy",
@@ -96,6 +102,11 @@ exclude_patterns = [
     "Thumbs.db",
     ".DS_Store",
     "api/nifreeze.rst",
+    # Legacy top-level notebooks are not part of the rendered docs (only the
+    # prediction gallery under notebooks/gallery/ is); excluding them keeps
+    # nbsphinx from warning that they are not in any toctree.
+    "notebooks/*.ipynb",
+    ".ipynb_checkpoints",
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -225,7 +236,7 @@ epub_exclude_files = ["search.html"]
 
 apidoc_module_dir = "../src/nifreeze"
 apidoc_output_dir = "api"
-apidoc_excluded_paths = ["conftest.py", "*/tests/*", "tests/*", "config/*"]
+apidoc_excluded_paths = ["conftest.py", "*/tests/*", "tests/*", "config/*", "_gallery/*"]
 apidoc_separate_modules = True
 apidoc_extra_args = ["--module-first", "-d 1", "-T"]
 
