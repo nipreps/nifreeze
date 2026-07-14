@@ -51,8 +51,13 @@ SCHEMES = (SINGLE_SHELL, MULTI_SHELL, DSI)
 """Acquisition schemes, matching :func:`~nifreeze.data.dmri.utils.find_shelling_scheme`."""
 
 
-def default_lovo_indices(dwi: DWI, count: int = 3) -> list[int]:
-    """Pick a few, well-spread held-out volume indices for display."""
+def default_lovo_indices(dwi: DWI, count: int = 2) -> list[int]:
+    """Pick a few, well-spread held-out volume indices for display.
+
+    Two by default keeps the gallery tractable — some models (e.g. the
+    multi-shell GP) take minutes per fit, and each rendered volume is already a
+    multi-cut montage.
+    """
     n = len(dwi)
     if n <= count:
         return list(range(n))
