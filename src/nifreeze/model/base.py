@@ -105,11 +105,6 @@ class BaseModel(ABC):
 
     __metaclass__ = ABCMeta
 
-    #: Declarative capability contract (read by callers such as the prediction
-    #: gallery to decide, *before* instantiation, whether a model applies to a
-    #: given dataset and mode). Subclasses override the class attributes below;
-    #: they are intrinsic model properties, centralizing constraints that were
-    #: otherwise only enforced by scattered runtime guards.
     supports_single_fit: bool = True
     """Whether the model can be fit once on all volumes (``index=None``)."""
     applicable_schemes: frozenset[str] = frozenset({"single-shell", "multi-shell", "DSI"})
