@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.gpr - nifreeze 26.0.0.dev142 documentation</title>
+        <title>nifreeze.model.gpr - nifreeze 26.0.0.dev145 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev142 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev145 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev142</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev145</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev142</span>
+  <span class="sidebar-brand-text">26.0.0.dev145</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -409,13 +409,10 @@
 <span class="sd">        :math:`f^{*}`, which is analogous to what is often done in</span>
 <span class="sd">        &quot;traditional&quot; regression.</span>
 
-<span class="sd">    Finally, the parameter :math:`\sigma^2` maps on to Scikit-learn&#39;s ``alpha``</span>
-<span class="sd">    of the regressor. Because it is not a parameter of the kernel, hyperparameter</span>
-<span class="sd">    selection through gradient-descent with analytical gradient calculations</span>
-<span class="sd">    would not work (the derivative of the kernel w.r.t. ``alpha`` is zero).</span>
-
-<span class="sd">    This might have been overlooked in :footcite:p:`andersson_non-parametric_2015` or else they actually did</span>
-<span class="sd">    not use analytical gradient-descent:</span>
+<span class="sd">    Finally, the parameter :math:`\sigma^2` (the measurement noise) is modeled by</span>
+<span class="sd">    adding a :obj:`~sklearn.gaussian_process.kernels.WhiteKernel` to the covariance</span>
+<span class="sd">    kernel (see :obj:`~nifreeze.model._dipy.GaussianProcessModel`), in order to</span>
+<span class="sd">    estimate :math:`\sigma^2` :footcite:t:`andersson_non-parametric_2015`:</span>
 
 <span class="sd">        *A note on optimisation*</span>
 
@@ -652,9 +649,12 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">eval_gradient</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_l</span> <span class="o">*</span> <span class="n">C_theta</span>
 
+        <span class="c1"># scikit-learn expects gradients w.r.t. the *log* of each hyperparameter</span>
+        <span class="c1"># (``Kernel.theta`` is log-transformed), hence the chain-rule factors of</span>
+        <span class="c1"># ``beta_a`` and ``beta_l``.</span>
         <span class="n">K_gradient</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="o">*</span><span class="n">thetas</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
-        <span class="n">K_gradient</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_l</span> <span class="o">*</span> <span class="n">C_theta</span> <span class="o">*</span> <span class="n">thetas</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_a</span><span class="o">**</span><span class="mi">2</span>  <span class="c1"># Derivative w.r.t. a</span>
-        <span class="n">K_gradient</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">C_theta</span>
+        <span class="n">K_gradient</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_l</span> <span class="o">*</span> <span class="n">C_theta</span> <span class="o">*</span> <span class="n">thetas</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_a</span>  <span class="c1"># d/d(log a)</span>
+        <span class="n">K_gradient</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_l</span> <span class="o">*</span> <span class="n">C_theta</span>  <span class="c1"># d/d(log lambda)</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_l</span> <span class="o">*</span> <span class="n">C_theta</span><span class="p">,</span> <span class="n">K_gradient</span></div>
 
@@ -769,14 +769,15 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">eval_gradient</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_l</span> <span class="o">*</span> <span class="n">C_theta</span>
 
+        <span class="c1"># scikit-learn expects gradients w.r.t. the *log* of each hyperparameter.</span>
         <span class="n">deriv_a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">thetas</span><span class="p">)</span>
         <span class="n">nonzero</span> <span class="o">=</span> <span class="n">thetas</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_a</span>
         <span class="n">deriv_a</span><span class="p">[</span><span class="n">nonzero</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
             <span class="mf">1.5</span>
             <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_l</span>
-            <span class="o">*</span> <span class="p">(</span><span class="n">thetas</span><span class="p">[</span><span class="n">nonzero</span><span class="p">]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_a</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">thetas</span><span class="p">[</span><span class="n">nonzero</span><span class="p">]</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_a</span><span class="o">**</span><span class="mi">4</span><span class="p">)</span>
+            <span class="o">*</span> <span class="p">(</span><span class="n">thetas</span><span class="p">[</span><span class="n">nonzero</span><span class="p">]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_a</span> <span class="o">-</span> <span class="n">thetas</span><span class="p">[</span><span class="n">nonzero</span><span class="p">]</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_a</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span>
         <span class="p">)</span>
-        <span class="n">K_gradient</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dstack</span><span class="p">((</span><span class="n">deriv_a</span><span class="p">,</span> <span class="n">C_theta</span><span class="p">))</span>
+        <span class="n">K_gradient</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dstack</span><span class="p">((</span><span class="n">deriv_a</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_l</span> <span class="o">*</span> <span class="n">C_theta</span><span class="p">))</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta_l</span> <span class="o">*</span> <span class="n">C_theta</span><span class="p">,</span> <span class="n">K_gradient</span></div>
 
@@ -995,7 +996,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=eef44ff0"></script>
+</div><script src="../../../_static/documentation_options.js?v=257ddf3d"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
