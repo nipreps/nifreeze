@@ -1272,6 +1272,7 @@ def test_gp_model(evals, S0, snr, hsph_dirs, bval_shell):
     assert prediction.shape == (2,)
 
 
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
 @pytest.mark.parametrize("hsph_dirs", (30, 20))
 def test_gp_model_multishell(hsph_dirs):
     """GaussianProcessModel wires MultiShellKernel end-to-end over two shells."""

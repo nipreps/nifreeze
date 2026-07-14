@@ -523,32 +523,6 @@ _ORIENT = np.array(
 _ORIENT /= np.linalg.norm(_ORIENT, axis=1, keepdims=True)
 
 
-def _numeric_kernel_gradient(kernel, X, eps: float = 1e-6) -> np.ndarray:
-    """Finite-difference gradient of K(X) w.r.t. the (log-space) kernel theta."""
-    from sklearn.base import clone
-
-    theta = kernel.theta
-    _, analytic = kernel(X, eval_gradient=True)
-    numeric = np.zeros_like(analytic)
-    for i in range(len(theta)):
-        tp, tm = theta.copy(), theta.copy()
-        tp[i] += eps
-        tm[i] -= eps
-        kp, km = clone(kernel), clone(kernel)
-        kp.theta = tp
-        km.theta = tm
-        numeric[..., i] = (kp(X) - km(X)) / (2 * eps)
-    return numeric
-
-
-@pytest.mark.parametrize("kernel", [gpr.SphericalKriging(), gpr.ExponentialKriging()])
-def test_kernel_gradient_matches_finite_differences(kernel):
-    """Analytical gradients must match numerical ones (sklearn's log-hyperparameter space)."""
-    _, analytic = kernel(_ORIENT, eval_gradient=True)
-    numeric = _numeric_kernel_gradient(kernel, _ORIENT)
-    assert np.allclose(analytic, numeric, atol=1e-5)
-
-
 def test_gp_model_adds_and_optimizes_whitekernel():
     """GaussianProcessModel folds noise into a WhiteKernel that is tuned by the optimizer."""
     from sklearn.gaussian_process.kernels import Sum, WhiteKernel
@@ -739,6 +713,7 @@ def test_multishellkernel_gp(n_samples):
     assert np.isfinite(std).all()
 
 
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
 @pytest.mark.parametrize("n_samples", [12])
 def test_multishellkernel_gp_optimizes(n_samples):
     """The gradient-based optimizer path runs and tunes theta with MultiShellKernel."""

@@ -30,7 +30,7 @@ import numpy as np
 from dipy.core.gradients import GradientTable
 from dipy.reconst.base import ReconstModel
 from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF, Kernel, KernelOperator, WhiteKernel
+from sklearn.gaussian_process.kernels import RBF, Kernel, WhiteKernel
 
 from nifreeze.model.gpr import (
     DiffusionGPR,
@@ -43,42 +43,36 @@ GP_JITTER = 1e-10
 """Small nugget kept on ``alpha`` for numerical stability."""
 
 
-def _cartesian_components(gtab: GradientTable | np.ndarray, keep_bval: bool = False) -> np.ndarray:
-    """Return the gradient directions as Cartesian components.
+def _cartesian_components(gtab: GradientTable | np.ndarray) -> np.ndarray:
+    """Return the design matrix ``[gx, gy, gz, bval]``.
 
-    When ``keep_bval`` is :obj:`True`, the b-value is appended as a trailing
-    column (layout ``[gx, gy, gz, bval]``) so multi-shell kernels can access it;
-    otherwise only the 3 orientation components are returned.
+    The b-value is always appended as a trailing column (layout
+    ``[gx, gy, gz, bval]``) so multi-shell kernels can access it. Single-shell
+    kernels operate on orientations only and drop the b-value column downstream
+    (see :func:`_design_matrix`).
     """
 
     if hasattr(gtab, "bvecs"):
         gtab = cast(GradientTable, gtab)
-        components = gtab.bvecs
-        if keep_bval:
-            components = np.column_stack([components, np.asarray(gtab.bvals)])
-    else:
-        components = np.asarray(gtab)
-        if components.ndim == 1:
-            components = components[np.newaxis, :]
-        if not keep_bval and components.shape[-1] > 3:
-            components = components[:, :-1]
+        return np.column_stack([gtab.bvecs, np.asarray(gtab.bvals)])
+
+    components = np.asarray(gtab)
+    if components.ndim == 1:
+        components = components[np.newaxis, :]
     return components
 
 
-def _kernel_uses_bval(kernel: Kernel | None) -> bool:
-    """Return whether ``kernel`` (possibly compound) contains a multi-shell kernel.
+def _design_matrix(gtab: GradientTable | np.ndarray, kernel: Kernel | None) -> np.ndarray:
+    """Build the GP design matrix appropriate for ``kernel``.
 
-    The b-value column is only needed in the design matrix when a
-    :obj:`~nifreeze.model.gpr.MultiShellKernel` is somewhere in the kernel. Because
-    the measurement-noise :obj:`~sklearn.gaussian_process.kernels.WhiteKernel` is
-    added as a :obj:`~sklearn.gaussian_process.kernels.KernelOperator`, the check
-    must recurse into the operands.
+    The b-value is always available in the Cartesian components; a single-shell
+    kernel only consumes orientations, so its trailing b-value column is dropped
+    here (multi-shell kernels keep it, selecting columns via ``bval_index``).
     """
-    if isinstance(kernel, MultiShellKernel):
-        return True
-    if isinstance(kernel, KernelOperator):
-        return _kernel_uses_bval(kernel.k1) or _kernel_uses_bval(kernel.k2)
-    return False
+    X = _cartesian_components(gtab)
+    if not isinstance(kernel, MultiShellKernel) and X.shape[-1] > 3:
+        X = X[:, :3]
+    return X
 
 
 def gp_prediction(
@@ -112,8 +106,7 @@ def gp_prediction(
 
     """
 
-    keep_bval = _kernel_uses_bval(getattr(model, "kernel", None))
-    X = _cartesian_components(gtab, keep_bval=keep_bval)
+    X = _design_matrix(gtab, getattr(model, "kernel", None))
 
     # Check it's fitted as they do in sklearn internally
     # https://github.com/scikit-learn/scikit-learn/blob/972e17fe1aa12d481b120ad4a3dc076bae736931/\
@@ -156,9 +149,13 @@ class GaussianProcessModel(ReconstModel):
         kernel_model : :obj:`str`, optional
             Angular covariance model. One of ``"spherical"`` (default),
             ``"exponential"``, or ``"multishell"``. ``"multishell"`` builds a
-            :obj:`~nifreeze.model.gpr.MultiShellKernel` (angular × radial product,
-            Eqs. 14–15) and expects the b-value to be preserved in the design
-            matrix.
+            :obj:`~nifreeze.model.gpr.MultiShellKernel` as the product of a
+            **spherical** angular covariance and a radial (log-b) kernel
+            (Eqs. 14–15), and expects the b-value to be preserved in the design
+            matrix. :footcite:t:`andersson_non-parametric_2015` only investigated
+            the multi-shell model with the spherical covariance; the exponential
+            covariance was characterized for the single-shell case, so it is not
+            wired into the multi-shell kernel here.
         beta_l : :obj:`float`, optional
             Signal scale parameter determining the variability of the signal.
         beta_a : :obj:`float`, optional
@@ -185,6 +182,7 @@ class GaussianProcessModel(ReconstModel):
 
         self.sigma_sq = sigma_sq
 
+        self.kernel: Kernel
         if kernel_model == "multishell":
             self.kernel = MultiShellKernel(
                 orientation_kernel=SphericalKriging(beta_a=beta_a, beta_l=beta_l),
@@ -231,8 +229,7 @@ class GaussianProcessModel(ReconstModel):
         # n_samples is the different diffusion-encoding gradient orientations.
         # n_features is 3 (orientation only), or 4 ([gx, gy, gz, bval]) when a
         # multi-shell kernel needs the b-value.
-        keep_bval = _kernel_uses_bval(self.kernel)
-        X = _cartesian_components(gtab, keep_bval=keep_bval)
+        X = _design_matrix(gtab, self.kernel)
 
         # Data must have shape (n_samples, n_targets) where n_samples is
         # the number of diffusion-encoding gradient orientations, and n_targets

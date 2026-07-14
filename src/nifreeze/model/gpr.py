@@ -348,8 +348,6 @@ class ExponentialKriging(Kernel):
             return self.beta_l * C_theta
 
         # scikit-learn expects gradients w.r.t. the *log* of each hyperparameter
-        # (``Kernel.theta`` is log-transformed), hence the chain-rule factors of
-        # ``beta_a`` and ``beta_l``.
         K_gradient = np.zeros((*thetas.shape, 2))
         K_gradient[..., 0] = self.beta_l * C_theta * thetas / self.beta_a  # d/d(log a)
         K_gradient[..., 1] = self.beta_l * C_theta  # d/d(log lambda)
@@ -456,8 +454,6 @@ class SphericalKriging(Kernel):
             return self.beta_l * C_theta
 
         # scikit-learn expects gradients w.r.t. the *log* of each hyperparameter
-        # (``Kernel.theta`` is log-transformed), hence the chain-rule factors of
-        # ``beta_a`` and ``beta_l``.
         deriv_a = np.zeros_like(thetas)
         nonzero = thetas <= self.beta_a
         deriv_a[nonzero] = (
@@ -568,16 +564,18 @@ class MultiShellKernel(KernelOperator):
         return params
 
     @property
-    def hyperparameters(self) -> list[Hyperparameter]:
+    def hyperparameters(self) -> list[Hyperparameter]:  # type: ignore[override]
         """Expose sub-kernel hyperparameters under the constructor's names."""
         r = []
         for prefix, kernel in (
             ("orientation_kernel", self.orientation_kernel),
             ("radial_kernel", self.radial_kernel),
         ):
-            for hp in kernel.hyperparameters:
+            for hp in kernel.hyperparameters:  # type: ignore[attr-defined]
                 r.append(
-                    Hyperparameter(f"{prefix}__{hp.name}", hp.value_type, hp.bounds, hp.n_elements)
+                    Hyperparameter(  # type: ignore[call-arg,arg-type]
+                        f"{prefix}__{hp.name}", hp.value_type, hp.bounds, hp.n_elements
+                    )
                 )
         return r
 
