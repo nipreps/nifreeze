@@ -43,6 +43,8 @@ N_CUTS = 6
 """Number of axial (z) cuts per row."""
 CHECKER_BLOCK = 12
 """Checkerboard block size in voxels."""
+DPI = 150
+"""Output resolution for rendered figures."""
 
 
 def _match_intensity(
@@ -189,7 +191,7 @@ def save_slice_panel(
 
     if title:
         fig.suptitle(title, fontsize=12)
-    fig.savefig(path, dpi=90, bbox_inches="tight", facecolor="white")
+    fig.savefig(path, dpi=DPI, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return path
 
@@ -268,6 +270,6 @@ def save_covariance_plot(gpr, path: str | Path, *, title: str | None = None) -> 
     if title:
         fig.suptitle(title, fontsize=11)
     fig.tight_layout()
-    fig.savefig(path, dpi=90, facecolor="white")
+    fig.savefig(path, dpi=DPI, facecolor="white")
     plt.close(fig)
     return path

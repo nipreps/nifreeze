@@ -35,6 +35,7 @@ Run as ``python -m nifreeze._gallery.run --out <dir>``.
 from __future__ import annotations
 
 import argparse
+import time
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -88,6 +89,40 @@ def _fitted_gpr(model):
     return getattr(models[0], "model", None)
 
 
+def _fmt_seconds(seconds: float) -> str:
+    """Human-readable duration (``ms`` under a second, else ``s``)."""
+    return f"{seconds * 1000:.0f} ms" if seconds < 1.0 else f"{seconds:.1f} s"
+
+
+def _timed_predict(model, idx: int, mode: str, fit_shared: float):
+    """Predict volume ``idx`` and return ``(predicted, fit_seconds, predict_seconds)``.
+
+    Separates fit from predict without doing extra work: in single-fit mode the
+    fit is shared (measured once), so each call is predict-only; in LOVO mode the
+    model is (re)fit without ``idx``, then temporarily locked so the prediction
+    reuses that fit — timing the two phases independently.
+    """
+    if mode == "single-fit" or not callable(getattr(model, "_fit", None)):
+        t0 = time.perf_counter()
+        predicted = model.fit_predict(idx)
+        predict_s = time.perf_counter() - t0
+        return predicted, fit_shared, predict_s
+
+    # LOVO: fit on all-but-idx, then lock so ``fit_predict`` predicts without refitting.
+    t0 = time.perf_counter()
+    model._fit(idx)
+    fit_s = time.perf_counter() - t0
+    previous = model._locked_fit
+    model._locked_fit = True
+    try:
+        t0 = time.perf_counter()
+        predicted = model.fit_predict(idx)
+        predict_s = time.perf_counter() - t0
+    finally:
+        model._locked_fit = previous
+    return predicted, fit_s, predict_s
+
+
 def _run_cell(
     spec: ModelSpec,
     mode: str,
@@ -103,27 +138,35 @@ def _run_cell(
     from nifreeze._gallery.render import save_covariance_plot, save_slice_panel
 
     model = build_model(spec, dwi)
+    fit_shared = 0.0
     if mode == "single-fit":
         # Lock the fit once on all volumes, then predict held-in orientations.
+        t0 = time.perf_counter()
         model.fit_predict(None)
+        fit_shared = time.perf_counter() - t0
 
     artifacts: list[str] = []
     used_indices: list[int] = []
     for idx in indices:
-        predicted = model.fit_predict(int(idx))
+        idx = int(idx)
+        predicted, fit_s, predict_s = _timed_predict(model, idx, mode, fit_shared)
         if predicted is None:
             continue
-        used_indices.append(int(idx))
+        used_indices.append(idx)
         if render and out_dir is not None:
             observed = dwi[idx][0]
-            rel = f"{dataset_name}/{spec.key}_{mode}_{int(idx):03d}.png"
+            rel = f"{dataset_name}/{spec.key}_{mode}_{idx:03d}.png"
+            title = (
+                f"{dataset_name} · {spec.label} · {mode} · vol {idx}    "
+                f"(fit {_fmt_seconds(fit_s)}, predict {_fmt_seconds(predict_s)})"
+            )
             save_slice_panel(
                 observed,
                 predicted,
                 out_dir / rel,
                 affine=dwi.affine,
                 mask=dwi.brainmask,
-                title=f"{dataset_name} · {spec.label} · {mode} · vol {int(idx)}",
+                title=title,
             )
             artifacts.append(rel)
 
