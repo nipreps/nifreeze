@@ -101,11 +101,20 @@ benchmark = [
   "pyperf",
   "virtualenv==20.38.0",
 ]
+gallery = [
+  "coverage",
+  "datalad",
+  "datalad-next",
+  "ipykernel",
+  "jupyter",
+  "nbclient",
+  "nbconvert",
+]
 
 # Aliases
 docs = ["nifreeze[doc]"]
 tests = ["nifreeze[test]"]
-all = ["nifreeze[antsopt,benchmark,dev,doc,notebooks,plotting,resmon,test,types]"]
+all = ["nifreeze[antsopt,benchmark,dev,doc,gallery,notebooks,plotting,resmon,test,types]"]
 
 [project.scripts]
 nifreeze = "nifreeze.cli.run:main"
