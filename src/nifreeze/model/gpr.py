@@ -94,13 +94,8 @@ class DiffusionGPR(GaussianProcessRegressor):
 
     Finally, the parameter :math:`\sigma^2` (the measurement noise) is modeled by
     adding a :obj:`~sklearn.gaussian_process.kernels.WhiteKernel` to the covariance
-    kernel (see :obj:`~nifreeze.model._dipy.GaussianProcessModel`). Folding the
-    noise into the kernel — rather than leaving it in Scikit-learn's fixed ``alpha``
-    nugget, whose derivative w.r.t. the kernel is zero — lets it be tuned by the
-    analytical-gradient optimizer alongside the other hyperparameters.
-
-    :footcite:t:`andersson_non-parametric_2015` did estimate :math:`\sigma^2`,
-    but with a derivative-free optimizer rather than analytical gradient descent:
+    kernel (see :obj:`~nifreeze.model._dipy.GaussianProcessModel`), in order to
+    estimate :math:`\sigma^2` :footcite:t:`andersson_non-parametric_2015`:
 
         *A note on optimisation*
 
@@ -440,9 +435,7 @@ class SphericalKriging(Kernel):
         if not eval_gradient:
             return self.beta_l * C_theta
 
-        # scikit-learn expects gradients w.r.t. the *log* of each hyperparameter
-        # (``Kernel.theta`` is log-transformed), hence the chain-rule factors of
-        # ``beta_a`` and ``beta_l``.
+        # scikit-learn expects gradients w.r.t. the *log* of each hyperparameter.
         deriv_a = np.zeros_like(thetas)
         nonzero = thetas <= self.beta_a
         deriv_a[nonzero] = (

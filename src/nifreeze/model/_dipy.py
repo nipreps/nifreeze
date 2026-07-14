@@ -36,9 +36,8 @@ from nifreeze.model.gpr import (
     SphericalKriging,
 )
 
-#: Small nugget kept on ``alpha`` for numerical stability once the measurement
-#: noise is modeled explicitly by a :obj:`~sklearn.gaussian_process.kernels.WhiteKernel`.
 GP_JITTER = 1e-10
+"""Small nugget kept on ``alpha`` for numerical stability."""
 
 
 def _cartesian_components(gtab: GradientTable | np.ndarray) -> np.ndarray:
@@ -152,9 +151,7 @@ class GaussianProcessModel(ReconstModel):
         self.sigma_sq = sigma_sq
 
         KernelType = SphericalKriging if kernel_model == "spherical" else ExponentialKriging
-        # Add the measurement noise as a WhiteKernel so it lives *inside* the
-        # covariance and is tuned by the analytical-gradient optimizer (a fixed
-        # ``alpha`` nugget has zero kernel-gradient and cannot be optimized).
+        # Add the :math:`\sigma^2` term of Andersson et al. (2015) as a WhiteKernel
         self.kernel = KernelType(
             beta_a=beta_a,
             beta_l=beta_l,
@@ -211,8 +208,6 @@ class GaussianProcessModel(ReconstModel):
             kernel=self.kernel,
             random_state=random_state,
             n_targets=y.shape[1],
-            # Noise is now carried by the WhiteKernel; keep ``alpha`` as a small
-            # numerical-stability jitter only.
             alpha=GP_JITTER,
         )
         self._modelfit = GPFit(
