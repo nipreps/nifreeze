@@ -1311,3 +1311,13 @@ def test_gp_model_multishell_rejects_b0():
     gp = GaussianProcessModel(kernel_model="multishell")
     with pytest.raises(ValueError, match="strictly positive b-values"):
         gp.fit(signal, X)
+
+
+def test_btable_asarray_promotes_1d_input():
+    """A single 1-D gradient row is promoted to a (1, n) design matrix."""
+    from nifreeze.model._dipy import _btable_asarray
+
+    x = np.array([1.0, 0.0, 0.0, 1000.0])
+    out = _btable_asarray(x)
+    assert out.shape == (1, 4)
+    assert np.allclose(out, x[np.newaxis, :])

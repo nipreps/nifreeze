@@ -692,6 +692,32 @@ def test_multishellkernel_clone_theta_roundtrip():
     assert np.allclose(k.theta, theta)
 
 
+def test_multishellkernel_get_params_deep():
+    """``get_params(deep=True)`` surfaces the sub-kernels' parameters (prefixed)."""
+    k = gpr.MultiShellKernel()
+
+    shallow = k.get_params(deep=False)
+    assert set(shallow) == {
+        "orientation_kernel",
+        "radial_kernel",
+        "orientation_dims",
+        "bval_index",
+    }
+
+    deep = k.get_params(deep=True)
+    # Shallow keys are still present, plus prefixed sub-kernel parameters.
+    assert set(shallow).issubset(deep)
+    assert any(key.startswith("orientation_kernel__") for key in deep)
+    assert any(key.startswith("radial_kernel__") for key in deep)
+
+
+def test_multishellkernel_repr():
+    """``repr`` mentions the composed sub-kernels."""
+    text = repr(gpr.MultiShellKernel())
+    assert text.startswith("MultiShellKernel(")
+    assert "*" in text
+
+
 @pytest.mark.parametrize("n_samples", [8])
 def test_multishellkernel_gp(n_samples):
     """Smoke test: DiffusionGPR can fit/predict with MultiShellKernel."""

@@ -612,7 +612,7 @@ class MultiShellKernel(KernelOperator):
         X_o, X_b = self._split(np.asarray(X))
         return self.k1.diag(X_o) * self.k2.diag(X_b)
 
-    def __repr__(self) -> str:  # pragma: no cover - simple representation
+    def __repr__(self) -> str:
         return f"MultiShellKernel({self.k1} * {self.k2})"
 
 
