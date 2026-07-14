@@ -484,8 +484,6 @@ class DTIModel(BaseDWIModel):
 class DKIModel(BaseDWIModel):
     """A wrapper of :obj:`~nifreeze.model.dki.DiffusionKurtosisModel`."""
 
-    # Kurtosis estimation needs >= 3 b-values (see ``check_multi_b`` guard in
-    # ``BaseDWIModel.__init__``); it only applies to multi-shell acquisitions.
     requires_multishell = True
     applicable_schemes = frozenset({"multi-shell"})
 
