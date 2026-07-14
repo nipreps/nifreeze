@@ -42,10 +42,23 @@ from pathlib import Path
 OUT = Path(os.environ.get("NIFREEZE_GALLERY_OUT", "gallery-out"))
 OUT.mkdir(parents=True, exist_ok=True)
 
+# The gallery package lives under docs/ (it is docs tooling, not shipped library
+# code), so put it on PYTHONPATH for the subprocesses that import it.
+SPHINXEXT = Path(__file__).resolve().parent.parent / "docs" / "sphinxext"
+
+
+def _env() -> dict[str, str]:
+    env = dict(os.environ)
+    existing = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = os.pathsep.join(
+        [str(SPHINXEXT), existing] if existing else [str(SPHINXEXT)]
+    )
+    return env
+
 
 def _run(cmd: list[str]) -> None:
     print("+", " ".join(cmd), flush=True)
-    rc = subprocess.call(cmd)
+    rc = subprocess.call(cmd, env=_env())
     if rc:
         sys.exit(rc)
 
@@ -60,7 +73,7 @@ def main() -> None:
             "run",
             "--source=nifreeze",
             "-m",
-            "nifreeze._gallery.run",
+            "gallery.run",
             "--out",
             str(OUT),
         ]

@@ -25,12 +25,12 @@ Prediction gallery: a declarative matrix of *(dataset × model × mode)* cells.
 
 This subpackage drives the documentation "gallery" of predicted diffusion
 volumes (see issue #458). A single source of truth — the registry of datasets
-and models — is executed by :mod:`~nifreeze._gallery.run` to (a) render figures
+and models — is executed by :mod:`~gallery.run` to (a) render figures
 for the docs, (b) emit a combinatorial coverage manifest recording what was
 exercised, and (c) exercise the model layer on real data under code coverage.
 """
 
-from nifreeze._gallery.manifest import (
+from gallery.manifest import (
     STATUS_ERROR,
     STATUS_RAN,
     STATUS_SKIPPED,

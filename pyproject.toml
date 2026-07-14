@@ -153,6 +153,8 @@ version-file = "src/nifreeze/_version.py"
 
 [tool.mypy]
 check_untyped_defs = true
+# The prediction-gallery package lives under docs/ (docs tooling, not shipped).
+mypy_path = "docs/sphinxext"
 
 [[tool.mypy.overrides]]
 module = [
@@ -224,7 +226,7 @@ quote-style = "double"
 known-first-party=["nifreeze"]
 
 [tool.pytest.ini_options]
-pythonpath = "src/ test/"
+pythonpath = "src/ test/ docs/sphinxext/"
 norecursedirs = [".*", "_*"]
 addopts = "-v --doctest-modules"
 doctest_optionflags = "ALLOW_UNICODE NORMALIZE_WHITESPACE ELLIPSIS"
@@ -254,8 +256,7 @@ concurrency = ["multiprocessing"]
 omit = [
   "^test/*",
   "*/conftest.py",
-  "src/nifreeze/_version.py",
-  "src/nifreeze/_gallery/*"
+  "src/nifreeze/_version.py"
 ]
 
 [tool.coverage.report]

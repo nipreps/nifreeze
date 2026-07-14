@@ -16,7 +16,8 @@ DSI dataset. For each dataset, every applicable model is run in **two modes**:
 - **single-fit**: the model is fit **once** on all volumes and then predicts.
 
 The whole gallery is driven by a single declarative matrix
-(:mod:`nifreeze._gallery`) of *(dataset × model × mode)* cells. A model's
+(a support harness under ``docs/sphinxext/gallery``) of
+*(dataset × model × mode)* cells. A model's
 **capability contract** (:class:`~nifreeze.model.base.BaseModel`) decides, before
 fitting, which cells apply — so each page also reports a **coverage table**
 recording what was exercised and why any cell was skipped (e.g. DKI needs

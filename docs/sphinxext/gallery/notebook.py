@@ -34,9 +34,9 @@ import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 
-from nifreeze._gallery.datasets import DATASETS, source_relpaths
-from nifreeze._gallery.manifest import STATUS_RAN, GalleryManifest
-from nifreeze._gallery.run import run_gallery
+from gallery.datasets import DATASETS, source_relpaths
+from gallery.manifest import STATUS_RAN, GalleryManifest
+from gallery.run import run_gallery
 
 
 def show_dataset(
@@ -58,7 +58,7 @@ def show_dataset(
 
     Returns
     -------
-    :class:`~nifreeze._gallery.manifest.GalleryManifest`
+    :class:`~gallery.manifest.GalleryManifest`
         The coverage manifest for this dataset.
 
     """

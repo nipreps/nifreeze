@@ -24,12 +24,12 @@
 
 Iterates the *(dataset × model × mode)* matrix, loading each dataset once,
 running LOVO and single-fit predictions for a few volumes, rendering panels, and
-recording every cell in a :class:`~nifreeze._gallery.manifest.GalleryManifest`.
+recording every cell in a :class:`~gallery.manifest.GalleryManifest`.
 Inapplicable cells are pre-filtered by the capability contract (recorded as
 ``skipped``); unexpected failures are captured as ``error`` so one bad cell never
 aborts the run.
 
-Run as ``python -m nifreeze._gallery.run --out <dir>``.
+Run as ``python -m gallery.run --out <dir>``.
 """
 
 from __future__ import annotations
@@ -39,16 +39,16 @@ import time
 from collections.abc import Sequence
 from pathlib import Path
 
-from nifreeze._gallery import datasets as _datasets
-from nifreeze._gallery.datasets import DatasetSpec
-from nifreeze._gallery.manifest import (
+from gallery import datasets as _datasets
+from gallery.datasets import DatasetSpec
+from gallery.manifest import (
     STATUS_ERROR,
     STATUS_RAN,
     STATUS_SKIPPED,
     CellResult,
     GalleryManifest,
 )
-from nifreeze._gallery.registry import (
+from gallery.registry import (
     GALLERY_MODELS,
     GALLERY_MODES,
     ModelSpec,
@@ -135,7 +135,7 @@ def _run_cell(
     render: bool,
 ) -> CellResult:
     """Build, fit/predict, and render a single applicable cell."""
-    from nifreeze._gallery.render import save_covariance_plot, save_slice_panel
+    from gallery.render import save_covariance_plot, save_slice_panel
 
     model = build_model(spec, dwi)
     fit_shared = 0.0
@@ -237,9 +237,9 @@ def run_gallery(
 
     Parameters
     ----------
-    dataset_specs : sequence of :class:`~nifreeze._gallery.datasets.DatasetSpec`
+    dataset_specs : sequence of :class:`~gallery.datasets.DatasetSpec`
         Datasets to run.
-    models : sequence of :class:`~nifreeze._gallery.registry.ModelSpec`, optional
+    models : sequence of :class:`~gallery.registry.ModelSpec`, optional
         Model specs to attempt (defaults to :data:`GALLERY_MODELS`).
     model_keys : sequence of :obj:`str`, optional
         Restrict to these model keys (a convenience filter over ``models``).
@@ -253,7 +253,7 @@ def run_gallery(
 
     Returns
     -------
-    :class:`~nifreeze._gallery.manifest.GalleryManifest`
+    :class:`~gallery.manifest.GalleryManifest`
         The coverage manifest.
 
     """

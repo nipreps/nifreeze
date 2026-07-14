@@ -25,8 +25,7 @@
 from __future__ import annotations
 
 import pytest
-
-from nifreeze._gallery.datasets import (
+from gallery.datasets import (
     DATASETS,
     DSI,
     MULTI_SHELL,
@@ -38,18 +37,18 @@ from nifreeze._gallery.datasets import (
     synthetic_spec,
     verify_scheme,
 )
-from nifreeze._gallery.manifest import (
+from gallery.manifest import (
     STATUS_RAN,
     STATUS_SKIPPED,
     CellResult,
     GalleryManifest,
 )
-from nifreeze._gallery.registry import (
+from gallery.registry import (
     GALLERY_MODELS,
     check_applicability,
     check_mode,
 )
-from nifreeze._gallery.run import run_gallery
+from gallery.run import run_gallery
 
 
 def _cell(manifest, model, mode):
@@ -176,8 +175,7 @@ def _ds000206_cached() -> bool:
 def test_select_cut_coords():
     """Cut coords come from the mask's high-mass slices, in world-z order."""
     import numpy as np
-
-    from nifreeze._gallery.render import select_cut_coords
+    from gallery.render import select_cut_coords
 
     assert select_cut_coords(None, np.eye(4), 4) is None
 
@@ -194,8 +192,7 @@ def test_select_cut_coords():
 def test_local_correlation():
     """Sliding-window correlation is full-resolution, ~1 for a linear map."""
     import numpy as np
-
-    from nifreeze._gallery.render import _local_correlation
+    from gallery.render import _local_correlation
 
     rng = np.random.default_rng(0)
     observed = rng.normal(size=(16, 16, 16))
@@ -220,7 +217,7 @@ def test_local_correlation():
 @pytest.mark.skipif(not _ds000206_cached(), reason="ds000206 data not fetched locally")
 def test_load_ds000206_real():
     """The ds000206 loader builds a valid single-shell DWI from real data."""
-    from nifreeze._gallery.datasets import source_relpaths
+    from gallery.datasets import source_relpaths
 
     dwi = load_ds000206()
     assert verify_scheme(dwi, SINGLE_SHELL) == SINGLE_SHELL

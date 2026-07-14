@@ -7,9 +7,15 @@ http://www.sphinx-doc.org/en/master/config
 
 """
 
+import os
+import sys
+
 from packaging.version import Version
 
 from nifreeze import __copyright__, __packagename__, __version__
+
+# The prediction-gallery harness lives under docs/sphinxext (docs tooling).
+sys.path.insert(0, os.path.abspath("sphinxext"))
 
 # -- Path setup --------------------------------------------------------------
 # If extensions (or modules to document with autodoc) are in another directory,
