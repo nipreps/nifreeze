@@ -468,8 +468,6 @@ class AverageDWIModel(ExpectationModel):
 class DTIModel(BaseDWIModel):
     """A wrapper of :obj:`dipy.reconst.dti.TensorModel`."""
 
-    # The tensor model is estimated from low-b data; DSI's dense q-space grid
-    # is out of scope.
     applicable_schemes = frozenset({"single-shell", "multi-shell"})
 
     _modelargs = (
