@@ -414,9 +414,10 @@ def test_exponential_kriging_basic(
         assert grad is not None
         assert grad.shape == (*thetas.shape, 2)  # two params: a and lambda
 
+        # Gradients are w.r.t. the log of each hyperparameter (sklearn convention).
         C_theta = gpr.exponential_covariance(thetas, ek.beta_a)
-        deriv_a = ek.beta_l * C_theta * thetas / (ek.beta_a**2)
-        deriv_lambda = C_theta
+        deriv_a = ek.beta_l * C_theta * thetas / ek.beta_a
+        deriv_lambda = ek.beta_l * C_theta
 
         expected_grad = np.zeros((*thetas.shape, 2))
         expected_grad[..., 0] = deriv_a
@@ -459,15 +460,15 @@ def test_spherical_kriging_basic(
         assert grad is not None
         assert grad.shape == (*thetas.shape, 2)  # two params: a and lambda
 
-        # deriv_a as implemented in SphericalKriging
+        # deriv_a as implemented in SphericalKriging (w.r.t. log-hyperparameters).
         deriv_a = np.zeros_like(thetas)
         nonzero = thetas <= sk.beta_a
         deriv_a[nonzero] = (
-            1.5
-            * sk.beta_l
-            * (thetas[nonzero] / sk.beta_a**2 - thetas[nonzero] ** 3 / sk.beta_a**4)
+            1.5 * sk.beta_l * (thetas[nonzero] / sk.beta_a - thetas[nonzero] ** 3 / sk.beta_a**3)
         )
-        expected_grad = np.dstack((deriv_a, gpr.spherical_covariance(thetas, sk.beta_a)))
+        expected_grad = np.dstack(
+            (deriv_a, sk.beta_l * gpr.spherical_covariance(thetas, sk.beta_a))
+        )
 
         assert np.allclose(grad, expected_grad)
 
@@ -475,3 +476,64 @@ def test_spherical_kriging_basic(
     d = sk.diag(X)
     assert d.shape == (n_samples,)
     assert np.allclose(d, sk.beta_l * np.ones(n_samples))
+
+
+_ORIENT = np.array(
+    [
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, 1.0],
+        [1.0, 1.0, 0.0],
+        [1.0, 0.0, 1.0],
+    ],
+    dtype=float,
+)
+_ORIENT /= np.linalg.norm(_ORIENT, axis=1, keepdims=True)
+
+
+def _numeric_kernel_gradient(kernel, X, eps: float = 1e-6) -> np.ndarray:
+    """Finite-difference gradient of K(X) w.r.t. the (log-space) kernel theta."""
+    from sklearn.base import clone
+
+    theta = kernel.theta
+    _, analytic = kernel(X, eval_gradient=True)
+    numeric = np.zeros_like(analytic)
+    for i in range(len(theta)):
+        tp, tm = theta.copy(), theta.copy()
+        tp[i] += eps
+        tm[i] -= eps
+        kp, km = clone(kernel), clone(kernel)
+        kp.theta = tp
+        km.theta = tm
+        numeric[..., i] = (kp(X) - km(X)) / (2 * eps)
+    return numeric
+
+
+@pytest.mark.parametrize("kernel", [gpr.SphericalKriging(), gpr.ExponentialKriging()])
+def test_kernel_gradient_matches_finite_differences(kernel):
+    """Analytical gradients must match numerical ones (sklearn's log-hyperparameter space)."""
+    _, analytic = kernel(_ORIENT, eval_gradient=True)
+    numeric = _numeric_kernel_gradient(kernel, _ORIENT)
+    assert np.allclose(analytic, numeric, atol=1e-5)
+
+
+def test_gp_model_adds_and_optimizes_whitekernel():
+    """GaussianProcessModel folds noise into a WhiteKernel that is tuned by the optimizer."""
+    from sklearn.gaussian_process.kernels import Sum, WhiteKernel
+
+    from nifreeze.model._dipy import GaussianProcessModel
+
+    gp = GaussianProcessModel(kernel_model="spherical", sigma_sq=1.0)
+    assert isinstance(gp.kernel, Sum)
+    # ``get_params()`` is the typed-safe way to reach a KernelOperator's operands.
+    assert isinstance(gp.kernel.get_params()["k2"], WhiteKernel)
+
+    y = np.linspace(1.0, 0.5, num=_ORIENT.shape[0], dtype=float)
+    gpfit = gp.fit(y, _ORIENT)  # gtab passed as (n, 3) orientation array
+
+    fitted_noise = gpfit.model.kernel_.get_params()["k2"].noise_level
+    assert not np.isclose(fitted_noise, 1.0)  # optimizer moved the noise level
+
+    prediction = gpfit.predict(_ORIENT[:2])
+    assert prediction.shape == (2,)
+    assert np.isfinite(prediction).all()

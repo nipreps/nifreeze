@@ -92,13 +92,10 @@ class DiffusionGPR(GaussianProcessRegressor):
         :math:`f^{*}`, which is analogous to what is often done in
         "traditional" regression.
 
-    Finally, the parameter :math:`\sigma^2` maps on to Scikit-learn's ``alpha``
-    of the regressor. Because it is not a parameter of the kernel, hyperparameter
-    selection through gradient-descent with analytical gradient calculations
-    would not work (the derivative of the kernel w.r.t. ``alpha`` is zero).
-
-    This might have been overlooked in :footcite:p:`andersson_non-parametric_2015` or else they actually did
-    not use analytical gradient-descent:
+    Finally, the parameter :math:`\sigma^2` (the measurement noise) is modeled by
+    adding a :obj:`~sklearn.gaussian_process.kernels.WhiteKernel` to the covariance
+    kernel (see :obj:`~nifreeze.model._dipy.GaussianProcessModel`), in order to
+    estimate :math:`\sigma^2` :footcite:t:`andersson_non-parametric_2015`:
 
         *A note on optimisation*
 
@@ -330,9 +327,12 @@ class ExponentialKriging(Kernel):
         if not eval_gradient:
             return self.beta_l * C_theta
 
+        # scikit-learn expects gradients w.r.t. the *log* of each hyperparameter
+        # (``Kernel.theta`` is log-transformed), hence the chain-rule factors of
+        # ``beta_a`` and ``beta_l``.
         K_gradient = np.zeros((*thetas.shape, 2))
-        K_gradient[..., 0] = self.beta_l * C_theta * thetas / self.beta_a**2  # Derivative w.r.t. a
-        K_gradient[..., 1] = C_theta
+        K_gradient[..., 0] = self.beta_l * C_theta * thetas / self.beta_a  # d/d(log a)
+        K_gradient[..., 1] = self.beta_l * C_theta  # d/d(log lambda)
 
         return self.beta_l * C_theta, K_gradient
 
@@ -435,14 +435,15 @@ class SphericalKriging(Kernel):
         if not eval_gradient:
             return self.beta_l * C_theta
 
+        # scikit-learn expects gradients w.r.t. the *log* of each hyperparameter.
         deriv_a = np.zeros_like(thetas)
         nonzero = thetas <= self.beta_a
         deriv_a[nonzero] = (
             1.5
             * self.beta_l
-            * (thetas[nonzero] / self.beta_a**2 - thetas[nonzero] ** 3 / self.beta_a**4)
+            * (thetas[nonzero] / self.beta_a - thetas[nonzero] ** 3 / self.beta_a**3)
         )
-        K_gradient = np.dstack((deriv_a, C_theta))
+        K_gradient = np.dstack((deriv_a, self.beta_l * C_theta))
 
         return self.beta_l * C_theta, K_gradient
 

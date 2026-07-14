@@ -156,6 +156,8 @@ module = [
   "joblib",
   "h5py",
   "ConfigSpace",
+  "scipy.*",
+  "sklearn.*",
 ]
 ignore_missing_imports = true
 
