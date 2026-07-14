@@ -22,10 +22,15 @@
 #
 """Figure composition for the prediction gallery.
 
-Renders a compact *observed vs. predicted vs. difference* panel for a held-out
-(or held-in, in single-fit mode) volume. Kept dependency-light (matplotlib
-``Agg``) so it runs headless in CI; the docs notebooks may compose richer
-visuals on top (e.g. ``nireports.plot_dwi``).
+Renders an affine-aware montage of axial cuts (via :mod:`nilearn.plotting`, which
+handles image orientation) with four rows for a held-out (or held-in) volume:
+
+1. **observed** — the reference volume,
+2. **predicted** — the model prediction,
+3. **checkerboard** — observed/predicted interleaved in blocks (the predicted
+   volume is intensity-matched to the observed one by linear regression so the
+   two are on a comparable range), which makes mismatches pop as block seams,
+4. **difference** — observed minus the matched prediction.
 """
 
 from __future__ import annotations
@@ -34,11 +39,34 @@ from pathlib import Path
 
 import numpy as np
 
+N_CUTS = 6
+"""Number of axial (z) cuts per row."""
+CHECKER_BLOCK = 12
+"""Checkerboard block size in voxels."""
 
-def _mid_slice(volume: np.ndarray, axis: int = 2) -> np.ndarray:
-    """Return the middle slice of a 3D volume along ``axis`` (as a 2D array)."""
-    idx = volume.shape[axis] // 2
-    return np.take(volume, idx, axis=axis)
+
+def _match_intensity(
+    predicted: np.ndarray, observed: np.ndarray, mask: np.ndarray | None
+) -> np.ndarray:
+    """Linearly regress ``predicted`` onto ``observed`` (regression to the mean).
+
+    Returns ``a * predicted + b`` with ``(a, b)`` the least-squares fit within
+    ``mask``, so the two volumes share a comparable intensity range.
+    """
+    sel = mask if mask is not None else np.ones(observed.shape, dtype=bool)
+    x = predicted[sel].astype(float).ravel()
+    y = observed[sel].astype(float).ravel()
+    if x.size < 2 or np.allclose(x, x[0]):
+        return predicted.astype(float)
+    a, b = np.linalg.lstsq(np.vstack([x, np.ones_like(x)]).T, y, rcond=None)[0]
+    return a * predicted.astype(float) + b
+
+
+def _checkerboard(a: np.ndarray, b: np.ndarray, block: int = CHECKER_BLOCK) -> np.ndarray:
+    """Interleave volumes ``a`` and ``b`` in a 3D checkerboard of ``block`` voxels."""
+    idx = np.indices(a.shape)
+    pattern = ((idx[0] // block) + (idx[1] // block) + (idx[2] // block)) % 2
+    return np.where(pattern.astype(bool), a, b)
 
 
 def save_slice_panel(
@@ -46,10 +74,12 @@ def save_slice_panel(
     predicted: np.ndarray,
     path: str | Path,
     *,
+    affine: np.ndarray,
+    mask: np.ndarray | None = None,
     title: str | None = None,
-    axis: int = 2,
+    n_cuts: int = N_CUTS,
 ) -> Path:
-    """Render observed/predicted/difference middle slices to an image file.
+    """Render the four-row observed/predicted/checkerboard/difference montage.
 
     Parameters
     ----------
@@ -58,11 +88,15 @@ def save_slice_panel(
     predicted : :obj:`~numpy.ndarray`
         The model-predicted 3D volume (same shape as ``observed``).
     path : :obj:`str` or :obj:`~pathlib.Path`
-        Output image path (extension sets the format, e.g. ``.png``).
+        Output image path.
+    affine : :obj:`~numpy.ndarray`
+        The voxel-to-world affine (so cuts are correctly oriented).
+    mask : :obj:`~numpy.ndarray`, optional
+        Brain mask used for intensity matching.
     title : :obj:`str`, optional
         Figure title.
-    axis : :obj:`int`, optional
-        Slicing axis for the displayed 2D section.
+    n_cuts : :obj:`int`, optional
+        Number of axial cuts per row.
 
     Returns
     -------
@@ -74,35 +108,127 @@ def save_slice_panel(
 
     mpl.use("Agg", force=True)
     import matplotlib.pyplot as plt
+    import nibabel as nb
+    from nilearn import plotting
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    obs = np.rot90(_mid_slice(np.asarray(observed, dtype=float), axis))
-    pred = np.rot90(_mid_slice(np.asarray(predicted, dtype=float), axis))
-    diff = pred - obs
+    observed = np.asarray(observed, dtype=float)
+    predicted = np.asarray(predicted, dtype=float)
+    matched = _match_intensity(predicted, observed, mask)
+    checker = _checkerboard(observed, matched)
+    difference = observed - matched
 
-    # Shared intensity window for observed/predicted (robust to outliers).
-    finite = np.concatenate([obs[np.isfinite(obs)], pred[np.isfinite(pred)]])
+    finite = observed[np.isfinite(observed)]
     vmax = float(np.percentile(finite, 99)) if finite.size else 1.0
-    vmin = 0.0
-    dmax = float(np.percentile(np.abs(diff[np.isfinite(diff)]), 99)) if diff.size else 1.0
+    dvals = np.abs(difference[np.isfinite(difference)])
+    dmax = float(np.percentile(dvals, 99)) if dvals.size else 1.0
     dmax = dmax or 1.0
 
-    fig, axes = plt.subplots(1, 3, figsize=(9, 3.2))
-    for ax, data, label, kw in (
-        (axes[0], obs, "observed", {"cmap": "gray", "vmin": vmin, "vmax": vmax}),
-        (axes[1], pred, "predicted", {"cmap": "gray", "vmin": vmin, "vmax": vmax}),
-        (axes[2], diff, "difference", {"cmap": "RdBu_r", "vmin": -dmax, "vmax": dmax}),
-    ):
-        ax.imshow(data, origin="lower", **kw)
-        ax.set_title(label, fontsize=10)
-        ax.set_xticks([])
-        ax.set_yticks([])
+    rows = [
+        ("observed", observed, {"cmap": "gray", "vmin": 0.0, "vmax": vmax}),
+        ("predicted", matched, {"cmap": "gray", "vmin": 0.0, "vmax": vmax}),
+        ("checkerboard", checker, {"cmap": "gray", "vmin": 0.0, "vmax": vmax}),
+        ("difference", difference, {"cmap": "RdBu_r", "vmin": -dmax, "vmax": dmax}),
+    ]
+
+    fig, axes = plt.subplots(len(rows), 1, figsize=(2.2 * n_cuts, 2.4 * len(rows)))
+    for ax, (label, data, kw) in zip(axes, rows, strict=True):
+        img = nb.Nifti1Image(np.asarray(data, dtype=np.float32), affine)
+        plotting.plot_img(
+            img,
+            display_mode="z",
+            cut_coords=n_cuts,
+            axes=ax,
+            black_bg=True,
+            annotate=False,
+            colorbar=False,
+            **kw,
+        )
+        ax.set_title(label, color="black", fontsize=11)
+
+    if title:
+        fig.suptitle(title, fontsize=12)
+    fig.savefig(path, dpi=90, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    return path
+
+
+def _find_kriging(kernel):
+    """Walk a (possibly composite) kernel to find the angular kriging component."""
+    from nifreeze.model.gpr import ExponentialKriging, SphericalKriging
+
+    if isinstance(kernel, (SphericalKriging, ExponentialKriging)):
+        return kernel
+    for attr in ("orientation_kernel", "radial_kernel", "k1", "k2"):
+        sub = getattr(kernel, attr, None)
+        if sub is not None and (found := _find_kriging(sub)) is not None:
+            return found
+    return None
+
+
+def save_covariance_plot(gpr, path: str | Path, *, title: str | None = None) -> Path:
+    """Plot the fitted **angular covariance** function (Andersson 2015, Fig. 3).
+
+    Extracts the (spherical or exponential) kriging component of a fitted GP and
+    plots its covariance against angular distance — the covariance structure the
+    GP imposes across diffusion orientations.
+
+    Parameters
+    ----------
+    gpr : fitted GP regressor
+        A fitted :obj:`~sklearn.gaussian_process.GaussianProcessRegressor`
+        (exposing ``kernel_``) or any object exposing a ``kernel``/``kernel_``.
+    path : :obj:`str` or :obj:`~pathlib.Path`
+        Output image path.
+    title : :obj:`str`, optional
+        Figure title.
+
+    """
+    import matplotlib as mpl
+
+    mpl.use("Agg", force=True)
+    import matplotlib.pyplot as plt
+
+    from nifreeze.model.gpr import (
+        ExponentialKriging,
+        exponential_covariance,
+        spherical_covariance,
+    )
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    kernel = getattr(gpr, "kernel_", None)
+    if kernel is None:
+        kernel = getattr(gpr, "kernel", None)
+    kriging = _find_kriging(kernel) if kernel is not None else None
+
+    theta = np.linspace(0.0, np.pi / 2, 400)
+    fig, ax = plt.subplots(figsize=(5.0, 3.6))
+    if kriging is None:
+        ax.text(0.5, 0.5, "no angular kernel found", ha="center", va="center")
+        ax.set_axis_off()
+    else:
+        a = float(kriging.beta_a)
+        lam = float(kriging.beta_l)
+        if isinstance(kriging, ExponentialKriging):
+            cov = lam * exponential_covariance(theta, a)
+            name = f"Exponential (a={a:.2f}, λ={lam:.2f})"
+        else:
+            cov = lam * spherical_covariance(theta, a)
+            name = f"Spherical (a={a:.2f}, λ={lam:.2f})"
+        ax.plot(theta, cov, "k")
+        ax.set_xlabel("Angular distance θ (rad)")
+        ax.set_ylabel("Covariance")
+        ax.set_title(name, fontsize=10)
+        ax.set_xticks([0.0, np.pi / 8, np.pi / 4, 3 * np.pi / 8, np.pi / 2])
+        ax.set_xticklabels(["0", "π/8", "π/4", "3π/8", "π/2"])
 
     if title:
         fig.suptitle(title, fontsize=11)
     fig.tight_layout()
-    fig.savefig(path, dpi=90, bbox_inches="tight")
+    fig.savefig(path, dpi=90, facecolor="white")
     plt.close(fig)
     return path

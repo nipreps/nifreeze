@@ -75,6 +75,19 @@ def _provenance() -> dict[str, str]:
     return meta
 
 
+def _fitted_gpr(model):
+    """Return the fitted sklearn GP regressor behind a GP model, or ``None``.
+
+    Reaches through ``GPModel`` → ``GPFit`` → the underlying
+    :obj:`~sklearn.gaussian_process.GaussianProcessRegressor`; returns ``None``
+    for non-GP models (which have no such object).
+    """
+    models = getattr(model, "_models", None)
+    if not models:
+        return None
+    return getattr(models[0], "model", None)
+
+
 def _run_cell(
     spec: ModelSpec,
     mode: str,
@@ -87,7 +100,7 @@ def _run_cell(
     render: bool,
 ) -> CellResult:
     """Build, fit/predict, and render a single applicable cell."""
-    from nifreeze._gallery.render import save_slice_panel
+    from nifreeze._gallery.render import save_covariance_plot, save_slice_panel
 
     model = build_model(spec, dwi)
     if mode == "single-fit":
@@ -108,9 +121,22 @@ def _run_cell(
                 observed,
                 predicted,
                 out_dir / rel,
+                affine=dwi.affine,
+                mask=dwi.brainmask,
                 title=f"{dataset_name} · {spec.label} · {mode} · vol {int(idx)}",
             )
             artifacts.append(rel)
+
+    # For GP models, also plot the fitted angular covariance (Andersson Fig. 3).
+    fitted_gpr = _fitted_gpr(model) if spec.key.startswith("gp") else None
+    if render and out_dir is not None and fitted_gpr is not None:
+        rel = f"{dataset_name}/{spec.key}_{mode}_covariance.png"
+        save_covariance_plot(
+            fitted_gpr,
+            out_dir / rel,
+            title=f"{dataset_name} · {spec.label} · {mode} · covariance",
+        )
+        artifacts.append(rel)
 
     return CellResult(
         dataset=dataset_name,

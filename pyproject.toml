@@ -109,6 +109,7 @@ gallery = [
   "jupyter",
   "nbclient",
   "nbconvert",
+  "nilearn",
 ]
 
 # Aliases
