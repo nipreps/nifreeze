@@ -520,10 +520,6 @@ class GPModel(BaseDWIModel):
     therefore overridden here rather than reusing the chunked DIPY path.
     """
 
-    # The angular (+ optional radial) covariance targets orientation data; the
-    # applicable scheme further depends on ``kernel_model`` (single-shell for
-    # ``"spherical"``/``"exponential"``, multi-shell for ``"multishell"``), a
-    # distinction resolved by the caller (e.g. the gallery registry).
     applicable_schemes = frozenset({"single-shell", "multi-shell"})
 
     _modelargs = ("kernel_model", "beta_l", "beta_a", "sigma_sq", "ell")
