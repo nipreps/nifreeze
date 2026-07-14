@@ -347,7 +347,7 @@ class ExponentialKriging(Kernel):
         if not eval_gradient:
             return self.beta_l * C_theta
 
-        # scikit-learn expects gradients w.r.t. the *log* of each hyperparameter
+        # scikit-learn expects gradients w.r.t. the *log* of each hyperparameter.
         K_gradient = np.zeros((*thetas.shape, 2))
         K_gradient[..., 0] = self.beta_l * C_theta * thetas / self.beta_a  # d/d(log a)
         K_gradient[..., 1] = self.beta_l * C_theta  # d/d(log lambda)
@@ -453,7 +453,7 @@ class SphericalKriging(Kernel):
         if not eval_gradient:
             return self.beta_l * C_theta
 
-        # scikit-learn expects gradients w.r.t. the *log* of each hyperparameter
+        # scikit-learn expects gradients w.r.t. the *log* of each hyperparameter.
         deriv_a = np.zeros_like(thetas)
         nonzero = thetas <= self.beta_a
         deriv_a[nonzero] = (
@@ -572,11 +572,9 @@ class MultiShellKernel(KernelOperator):
             ("radial_kernel", self.radial_kernel),
         ):
             for hp in kernel.hyperparameters:  # type: ignore[attr-defined]
-                r.append(
-                    Hyperparameter(  # type: ignore[call-arg,arg-type]
-                        f"{prefix}__{hp.name}", hp.value_type, hp.bounds, hp.n_elements
-                    )
-                )
+                # ``Hyperparameter`` is a namedtuple; ``_replace`` re-prefixes the
+                # name while preserving value_type/bounds/n_elements/fixed.
+                r.append(hp._replace(name=f"{prefix}__{hp.name}"))
         return r
 
     def _split(self, X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:

@@ -43,15 +43,8 @@ GP_JITTER = 1e-10
 """Small nugget kept on ``alpha`` for numerical stability."""
 
 
-def _cartesian_components(gtab: GradientTable | np.ndarray) -> np.ndarray:
-    """Return the design matrix ``[gx, gy, gz, bval]``.
-
-    The b-value is always appended as a trailing column (layout
-    ``[gx, gy, gz, bval]``) so multi-shell kernels can access it. Single-shell
-    kernels operate on orientations only and drop the b-value column downstream
-    (see :func:`_design_matrix`).
-    """
-
+def _btable_asarray(gtab: GradientTable | np.ndarray) -> np.ndarray:
+    """Return the design matrix ``[gx, gy, gz, bval]``."""
     if hasattr(gtab, "bvecs"):
         gtab = cast(GradientTable, gtab)
         return np.column_stack([gtab.bvecs, np.asarray(gtab.bvals)])
@@ -60,19 +53,6 @@ def _cartesian_components(gtab: GradientTable | np.ndarray) -> np.ndarray:
     if components.ndim == 1:
         components = components[np.newaxis, :]
     return components
-
-
-def _design_matrix(gtab: GradientTable | np.ndarray, kernel: Kernel | None) -> np.ndarray:
-    """Build the GP design matrix appropriate for ``kernel``.
-
-    The b-value is always available in the Cartesian components; a single-shell
-    kernel only consumes orientations, so its trailing b-value column is dropped
-    here (multi-shell kernels keep it, selecting columns via ``bval_index``).
-    """
-    X = _cartesian_components(gtab)
-    if not isinstance(kernel, MultiShellKernel) and X.shape[-1] > 3:
-        X = X[:, :3]
-    return X
 
 
 def gp_prediction(
@@ -106,7 +86,10 @@ def gp_prediction(
 
     """
 
-    X = _design_matrix(gtab, getattr(model, "kernel", None))
+    X = _btable_asarray(gtab)
+    # Single-shell kernels consume orientations only; drop the b-value column.
+    if not isinstance(getattr(model, "kernel", None), MultiShellKernel):
+        X = X[:, :3]
 
     # Check it's fitted as they do in sklearn internally
     # https://github.com/scikit-learn/scikit-learn/blob/972e17fe1aa12d481b120ad4a3dc076bae736931/\
@@ -225,11 +208,13 @@ class GaussianProcessModel(ReconstModel):
 
         """
 
-        # Extract b-vecs: scikit-learn wants (n_samples, n_features) where
-        # n_samples is the different diffusion-encoding gradient orientations.
-        # n_features is 3 (orientation only), or 4 ([gx, gy, gz, bval]) when a
-        # multi-shell kernel needs the b-value.
-        X = _design_matrix(gtab, self.kernel)
+        # scikit-learn wants (n_samples, n_features), where n_samples is the
+        # number of diffusion-encoding gradient orientations. n_features is 4
+        # ([gx, gy, gz, bval]) for the multi-shell kernel; single-shell kernels
+        # consume orientations only, so the b-value column is dropped.
+        X = _btable_asarray(gtab)
+        if not isinstance(self.kernel, MultiShellKernel):
+            X = X[:, :3]
 
         # Data must have shape (n_samples, n_targets) where n_samples is
         # the number of diffusion-encoding gradient orientations, and n_targets
