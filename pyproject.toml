@@ -254,7 +254,8 @@ concurrency = ["multiprocessing"]
 omit = [
   "^test/*",
   "*/conftest.py",
-  "src/nifreeze/_version.py"
+  "src/nifreeze/_version.py",
+  "src/nifreeze/_gallery/*"
 ]
 
 [tool.coverage.report]
