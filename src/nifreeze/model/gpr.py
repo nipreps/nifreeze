@@ -33,11 +33,23 @@ from scipy import optimize
 from scipy.optimize import Bounds
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import (
+    RBF,
     Hyperparameter,
     Kernel,
+    KernelOperator,
 )
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.utils._param_validation import Interval, StrOptions
+
+__all__ = [
+    "DiffusionGPR",
+    "ExponentialKriging",
+    "SphericalKriging",
+    "MultiShellKernel",
+    "exponential_covariance",
+    "spherical_covariance",
+    "compute_pairwise_angles",
+]
 
 BOUNDS_A: tuple[float, float] = (0.1, 2.35)
 """The limits for the parameter *a* (angular distance in rad)."""
@@ -64,6 +76,13 @@ SUPPORTED_OPTIMIZERS = set(CONFIGURABLE_OPTIONS.keys()) | {"fmin_l_bfgs_b"}
 
 UNKNOWN_OPTIMIZER_ERROR_MSG = "Unknown optimizer {optimizer}."
 """Unknown optimizer error message."""
+
+NONPOSITIVE_BVAL_ERROR_MSG = (
+    "MultiShellKernel requires strictly positive b-values (the radial covariance "
+    "is a squared-exponential on log-b); b0/non-positive volumes must be excluded "
+    "before fitting."
+)
+"""Error raised when a non-positive b-value reaches the multi-shell kernel."""
 
 
 class DiffusionGPR(GaussianProcessRegressor):
@@ -112,9 +131,10 @@ class DiffusionGPR(GaussianProcessRegressor):
         Hence, that was the method we used for all optimisations in the present
         paper.
 
-    **Multi-shell regression (TODO).**
-    For multi-shell modeling, the kernel :math:`k(\textbf{x}, \textbf{x'})`
-    is updated following Eq. (14) in :footcite:p:`andersson_non-parametric_2015`.
+    **Multi-shell regression.**
+    For multi-shell modeling, use :obj:`~nifreeze.model.gpr.MultiShellKernel`,
+    which updates the kernel :math:`k(\textbf{x}, \textbf{x'})` following Eq. (14)
+    in :footcite:p:`andersson_non-parametric_2015`.
 
     .. math::
         k(\textbf{x}, \textbf{x'}) = C_{\theta}(\mathbf{g}, \mathbf{g'}; a) C_{b}(|b - b'|; \ell)
@@ -246,7 +266,7 @@ class DiffusionGPR(GaussianProcessRegressor):
                 options=options,
                 args=(self.eval_gradient,),
                 tol=self.tol,
-            )
+            )  # type: ignore[call-overload]
             return opt_res.x, opt_res.fun
 
         if callable(self.optimizer):
@@ -327,9 +347,7 @@ class ExponentialKriging(Kernel):
         if not eval_gradient:
             return self.beta_l * C_theta
 
-        # scikit-learn expects gradients w.r.t. the *log* of each hyperparameter
-        # (``Kernel.theta`` is log-transformed), hence the chain-rule factors of
-        # ``beta_a`` and ``beta_l``.
+        # scikit-learn expects gradients w.r.t. the *log* of each hyperparameter.
         K_gradient = np.zeros((*thetas.shape, 2))
         K_gradient[..., 0] = self.beta_l * C_theta * thetas / self.beta_a  # d/d(log a)
         K_gradient[..., 1] = self.beta_l * C_theta  # d/d(log lambda)
@@ -474,11 +492,136 @@ class SphericalKriging(Kernel):
         return f"SphericalKriging (a={self.beta_a}, λ={self.beta_l})"
 
 
+class MultiShellKernel(KernelOperator):
+    r"""Composite kernel for multi-shell diffusion data.
+
+    Implements the multi-shell covariance of :footcite:p:`andersson_non-parametric_2015`
+    (Eq. 14) as the product of an angular (orientation) kernel and a radial
+    (b-value) kernel,
+
+    .. math::
+        k(\mathbf{x}, \mathbf{x'}) =
+        C_{\theta}(\mathbf{g}, \mathbf{g'}; a)\, C_{b}(b, b'; \ell),
+
+    where the design matrix ``X`` is expected to hold the diffusion-encoding
+    gradient components in ``orientation_dims`` and the b-value in ``bval_index``
+    (default layout ``[gx, gy, gz, bval]``). The default ``radial_kernel``
+    (:obj:`~sklearn.gaussian_process.kernels.RBF`) applied to :math:`\log b`
+    reproduces Eq. (15),
+
+    .. math::
+        C_{b}(b, b'; \ell) = \exp\!\left(-\frac{(\log b - \log b')^2}{2\ell^2}\right).
+
+    The b-value column must be strictly positive: :math:`\log b` is undefined for
+    b0 volumes, which must be handled/excluded upstream.
+
+    References
+    ----------
+    .. footbibliography::
+
+    """
+
+    k1: Kernel
+    k2: Kernel
+
+    def __init__(
+        self,
+        orientation_kernel: Kernel | None = None,
+        radial_kernel: Kernel | None = None,
+        orientation_dims: Sequence[int] = (0, 1, 2),
+        bval_index: int = 3,
+    ) -> None:
+        # Store init params for sklearn cloning
+        self.orientation_kernel = (
+            orientation_kernel if orientation_kernel is not None else SphericalKriging()
+        )
+        self.radial_kernel = radial_kernel if radial_kernel is not None else RBF(length_scale=1.0)
+        self.orientation_dims = tuple(orientation_dims)
+        self.bval_index = bval_index
+
+        super().__init__(self.orientation_kernel, self.radial_kernel)
+
+    def get_params(self, deep: bool = True) -> dict:
+        # ``clone()`` calls ``get_params(deep=False)`` and re-invokes ``__init__``,
+        # so the shallow keys must match the constructor signature (not the
+        # inherited ``k1``/``k2``). With ``deep=True`` we also surface the
+        # sub-kernels' parameters, keeping ``get_params``/``set_params`` and
+        # ``hyperparameters`` consistent under the constructor's names.
+        params: dict = {
+            "orientation_kernel": self.orientation_kernel,
+            "radial_kernel": self.radial_kernel,
+            "orientation_dims": self.orientation_dims,
+            "bval_index": self.bval_index,
+        }
+        if deep:
+            for prefix, kernel in (
+                ("orientation_kernel", self.orientation_kernel),
+                ("radial_kernel", self.radial_kernel),
+            ):
+                params.update(
+                    (f"{prefix}__{name}", value) for name, value in kernel.get_params().items()
+                )
+        return params
+
+    @property
+    def hyperparameters(self) -> list[Hyperparameter]:  # type: ignore[override]
+        """Expose sub-kernel hyperparameters under the constructor's names."""
+        r = []
+        for prefix, kernel in (
+            ("orientation_kernel", self.orientation_kernel),
+            ("radial_kernel", self.radial_kernel),
+        ):
+            for hp in kernel.hyperparameters:  # type: ignore[attr-defined]
+                # ``Hyperparameter`` is a namedtuple; ``_replace`` re-prefixes the
+                # name while preserving value_type/bounds/n_elements/fixed.
+                r.append(hp._replace(name=f"{prefix}__{hp.name}"))
+        return r
+
+    def _split(self, X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        X = np.asarray(X)
+        bvals = X[:, self.bval_index]
+        if np.any(bvals <= 0):
+            raise ValueError(NONPOSITIVE_BVAL_ERROR_MSG)
+        orient = X[:, self.orientation_dims]
+        log_bvals = np.log(bvals).reshape(-1, 1)
+        return orient, log_bvals
+
+    def __call__(
+        self,
+        X: np.ndarray,
+        Y: np.ndarray | None = None,
+        eval_gradient: bool = False,
+    ) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
+        X_o, X_b = self._split(X)
+        Y_o: np.ndarray | None
+        Y_b: np.ndarray | None
+        if Y is not None:
+            Y_o, Y_b = self._split(Y)
+        else:
+            Y_o = None
+            Y_b = None
+
+        if eval_gradient:
+            K1, g1 = self.k1(X_o, Y_o, eval_gradient=True)
+            K2, g2 = self.k2(X_b, Y_b, eval_gradient=True)
+            return K1 * K2, np.dstack((g1 * K2[:, :, np.newaxis], g2 * K1[:, :, np.newaxis]))
+
+        return self.k1(X_o, Y_o) * self.k2(X_b, Y_b)
+
+    def diag(self, X: npt.ArrayLike) -> np.ndarray:
+        X_o, X_b = self._split(np.asarray(X))
+        return self.k1.diag(X_o) * self.k2.diag(X_b)
+
+    def __repr__(self) -> str:
+        return f"MultiShellKernel({self.k1} * {self.k2})"
+
+
 def exponential_covariance(theta: np.ndarray, a: float) -> np.ndarray:
     r"""
     Compute the exponential covariance for given distances and scale parameter.
 
-    Implements :math:`C_{\theta}`, following Eq. (9) in :footcite:p:`andersson_non-parametric_2015`:
+    Implements :math:`C_{\theta}`, following Eq. (9) in
+    :footcite:p:`andersson_non-parametric_2015`:
 
     .. math::
         \begin{equation}
@@ -514,7 +657,8 @@ def spherical_covariance(theta: np.ndarray, a: float) -> np.ndarray:
     r"""
     Compute the spherical covariance for given distances and scale parameter.
 
-    Implements :math:`C_{\theta}`, following Eq. (10) in :footcite:p:`andersson_non-parametric_2015`:
+    Implements :math:`C_{\theta}`, following Eq. (10) in
+    :footcite:p:`andersson_non-parametric_2015`:
 
     .. math::
         \begin{equation}
@@ -558,8 +702,9 @@ def compute_pairwise_angles(
 ) -> np.ndarray:
     r"""Compute pairwise angles across diffusion gradient encoding directions.
 
-    Following :footcite:p:`andersson_non-parametric_2015`:, it computes the smallest of the angles between
-    each pair if ``closest_polarity`` is :obj:`True`, i.e.,
+    Following :footcite:p:`andersson_non-parametric_2015`, it computes the
+    smallest of the angles between each pair if ``closest_polarity`` is ``True``,
+    i.e.,
 
     .. math::
 

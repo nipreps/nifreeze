@@ -43,6 +43,7 @@ from nifreeze.data.dmri.utils import (
 from nifreeze.model._dipy import GaussianProcessModel
 from nifreeze.model.base import MASK_ABSENCE_WARN_MSG
 from nifreeze.model.dki import DiffusionKurtosisModel as _NFDKIModel
+from nifreeze.model.gpr import MultiShellKernel
 from nifreeze.testing import simulations as _sim
 
 B_MATRIX = np.array(
@@ -1269,3 +1270,54 @@ def test_gp_model(evals, S0, snr, hsph_dirs, bval_shell):
     prediction = gpfit.predict(gtab.bvecs[-2:])
 
     assert prediction.shape == (2,)
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+@pytest.mark.parametrize("hsph_dirs", (30, 20))
+def test_gp_model_multishell(hsph_dirs):
+    """GaussianProcessModel wires MultiShellKernel end-to-end over two shells."""
+    evecs = _sim.create_single_fiber_evecs()
+    evals = (0.0015, 0.0003, 0.0003)
+
+    # Build a 2-shell gradient table (drop the leading b0 of each shell).
+    gtabs = [_sim.create_single_shell_gradient_table(hsph_dirs, b)[1:] for b in (1000, 2000)]
+    bvals = np.concatenate([g.bvals for g in gtabs])
+    bvecs = np.concatenate([g.bvecs for g in gtabs])
+    gtab = gradient_table_from_bvals_bvecs(bvals, bvecs)
+    signal = single_tensor(gtab, S0=100, evals=evals, evecs=evecs, snr=20)
+
+    # The multi-shell kernel needs the b-value, so feed [gx, gy, gz, bval].
+    X = np.column_stack([bvecs, bvals])
+
+    gp = GaussianProcessModel(kernel_model="multishell")
+    assert isinstance(gp.kernel, MultiShellKernel)
+
+    # Fit on all but the last two directions, predict those two (LOVO-style).
+    gpfit = gp.fit(signal[:-2], X[:-2])
+    prediction = gpfit.predict(X[-2:])
+
+    assert prediction.shape == (2,)
+    assert np.isfinite(prediction).all()
+
+
+def test_gp_model_multishell_rejects_b0():
+    """A b0 (bval=0) in the training data must raise, not emit inf/nan."""
+    gtab = _sim.create_single_shell_gradient_table(20, 1000)  # keeps the leading b0
+    evecs = _sim.create_single_fiber_evecs()
+    signal = single_tensor(gtab, S0=100, evals=(0.0015, 0.0003, 0.0003), evecs=evecs, snr=20)
+
+    X = np.column_stack([gtab.bvecs, gtab.bvals])  # first row is the b0 (bval=0)
+
+    gp = GaussianProcessModel(kernel_model="multishell")
+    with pytest.raises(ValueError, match="strictly positive b-values"):
+        gp.fit(signal, X)
+
+
+def test_btable_asarray_promotes_1d_input():
+    """A single 1-D gradient row is promoted to a (1, n) design matrix."""
+    from nifreeze.model._dipy import _btable_asarray
+
+    x = np.array([1.0, 0.0, 0.0, 1000.0])
+    out = _btable_asarray(x)
+    assert out.shape == (1, 4)
+    assert np.allclose(out, x[np.newaxis, :])

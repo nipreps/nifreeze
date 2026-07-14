@@ -21,9 +21,12 @@
 #     https://www.nipreps.org/community/licensing/
 #
 
+from typing import cast
+
 import numpy as np
 import pytest
 from dipy.io import read_bvals_bvecs
+from sklearn.gaussian_process.kernels import RBF
 
 from nifreeze.model import gpr
 
@@ -143,6 +146,35 @@ def _unit_vectors_nd(n_samples: int, n_features: int) -> np.ndarray:
         raise ValueError("n_samples must be <= n_features to produce orthogonal vectors")
 
     return np.eye(n_features, dtype=float)[:n_samples]
+
+
+def _make_multishell_X(n_samples: int) -> np.ndarray:
+    """Create X = [gx, gy, gz, bval] for MultiShellKernel tests (deterministic).
+
+    We do not require orthogonality (and cannot have >3 orthogonal vectors in R^3).
+    We just need unit vectors with some diversity.
+    """
+    dirs = np.array(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 0.0, 1.0],
+            [0.0, 1.0, 1.0],
+            [-1.0, 0.0, 0.0],
+            [0.0, -1.0, 0.0],
+            [0.0, 0.0, -1.0],
+        ],
+        dtype=float,
+    )
+    dirs /= np.linalg.norm(dirs, axis=1, keepdims=True)
+    orient = dirs[np.arange(n_samples) % dirs.shape[0], :]
+
+    shells = np.array([1000.0, 2000.0, 3000.0], dtype=float)
+    bvals = shells[np.arange(n_samples) % shells.size].reshape(-1, 1)
+
+    return np.hstack((orient, bvals))
 
 
 # No need to use normalized vectors: compute_pairwise_angles takes care of it.
@@ -491,32 +523,6 @@ _ORIENT = np.array(
 _ORIENT /= np.linalg.norm(_ORIENT, axis=1, keepdims=True)
 
 
-def _numeric_kernel_gradient(kernel, X, eps: float = 1e-6) -> np.ndarray:
-    """Finite-difference gradient of K(X) w.r.t. the (log-space) kernel theta."""
-    from sklearn.base import clone
-
-    theta = kernel.theta
-    _, analytic = kernel(X, eval_gradient=True)
-    numeric = np.zeros_like(analytic)
-    for i in range(len(theta)):
-        tp, tm = theta.copy(), theta.copy()
-        tp[i] += eps
-        tm[i] -= eps
-        kp, km = clone(kernel), clone(kernel)
-        kp.theta = tp
-        km.theta = tm
-        numeric[..., i] = (kp(X) - km(X)) / (2 * eps)
-    return numeric
-
-
-@pytest.mark.parametrize("kernel", [gpr.SphericalKriging(), gpr.ExponentialKriging()])
-def test_kernel_gradient_matches_finite_differences(kernel):
-    """Analytical gradients must match numerical ones (sklearn's log-hyperparameter space)."""
-    _, analytic = kernel(_ORIENT, eval_gradient=True)
-    numeric = _numeric_kernel_gradient(kernel, _ORIENT)
-    assert np.allclose(analytic, numeric, atol=1e-5)
-
-
 def test_gp_model_adds_and_optimizes_whitekernel():
     """GaussianProcessModel folds noise into a WhiteKernel that is tuned by the optimizer."""
     from sklearn.gaussian_process.kernels import Sum, WhiteKernel
@@ -537,3 +543,223 @@ def test_gp_model_adds_and_optimizes_whitekernel():
     prediction = gpfit.predict(_ORIENT[:2])
     assert prediction.shape == (2,)
     assert np.isfinite(prediction).all()
+
+
+@pytest.mark.parametrize("n_samples", [3, 5])
+@pytest.mark.parametrize("eval_gradient", [False, True])
+def test_multishellkernel_basic(n_samples, eval_gradient):
+    k = gpr.MultiShellKernel()
+    X = _make_multishell_X(n_samples)
+
+    if eval_gradient:
+        K, grad = k(X, eval_gradient=True)
+        assert grad.shape == (n_samples, n_samples, len(k.theta))
+        assert np.isfinite(grad).all()
+    else:
+        K = k(X, eval_gradient=False)
+
+    assert K.shape == (n_samples, n_samples)
+    assert np.isfinite(K).all()
+    assert np.allclose(K, K.T)
+    assert np.allclose(np.diagonal(K), k.diag(X))
+
+    K_predict = cast(np.ndarray, k(X, X[:1]))
+    assert K_predict.shape == (n_samples, 1)
+
+
+@pytest.mark.parametrize(
+    "orientation_dims, bval_index, nuisance_index",
+    [
+        ((0, 1, 2), 3, 4),
+        ((1, 2, 3), 0, 4),
+    ],
+)
+def test_multishellkernel_column_selection(orientation_dims, bval_index, nuisance_index):
+    """Ensure MultiShellKernel uses only the configured orientation and bval columns.
+
+    Changes to unused (nuisance) columns must not affect the kernel, while changes
+    to the bval column (and/or orientation columns) must affect it.
+    """
+    n_samples = 3
+    X = np.zeros((n_samples, 5), dtype=float)
+
+    orient = _unit_vectors_nd(n_samples, 3)
+    X[:, list(orientation_dims)] = orient
+    X[:, bval_index] = np.array([1000.0, 2000.0, 3000.0], dtype=float)
+    X[:, nuisance_index] = np.array([10.0, 11.0, 12.0], dtype=float)
+
+    k = gpr.MultiShellKernel(orientation_dims=orientation_dims, bval_index=bval_index)
+
+    # Nuisance columns must not matter (test on K(X) is fine)
+    K0 = k(X)
+    Xn = X.copy()
+    Xn[:, nuisance_index] += 1000.0
+    assert np.allclose(K0, k(Xn))
+
+    # To demonstrate bvals matter, compare K(X, Y) where orientations are identical
+    # but bvals differ. This makes the orientation kernel a constant 1 for each pair,
+    # so differences come from the radial kernel.
+    Y = X.copy()
+    Y[:, bval_index] *= 1.5
+
+    Kxy0 = k(X, X)  # includes radial similarity at identical bvals
+    Kxy1 = k(X, Y)  # radial similarity with different bvals
+
+    assert not np.allclose(Kxy0, Kxy1)
+
+
+@pytest.mark.parametrize("bad_bval", [0.0, -1.0])
+def test_multishellkernel_nonpositive_bval(bad_bval):
+    """Non-positive b-values (e.g. b0) must be rejected, not silently -inf/nan."""
+    k = gpr.MultiShellKernel()
+    X = _make_multishell_X(3)
+    X[0, 3] = bad_bval
+
+    with pytest.raises(ValueError, match="strictly positive b-values"):
+        k(X)
+
+
+def _numeric_kernel_gradient(kernel, X, eps: float = 1e-6) -> np.ndarray:
+    """Finite-difference gradient of K(X) w.r.t. the (log-space) kernel theta."""
+    from sklearn.base import clone
+
+    theta = kernel.theta
+    _, analytic = kernel(X, eval_gradient=True)
+    numeric = np.zeros_like(analytic)
+    for i in range(len(theta)):
+        tp, tm = theta.copy(), theta.copy()
+        tp[i] += eps
+        tm[i] -= eps
+        kp, km = clone(kernel), clone(kernel)
+        kp.theta = tp
+        km.theta = tm
+        numeric[..., i] = (kp(X) - km(X)) / (2 * eps)
+    return numeric
+
+
+@pytest.mark.parametrize(
+    "kernel",
+    [
+        gpr.SphericalKriging(),
+        gpr.ExponentialKriging(),
+        gpr.MultiShellKernel(),
+        gpr.MultiShellKernel(orientation_kernel=gpr.ExponentialKriging()),
+    ],
+)
+def test_kernel_gradient_matches_finite_differences(kernel):
+    """Analytical gradients must match numerical ones (log-space, as sklearn expects)."""
+    orient = _make_multishell_X(5)[:, :3]
+    if isinstance(kernel, gpr.MultiShellKernel):
+        X = _make_multishell_X(5)
+    else:
+        X = orient
+
+    _, analytic = kernel(X, eval_gradient=True)
+    numeric = _numeric_kernel_gradient(kernel, X)
+    assert np.allclose(analytic, numeric, atol=1e-5)
+
+
+def test_multishellkernel_reduces_to_radial_when_orientations_identical():
+    """With identical orientations, K = lambda * C_b(log b) (Andersson Eq. 15)."""
+    n = 4
+    orient = np.tile([1.0, 0.0, 0.0], (n, 1))
+    bvals = np.array([1000.0, 2000.0, 3000.0, 1000.0])
+    X = np.column_stack([orient, bvals])
+
+    lam, ell = 0.7, 1.3
+    k = gpr.MultiShellKernel(
+        orientation_kernel=gpr.SphericalKriging(beta_l=lam),
+        radial_kernel=RBF(length_scale=ell),
+    )
+    K = cast(np.ndarray, k(X))
+
+    logb = np.log(bvals)
+    C_b = np.exp(-((logb[:, None] - logb[None, :]) ** 2) / (2 * ell**2))
+    assert np.allclose(K, lam * C_b)
+
+
+def test_multishellkernel_clone_theta_roundtrip():
+    """clone_with_theta must preserve structure and set sub-kernel hyperparameters."""
+    k = gpr.MultiShellKernel()
+    theta = k.theta
+    new_theta = theta + 0.1
+    k2 = k.clone_with_theta(new_theta)
+
+    assert isinstance(k2, gpr.MultiShellKernel)
+    assert np.allclose(k2.theta, new_theta)
+    assert k2.bounds.shape == k.bounds.shape
+    # The original kernel is untouched (clone semantics).
+    assert np.allclose(k.theta, theta)
+
+
+def test_multishellkernel_get_params_deep():
+    """``get_params(deep=True)`` surfaces the sub-kernels' parameters (prefixed)."""
+    k = gpr.MultiShellKernel()
+
+    shallow = k.get_params(deep=False)
+    assert set(shallow) == {
+        "orientation_kernel",
+        "radial_kernel",
+        "orientation_dims",
+        "bval_index",
+    }
+
+    deep = k.get_params(deep=True)
+    # Shallow keys are still present, plus prefixed sub-kernel parameters.
+    assert set(shallow).issubset(deep)
+    assert any(key.startswith("orientation_kernel__") for key in deep)
+    assert any(key.startswith("radial_kernel__") for key in deep)
+
+
+def test_multishellkernel_repr():
+    """``repr`` mentions the composed sub-kernels."""
+    text = repr(gpr.MultiShellKernel())
+    assert text.startswith("MultiShellKernel(")
+    assert "*" in text
+
+
+@pytest.mark.parametrize("n_samples", [8])
+def test_multishellkernel_gp(n_samples):
+    """Smoke test: DiffusionGPR can fit/predict with MultiShellKernel."""
+    X = _make_multishell_X(n_samples)
+    y = np.linspace(1.0, 0.5, num=n_samples, dtype=float)
+
+    model = gpr.DiffusionGPR(
+        kernel=gpr.MultiShellKernel(),
+        alpha=1e-6,
+        optimizer=None,  # avoid expensive/unstable hyperparameter optimization in tests
+        disp=False,
+    )
+    model.fit(X, y)
+
+    mean, std = cast(tuple[np.ndarray, np.ndarray], model.predict(X[:2], return_std=True))
+    assert mean.shape == (2,)
+    assert std.shape == (2,)
+    assert np.isfinite(mean).all()
+    assert np.isfinite(std).all()
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+@pytest.mark.parametrize("n_samples", [12])
+def test_multishellkernel_gp_optimizes(n_samples):
+    """The gradient-based optimizer path runs and tunes theta with MultiShellKernel."""
+    X = _make_multishell_X(n_samples)
+    rng = np.random.default_rng(42)
+    y = X[:, 3] / 3000.0 + 0.05 * rng.standard_normal(n_samples)
+
+    kernel = gpr.MultiShellKernel()
+    theta0 = kernel.theta.copy()
+    model = gpr.DiffusionGPR(
+        kernel=kernel,
+        alpha=1e-3,
+        optimizer="fmin_l_bfgs_b",
+        eval_gradient=True,
+        maxiter=50,
+    )
+    model.fit(X, y)
+
+    # Optimizer actually moved the hyperparameters and produced a valid fit.
+    assert not np.allclose(model.kernel_.theta, theta0)
+    mean = cast(np.ndarray, model.predict(X[:3]))
+    assert mean.shape == (3,)
+    assert np.isfinite(mean).all()
