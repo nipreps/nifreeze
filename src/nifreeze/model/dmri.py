@@ -568,9 +568,7 @@ class GPModel(BaseDWIModel):
             return None
 
         gradient = self._dataset.gradients[index, :]
-        gtab = gradient_table_from_bvals_bvecs(
-            gradient[np.newaxis, -1], gradient[np.newaxis, :-1]
-        )
+        gtab = gradient_table_from_bvals_bvecs(gradient[np.newaxis, -1], gradient[np.newaxis, :-1])
         predicted = np.squeeze(self._models[0].predict(gtab))
 
         out_dtype = np.result_type(predicted.dtype, np.float32)
