@@ -118,6 +118,31 @@ def open_dataobj_memmap(
     return mm
 
 
+def stream_select_last_axis(
+    src: np.ndarray,
+    keep_mask: np.ndarray,
+    cache_dir: Path | str | None = None,
+    name: str = "dataobj",
+) -> np.memmap:
+    """Select volumes along the last axis into a disk-backed memmap.
+
+    Copies ``src[..., keep_mask]`` one volume at a time into a Fortran-ordered
+    ``.npy`` memmap (per-volume contiguous). The result is disk-backed, so once
+    the source is released the selection holds no resident RAM — used to drop
+    b=0 volumes from a DWI without retaining a full in-memory copy.
+    """
+    keep = np.flatnonzero(keep_mask)
+    out_shape = (*src.shape[:-1], keep.size)
+    cache = _cache_npy(cache_dir, name)
+    mm = np.lib.format.open_memmap(
+        cache, mode="w+", dtype=src.dtype, shape=out_shape, fortran_order=True
+    )
+    for j, i in enumerate(keep):
+        mm[..., j] = src[..., i]
+    mm.flush()
+    return mm
+
+
 def _cache_npy(cache_dir: Path | str | None, key: str) -> Path:
     cache_dir = Path(cache_dir) if cache_dir is not None else Path(mkdtemp())
     cache_dir.mkdir(parents=True, exist_ok=True)
