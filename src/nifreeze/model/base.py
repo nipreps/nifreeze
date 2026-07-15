@@ -115,8 +115,9 @@ class BaseModel(ABC):
 
     __metaclass__ = ABCMeta
 
-    supports_single_fit: bool = True
-    """Whether the model can be fit once on all volumes (``index=None``)."""
+    single_fit_is_canary: bool = False
+    """Whether single-fit only makes sense as a self-consistency canary (see
+    :meth:`_warn_single_fit_canary`)."""
 
     __slots__ = {
         "_dataset": "The NiFreeze dataset instance this model operates on",
@@ -161,6 +162,11 @@ class BaseModel(ABC):
 
         """
         return None
+
+    def _warn_single_fit_canary(self) -> None:
+        """Warn if single-fit for this model is only a self-consistency canary."""
+        if self.single_fit_is_canary:
+            warn(SINGLE_FIT_CANARY_MSG, SingleFitCanaryWarning, stacklevel=3)
 
 
 class TrivialModel(BaseModel):

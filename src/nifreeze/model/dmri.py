@@ -21,7 +21,6 @@
 #     https://www.nipreps.org/community/licensing/
 #
 
-import warnings
 from importlib import import_module
 from typing import Any, Union
 
@@ -32,12 +31,7 @@ from joblib import Parallel, delayed
 from nifreeze.data.dmri import DWI
 from nifreeze.data.dmri.utils import DEFAULT_LOWB_THRESHOLD, DEFAULT_MIN_S0, DTI_MIN_ORIENTATIONS
 from nifreeze.data.filtering import BVAL_ATOL, dwi_select_shells, grand_mean_normalization
-from nifreeze.model.base import (
-    SINGLE_FIT_CANARY_MSG,
-    BaseModel,
-    ExpectationModel,
-    SingleFitCanaryWarning,
-)
+from nifreeze.model.base import BaseModel, ExpectationModel
 
 DEFAULT_S0_CLIP_PERCENTILE = 98
 """Upper percentile threshold for non-diffusion-weighted signal estimation."""
@@ -202,9 +196,6 @@ class BaseDWIModel(BaseModel):
     """Whether the model requires more than one non-zero shell."""
     excludes_b0: bool = False
     """Whether ``b=0`` volumes are excluded from fitting/prediction."""
-    single_fit_is_canary: bool = False
-    """Whether single-fit only makes sense as a self-consistency canary (see
-    :meth:`_warn_single_fit_canary`)."""
 
     __slots__ = {
         "_max_b": "The maximum b-value supported by the model",
@@ -279,11 +270,6 @@ class BaseDWIModel(BaseModel):
         }
 
         super().__init__(dataset, **kwargs)
-
-    def _warn_single_fit_canary(self) -> None:
-        """Warn if single-fit for this model is only a self-consistency canary."""
-        if self.single_fit_is_canary:
-            warnings.warn(SINGLE_FIT_CANARY_MSG, SingleFitCanaryWarning, stacklevel=3)
 
     def _fit(self, index: int | None = None, n_jobs: int | None = None, **kwargs) -> int:
         """Fit the model chunk-by-chunk asynchronously"""

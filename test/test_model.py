@@ -492,8 +492,11 @@ def test_model_capability_contract():
         GQIModel,
     )
 
-    # supports_single_fit is modality-agnostic (lives on the base model).
-    assert BaseModel.supports_single_fit is True
+    # single_fit_is_canary is modality-agnostic (lives on the base model); only
+    # self-reconstructing models flip it on.
+    assert BaseModel.single_fit_is_canary is False
+    assert GQIModel.single_fit_is_canary is True
+    assert GPModel.single_fit_is_canary is True
 
     # The scheme/shell/b0 attributes are DWI-specific (live on BaseDWIModel).
     assert BaseDWIModel.requires_multishell is False

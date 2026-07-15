@@ -76,11 +76,6 @@ class ModelSpec:
             return self.scheme_override
         return getattr(self.model_cls, "applicable_schemes", ANY_SCHEME)
 
-    @property
-    def supports_single_fit(self) -> bool:
-        """Whether the underlying model supports single-fit mode."""
-        return self.model_cls.supports_single_fit
-
 
 #: The models the gallery attempts, per issue #458. Applicability is resolved by
 #: capability filtering, so this list is the *superset* of what may be shown.
@@ -117,11 +112,14 @@ def check_applicability(spec: ModelSpec, scheme: str) -> tuple[bool, str | None]
 
 
 def check_mode(spec: ModelSpec, mode: str) -> tuple[bool, str | None]:
-    """Whether ``spec`` supports ``mode``; returns ``(ok, reason)``."""
+    """Whether ``mode`` is a known gallery mode; returns ``(ok, reason)``.
+
+    Every model runs both modes: single-fit always fits on all volumes, and the
+    self-consistency canary is *labelled* (via the captured warning) rather than
+    skipped.
+    """
     if mode not in GALLERY_MODES:
         return False, f"Unknown mode {mode!r}"
-    if mode == "single-fit" and not spec.supports_single_fit:
-        return False, f"{spec.label} does not support single-fit mode"
     return True, None
 
 
