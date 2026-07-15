@@ -85,7 +85,20 @@ class DatasetSpec:
     """Link to the source dataset (e.g. its OpenNeuro page)."""
 
     def load(self) -> DWI:
-        """Load the dataset and assert its scheme matches the declaration."""
+        """Load the dataset and assert its scheme matches the declaration.
+
+        If ``NIFREEZE_GALLERY_H5DIR`` points at a directory holding
+        ``<name>.h5`` (written once by the fetch stage), that pre-cropped
+        dataset is read directly, so the parallel fit jobs never touch datalad
+        or the network.
+        """
+        h5dir = os.environ.get("NIFREEZE_GALLERY_H5DIR")
+        if h5dir:
+            cached = Path(h5dir) / f"{self.name}.h5"
+            if cached.is_file():
+                dwi = DWI.from_filename(cached)
+                verify_scheme(dwi, self.scheme, name=self.name)
+                return dwi
         dwi = self.loader()
         verify_scheme(dwi, self.scheme, name=self.name)
         return dwi

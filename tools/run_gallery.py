@@ -53,6 +53,9 @@ def _env() -> dict[str, str]:
     env["PYTHONPATH"] = os.pathsep.join(
         [str(SPHINXEXT), existing] if existing else [str(SPHINXEXT)]
     )
+    # Point the notebooks at the rendered panels so they embed pre-computed
+    # figures instead of re-fitting every model (avoids a redundant fit pass).
+    env["NIFREEZE_GALLERY_OUT"] = str(OUT)
     return env
 
 

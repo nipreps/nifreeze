@@ -48,7 +48,7 @@ from gallery.registry import (
     check_applicability,
     check_mode,
 )
-from gallery.run import run_gallery
+from gallery.run import applicable_matrix, run_gallery
 
 
 def _cell(manifest, model, mode):
@@ -240,6 +240,139 @@ def test_load_ds000206_real():
     # The exact subject/run is resolvable for the gallery page.
     paths = source_relpaths("ds000206")
     assert paths and paths[0].startswith("sub-THP0001/") and "acq-GD31" in paths[0]
+
+
+def test_applicable_matrix():
+    """The CI matrix lists only capability-applicable (dataset, model, mode) cells."""
+    cells = applicable_matrix()
+
+    # Every cell is a runnable combination (no inapplicable pairs leak through).
+    specs = {m.key: m for m in GALLERY_MODELS}
+    for c in cells:
+        assert check_applicability(specs[c["model"]], c["scheme"])[0]
+        assert check_mode(specs[c["model"]], c["mode"])[0]
+
+    # DSI (ds004737) supports only average + GQI; GP and DKI never appear there.
+    dsi_models = {c["model"] for c in cells if c["dataset"] == "ds004737"}
+    assert dsi_models == {"average", "gqi"}
+
+    # DKI is multi-shell only — never on the single-shell datasets.
+    for c in cells:
+        if c["model"] == "dki":
+            assert c["scheme"] == MULTI_SHELL
+        if c["model"] == "gp-spherical":
+            assert c["scheme"] == SINGLE_SHELL
+
+    # Both modes are enumerated for every applicable (dataset, model) pair.
+    pairs = {(c["dataset"], c["model"]) for c in cells}
+    assert len(cells) == 2 * len(pairs)
+
+
+def test_applicable_matrix_filtered():
+    """``applicable_matrix`` honors a modes restriction."""
+    cells = applicable_matrix(modes=["lovo"])
+    assert cells
+    assert {c["mode"] for c in cells} == {"lovo"}
+
+
+def test_manifest_merge_and_from_tree(tmp_path):
+    """Manifest fragments merge into one sorted manifest, via objects and on disk."""
+    a = GalleryManifest(
+        cells=[CellResult("dsB", SINGLE_SHELL, "gqi", "lovo", STATUS_RAN, indices=[1])],
+        metadata={"nifreeze_version": "1"},
+    )
+    b = GalleryManifest(
+        cells=[CellResult("dsA", SINGLE_SHELL, "dti", "single-fit", STATUS_RAN, indices=[0])],
+        metadata={"dipy_version": "2"},
+    )
+
+    merged = GalleryManifest.merge([a, b])
+    assert len(merged.cells) == 2
+    # Cells are sorted by (dataset, model, mode) regardless of fragment order.
+    assert [c.dataset for c in merged.cells] == ["dsA", "dsB"]
+    assert merged.metadata == {"nifreeze_version": "1", "dipy_version": "2"}
+
+    # Same result reading fragments scattered across per-artifact subdirectories.
+    (tmp_path / "cell-a").mkdir()
+    (tmp_path / "cell-b").mkdir()
+    a.to_json(tmp_path / "cell-a" / "gallery_manifest.json")
+    b.to_json(tmp_path / "cell-b" / "gallery_manifest.json")
+    from_tree = GalleryManifest.from_tree(tmp_path)
+    assert from_tree.to_dict() == merged.to_dict()
+
+
+def test_gallery_collect(tmp_path):
+    """The collect tool merges manifest fragments and reassembles the panel tree."""
+    import sys
+
+    sys.path.insert(0, "tools")
+    import gallery_collect
+
+    staging = tmp_path / "staging"
+    out = tmp_path / "out"
+    # Two artifact subdirs, each a fit-job's slice of the output directory.
+    for key, model, mode in [("a", "gqi", "lovo"), ("b", "dti", "single-fit")]:
+        cell_dir = staging / f"gallery-cell-{key}"
+        (cell_dir / "dsX").mkdir(parents=True)
+        png = cell_dir / "dsX" / f"{model}_{mode}_001.png"
+        png.write_bytes(b"\x89PNG\r\n\x1a\n")
+        GalleryManifest(
+            cells=[
+                CellResult(
+                    "dsX",
+                    SINGLE_SHELL,
+                    model,
+                    mode,
+                    STATUS_RAN,
+                    indices=[1],
+                    artifacts=[f"dsX/{model}_{mode}_001.png"],
+                )
+            ]
+        ).to_json(cell_dir / "gallery_manifest.json")
+
+    manifest = gallery_collect.collect(staging, out)
+
+    assert len(manifest.cells) == 2
+    assert (out / "gallery_manifest.json").is_file()
+    # Panels are reassembled under <dataset>/ so notebooks can embed them.
+    assert (out / "dsX" / "gqi_lovo_001.png").is_file()
+    assert (out / "dsX" / "dti_single-fit_001.png").is_file()
+
+
+def test_show_dataset_embed(tmp_path, monkeypatch):
+    """``show_dataset`` embeds pre-rendered panels without re-fitting any model."""
+    pytest.importorskip("IPython")
+    import IPython.display as ipd
+    from gallery import notebook
+
+    # A precomputed gallery for a real dataset name (no data touched).
+    (tmp_path / "ds000206").mkdir()
+    (tmp_path / "ds000206" / "dti_lovo_001.png").write_bytes(b"")
+    GalleryManifest(
+        cells=[
+            CellResult(
+                "ds000206",
+                SINGLE_SHELL,
+                "dti",
+                "lovo",
+                STATUS_RAN,
+                indices=[1],
+                artifacts=["ds000206/dti_lovo_001.png"],
+            )
+        ],
+        metadata={"nifreeze_version": "x"},
+    ).to_json(tmp_path / "gallery_manifest.json")
+
+    monkeypatch.setattr(ipd, "display", lambda *a, **k: None)
+    # If embedding fails to short-circuit, run_gallery would be invoked (and fit).
+    import gallery.run as run_mod
+
+    monkeypatch.setattr(
+        run_mod, "run_gallery", lambda *a, **k: pytest.fail("should not re-fit in embed mode")
+    )
+
+    manifest = notebook.show_dataset("ds000206", out_dir=tmp_path)
+    assert [c.model for c in manifest.cells] == ["dti"]
 
 
 def test_run_gallery_dki_scheme_gating():

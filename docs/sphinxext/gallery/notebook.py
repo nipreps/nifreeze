@@ -30,13 +30,28 @@ and nbsphinx renders them without re-execution.
 
 from __future__ import annotations
 
+import os
 import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 
 from gallery.datasets import DATASETS, source_relpaths
 from gallery.manifest import STATUS_RAN, GalleryManifest
-from gallery.run import run_gallery
+
+
+def _precomputed_dir(out_dir: str | Path | None) -> Path | None:
+    """Return the directory holding a pre-rendered gallery, or ``None``.
+
+    In CI the parallel fit jobs render panels and the collect job merges their
+    manifests into ``NIFREEZE_GALLERY_OUT/gallery_manifest.json``; when that
+    exists the notebook only *embeds* the stored figures instead of re-fitting.
+    Falls back to live computation (``None``) for local, no-data use.
+    """
+    candidate = out_dir if out_dir is not None else os.environ.get("NIFREEZE_GALLERY_OUT")
+    if candidate is None:
+        return None
+    root = Path(candidate)
+    return root if (root / "gallery_manifest.json").is_file() else None
 
 
 def show_dataset(
@@ -45,16 +60,22 @@ def show_dataset(
     out_dir: str | Path | None = None,
     model_keys: Sequence[str] | None = None,
 ) -> GalleryManifest:
-    """Run one dataset's gallery cells and display the results inline.
+    """Display one dataset's gallery cells inline.
+
+    If a pre-rendered gallery is available (``NIFREEZE_GALLERY_OUT`` or
+    ``out_dir`` holds a ``gallery_manifest.json``), the stored panels are
+    embedded without re-fitting — this is how the CI-executed notebooks render.
+    Otherwise the models are fit live (local use without pre-rendered output).
 
     Parameters
     ----------
     name : :obj:`str`
         Registered dataset name (e.g. ``"ds000206"``).
     out_dir : :obj:`str` or :obj:`~pathlib.Path`, optional
-        Where panels are written (a temporary directory by default).
+        Where panels are read from / written to (a temporary directory by
+        default when computing live).
     model_keys : sequence of :obj:`str`, optional
-        Restrict to these gallery model keys.
+        Restrict to these gallery model keys (live computation only).
 
     Returns
     -------
@@ -70,8 +91,6 @@ def show_dataset(
         raise ValueError(f"Unknown dataset {name!r}; registered: {known}.")
     spec = specs[0]
 
-    out = Path(out_dir) if out_dir is not None else Path(tempfile.mkdtemp())
-
     # Report the exact OpenNeuro subject/run being used.
     try:
         paths = source_relpaths(name)
@@ -83,7 +102,22 @@ def show_dataset(
     if spec.notes:
         display(Markdown(f"*{spec.notes}*"))
 
-    manifest = run_gallery([spec], out_dir=out, model_keys=model_keys, render=True)
+    precomputed = _precomputed_dir(out_dir)
+    if precomputed is not None:
+        # Embed mode: read the merged manifest and show only this dataset's cells.
+        full = GalleryManifest.from_json(precomputed / "gallery_manifest.json")
+        manifest = GalleryManifest(
+            cells=[c for c in full.cells if c.dataset == name],
+            metadata=full.metadata,
+        )
+        base = precomputed
+    else:
+        # Live mode: fit the models now and render into a scratch directory.
+        from gallery.run import run_gallery
+
+        base = Path(out_dir) if out_dir is not None else Path(tempfile.mkdtemp())
+        manifest = run_gallery([spec], out_dir=base, model_keys=model_keys, render=True)
+
     display(Markdown(manifest.coverage_table_markdown()))
 
     for cell in manifest.cells:
@@ -91,6 +125,6 @@ def show_dataset(
             continue
         display(Markdown(f"### {cell.model} · {cell.mode}"))
         for rel in cell.artifacts:
-            display(Image(filename=str(out / rel)))
+            display(Image(filename=str(base / rel)))
 
     return manifest
