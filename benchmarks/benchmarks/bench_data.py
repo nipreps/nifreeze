@@ -132,6 +132,11 @@ class DWIBenchmark:
     def mem_instantiation_from_filename(self):
         return DWI.from_filename(self.h5_file)
 
+    def peakmem_instantiation_from_filename(self):
+        # RSS-based peak (unlike the pympler mem_* above): guards the lazy,
+        # memory-mapped load from regressing back to a full in-RAM read.
+        self.dwi = DWI.from_filename(self.h5_file)
+
     def time_instantiation_from_filename(self):
         _ = DWI.from_filename(self.h5_file)
 
@@ -295,6 +300,11 @@ class PETBenchmark:
     @skip_benchmark_if(True)
     def mem_instantiation_from_filename(self):
         return PET.from_filename(self.h5_file)
+
+    def peakmem_instantiation_from_filename(self):
+        # RSS-based peak (unlike the pympler mem_* above): guards the lazy,
+        # memory-mapped load from regressing back to a full in-RAM read.
+        self.pet = PET.from_filename(self.h5_file)
 
     def time_instantiation_from_filename(self):
         _ = PET.from_filename(self.h5_file)
