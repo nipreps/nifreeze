@@ -158,8 +158,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gallery-cov-${{ matrix.cell.dataset }}-${{ matrix.cell.model }}-${{ matrix.cell.mode }}
+          # ``coverage run --parallel-mode`` writes .coverage.<host>.<pid>.<rand>,
+          # a dotfile — which upload-artifact excludes unless asked not to, so
+          # without this every fragment silently matches nothing.
           path: .coverage.*
-          if-no-files-found: warn
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 3
 
   # 4. Merge every fragment into one gallery, combine coverage, execute the
