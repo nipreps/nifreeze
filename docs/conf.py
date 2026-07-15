@@ -50,9 +50,10 @@ extensions = [
     "nbsphinx",
 ]
 
-# The prediction gallery notebooks ship with stored outputs produced by the
-# scheduled gallery job; the docs build renders those outputs and never executes
-# the notebooks (which would need the full scientific stack + data downloads).
+# No notebooks are rendered at present: the prediction gallery is generated as
+# plain rST pages under gallery/, and the top-level notebooks are excluded below.
+# nbsphinx stays configured (and set to never execute, which would need the full
+# scientific stack + data downloads) so notebooks can return without re-wiring.
 nbsphinx_execute = "never"
 
 autodoc_mock_imports = [
@@ -108,9 +109,9 @@ exclude_patterns = [
     "Thumbs.db",
     ".DS_Store",
     "api/nifreeze.rst",
-    # Legacy top-level notebooks are not part of the rendered docs (only the
-    # prediction gallery under notebooks/gallery/ is); excluding them keeps
-    # nbsphinx from warning that they are not in any toctree.
+    # The top-level notebooks are exercised by ``tox -e notebooks``, not rendered
+    # here; excluding them keeps nbsphinx from warning that they are not in any
+    # toctree.
     "notebooks/*.ipynb",
     ".ipynb_checkpoints",
 ]
