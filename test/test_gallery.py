@@ -102,10 +102,8 @@ def test_capability_filtering_helpers():
     """The registry helpers reflect the model capability contract."""
     specs = {m.key: m for m in GALLERY_MODELS}
 
-    # AverageDWI has no single-fit mode.
-    ok, reason = check_mode(specs["average"], "single-fit")
-    assert not ok
-    assert reason is not None and "single-fit" in reason
+    # Average supports both modes (single-fit averages all volumes).
+    assert check_mode(specs["average"], "single-fit")[0]
     assert check_mode(specs["average"], "lovo")[0]
 
     # DKI is multi-shell only.
@@ -124,14 +122,12 @@ def test_capability_filtering_helpers():
 
 
 def test_run_gallery_average_single_shell():
-    """Average runs LOVO but is skipped in single-fit (no locked mode)."""
+    """Average runs in both modes (single-fit averages all volumes)."""
     spec = synthetic_spec(SINGLE_SHELL, n_directions=20)
     manifest = run_gallery([spec], model_keys=["average"], render=False)
 
     assert _cell(manifest, "average", "lovo").status == STATUS_RAN
-    single = _cell(manifest, "average", "single-fit")
-    assert single.status == STATUS_SKIPPED
-    assert "single-fit" in single.reason
+    assert _cell(manifest, "average", "single-fit").status == STATUS_RAN
 
 
 def test_run_gallery_dti_renders(tmp_path):

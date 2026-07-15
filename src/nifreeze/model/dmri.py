@@ -443,16 +443,16 @@ class AverageDWIModel(ExpectationModel):
         """Return the average map."""
 
         if index is None:
-            raise RuntimeError(f"Model {self.__class__.__name__} does not allow locking.")
-
-        shellmask = dwi_select_shells(
-            self._dataset.gradients,
-            index,
-            atol_low=self._atol_low,
-            atol_high=self._atol_high,
-        )
-
-        shelldata = self._dataset.dataobj[..., shellmask]
+            # Single-fit: average across all volumes.
+            shelldata = self._dataset.dataobj
+        else:
+            shellmask = dwi_select_shells(
+                self._dataset.gradients,
+                index,
+                atol_low=self._atol_low,
+                atol_high=self._atol_high,
+            )
+            shelldata = self._dataset.dataobj[..., shellmask]
 
         # Regress out global signal differences
         if self._detrend:

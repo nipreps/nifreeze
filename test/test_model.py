@@ -444,7 +444,6 @@ def test_model_capability_contract():
     """The declarative capability attributes match each model's real constraints."""
     from nifreeze.model.base import BaseModel
     from nifreeze.model.dmri import (
-        AverageDWIModel,
         DKIModel,
         DTIModel,
         GPModel,
@@ -456,9 +455,6 @@ def test_model_capability_contract():
     assert BaseModel.requires_multishell is False
     assert BaseModel.excludes_b0 is False
     assert BaseModel.applicable_schemes == frozenset({"single-shell", "multi-shell", "DSI"})
-
-    # Shell-averaging has no locked/single-fit mode.
-    assert AverageDWIModel.supports_single_fit is False
 
     # DTI is a low-b tensor fit; DSI is out of scope.
     assert DTIModel.applicable_schemes == frozenset({"single-shell", "multi-shell"})
