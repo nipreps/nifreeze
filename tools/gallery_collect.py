@@ -35,6 +35,7 @@ Run as ``python tools/gallery_collect.py --staging <dir> --out <dir>``.
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import sys
 from pathlib import Path
@@ -42,26 +43,84 @@ from pathlib import Path
 SPHINXEXT = Path(__file__).resolve().parent.parent / "docs" / "sphinxext"
 sys.path.insert(0, str(SPHINXEXT))
 
-from gallery.manifest import GalleryManifest  # noqa: E402  (after sys.path plumbing)
+from gallery.datasets import DATASETS  # noqa: E402
+from gallery.manifest import (  # noqa: E402  (after sys.path plumbing)
+    STATUS_ERROR,
+    CellResult,
+    GalleryManifest,
+)
+from gallery.pages import write_pages  # noqa: E402
+
+NO_OUTPUT_REASON = "no output produced (fit job failed, timed out, or was cancelled)"
+"""Reason recorded for an expected cell that never reported back."""
 
 
-def collect(staging: Path, out: Path) -> GalleryManifest:
+def reconcile(manifest: GalleryManifest, expected: list[dict[str, str]]) -> int:
+    """Record every expected cell that produced no fragment as an error.
+
+    A fit job killed by a timeout or OOM uploads nothing, so its cell would
+    otherwise vanish from the coverage table — reading as though it was never
+    part of the matrix. The manifest exists to say what was exercised, so an
+    absent cell is reported as a failure rather than silently dropped.
+    """
+    seen = {(c.dataset, c.model, c.mode) for c in manifest.cells}
+    missing = [c for c in expected if (c["dataset"], c["model"], c["mode"]) not in seen]
+    for cell in missing:
+        manifest.cells.append(
+            CellResult(
+                dataset=cell["dataset"],
+                scheme=cell.get("scheme", "?"),
+                model=cell["model"],
+                mode=cell["mode"],
+                status=STATUS_ERROR,
+                reason=NO_OUTPUT_REASON,
+            )
+        )
+    manifest.cells.sort(key=lambda c: (c.dataset, c.model, c.mode))
+    return len(missing)
+
+
+def collect(
+    staging: Path,
+    out: Path,
+    expected: list[dict[str, str]] | None = None,
+    pages_dir: Path | None = None,
+) -> GalleryManifest:
     """Merge manifest fragments and panels from ``staging`` into ``out``."""
     out.mkdir(parents=True, exist_ok=True)
 
     # 1. Merge every manifest fragment (recursively, across per-artifact subdirs).
     manifest = GalleryManifest.from_tree(staging)
+
+    # 2. Account for cells that never reported back at all.
+    n_missing = reconcile(manifest, expected or [])
+    if n_missing:
+        print(f"WARNING: {n_missing} expected cell(s) produced no output.", flush=True)
+
     manifest.to_json(out / "gallery_manifest.json")
     (out / "coverage.rst").write_text(manifest.coverage_table_rst())
 
-    # 2. Reassemble the panel tree: each PNG lives under ``<dataset>/<file>.png``
+    # 3. Reassemble the panel tree: each PNG lives under ``<dataset>/<file>.png``
     #    inside its artifact; copy it to the same-named dataset dir under ``out``.
     n_panels = 0
     for png in sorted(staging.rglob("*.png")):
-        dest_dir = out / png.parent.name
-        dest_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(png, dest_dir / png.name)
+        dest = out / png.parent.name / png.name
+        # Local runs pass --staging == --out, where the panels are already in place.
+        if png.resolve() == dest.resolve():
+            n_panels += 1
+            continue
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(png, dest)
         n_panels += 1
+
+    # 4. Render the documentation pages over that output (plain rST + images).
+    #    Every registered dataset gets a page, whether or not it reported cells:
+    #    the toctree references them all, so a missing page breaks the docs build.
+    if pages_dir is not None:
+        pages = write_pages(
+            manifest, pages_dir, panels_from=out, datasets=[d.name for d in DATASETS]
+        )
+        print(f"Wrote {len(pages)} gallery page(s) to {pages_dir}.", flush=True)
 
     counts = manifest.counts()
     print(
@@ -87,8 +146,24 @@ def main(argv: list[str] | None = None) -> int:
         required=True,
         help="Output directory for the merged manifest and panel tree.",
     )
+    parser.add_argument(
+        "--expect",
+        type=Path,
+        default=None,
+        help=(
+            "JSON file listing the expected (dataset, model, mode) cells; any that "
+            "produced no output are recorded as errors instead of being dropped."
+        ),
+    )
+    parser.add_argument(
+        "--pages",
+        type=Path,
+        default=None,
+        help="Write the per-dataset reStructuredText pages (and panels) into this directory.",
+    )
     args = parser.parse_args(argv)
-    collect(args.staging, args.out)
+    expected = json.loads(args.expect.read_text()) if args.expect else None
+    collect(args.staging, args.out, expected, args.pages)
     return 0
 
 

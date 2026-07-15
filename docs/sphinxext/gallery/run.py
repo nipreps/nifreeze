@@ -295,6 +295,16 @@ def run_gallery(
             )
             continue
 
+        # Carry the exact subject/run forward in the manifest: the collect job
+        # embeds the panels without the dataset (or its datalad clone) present,
+        # so provenance has to travel with the manifest rather than be re-resolved.
+        try:
+            manifest.metadata.setdefault("sources", {})[ds.name] = _datasets.source_relpaths(
+                ds.name
+            )
+        except Exception:  # pragma: no cover - provenance is best-effort
+            pass
+
         indices = ds.lovo_indices(dwi)
 
         for spec in model_specs:
@@ -425,6 +435,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 dwi.to_filename(dest)
                 print(f"  saved {dest}", flush=True)
+                # Record which subject/run was used while the datalad clone is
+                # still around; the fit jobs read this instead of re-resolving.
+                sidecar = _datasets.sources_sidecar(ds.name, h5dir)
+                if sidecar is not None:
+                    sidecar.write_text(json.dumps(_datasets.source_relpaths(ds.name)))
+                    print(f"  saved {sidecar}", flush=True)
         return 0
 
     if args.out is None:

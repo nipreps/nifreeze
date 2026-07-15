@@ -32,6 +32,7 @@ used for fast, network-free testing.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -368,8 +369,23 @@ RESOLVERS = {
 }
 
 
+def sources_sidecar(name: str, h5dir: str | Path | None = None) -> Path | None:
+    """Path of the source-provenance sidecar beside the cached ``<name>.h5``."""
+    root = h5dir if h5dir is not None else os.environ.get("NIFREEZE_GALLERY_H5DIR")
+    return Path(root) / f"{name}.sources.json" if root else None
+
+
 def source_relpaths(name: str, cache_root: str | Path | None = None) -> list[str]:
-    """Return the DWI file path(s) (relative to the dataset) actually loaded."""
+    """Return the DWI file path(s) (relative to the dataset) actually loaded.
+
+    Resolving these from the datalad clone is only possible where the clone
+    exists (the fetch stage), so that stage records them in a sidecar next to the
+    cached ``<name>.h5``. This prefers that sidecar, which keeps the parallel fit
+    jobs off the network entirely.
+    """
+    sidecar = sources_sidecar(name)
+    if sidecar is not None and sidecar.is_file():
+        return list(json.loads(sidecar.read_text()))
     ds, triples = RESOLVERS[name](cache_root)
     return [str(dwi.relative_to(ds)) for dwi, _, _ in triples]
 

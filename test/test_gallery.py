@@ -339,16 +339,98 @@ def test_gallery_collect(tmp_path):
     assert (out / "dsX" / "dti_single-fit_001.png").is_file()
 
 
-def test_show_dataset_embed(tmp_path, monkeypatch):
-    """``show_dataset`` embeds pre-rendered panels without re-fitting any model."""
-    pytest.importorskip("IPython")
-    import IPython.display as ipd
-    from gallery import notebook
+def test_gallery_collect_reconciles_missing_cells(tmp_path):
+    """A cell that produced no output is reported as an error, never dropped.
 
-    # A precomputed gallery for a real dataset name (no data touched).
-    (tmp_path / "ds000206").mkdir()
-    (tmp_path / "ds000206" / "dti_lovo_001.png").write_bytes(b"")
+    A timed-out or OOM-killed fit job uploads nothing; the coverage table must
+    still account for it rather than read as if it was never attempted.
+    """
+    import sys
+
+    sys.path.insert(0, "tools")
+    import gallery_collect
+
+    staging = tmp_path / "staging"
+    cell_dir = staging / "gallery-cell-a"
+    cell_dir.mkdir(parents=True)
     GalleryManifest(
+        cells=[CellResult("dsX", SINGLE_SHELL, "gqi", "lovo", STATUS_RAN, indices=[1])]
+    ).to_json(cell_dir / "gallery_manifest.json")
+
+    expected = [
+        {"dataset": "dsX", "model": "gqi", "mode": "lovo", "scheme": SINGLE_SHELL},
+        {"dataset": "dsX", "model": "dki", "mode": "lovo", "scheme": SINGLE_SHELL},  # vanished
+    ]
+    manifest = gallery_collect.collect(staging, tmp_path / "out", expected)
+
+    assert len(manifest.cells) == 2
+    dki = [c for c in manifest.cells if c.model == "dki"][0]
+    assert dki.status == "error"
+    assert "no output produced" in dki.reason
+    # The cell that did report is untouched.
+    assert [c for c in manifest.cells if c.model == "gqi"][0].status == STATUS_RAN
+
+
+def test_dataset_page_rst():
+    """A dataset page embeds the stored panels and reports provenance + coverage."""
+    from gallery.pages import dataset_page_rst
+
+    manifest = GalleryManifest(
+        cells=[
+            CellResult(
+                "ds000206",
+                SINGLE_SHELL,
+                "dti",
+                "lovo",
+                STATUS_RAN,
+                indices=[1],
+                artifacts=["ds000206/dti_lovo_001.png"],
+            ),
+            CellResult(
+                "ds000206",
+                SINGLE_SHELL,
+                "gqi",
+                "single-fit",
+                STATUS_RAN,
+                indices=[1],
+                artifacts=["ds000206/gqi_single-fit_001.png"],
+                canary=True,
+            ),
+            # Another dataset's cells must not leak onto this page.
+            CellResult("ds004737", DSI, "gqi", "lovo", STATUS_RAN, indices=[0]),
+        ],
+        metadata={"sources": {"ds000206": ["sub-THP0001/ses-1/dwi/x_dwi.nii.gz"]}},
+    )
+
+    page = dataset_page_rst(manifest, "ds000206")
+
+    assert ".. _gallery_ds000206:" in page
+    # Figures point at the stored panels, relative to the page.
+    assert ".. figure:: ds000206/dti_lovo_001.png" in page
+    assert ".. figure:: ds000206/gqi_single-fit_001.png" in page
+    # The canary is labelled, and provenance/coverage are present.
+    assert "gqi · single-fit (canary)" in page
+    assert "sub-THP0001/ses-1/dwi/x_dwi.nii.gz" in page
+    assert "list-table" in page
+    # Scoped to this dataset only.
+    assert "ds004737" not in page
+
+
+def test_write_pages_figures_resolve(tmp_path):
+    """Every figure a page references exists next to it after collection.
+
+    A dangling figure path renders an empty gallery without failing anything,
+    so the page and the panels it embeds are checked together.
+    """
+    import re
+
+    from gallery.pages import write_pages
+
+    panels = tmp_path / "panels"
+    (panels / "ds000206").mkdir(parents=True)
+    (panels / "ds000206" / "dti_lovo_001.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+
+    manifest = GalleryManifest(
         cells=[
             CellResult(
                 "ds000206",
@@ -359,20 +441,56 @@ def test_show_dataset_embed(tmp_path, monkeypatch):
                 indices=[1],
                 artifacts=["ds000206/dti_lovo_001.png"],
             )
-        ],
-        metadata={"nifreeze_version": "x"},
-    ).to_json(tmp_path / "gallery_manifest.json")
+        ]
+    )
+    pages_dir = tmp_path / "pages"
+    write_pages(manifest, pages_dir, panels_from=panels, datasets=["ds000206"])
 
-    monkeypatch.setattr(ipd, "display", lambda *a, **k: None)
-    # If embedding fails to short-circuit, run_gallery would be invoked (and fit).
-    import gallery.run as run_mod
+    page = (pages_dir / "ds000206.rst").read_text()
+    figures = re.findall(r"\.\. figure:: (\S+)", page)
+    assert figures
+    for rel in figures:
+        assert (pages_dir / rel).is_file(), f"dangling figure reference: {rel}"
 
-    monkeypatch.setattr(
-        run_mod, "run_gallery", lambda *a, **k: pytest.fail("should not re-fit in embed mode")
+
+def test_write_pages_placeholder_for_unpublished(tmp_path):
+    """Every requested dataset gets a page, so the toctree never dangles."""
+    from gallery.pages import write_pages
+
+    manifest = GalleryManifest(
+        cells=[CellResult("ds000206", SINGLE_SHELL, "dti", "lovo", STATUS_RAN, indices=[1])]
+    )
+    pages = write_pages(manifest, tmp_path, datasets=["ds000206", "ds004737"])
+
+    assert len(pages) == 2
+    assert (tmp_path / "ds000206.rst").is_file()
+    # The dataset with no cells is honest about not being published, not empty.
+    unpublished = (tmp_path / "ds004737.rst").read_text()
+    assert "have not been published yet" in unpublished
+
+
+def test_merge_deep_merges_sources():
+    """Per-dataset ``sources`` survive merging (one fragment knows one dataset)."""
+    a = GalleryManifest(metadata={"sources": {"dsA": ["a.nii.gz"]}, "nifreeze_version": "1"})
+    b = GalleryManifest(metadata={"sources": {"dsB": ["b.nii.gz"]}})
+
+    merged = GalleryManifest.merge([a, b])
+    assert merged.metadata["sources"] == {"dsA": ["a.nii.gz"], "dsB": ["b.nii.gz"]}
+    assert merged.metadata["nifreeze_version"] == "1"
+
+
+def test_source_relpaths_prefers_sidecar(tmp_path, monkeypatch):
+    """The fetch-stage sidecar keeps the fit jobs off datalad entirely."""
+    from gallery import datasets
+
+    monkeypatch.setenv("NIFREEZE_GALLERY_H5DIR", str(tmp_path))
+    (tmp_path / "ds000206.sources.json").write_text('["sub-THP0001/ses-1/dwi/x_dwi.nii.gz"]')
+    # Resolving would clone; the sidecar must short-circuit that.
+    monkeypatch.setitem(
+        datasets.RESOLVERS, "ds000206", lambda *a, **k: pytest.fail("should not clone")
     )
 
-    manifest = notebook.show_dataset("ds000206", out_dir=tmp_path)
-    assert [c.model for c in manifest.cells] == ["dti"]
+    assert datasets.source_relpaths("ds000206") == ["sub-THP0001/ses-1/dwi/x_dwi.nii.gz"]
 
 
 def test_run_gallery_dki_scheme_gating():

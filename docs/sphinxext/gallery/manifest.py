@@ -113,7 +113,14 @@ class GalleryManifest:
         merged = cls()
         for m in manifests:
             merged.cells.extend(m.cells)
-            merged.metadata.update(m.metadata)
+            for key, value in m.metadata.items():
+                # Dict-valued metadata (e.g. per-dataset ``sources``) is merged
+                # key-wise: each fragment only knows about its own dataset, so a
+                # plain update would drop every other fragment's entries.
+                if isinstance(value, dict) and isinstance(merged.metadata.get(key), dict):
+                    merged.metadata[key].update(value)
+                else:
+                    merged.metadata[key] = value
         merged.cells.sort(key=lambda c: (c.dataset, c.model, c.mode))
         return merged
 

@@ -1,0 +1,14 @@
+.. _gallery_ds004737:
+
+==============
+DSI (ds004737)
+==============
+
+.. note::
+
+   Compressed-sensing DSI (q-space grid, HASC92), not a full 258-point grid.
+
+The panels for this dataset have not been published yet. They are produced
+by the ``gallery`` workflow, which fits each *(model × mode)* cell in its own
+job and opens a pull request refreshing these pages.
+

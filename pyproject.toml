@@ -105,10 +105,6 @@ gallery = [
   "coverage",
   "datalad",
   "datalad-next",
-  "ipykernel",
-  "jupyter",
-  "nbclient",
-  "nbconvert",
   "nilearn",
 ]
 

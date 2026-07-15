@@ -87,7 +87,11 @@ jobs:
       - name: Cache the cropped dataset (cross-run)
         uses: actions/cache@v4
         with:
-          path: ${{ env.NIFREEZE_GALLERY_H5DIR }}/${{ matrix.dataset }}.h5
+          # The sidecar must travel with the .h5: without it the fit jobs would
+          # fall back to resolving provenance from the (absent) datalad clone.
+          path: |
+            ${{ env.NIFREEZE_GALLERY_H5DIR }}/${{ matrix.dataset }}.h5
+            ${{ env.NIFREEZE_GALLERY_H5DIR }}/${{ matrix.dataset }}.sources.json
           key: gallery-h5-${{ matrix.dataset }}-v1
       - name: Install package (gallery extra)
         run: |
@@ -99,7 +103,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gallery-data-${{ matrix.dataset }}
-          path: ${{ env.NIFREEZE_GALLERY_H5DIR }}/${{ matrix.dataset }}.h5
+          path: |
+            ${{ env.NIFREEZE_GALLERY_H5DIR }}/${{ matrix.dataset }}.h5
+            ${{ env.NIFREEZE_GALLERY_H5DIR }}/${{ matrix.dataset }}.sources.json
           if-no-files-found: error
           retention-days: 3
 
@@ -137,7 +143,10 @@ jobs:
             --models ${{ matrix.cell.model }} \
             --modes ${{ matrix.cell.mode }} \
             --out "${NIFREEZE_GALLERY_OUT}"
+      # always(): a cell that OOMs or times out may still have rendered panels,
+      # and collect is designed to assemble whatever exists.
       - name: Upload cell output (panels + manifest fragment)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gallery-cell-${{ matrix.cell.dataset }}-${{ matrix.cell.model }}-${{ matrix.cell.mode }}
@@ -145,6 +154,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 3
       - name: Upload coverage fragment
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gallery-cov-${{ matrix.cell.dataset }}-${{ matrix.cell.model }}-${{ matrix.cell.mode }}
@@ -156,7 +166,10 @@ jobs:
   #    notebooks in embed mode (no re-fitting), and open the refresh PR.
   collect:
     needs: [setup, fit]
-    if: always() && needs.fit.result != 'cancelled'
+    # Always assemble whatever the fit stage produced: a failed or timed-out cell
+    # must not cost us the other 29. Missing cells are reconciled below and
+    # reported as errors, so the coverage table stays complete either way.
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -185,7 +198,23 @@ jobs:
           path: gallery-cov
           merge-multiple: true
       - name: Merge panels + manifest
-        run: python tools/gallery_collect.py --staging gallery-staging --out "${NIFREEZE_GALLERY_OUT}"
+        env:
+          EXPECTED: ${{ needs.setup.outputs.matrix }}
+        run: |
+          # setup may have failed (collect still runs): reconcile only if we know
+          # what was expected, rather than dying on an empty matrix.
+          EXPECT_ARG=""
+          if [ -n "${EXPECTED}" ]; then
+            printf '%s' "${EXPECTED}" > expected-cells.json
+            EXPECT_ARG="--expect expected-cells.json"
+          else
+            echo "No expected matrix available; merging fragments without reconciliation."
+          fi
+          python tools/gallery_collect.py \
+            --staging gallery-staging \
+            --out "${NIFREEZE_GALLERY_OUT}" \
+            --pages docs/gallery \
+            ${EXPECT_ARG}
       - name: Combine coverage
         run: |
           if compgen -G "gallery-cov/.coverage.*" > /dev/null; then
@@ -194,11 +223,6 @@ jobs:
           else
             echo "No coverage fragments found; skipping."
           fi
-      - name: Execute notebooks (embed pre-rendered panels)
-        run: |
-          python -m jupyter nbconvert --to notebook --execute --inplace \
-            --ExecutePreprocessor.timeout=1200 \
-            docs/notebooks/gallery/*.ipynb
       - name: Upload gallery output + coverage
         if: always()
         uses: actions/upload-artifact@v4
@@ -208,12 +232,12 @@ jobs:
             ${{ env.NIFREEZE_GALLERY_OUT }}
             coverage-gallery.xml
           if-no-files-found: warn
-      - name: Upload executed notebooks
+      - name: Upload rendered pages
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gallery-notebooks
-          path: docs/notebooks/gallery/*.ipynb
+          name: gallery-pages
+          path: docs/gallery
       - name: Upload coverage to Codecov
         if: hashFiles('coverage-gallery.xml') != ''
         uses: codecov/codecov-action@v4
@@ -221,18 +245,21 @@ jobs:
           files: coverage-gallery.xml
           flags: gallery
           fail_ci_if_error: false
-      # On manual dispatch, open a PR refreshing the committed notebook outputs.
+      # On manual dispatch, open a PR refreshing the committed gallery pages.
       # Scheduled runs only publish artifacts (avoids noisy auto-commits, e.g.
       # from GP run-to-run variation) — a maintainer refreshes deliberately.
       - name: Open refresh PR
         if: github.event_name == 'workflow_dispatch' && github.repository == 'nipreps/nifreeze'
         uses: peter-evans/create-pull-request@v7
         with:
-          branch: gallery/refresh-notebooks
-          title: "DOC: Refresh prediction gallery notebook outputs"
-          commit-message: "doc(gallery): refresh executed notebook outputs"
+          branch: gallery/refresh-pages
+          title: "DOC: Refresh prediction gallery"
+          commit-message: "doc(gallery): refresh rendered pages and panels"
           body: |
-            Automated refresh of the prediction gallery notebook outputs
-            (`docs/notebooks/gallery/*.ipynb`), generated by the `gallery` workflow.
-          add-paths: docs/notebooks/gallery/*.ipynb
+            Automated refresh of the prediction gallery (`docs/gallery/`), generated
+            by the `gallery` workflow: one reStructuredText page per dataset over the
+            panels rendered by the per-cell fit jobs.
+
+            Check the coverage table on each page for cells reported as errored.
+          add-paths: docs/gallery
           delete-branch: true
