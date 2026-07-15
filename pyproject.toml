@@ -240,6 +240,7 @@ markers = [
   "random_pet_data: Custom marker for random pet data tests",
   "random_uniform_ndim_data: Custom marker for random multi-dimensional data tests",
   "random_uniform_spatial_data: Custom marker for random spatial data tests",
+  "memory: Opt-in peak-RSS memory tests (heavier fixtures; run explicitly with -m memory)",
 ]
 filterwarnings = [
   "ignore::DeprecationWarning",
