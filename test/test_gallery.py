@@ -130,6 +130,22 @@ def test_run_gallery_average_single_shell():
     assert _cell(manifest, "average", "single-fit").status == STATUS_RAN
 
 
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def test_run_gallery_single_fit_canary():
+    """The gallery captures the self-consistency-canary warning for GQI/GP."""
+    spec = synthetic_spec(SINGLE_SHELL, n_directions=14)
+    manifest = run_gallery(
+        [spec], model_keys=["dti", "gqi", "gp-spherical", "average"], render=False
+    )
+
+    assert _cell(manifest, "gqi", "single-fit").canary is True
+    assert _cell(manifest, "gp-spherical", "single-fit").canary is True
+    assert _cell(manifest, "dti", "single-fit").canary is False
+    assert _cell(manifest, "average", "single-fit").canary is False
+    # LOVO is never a canary.
+    assert _cell(manifest, "gqi", "lovo").canary is False
+
+
 def test_run_gallery_dti_renders(tmp_path):
     """DTI runs both modes and writes figures + a manifest to disk."""
     spec = synthetic_spec(SINGLE_SHELL, n_directions=20)

@@ -35,6 +35,16 @@ PREDICTED_MAP_ERROR_MSG = "This model requires the predicted map at initializati
 """Oracle requirement error message."""
 UNSUPPORTED_MODEL_ERROR_MSG = "Unsupported model <{model}>."
 """Unsupported model error message"""
+SINGLE_FIT_CANARY_MSG = (
+    "Single-fit for this model is a self-consistency check (canary): the held-out "
+    "volume is also in the training set, so it is reproduced near-perfectly. It "
+    "validates the implementation rather than being a genuine prediction."
+)
+"""Single-fit canary warning message."""
+
+
+class SingleFitCanaryWarning(UserWarning):
+    """Single-fit for this model only makes sense as a self-consistency canary."""
 
 
 class ModelFactory:

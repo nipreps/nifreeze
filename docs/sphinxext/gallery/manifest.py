@@ -63,6 +63,8 @@ class CellResult:
     """Held-out/predicted volume indices."""
     artifacts: list[str] = field(default_factory=list)
     """Paths (relative to the output directory) of rendered figures."""
+    canary: bool = False
+    """Whether single-fit here is only a self-consistency canary (warning captured)."""
 
 
 @dataclass
@@ -146,8 +148,9 @@ class GalleryManifest:
             "| --- | --- | --- | --- | :-: | --- |",
         ]
         for cell in self.cells:
+            mode = f"{cell.mode} (canary)" if cell.canary else cell.mode
             lines.append(
-                f"| {cell.dataset} | {cell.scheme} | {cell.model} | {cell.mode} "
+                f"| {cell.dataset} | {cell.scheme} | {cell.model} | {mode} "
                 f"| {symbol.get(cell.status, cell.status)} | {cell.reason or ''} |"
             )
         return "\n".join(lines)

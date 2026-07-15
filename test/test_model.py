@@ -432,12 +432,53 @@ def test_gpmodel_fit_predict(request):
     assert np.all(np.isfinite(predicted))
 
     # Single-fit: locks the fit (returns None), then predicts from the locked fit.
+    # GP single-fit is a self-consistency canary, so it warns.
+    from nifreeze.model.base import SingleFitCanaryWarning
+
     gp2 = GPModel(dwi, kernel_model="spherical")
-    assert gp2.fit_predict(None) is None
+    with pytest.warns(SingleFitCanaryWarning):
+        assert gp2.fit_predict(None) is None
     assert gp2._locked_fit is True
     predicted2 = gp2.fit_predict(0)
     assert predicted2 is not None
     assert predicted2.shape == size
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def test_single_fit_canary_warning(request):
+    """Canary models (GQI, GP) warn on single-fit; DTI and average do not."""
+    import warnings
+
+    from nifreeze.model.base import SingleFitCanaryWarning
+    from nifreeze.model.dmri import AverageDWIModel, DTIModel, GPModel, GQIModel
+
+    rng = request.node.rng
+    size = (2, 2, 2)
+    n_dirs = 20
+    bvecs = rng.normal(size=(n_dirs, 3))
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+    bvecs = np.vstack([np.zeros((1, 3)), bvecs])
+    bvals = np.concatenate([[0.0], np.full(n_dirs, 1000.0)])
+    gradients = np.column_stack([bvecs, bvals])
+    dwi = DWI(
+        dataobj=rng.uniform(50.0, 1000.0, size=(*size, n_dirs + 1)).astype("float32"),
+        affine=np.eye(4),
+        brainmask=np.ones(size, dtype=bool),
+        gradients=gradients,
+    )
+
+    def warns(model) -> bool:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            model.fit_predict(None)
+        return any(issubclass(w.category, SingleFitCanaryWarning) for w in caught)
+
+    # Self-reconstructing models: single-fit is only a self-consistency canary.
+    assert warns(GQIModel(dwi)) is True
+    assert warns(GPModel(dwi, kernel_model="spherical")) is True
+    # Constrained / averaging models: single-fit is a genuine operation.
+    assert warns(DTIModel(dwi)) is False
+    assert warns(AverageDWIModel(dwi)) is False
 
 
 def test_model_capability_contract():

@@ -135,15 +135,23 @@ def _run_cell(
     render: bool,
 ) -> CellResult:
     """Build, fit/predict, and render a single applicable cell."""
+    import warnings
+
     from gallery.render import save_covariance_plot, save_slice_panel
+    from nifreeze.model.base import SingleFitCanaryWarning
 
     model = build_model(spec, dwi)
     fit_shared = 0.0
+    canary = False
     if mode == "single-fit":
-        # Lock the fit once on all volumes, then predict held-in orientations.
-        t0 = time.perf_counter()
-        model.fit_predict(None)
-        fit_shared = time.perf_counter() - t0
+        # Lock the fit once on all volumes, capturing the self-consistency-canary
+        # warning (if the model emits it) rather than reading a model attribute.
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            t0 = time.perf_counter()
+            model.fit_predict(None)
+            fit_shared = time.perf_counter() - t0
+        canary = any(issubclass(w.category, SingleFitCanaryWarning) for w in caught)
 
     artifacts: list[str] = []
     used_indices: list[int] = []
@@ -156,8 +164,9 @@ def _run_cell(
         if render and out_dir is not None:
             observed = dwi[idx][0]
             rel = f"{dataset_name}/{spec.key}_{mode}_{idx:03d}.png"
+            canary_tag = " · canary" if canary else ""
             title = (
-                f"{dataset_name} · {spec.label} · {mode} · vol {idx}    "
+                f"{dataset_name} · {spec.label} · {mode}{canary_tag} · vol {idx}    "
                 f"(fit {_fmt_seconds(fit_s)}, predict {_fmt_seconds(predict_s)})"
             )
             save_slice_panel(
@@ -189,6 +198,7 @@ def _run_cell(
         status=STATUS_RAN,
         indices=used_indices,
         artifacts=artifacts,
+        canary=canary,
     )
 
 
