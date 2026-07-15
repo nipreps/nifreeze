@@ -338,6 +338,23 @@ def test_to_filename_and_from_filename(random_dataset: BaseDataset):
         assert np.allclose(random_dataset.dataobj, ds2.dataobj)
 
 
+def test_from_filename_compressed_roundtrip(random_dataset: BaseDataset):
+    """A compressed (chunked) dataobj is not directly mappable and is streamed.
+
+    Exercises the streaming fallback in ``open_dataobj_memmap``: gzip forces a
+    chunked layout, so the raw block cannot be memory-mapped in place and is
+    copied volume-by-volume into a ``.npy`` memmap instead.
+    """
+    with TemporaryDirectory() as tmpdir:
+        h5_file = Path(tmpdir) / f"compressed{NFDH5_EXT}"
+        random_dataset.to_filename(h5_file, compression="gzip")
+
+        ds2: BaseDataset[Any] = BaseDataset.from_filename(h5_file)
+        assert isinstance(ds2.dataobj, np.memmap)  # streamed into a memmap, still lazy
+        assert ds2.dataobj.shape == (32, 32, 32, 5)
+        assert np.allclose(random_dataset.dataobj, ds2.dataobj)
+
+
 def test_object_to_nifti(random_dataset: BaseDataset):
     """Test writing a dataset to a NIfTI file."""
     with TemporaryDirectory() as tmpdir:
