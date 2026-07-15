@@ -29,6 +29,8 @@ of the whole array. They fail on an eager (in-RAM) implementation and pass on
 the memory-mapped one.
 """
 
+from typing import Any
+
 import h5py
 import numpy as np
 import pytest
@@ -57,7 +59,7 @@ def test_from_filename_peak_rss(peak_rss, tmp_path):
     h5 = _write_dataset(tmp_path / "big.h5")
 
     def _load_and_index(p):
-        ds = BaseDataset.from_filename(p)
+        ds: BaseDataset[Any] = BaseDataset.from_filename(p)
         # Touch a single volume only — never the whole array.
         _ = np.asarray(ds[len(ds) // 2][0]).sum()
 
@@ -71,7 +73,7 @@ def test_from_filename_peak_rss(peak_rss, tmp_path):
 def test_from_filename_returns_memmap(tmp_path):
     """The loaded ``dataobj`` is a memory-mapped ndarray subclass."""
     h5 = _write_dataset(tmp_path / "big.h5")
-    ds = BaseDataset.from_filename(h5)
+    ds: BaseDataset[Any] = BaseDataset.from_filename(h5)
     assert isinstance(ds.dataobj, np.memmap)
     assert isinstance(ds.dataobj, np.ndarray)  # subclass — consumer contract holds
 
@@ -83,7 +85,7 @@ def test_from_filename_roundtrip_values(tmp_path):
     h5 = tmp_path / "big.h5"
     BaseDataset(dataobj=expected, affine=np.eye(4)).to_filename(h5)
 
-    ds = BaseDataset.from_filename(h5)
+    ds: BaseDataset[Any] = BaseDataset.from_filename(h5)
     assert ds.dataobj.shape == _SHAPE
     for i in range(_SHAPE[-1]):
         np.testing.assert_allclose(ds[i][0], expected[..., i])

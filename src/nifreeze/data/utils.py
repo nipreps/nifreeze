@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from tempfile import mkdtemp
+from typing import Literal
 
 import attrs
 import h5py
@@ -63,9 +64,9 @@ def save_dataobj_volume_major(
 def open_dataobj_memmap(
     filename: Path | str,
     key: str = "/0/dataobj",
-    mode: str = "c",
+    mode: Literal["r", "c", "r+"] = "c",
     cache_dir: Path | str | None = None,
-) -> np.memmap:
+) -> np.ndarray:
     """Open a 4D ``dataobj`` as a lazy, per-volume-local :obj:`~numpy.memmap`.
 
     The returned array always has the in-memory shape ``(X, Y, Z, N)`` so that
@@ -93,6 +94,7 @@ def open_dataobj_memmap(
 
     if volume_major:
         if mappable:
+            assert offset is not None  # guaranteed by mappable
             mm = np.memmap(filename, dtype=dtype, mode=mode, offset=offset, shape=shape, order="C")
             return np.moveaxis(mm, 0, -1)
         # Compressed/chunked volume-major: stream (N, X, Y, Z) then transpose.
