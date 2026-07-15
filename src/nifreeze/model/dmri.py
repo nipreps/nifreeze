@@ -189,6 +189,14 @@ def _append_bzero(dataobj, gtab, bzero=None):
 class BaseDWIModel(BaseModel):
     """Interface and default methods for DWI models."""
 
+    applicable_schemes: frozenset[str] = frozenset({"single-shell", "multi-shell", "DSI"})
+    """Acquisition schemes (as labelled by
+    :func:`~nifreeze.data.dmri.utils.find_shelling_scheme`) the model supports."""
+    requires_multishell: bool = False
+    """Whether the model requires more than one non-zero shell."""
+    excludes_b0: bool = False
+    """Whether ``b=0`` volumes are excluded from fitting/prediction."""
+
     __slots__ = {
         "_max_b": "The maximum b-value supported by the model",
         "_data_mask": "A mask for the voxels that will be fitted and predicted",

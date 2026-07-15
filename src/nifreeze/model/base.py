@@ -107,13 +107,6 @@ class BaseModel(ABC):
 
     supports_single_fit: bool = True
     """Whether the model can be fit once on all volumes (``index=None``)."""
-    applicable_schemes: frozenset[str] = frozenset({"single-shell", "multi-shell", "DSI"})
-    """Acquisition schemes (as labelled by
-    :func:`~nifreeze.data.dmri.utils.find_shelling_scheme`) the model supports."""
-    requires_multishell: bool = False
-    """Whether the model requires more than one non-zero shell."""
-    excludes_b0: bool = False
-    """Whether ``b=0`` volumes are excluded from fitting/prediction."""
 
     __slots__ = {
         "_dataset": "The NiFreeze dataset instance this model operates on",

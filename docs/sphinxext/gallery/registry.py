@@ -34,6 +34,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
+from gallery.datasets import SCHEMES
 from nifreeze.data.dmri import DWI
 from nifreeze.model.base import BaseModel, ModelFactory
 from nifreeze.model.dmri import (
@@ -43,6 +44,9 @@ from nifreeze.model.dmri import (
     GPModel,
     GQIModel,
 )
+
+#: Every acquisition scheme — the default for a model without ``applicable_schemes``.
+ANY_SCHEME = frozenset(SCHEMES)
 
 #: Gallery prediction modes.
 GALLERY_MODES = ("lovo", "single-fit")
@@ -67,8 +71,10 @@ class ModelSpec:
 
     @property
     def applicable_schemes(self) -> frozenset[str]:
-        """Schemes this spec applies to (override or the class default)."""
-        return self.scheme_override or self.model_cls.applicable_schemes
+        """Schemes this spec applies to; a model without the attribute means any."""
+        if self.scheme_override is not None:
+            return self.scheme_override
+        return getattr(self.model_cls, "applicable_schemes", ANY_SCHEME)
 
     @property
     def supports_single_fit(self) -> bool:

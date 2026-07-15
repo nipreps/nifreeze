@@ -444,17 +444,20 @@ def test_model_capability_contract():
     """The declarative capability attributes match each model's real constraints."""
     from nifreeze.model.base import BaseModel
     from nifreeze.model.dmri import (
+        BaseDWIModel,
         DKIModel,
         DTIModel,
         GPModel,
         GQIModel,
     )
 
-    # Defaults: permissive on the base class.
+    # supports_single_fit is modality-agnostic (lives on the base model).
     assert BaseModel.supports_single_fit is True
-    assert BaseModel.requires_multishell is False
-    assert BaseModel.excludes_b0 is False
-    assert BaseModel.applicable_schemes == frozenset({"single-shell", "multi-shell", "DSI"})
+
+    # The scheme/shell/b0 attributes are DWI-specific (live on BaseDWIModel).
+    assert BaseDWIModel.requires_multishell is False
+    assert BaseDWIModel.excludes_b0 is False
+    assert BaseDWIModel.applicable_schemes == frozenset({"single-shell", "multi-shell", "DSI"})
 
     # DTI is a low-b tensor fit; DSI is out of scope.
     assert DTIModel.applicable_schemes == frozenset({"single-shell", "multi-shell"})
