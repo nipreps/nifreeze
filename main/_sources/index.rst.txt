@@ -15,6 +15,7 @@ Contents
     installation
     design
     models
+    gallery
     usage
     running
     developers
