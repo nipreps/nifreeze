@@ -366,6 +366,7 @@ def test_gallery_collect_reconciles_missing_cells(tmp_path):
     assert len(manifest.cells) == 2
     dki = [c for c in manifest.cells if c.model == "dki"][0]
     assert dki.status == "error"
+    assert dki.reason is not None
     assert "no output produced" in dki.reason
     # The cell that did report is untouched.
     assert [c for c in manifest.cells if c.model == "gqi"][0].status == STATUS_RAN
