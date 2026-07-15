@@ -4,11 +4,153 @@
 Legacy DTI (ds000206)
 =====================
 
+**Source:** `OpenNeuro ds000206 <https://openneuro.org/datasets/ds000206>`__ — ``sub-THP0001/ses-THP0001CCF1/dwi/sub-THP0001_ses-THP0001CCF1_acq-GD31_run-01_dwi.nii.gz``
+
 .. note::
 
    Traveling human phantom; 30 directions at b=1000 s/mm² (GD31).
 
-The panels for this dataset have not been published yet. They are produced
-by the ``gallery`` workflow, which fits each *(model × mode)* cell in its own
-job and opens a pull request refreshing these pages.
+Predicted diffusion volumes for the **Legacy DTI (ds000206)** dataset, across every
+applicable model in both **LOVO** (leave-one-volume-out, holding out the
+predicted orientation) and **single-fit** (fit once on all volumes) modes.
+
+Coverage
+--------
+
+.. list-table:: Gallery coverage
+   :header-rows: 1
+   :widths: 18 14 16 12 8 32
+
+   * - Dataset
+     - Scheme
+     - Model
+     - Mode
+     - Ran
+     - Reason
+   * - ds000206
+     - single-shell
+     - average
+     - lovo
+     - ✓
+     - 
+   * - ds000206
+     - single-shell
+     - average
+     - single-fit
+     - ✓
+     - 
+   * - ds000206
+     - single-shell
+     - dti
+     - lovo
+     - ✓
+     - 
+   * - ds000206
+     - single-shell
+     - dti
+     - single-fit
+     - ✓
+     - 
+   * - ds000206
+     - single-shell
+     - gp-spherical
+     - lovo
+     - ✓
+     - 
+   * - ds000206
+     - single-shell
+     - gp-spherical
+     - single-fit
+     - ✓
+     - 
+   * - ds000206
+     - single-shell
+     - gqi
+     - lovo
+     - ✓
+     - 
+   * - ds000206
+     - single-shell
+     - gqi
+     - single-fit
+     - ✓
+     - 
+
+average · lovo
+--------------
+
+.. figure:: ds000206/average_lovo_010.png
+   :alt: average lovo ds000206
+
+.. figure:: ds000206/average_lovo_019.png
+   :alt: average lovo ds000206
+
+average · single-fit
+--------------------
+
+.. figure:: ds000206/average_single-fit_010.png
+   :alt: average single-fit ds000206
+
+.. figure:: ds000206/average_single-fit_019.png
+   :alt: average single-fit ds000206
+
+dti · lovo
+----------
+
+.. figure:: ds000206/dti_lovo_010.png
+   :alt: dti lovo ds000206
+
+.. figure:: ds000206/dti_lovo_019.png
+   :alt: dti lovo ds000206
+
+dti · single-fit
+----------------
+
+.. figure:: ds000206/dti_single-fit_010.png
+   :alt: dti single-fit ds000206
+
+.. figure:: ds000206/dti_single-fit_019.png
+   :alt: dti single-fit ds000206
+
+gp-spherical · lovo
+-------------------
+
+.. figure:: ds000206/gp-spherical_lovo_010.png
+   :alt: gp-spherical lovo ds000206
+
+.. figure:: ds000206/gp-spherical_lovo_019.png
+   :alt: gp-spherical lovo ds000206
+
+.. figure:: ds000206/gp-spherical_lovo_covariance.png
+   :alt: gp-spherical lovo ds000206
+
+gp-spherical · single-fit (canary)
+----------------------------------
+
+.. figure:: ds000206/gp-spherical_single-fit_010.png
+   :alt: gp-spherical single-fit ds000206
+
+.. figure:: ds000206/gp-spherical_single-fit_019.png
+   :alt: gp-spherical single-fit ds000206
+
+.. figure:: ds000206/gp-spherical_single-fit_covariance.png
+   :alt: gp-spherical single-fit ds000206
+
+gqi · lovo
+----------
+
+.. figure:: ds000206/gqi_lovo_010.png
+   :alt: gqi lovo ds000206
+
+.. figure:: ds000206/gqi_lovo_019.png
+   :alt: gqi lovo ds000206
+
+gqi · single-fit (canary)
+-------------------------
+
+.. figure:: ds000206/gqi_single-fit_010.png
+   :alt: gqi single-fit ds000206
+
+.. figure:: ds000206/gqi_single-fit_019.png
+   :alt: gqi single-fit ds000206
 
