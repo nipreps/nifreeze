@@ -1,0 +1,14 @@
+.. _gallery_ds000114:
+
+=============================
+Single-shell HARDI (ds000114)
+=============================
+
+.. note::
+
+   64 directions at b=1000 s/mm² (milder than textbook high-b HARDI).
+
+The panels for this dataset have not been published yet. They are produced
+by the ``gallery`` workflow, which fits each *(model × mode)* cell in its own
+job and opens a pull request refreshing these pages.
+
