@@ -35,6 +35,16 @@ PREDICTED_MAP_ERROR_MSG = "This model requires the predicted map at initializati
 """Oracle requirement error message."""
 UNSUPPORTED_MODEL_ERROR_MSG = "Unsupported model <{model}>."
 """Unsupported model error message"""
+SINGLE_FIT_CANARY_MSG = (
+    "Single-fit for this model is a self-consistency check (canary): the held-out "
+    "volume is also in the training set, so it is reproduced near-perfectly. It "
+    "validates the implementation rather than being a genuine prediction."
+)
+"""Single-fit canary warning message."""
+
+
+class SingleFitCanaryWarning(UserWarning):
+    """Single-fit for this model only makes sense as a self-consistency canary."""
 
 
 class ModelFactory:
@@ -49,7 +59,11 @@ class ModelFactory:
         ----------
         model : :obj:`str`
             Diffusion model.
-            Options: ``"DTI"``, ``"DKI"``, ``"S0"``, ``"AverageDWI"``
+            Options: ``"DTI"``, ``"DKI"``, ``"GQI"``, ``"GP"``, ``"S0"``,
+            ``"AverageDWI"``. ``"GP"`` (aliases ``"GPR"``,
+            ``"GaussianProcess"``) builds a
+            :obj:`~nifreeze.model.dmri.GPModel`; pass ``kernel_model`` through
+            ``kwargs`` to select the covariance.
 
         Return
         ------
@@ -70,6 +84,11 @@ class ModelFactory:
             from nifreeze.model.dmri import AverageDWIModel
 
             return AverageDWIModel(kwargs.pop("dataset"), **kwargs)
+
+        if model.lower() in ("gp", "gpr", "gaussianprocess"):
+            from nifreeze.model.dmri import GPModel
+
+            return GPModel(kwargs.pop("dataset"), **kwargs)
 
         if model.lower() in ("gqi", "dti", "dki", "pet"):
             from importlib import import_module
@@ -95,6 +114,10 @@ class BaseModel(ABC):
     """
 
     __metaclass__ = ABCMeta
+
+    single_fit_is_canary: bool = False
+    """Whether single-fit only makes sense as a self-consistency canary (see
+    :meth:`_warn_single_fit_canary`)."""
 
     __slots__ = {
         "_dataset": "The NiFreeze dataset instance this model operates on",
@@ -139,6 +162,11 @@ class BaseModel(ABC):
 
         """
         return None
+
+    def _warn_single_fit_canary(self) -> None:
+        """Warn if single-fit for this model is only a self-consistency canary."""
+        if self.single_fit_is_canary:
+            warn(SINGLE_FIT_CANARY_MSG, SingleFitCanaryWarning, stacklevel=3)
 
 
 class TrivialModel(BaseModel):

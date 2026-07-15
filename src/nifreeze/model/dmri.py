@@ -189,6 +189,14 @@ def _append_bzero(dataobj, gtab, bzero=None):
 class BaseDWIModel(BaseModel):
     """Interface and default methods for DWI models."""
 
+    applicable_schemes: frozenset[str] = frozenset({"single-shell", "multi-shell", "DSI"})
+    """Acquisition schemes (as labelled by
+    :func:`~nifreeze.data.dmri.utils.find_shelling_scheme`) the model supports."""
+    requires_multishell: bool = False
+    """Whether the model requires more than one non-zero shell."""
+    excludes_b0: bool = False
+    """Whether ``b=0`` volumes are excluded from fitting/prediction."""
+
     __slots__ = {
         "_max_b": "The maximum b-value supported by the model",
         "_data_mask": "A mask for the voxels that will be fitted and predicted",
@@ -276,6 +284,7 @@ class BaseDWIModel(BaseModel):
             idxmask[index] = False
         else:
             self._locked_fit = True
+            self._warn_single_fit_canary()
 
         data, _, gtab = self._dataset[idxmask]
         # Select voxels within mask or just unravel 3D if no mask
@@ -443,16 +452,16 @@ class AverageDWIModel(ExpectationModel):
         """Return the average map."""
 
         if index is None:
-            raise RuntimeError(f"Model {self.__class__.__name__} does not allow locking.")
-
-        shellmask = dwi_select_shells(
-            self._dataset.gradients,
-            index,
-            atol_low=self._atol_low,
-            atol_high=self._atol_high,
-        )
-
-        shelldata = self._dataset.dataobj[..., shellmask]
+            # Single-fit: average across all volumes.
+            shelldata = self._dataset.dataobj
+        else:
+            shellmask = dwi_select_shells(
+                self._dataset.gradients,
+                index,
+                atol_low=self._atol_low,
+                atol_high=self._atol_high,
+            )
+            shelldata = self._dataset.dataobj[..., shellmask]
 
         # Regress out global signal differences
         if self._detrend:
@@ -468,6 +477,8 @@ class AverageDWIModel(ExpectationModel):
 class DTIModel(BaseDWIModel):
     """A wrapper of :obj:`dipy.reconst.dti.TensorModel`."""
 
+    applicable_schemes = frozenset({"single-shell", "multi-shell"})
+
     _modelargs = (
         "min_signal",
         "return_S0_hat",
@@ -482,12 +493,20 @@ class DTIModel(BaseDWIModel):
 class DKIModel(BaseDWIModel):
     """A wrapper of :obj:`~nifreeze.model.dki.DiffusionKurtosisModel`."""
 
+    requires_multishell = True
+    applicable_schemes = frozenset({"multi-shell"})
+
     _modelargs = DTIModel._modelargs
     _model_class = "nifreeze.model.dki.DiffusionKurtosisModel"
 
 
 class GQIModel(BaseDWIModel):
     """A wrapper of :obj:`nifreeze.model.gqi.GeneralizedQSamplingModel`."""
+
+    # GQI fitting/prediction drops b=0 volumes (see :mod:`nifreeze.model.gqi`).
+    excludes_b0 = True
+    # GQI reconstructs the signal itself, so single-fit only self-consistency-checks.
+    single_fit_is_canary = True
 
     _modelargs = (
         "method",
@@ -499,7 +518,62 @@ class GQIModel(BaseDWIModel):
 
 
 class GPModel(BaseDWIModel):
-    """A wrapper of :obj:`~nifreeze.model.dipy.GaussianProcessModel`."""
+    """A wrapper of :obj:`~nifreeze.model.dipy.GaussianProcessModel`.
+
+    The Gaussian process does not follow the DIPY ``Model(gtab).fit(data)``
+    convention that :class:`BaseDWIModel` implements: it is constructed from a
+    ``kernel_model`` and receives the gradient table at ``fit`` time, fitting all
+    voxels at once (vectorized across GP targets). ``_fit``/``fit_predict`` are
+    therefore overridden here rather than reusing the chunked DIPY path.
+    """
+
+    applicable_schemes = frozenset({"single-shell", "multi-shell"})
+    # The GP interpolates the signal, so single-fit reproduces held-in volumes.
+    single_fit_is_canary = True
 
     _modelargs = ("kernel_model", "beta_l", "beta_a", "sigma_sq", "ell")
     _model_class = "nifreeze.model._dipy.GaussianProcessModel"
+
+    def _fit(self, index: int | None = None, n_jobs: int | None = None, **kwargs) -> int:
+        """Fit a single Gaussian process over all masked voxels."""
+
+        if self._locked_fit is not None:
+            return len(self._models)
+
+        idxmask = np.ones(len(self._dataset), dtype=bool)
+        if index is not None:
+            idxmask[index] = False
+        else:
+            self._locked_fit = True
+            self._warn_single_fit_canary()
+
+        data, _, gtab = self._dataset[idxmask]
+        # Restrict to the fitted voxels so predictions align with the scatter
+        # mask used in ``fit_predict``.
+        train = data[self._data_mask, ...]
+        gtab = gradient_table_from_bvals_bvecs(gtab[:, -1], gtab[:, :-1])
+
+        module_name, class_name = self._model_class.rsplit(".", 1)
+        gp = getattr(import_module(module_name), class_name)(**self._model_kwargs)
+        # ``GaussianProcessModel.fit`` takes ``(data, gtab)`` and returns a fit
+        # container whose ``predict(gtab)`` yields the signal at new orientations.
+        self._models = [gp.fit(train, gtab)]
+        return 1
+
+    def fit_predict(self, index: int | None = None, **kwargs) -> Union[np.ndarray, None]:
+        """Fit the GP (LOVO or single-fit) and predict the held-out orientation."""
+
+        kwargs.pop("omp_nthreads", None)
+        self._fit(index, n_jobs=kwargs.pop("n_jobs", None))
+
+        if index is None:
+            return None
+
+        gradient = self._dataset.gradients[index, :]
+        gtab = gradient_table_from_bvals_bvecs(gradient[np.newaxis, -1], gradient[np.newaxis, :-1])
+        predicted = np.squeeze(self._models[0].predict(gtab))
+
+        out_dtype = np.result_type(predicted.dtype, np.float32)
+        retval = np.zeros(self._data_mask.shape, dtype=out_dtype)
+        retval[self._data_mask, ...] = predicted
+        return retval

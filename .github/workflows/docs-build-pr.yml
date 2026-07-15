@@ -32,10 +32,10 @@ jobs:
         echo "Building branch/tag ${CURBRANCH:-<unkwown>}, from git ref <$GITHUB_REF>"
         echo "CURBRANCH=${CURBRANCH}" >> ${GITHUB_ENV}
 
-    - name: Install GraphViz
+    - name: Install GraphViz and pandoc
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y --no-install-recommends graphviz
+        sudo apt-get install -y --no-install-recommends graphviz pandoc
 
     - name: Install dependencies
       run: |

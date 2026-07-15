@@ -101,11 +101,21 @@ benchmark = [
   "pyperf",
   "virtualenv==20.38.0",
 ]
+gallery = [
+  "coverage",
+  "datalad",
+  "datalad-next",
+  "ipykernel",
+  "jupyter",
+  "nbclient",
+  "nbconvert",
+  "nilearn",
+]
 
 # Aliases
 docs = ["nifreeze[doc]"]
 tests = ["nifreeze[test]"]
-all = ["nifreeze[antsopt,benchmark,dev,doc,notebooks,plotting,resmon,test,types]"]
+all = ["nifreeze[antsopt,benchmark,dev,doc,gallery,notebooks,plotting,resmon,test,types]"]
 
 [project.scripts]
 nifreeze = "nifreeze.cli.run:main"
@@ -143,9 +153,12 @@ version-file = "src/nifreeze/_version.py"
 
 [tool.mypy]
 check_untyped_defs = true
+# The prediction-gallery package lives under docs/ (docs tooling, not shipped).
+mypy_path = "docs/sphinxext"
 
 [[tool.mypy.overrides]]
 module = [
+  "IPython.*",
   "nipype.*",
   "nilearn.*",
   "nireports.*",
@@ -213,7 +226,7 @@ quote-style = "double"
 known-first-party=["nifreeze"]
 
 [tool.pytest.ini_options]
-pythonpath = "src/ test/"
+pythonpath = "src/ test/ docs/sphinxext/"
 norecursedirs = [".*", "_*"]
 addopts = "-v --doctest-modules"
 doctest_optionflags = "ALLOW_UNICODE NORMALIZE_WHITESPACE ELLIPSIS"

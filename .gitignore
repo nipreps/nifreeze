@@ -118,3 +118,4 @@ kubernetes/jobs/
 src/nifreeze/_version.py
 # LLM-Wiki: original source PDFs backing wiki pages (not versioned)
 .wiki/_sources/
+.local.yaml
