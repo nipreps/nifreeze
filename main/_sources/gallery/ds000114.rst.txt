@@ -4,11 +4,153 @@
 Single-shell HARDI (ds000114)
 =============================
 
+**Source:** `OpenNeuro ds000114 <https://openneuro.org/datasets/ds000114>`__ — ``sub-01/ses-test/dwi/sub-01_ses-test_dwi.nii.gz``
+
 .. note::
 
    64 directions at b=1000 s/mm² (milder than textbook high-b HARDI).
 
-The panels for this dataset have not been published yet. They are produced
-by the ``gallery`` workflow, which fits each *(model × mode)* cell in its own
-job and opens a pull request refreshing these pages.
+Predicted diffusion volumes for the **Single-shell HARDI (ds000114)** dataset, across every
+applicable model in both **LOVO** (leave-one-volume-out, holding out the
+predicted orientation) and **single-fit** (fit once on all volumes) modes.
+
+Coverage
+--------
+
+.. list-table:: Gallery coverage
+   :header-rows: 1
+   :widths: 18 14 16 12 8 32
+
+   * - Dataset
+     - Scheme
+     - Model
+     - Mode
+     - Ran
+     - Reason
+   * - ds000114
+     - single-shell
+     - average
+     - lovo
+     - ✓
+     - 
+   * - ds000114
+     - single-shell
+     - average
+     - single-fit
+     - ✓
+     - 
+   * - ds000114
+     - single-shell
+     - dti
+     - lovo
+     - ✓
+     - 
+   * - ds000114
+     - single-shell
+     - dti
+     - single-fit
+     - ✓
+     - 
+   * - ds000114
+     - single-shell
+     - gp-spherical
+     - lovo
+     - ✓
+     - 
+   * - ds000114
+     - single-shell
+     - gp-spherical
+     - single-fit
+     - ✓
+     - 
+   * - ds000114
+     - single-shell
+     - gqi
+     - lovo
+     - ✓
+     - 
+   * - ds000114
+     - single-shell
+     - gqi
+     - single-fit
+     - ✓
+     - 
+
+average · lovo
+--------------
+
+.. figure:: ds000114/average_lovo_021.png
+   :alt: average lovo ds000114
+
+.. figure:: ds000114/average_lovo_042.png
+   :alt: average lovo ds000114
+
+average · single-fit
+--------------------
+
+.. figure:: ds000114/average_single-fit_021.png
+   :alt: average single-fit ds000114
+
+.. figure:: ds000114/average_single-fit_042.png
+   :alt: average single-fit ds000114
+
+dti · lovo
+----------
+
+.. figure:: ds000114/dti_lovo_021.png
+   :alt: dti lovo ds000114
+
+.. figure:: ds000114/dti_lovo_042.png
+   :alt: dti lovo ds000114
+
+dti · single-fit
+----------------
+
+.. figure:: ds000114/dti_single-fit_021.png
+   :alt: dti single-fit ds000114
+
+.. figure:: ds000114/dti_single-fit_042.png
+   :alt: dti single-fit ds000114
+
+gp-spherical · lovo
+-------------------
+
+.. figure:: ds000114/gp-spherical_lovo_021.png
+   :alt: gp-spherical lovo ds000114
+
+.. figure:: ds000114/gp-spherical_lovo_042.png
+   :alt: gp-spherical lovo ds000114
+
+.. figure:: ds000114/gp-spherical_lovo_covariance.png
+   :alt: gp-spherical lovo ds000114
+
+gp-spherical · single-fit (canary)
+----------------------------------
+
+.. figure:: ds000114/gp-spherical_single-fit_021.png
+   :alt: gp-spherical single-fit ds000114
+
+.. figure:: ds000114/gp-spherical_single-fit_042.png
+   :alt: gp-spherical single-fit ds000114
+
+.. figure:: ds000114/gp-spherical_single-fit_covariance.png
+   :alt: gp-spherical single-fit ds000114
+
+gqi · lovo
+----------
+
+.. figure:: ds000114/gqi_lovo_021.png
+   :alt: gqi lovo ds000114
+
+.. figure:: ds000114/gqi_lovo_042.png
+   :alt: gqi lovo ds000114
+
+gqi · single-fit (canary)
+-------------------------
+
+.. figure:: ds000114/gqi_single-fit_021.png
+   :alt: gqi single-fit ds000114
+
+.. figure:: ds000114/gqi_single-fit_042.png
+   :alt: gqi single-fit ds000114
 

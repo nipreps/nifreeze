@@ -4,11 +4,87 @@
 DSI (ds004737)
 ==============
 
+**Source:** `OpenNeuro ds004737 <https://openneuro.org/datasets/ds004737>`__ — ``sub-001/ses-1/dwi/sub-001_ses-1_acq-HASC92_dwi.nii.gz``
+
 .. note::
 
    Compressed-sensing DSI (q-space grid, HASC92), not a full 258-point grid.
 
-The panels for this dataset have not been published yet. They are produced
-by the ``gallery`` workflow, which fits each *(model × mode)* cell in its own
-job and opens a pull request refreshing these pages.
+Predicted diffusion volumes for the **DSI (ds004737)** dataset, across every
+applicable model in both **LOVO** (leave-one-volume-out, holding out the
+predicted orientation) and **single-fit** (fit once on all volumes) modes.
+
+Coverage
+--------
+
+.. list-table:: Gallery coverage
+   :header-rows: 1
+   :widths: 18 14 16 12 8 32
+
+   * - Dataset
+     - Scheme
+     - Model
+     - Mode
+     - Ran
+     - Reason
+   * - ds004737
+     - DSI
+     - average
+     - lovo
+     - ✓
+     - 
+   * - ds004737
+     - DSI
+     - average
+     - single-fit
+     - ✓
+     - 
+   * - ds004737
+     - DSI
+     - gqi
+     - lovo
+     - ✓
+     - 
+   * - ds004737
+     - DSI
+     - gqi
+     - single-fit
+     - ✓
+     - 
+
+average · lovo
+--------------
+
+.. figure:: ds004737/average_lovo_031.png
+   :alt: average lovo ds004737
+
+.. figure:: ds004737/average_lovo_063.png
+   :alt: average lovo ds004737
+
+average · single-fit
+--------------------
+
+.. figure:: ds004737/average_single-fit_031.png
+   :alt: average single-fit ds004737
+
+.. figure:: ds004737/average_single-fit_063.png
+   :alt: average single-fit ds004737
+
+gqi · lovo
+----------
+
+.. figure:: ds004737/gqi_lovo_031.png
+   :alt: gqi lovo ds004737
+
+.. figure:: ds004737/gqi_lovo_063.png
+   :alt: gqi lovo ds004737
+
+gqi · single-fit (canary)
+-------------------------
+
+.. figure:: ds004737/gqi_single-fit_031.png
+   :alt: gqi single-fit ds004737
+
+.. figure:: ds004737/gqi_single-fit_063.png
+   :alt: gqi single-fit ds004737
 

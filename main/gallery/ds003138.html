@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="DSI (ds004737)" href="ds004737.html"><link rel="prev" title="Single-shell HARDI (ds000114)" href="ds000114.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>Multi-shell (ds003138) - nifreeze 26.0.0.dev189 documentation</title>
+        <title>Multi-shell (ds003138) - nifreeze 26.0.0.dev191 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev189 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev191 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -173,7 +173,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev189</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev191</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev189</span>
+  <span class="sidebar-brand-text">26.0.0.dev191</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -321,20 +321,214 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
         <article role="main" id="furo-main-content">
           <section id="multi-shell-ds003138">
 <span id="gallery-ds003138"></span><h1>Multi-shell (ds003138)<a class="headerlink" href="#multi-shell-ds003138" title="Link to this heading">¶</a></h1>
+<p><strong>Source:</strong> <a class="reference external" href="https://openneuro.org/datasets/ds003138">OpenNeuro ds003138</a> — <code class="docutils literal notranslate"><span class="pre">sub-82KK02101/ses-1/dwi/sub-82KK02101_ses-1_acq-shell1_dir-AP_run-1_dwi.nii.gz</span></code>, <code class="docutils literal notranslate"><span class="pre">sub-82KK02101/ses-1/dwi/sub-82KK02101_ses-1_acq-shell2_dir-AP_run-1_dwi.nii.gz</span></code>, <code class="docutils literal notranslate"><span class="pre">sub-82KK02101/ses-1/dwi/sub-82KK02101_ses-1_acq-shell3_dir-AP_run-1_dwi.nii.gz</span></code></p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Three shells (b=1000/2000/3000 s/mm²) stored as separate files, merged on load.</p>
 </div>
-<p>The panels for this dataset have not been published yet. They are produced
-by the <code class="docutils literal notranslate"><span class="pre">gallery</span></code> workflow, which fits each <em>(model × mode)</em> cell in its own
-job and opens a pull request refreshing these pages.</p>
+<p>Predicted diffusion volumes for the <strong>Multi-shell (ds003138)</strong> dataset, across every
+applicable model in both <strong>LOVO</strong> (leave-one-volume-out, holding out the
+predicted orientation) and <strong>single-fit</strong> (fit once on all volumes) modes.</p>
+<section id="coverage">
+<h2>Coverage<a class="headerlink" href="#coverage" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-given docutils container" id="id1">
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-number">Table 4 </span><span class="caption-text">Gallery coverage</span><a class="headerlink" href="#id1" title="Link to this table">¶</a></caption>
+<colgroup>
+<col style="width: 18.0%" />
+<col style="width: 14.0%" />
+<col style="width: 16.0%" />
+<col style="width: 12.0%" />
+<col style="width: 8.0%" />
+<col style="width: 32.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Dataset</p></th>
+<th class="head"><p>Scheme</p></th>
+<th class="head"><p>Model</p></th>
+<th class="head"><p>Mode</p></th>
+<th class="head"><p>Ran</p></th>
+<th class="head"><p>Reason</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>ds003138</p></td>
+<td><p>multi-shell</p></td>
+<td><p>average</p></td>
+<td><p>lovo</p></td>
+<td><p>✓</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>ds003138</p></td>
+<td><p>multi-shell</p></td>
+<td><p>average</p></td>
+<td><p>single-fit</p></td>
+<td><p>✓</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>ds003138</p></td>
+<td><p>multi-shell</p></td>
+<td><p>dki</p></td>
+<td><p>lovo</p></td>
+<td><p>✓</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>ds003138</p></td>
+<td><p>multi-shell</p></td>
+<td><p>dki</p></td>
+<td><p>single-fit</p></td>
+<td><p>✓</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>ds003138</p></td>
+<td><p>multi-shell</p></td>
+<td><p>dti</p></td>
+<td><p>lovo</p></td>
+<td><p>✓</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>ds003138</p></td>
+<td><p>multi-shell</p></td>
+<td><p>dti</p></td>
+<td><p>single-fit</p></td>
+<td><p>✓</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>ds003138</p></td>
+<td><p>multi-shell</p></td>
+<td><p>gp-multishell</p></td>
+<td><p>lovo</p></td>
+<td><p>✓</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>ds003138</p></td>
+<td><p>multi-shell</p></td>
+<td><p>gp-multishell</p></td>
+<td><p>single-fit</p></td>
+<td><p>✓</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>ds003138</p></td>
+<td><p>multi-shell</p></td>
+<td><p>gqi</p></td>
+<td><p>lovo</p></td>
+<td><p>✓</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>ds003138</p></td>
+<td><p>multi-shell</p></td>
+<td><p>gqi</p></td>
+<td><p>single-fit</p></td>
+<td><p>✓</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="average-lovo">
+<h2>average · lovo<a class="headerlink" href="#average-lovo" title="Link to this heading">¶</a></h2>
+<figure class="align-default">
+<img alt="average lovo ds003138" src="../_images/average_lovo_038.png" />
+</figure>
+<figure class="align-default">
+<img alt="average lovo ds003138" src="../_images/average_lovo_075.png" />
+</figure>
+</section>
+<section id="average-single-fit">
+<h2>average · single-fit<a class="headerlink" href="#average-single-fit" title="Link to this heading">¶</a></h2>
+<figure class="align-default">
+<img alt="average single-fit ds003138" src="../_images/average_single-fit_038.png" />
+</figure>
+<figure class="align-default">
+<img alt="average single-fit ds003138" src="../_images/average_single-fit_075.png" />
+</figure>
+</section>
+<section id="dki-lovo">
+<h2>dki · lovo<a class="headerlink" href="#dki-lovo" title="Link to this heading">¶</a></h2>
+<figure class="align-default">
+<img alt="dki lovo ds003138" src="../_images/dki_lovo_038.png" />
+</figure>
+<figure class="align-default">
+<img alt="dki lovo ds003138" src="../_images/dki_lovo_075.png" />
+</figure>
+</section>
+<section id="dki-single-fit">
+<h2>dki · single-fit<a class="headerlink" href="#dki-single-fit" title="Link to this heading">¶</a></h2>
+<figure class="align-default">
+<img alt="dki single-fit ds003138" src="../_images/dki_single-fit_038.png" />
+</figure>
+<figure class="align-default">
+<img alt="dki single-fit ds003138" src="../_images/dki_single-fit_075.png" />
+</figure>
+</section>
+<section id="dti-lovo">
+<h2>dti · lovo<a class="headerlink" href="#dti-lovo" title="Link to this heading">¶</a></h2>
+<figure class="align-default">
+<img alt="dti lovo ds003138" src="../_images/dti_lovo_038.png" />
+</figure>
+<figure class="align-default">
+<img alt="dti lovo ds003138" src="../_images/dti_lovo_075.png" />
+</figure>
+</section>
+<section id="dti-single-fit">
+<h2>dti · single-fit<a class="headerlink" href="#dti-single-fit" title="Link to this heading">¶</a></h2>
+<figure class="align-default">
+<img alt="dti single-fit ds003138" src="../_images/dti_single-fit_038.png" />
+</figure>
+<figure class="align-default">
+<img alt="dti single-fit ds003138" src="../_images/dti_single-fit_075.png" />
+</figure>
+</section>
+<section id="gp-multishell-lovo">
+<h2>gp-multishell · lovo<a class="headerlink" href="#gp-multishell-lovo" title="Link to this heading">¶</a></h2>
+<figure class="align-default">
+<img alt="gp-multishell lovo ds003138" src="../_images/gp-multishell_lovo_038.png" />
+</figure>
+<figure class="align-default">
+<img alt="gp-multishell lovo ds003138" src="../_images/gp-multishell_lovo_075.png" />
+</figure>
+<figure class="align-default">
+<img alt="gp-multishell lovo ds003138" src="../_images/gp-multishell_lovo_covariance.png" />
+</figure>
+</section>
+<section id="gp-multishell-single-fit-canary">
+<h2>gp-multishell · single-fit (canary)<a class="headerlink" href="#gp-multishell-single-fit-canary" title="Link to this heading">¶</a></h2>
+<figure class="align-default">
+<img alt="gp-multishell single-fit ds003138" src="../_images/gp-multishell_single-fit_038.png" />
+</figure>
+<figure class="align-default">
+<img alt="gp-multishell single-fit ds003138" src="../_images/gp-multishell_single-fit_075.png" />
+</figure>
+<figure class="align-default">
+<img alt="gp-multishell single-fit ds003138" src="../_images/gp-multishell_single-fit_covariance.png" />
+</figure>
+</section>
+<section id="gqi-lovo">
+<h2>gqi · lovo<a class="headerlink" href="#gqi-lovo" title="Link to this heading">¶</a></h2>
+<figure class="align-default">
+<img alt="gqi lovo ds003138" src="../_images/gqi_lovo_038.png" />
+</figure>
+<figure class="align-default">
+<img alt="gqi lovo ds003138" src="../_images/gqi_lovo_075.png" />
+</figure>
+</section>
+<section id="gqi-single-fit-canary">
+<h2>gqi · single-fit (canary)<a class="headerlink" href="#gqi-single-fit-canary" title="Link to this heading">¶</a></h2>
+<figure class="align-default">
+<img alt="gqi single-fit ds003138" src="../_images/gqi_single-fit_038.png" />
+</figure>
+<figure class="align-default">
+<img alt="gqi single-fit ds003138" src="../_images/gqi_single-fit_075.png" />
+</figure>
+</section>
 </section>
 
         </article>
@@ -380,13 +574,42 @@ job and opens a pull request refreshing these pages.</p>
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Multi-shell (ds003138)</a><ul>
+<li><a class="reference internal" href="#coverage">Coverage</a></li>
+<li><a class="reference internal" href="#average-lovo">average · lovo</a></li>
+<li><a class="reference internal" href="#average-single-fit">average · single-fit</a></li>
+<li><a class="reference internal" href="#dki-lovo">dki · lovo</a></li>
+<li><a class="reference internal" href="#dki-single-fit">dki · single-fit</a></li>
+<li><a class="reference internal" href="#dti-lovo">dti · lovo</a></li>
+<li><a class="reference internal" href="#dti-single-fit">dti · single-fit</a></li>
+<li><a class="reference internal" href="#gp-multishell-lovo">gp-multishell · lovo</a></li>
+<li><a class="reference internal" href="#gp-multishell-single-fit-canary">gp-multishell · single-fit (canary)</a></li>
+<li><a class="reference internal" href="#gqi-lovo">gqi · lovo</a></li>
+<li><a class="reference internal" href="#gqi-single-fit-canary">gqi · single-fit (canary)</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=224d3f66"></script>
+</div><script src="../_static/documentation_options.js?v=6511dc2d"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

@@ -4,11 +4,183 @@
 Multi-shell (ds003138)
 ======================
 
+**Source:** `OpenNeuro ds003138 <https://openneuro.org/datasets/ds003138>`__ — ``sub-82KK02101/ses-1/dwi/sub-82KK02101_ses-1_acq-shell1_dir-AP_run-1_dwi.nii.gz``, ``sub-82KK02101/ses-1/dwi/sub-82KK02101_ses-1_acq-shell2_dir-AP_run-1_dwi.nii.gz``, ``sub-82KK02101/ses-1/dwi/sub-82KK02101_ses-1_acq-shell3_dir-AP_run-1_dwi.nii.gz``
+
 .. note::
 
    Three shells (b=1000/2000/3000 s/mm²) stored as separate files, merged on load.
 
-The panels for this dataset have not been published yet. They are produced
-by the ``gallery`` workflow, which fits each *(model × mode)* cell in its own
-job and opens a pull request refreshing these pages.
+Predicted diffusion volumes for the **Multi-shell (ds003138)** dataset, across every
+applicable model in both **LOVO** (leave-one-volume-out, holding out the
+predicted orientation) and **single-fit** (fit once on all volumes) modes.
+
+Coverage
+--------
+
+.. list-table:: Gallery coverage
+   :header-rows: 1
+   :widths: 18 14 16 12 8 32
+
+   * - Dataset
+     - Scheme
+     - Model
+     - Mode
+     - Ran
+     - Reason
+   * - ds003138
+     - multi-shell
+     - average
+     - lovo
+     - ✓
+     - 
+   * - ds003138
+     - multi-shell
+     - average
+     - single-fit
+     - ✓
+     - 
+   * - ds003138
+     - multi-shell
+     - dki
+     - lovo
+     - ✓
+     - 
+   * - ds003138
+     - multi-shell
+     - dki
+     - single-fit
+     - ✓
+     - 
+   * - ds003138
+     - multi-shell
+     - dti
+     - lovo
+     - ✓
+     - 
+   * - ds003138
+     - multi-shell
+     - dti
+     - single-fit
+     - ✓
+     - 
+   * - ds003138
+     - multi-shell
+     - gp-multishell
+     - lovo
+     - ✓
+     - 
+   * - ds003138
+     - multi-shell
+     - gp-multishell
+     - single-fit
+     - ✓
+     - 
+   * - ds003138
+     - multi-shell
+     - gqi
+     - lovo
+     - ✓
+     - 
+   * - ds003138
+     - multi-shell
+     - gqi
+     - single-fit
+     - ✓
+     - 
+
+average · lovo
+--------------
+
+.. figure:: ds003138/average_lovo_038.png
+   :alt: average lovo ds003138
+
+.. figure:: ds003138/average_lovo_075.png
+   :alt: average lovo ds003138
+
+average · single-fit
+--------------------
+
+.. figure:: ds003138/average_single-fit_038.png
+   :alt: average single-fit ds003138
+
+.. figure:: ds003138/average_single-fit_075.png
+   :alt: average single-fit ds003138
+
+dki · lovo
+----------
+
+.. figure:: ds003138/dki_lovo_038.png
+   :alt: dki lovo ds003138
+
+.. figure:: ds003138/dki_lovo_075.png
+   :alt: dki lovo ds003138
+
+dki · single-fit
+----------------
+
+.. figure:: ds003138/dki_single-fit_038.png
+   :alt: dki single-fit ds003138
+
+.. figure:: ds003138/dki_single-fit_075.png
+   :alt: dki single-fit ds003138
+
+dti · lovo
+----------
+
+.. figure:: ds003138/dti_lovo_038.png
+   :alt: dti lovo ds003138
+
+.. figure:: ds003138/dti_lovo_075.png
+   :alt: dti lovo ds003138
+
+dti · single-fit
+----------------
+
+.. figure:: ds003138/dti_single-fit_038.png
+   :alt: dti single-fit ds003138
+
+.. figure:: ds003138/dti_single-fit_075.png
+   :alt: dti single-fit ds003138
+
+gp-multishell · lovo
+--------------------
+
+.. figure:: ds003138/gp-multishell_lovo_038.png
+   :alt: gp-multishell lovo ds003138
+
+.. figure:: ds003138/gp-multishell_lovo_075.png
+   :alt: gp-multishell lovo ds003138
+
+.. figure:: ds003138/gp-multishell_lovo_covariance.png
+   :alt: gp-multishell lovo ds003138
+
+gp-multishell · single-fit (canary)
+-----------------------------------
+
+.. figure:: ds003138/gp-multishell_single-fit_038.png
+   :alt: gp-multishell single-fit ds003138
+
+.. figure:: ds003138/gp-multishell_single-fit_075.png
+   :alt: gp-multishell single-fit ds003138
+
+.. figure:: ds003138/gp-multishell_single-fit_covariance.png
+   :alt: gp-multishell single-fit ds003138
+
+gqi · lovo
+----------
+
+.. figure:: ds003138/gqi_lovo_038.png
+   :alt: gqi lovo ds003138
+
+.. figure:: ds003138/gqi_lovo_075.png
+   :alt: gqi lovo ds003138
+
+gqi · single-fit (canary)
+-------------------------
+
+.. figure:: ds003138/gqi_single-fit_038.png
+   :alt: gqi single-fit ds003138
+
+.. figure:: ds003138/gqi_single-fit_075.png
+   :alt: gqi single-fit ds003138
 
