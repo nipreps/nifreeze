@@ -1,0 +1,14 @@
+.. _gallery_ds003138:
+
+======================
+Multi-shell (ds003138)
+======================
+
+.. note::
+
+   Three shells (b=1000/2000/3000 s/mm²) stored as separate files, merged on load.
+
+The panels for this dataset have not been published yet. They are produced
+by the ``gallery`` workflow, which fits each *(model × mode)* cell in its own
+job and opens a pull request refreshing these pages.
+

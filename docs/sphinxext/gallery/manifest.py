@@ -31,6 +31,7 @@ the gallery documentation page.
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -100,6 +101,39 @@ class GalleryManifest:
     def from_json(cls, path: str | Path) -> GalleryManifest:
         """Read a manifest from a JSON file."""
         return cls.from_dict(json.loads(Path(path).read_text()))
+
+    @classmethod
+    def merge(cls, manifests: Sequence[GalleryManifest]) -> GalleryManifest:
+        """Combine several manifests into one (cells concatenated, metadata merged).
+
+        Cells are ordered by *(dataset, model, mode)* so the merged coverage
+        table is stable regardless of the order fragments arrive from the
+        parallel fit jobs.
+        """
+        merged = cls()
+        for m in manifests:
+            merged.cells.extend(m.cells)
+            for key, value in m.metadata.items():
+                # Dict-valued metadata (e.g. per-dataset ``sources``) is merged
+                # key-wise: each fragment only knows about its own dataset, so a
+                # plain update would drop every other fragment's entries.
+                if isinstance(value, dict) and isinstance(merged.metadata.get(key), dict):
+                    merged.metadata[key].update(value)
+                else:
+                    merged.metadata[key] = value
+        merged.cells.sort(key=lambda c: (c.dataset, c.model, c.mode))
+        return merged
+
+    @classmethod
+    def from_tree(cls, root: str | Path) -> GalleryManifest:
+        """Merge every ``gallery_manifest.json`` found anywhere under ``root``.
+
+        Used by the collect job to fold the per-cell manifest fragments emitted
+        by the parallel fit jobs back into a single coverage manifest.
+        """
+        root = Path(root)
+        parts = [cls.from_json(p) for p in sorted(root.rglob("gallery_manifest.json"))]
+        return cls.merge(parts)
 
     # -- summaries -----------------------------------------------------------
     def counts(self) -> dict[str, int]:

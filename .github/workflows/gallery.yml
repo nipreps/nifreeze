@@ -11,10 +11,15 @@ defaults:
     shell: bash
 
 env:
-  FORCE_COLOR: true
-  NIFREEZE_WERRORS: 1
-  NIFREEZE_GALLERY_DATA: /home/runner/nifreeze-gallery-data
+  FORCE_COLOR: "1"
+  # Self-contained cropped datasets (one <name>.h5 per dataset, written by fetch).
+  NIFREEZE_GALLERY_H5DIR: /home/runner/gallery-h5
+  # Where datalad materializes annexed data (fetch stage only).
+  NIFREEZE_GALLERY_DATA: /home/runner/gallery-data
+  # Rendered panels + merged manifest (assembled by collect).
   NIFREEZE_GALLERY_OUT: /home/runner/gallery-out
+  # The gallery package lives under docs/ (docs tooling, not shipped library code).
+  PYTHONPATH: ${{ github.workspace }}/docs/sphinxext
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,51 +29,205 @@ permissions:
   contents: read
 
 jobs:
-  gallery:
-    runs-on: 'ubuntu-latest'
-    # Prediction only — no registration — so ANTs/AFNI/TeX are not needed.
-    permissions:
-      contents: write
-      pull-requests: write
-
-    strategy:
-      matrix:
-        python-version: ['3.12']
-
+  # 1. Derive the applicable (dataset × model × mode) matrix from the capability
+  #    contract — the single source of truth — so no empty cells are scheduled.
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      matrix: ${{ steps.gen.outputs.matrix }}
+      datasets: ${{ steps.gen.outputs.datasets }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: pyproject.toml
+      - name: Install package (gallery extra)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[gallery]
+      - name: Generate matrix
+        id: gen
+        run: |
+          MATRIX=$(python -m gallery.run --print-matrix)
+          echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
+          DATASETS=$(printf '%s' "${MATRIX}" | python -c \
+            "import sys,json; print(json.dumps(sorted({c['dataset'] for c in json.load(sys.stdin)})))")
+          echo "datasets=${DATASETS}" >> "$GITHUB_OUTPUT"
+          echo "Cells: ${MATRIX}"
+          echo "Datasets: ${DATASETS}"
 
+  # 2. Download each dataset exactly once and save it as a self-contained,
+  #    already-cropped <name>.h5 (uploaded as an artifact for the fit stage).
+  fetch:
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        dataset: ${{ fromJSON(needs.setup.outputs.datasets) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: pyproject.toml
       - name: Install git-annex (DataLad backend)
         run: |
           sudo apt-get update
           sudo apt-get install -y git-annex
-
       - name: Configure Git user for DataLad
         run: |
           git config --global user.email "nipreps@gmail.com"
           git config --global user.name "nipreps-bot"
-
-      - name: Cache fetched OpenNeuro data
+      - name: Cache the cropped dataset (cross-run)
         uses: actions/cache@v4
         with:
-          path: ${{ env.NIFREEZE_GALLERY_DATA }}
-          key: gallery-data-v1
-
-      - name: Install tox
+          # The sidecar must travel with the .h5: without it the fit jobs would
+          # fall back to resolving provenance from the (absent) datalad clone.
+          path: |
+            ${{ env.NIFREEZE_GALLERY_H5DIR }}/${{ matrix.dataset }}.h5
+            ${{ env.NIFREEZE_GALLERY_H5DIR }}/${{ matrix.dataset }}.sources.json
+          key: gallery-h5-${{ matrix.dataset }}-v1
+      - name: Install package (gallery extra)
         run: |
           python -m pip install --upgrade pip
-          pip install tox
+          pip install -e .[gallery]
+      - name: Materialize ${{ matrix.dataset }}
+        run: python -m gallery.run --datasets ${{ matrix.dataset }} --fetch-only
+      - name: Upload dataset artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gallery-data-${{ matrix.dataset }}
+          path: |
+            ${{ env.NIFREEZE_GALLERY_H5DIR }}/${{ matrix.dataset }}.h5
+            ${{ env.NIFREEZE_GALLERY_H5DIR }}/${{ matrix.dataset }}.sources.json
+          if-no-files-found: error
+          retention-days: 3
 
-      - name: Generate the gallery (manifest + executed notebooks)
-        run: tox -e gallery
+  # 3. One job per (dataset × model × mode) cell — the fast cells (average, GQI)
+  #    finish quickly while the slow ones (DKI, GP) run isolated, so no single
+  #    job approaches the wall-clock limit. Each fits under coverage and renders.
+  fit:
+    needs: [setup, fetch]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        cell: ${{ fromJSON(needs.setup.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: pyproject.toml
+      - name: Install package (gallery extra)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[gallery]
+      - name: Download dataset
+        uses: actions/download-artifact@v4
+        with:
+          name: gallery-data-${{ matrix.cell.dataset }}
+          path: ${{ env.NIFREEZE_GALLERY_H5DIR }}
+      - name: Fit + render ${{ matrix.cell.dataset }} / ${{ matrix.cell.model }} / ${{ matrix.cell.mode }}
+        run: |
+          coverage run --parallel-mode --source=nifreeze -m gallery.run \
+            --datasets ${{ matrix.cell.dataset }} \
+            --models ${{ matrix.cell.model }} \
+            --modes ${{ matrix.cell.mode }} \
+            --out "${NIFREEZE_GALLERY_OUT}"
+      # always(): a cell that OOMs or times out may still have rendered panels,
+      # and collect is designed to assemble whatever exists.
+      - name: Upload cell output (panels + manifest fragment)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gallery-cell-${{ matrix.cell.dataset }}-${{ matrix.cell.model }}-${{ matrix.cell.mode }}
+          path: ${{ env.NIFREEZE_GALLERY_OUT }}
+          if-no-files-found: warn
+          retention-days: 3
+      - name: Upload coverage fragment
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gallery-cov-${{ matrix.cell.dataset }}-${{ matrix.cell.model }}-${{ matrix.cell.mode }}
+          # ``coverage run --parallel-mode`` writes .coverage.<host>.<pid>.<rand>,
+          # a dotfile — which upload-artifact excludes unless asked not to, so
+          # without this every fragment silently matches nothing.
+          path: .coverage.*
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
 
-      - name: Upload manifest, panels, and coverage
+  # 4. Merge every fragment into one gallery, combine coverage, execute the
+  #    notebooks in embed mode (no re-fitting), and open the refresh PR.
+  collect:
+    needs: [setup, fit]
+    # Always assemble whatever the fit stage produced: a failed or timed-out cell
+    # must not cost us the other 29. Missing cells are reconciled below and
+    # reported as errors, so the coverage table stays complete either way.
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: pyproject.toml
+      - name: Install package (gallery extra)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[gallery]
+      - name: Download cell outputs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: gallery-cell-*
+          path: gallery-staging
+      - name: Download coverage fragments
+        uses: actions/download-artifact@v4
+        with:
+          pattern: gallery-cov-*
+          path: gallery-cov
+          merge-multiple: true
+      - name: Merge panels + manifest
+        env:
+          EXPECTED: ${{ needs.setup.outputs.matrix }}
+        run: |
+          # setup may have failed (collect still runs): reconcile only if we know
+          # what was expected, rather than dying on an empty matrix.
+          EXPECT_ARG=""
+          if [ -n "${EXPECTED}" ]; then
+            printf '%s' "${EXPECTED}" > expected-cells.json
+            EXPECT_ARG="--expect expected-cells.json"
+          else
+            echo "No expected matrix available; merging fragments without reconciliation."
+          fi
+          python tools/gallery_collect.py \
+            --staging gallery-staging \
+            --out "${NIFREEZE_GALLERY_OUT}" \
+            --pages docs/gallery \
+            ${EXPECT_ARG}
+      - name: Combine coverage
+        run: |
+          if compgen -G "gallery-cov/.coverage.*" > /dev/null; then
+            python -m coverage combine gallery-cov
+            python -m coverage xml -o coverage-gallery.xml
+          else
+            echo "No coverage fragments found; skipping."
+          fi
+      - name: Upload gallery output + coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -77,26 +236,34 @@ jobs:
             ${{ env.NIFREEZE_GALLERY_OUT }}
             coverage-gallery.xml
           if-no-files-found: warn
-
-      - name: Upload executed notebooks
+      - name: Upload rendered pages
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gallery-notebooks
-          path: docs/notebooks/gallery/*.ipynb
-
-      # On manual dispatch, open a PR refreshing the committed notebook outputs.
+          name: gallery-pages
+          path: docs/gallery
+      - name: Upload coverage to Codecov
+        if: hashFiles('coverage-gallery.xml') != ''
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage-gallery.xml
+          flags: gallery
+          fail_ci_if_error: false
+      # On manual dispatch, open a PR refreshing the committed gallery pages.
       # Scheduled runs only publish artifacts (avoids noisy auto-commits, e.g.
       # from GP run-to-run variation) — a maintainer refreshes deliberately.
       - name: Open refresh PR
         if: github.event_name == 'workflow_dispatch' && github.repository == 'nipreps/nifreeze'
         uses: peter-evans/create-pull-request@v7
         with:
-          branch: gallery/refresh-notebooks
-          title: "DOC: Refresh prediction gallery notebook outputs"
-          commit-message: "doc(gallery): refresh executed notebook outputs"
+          branch: gallery/refresh-pages
+          title: "DOC: Refresh prediction gallery"
+          commit-message: "doc(gallery): refresh rendered pages and panels"
           body: |
-            Automated refresh of the prediction gallery notebook outputs
-            (`docs/notebooks/gallery/*.ipynb`), generated by the `gallery` workflow.
-          add-paths: docs/notebooks/gallery/*.ipynb
+            Automated refresh of the prediction gallery (`docs/gallery/`), generated
+            by the `gallery` workflow: one reStructuredText page per dataset over the
+            panels rendered by the per-cell fit jobs.
+
+            Check the coverage table on each page for cells reported as errored.
+          add-paths: docs/gallery
           delete-branch: true

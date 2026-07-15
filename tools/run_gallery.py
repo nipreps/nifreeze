@@ -20,20 +20,21 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""Generate the prediction gallery: coverage manifest + executed notebooks.
+"""Generate the whole prediction gallery locally, on one machine.
 
-Two passes over the real (OpenNeuro) data:
+One pass over the real (OpenNeuro) data:
 
 1. Run the full ``(dataset × model × mode)`` matrix under ``coverage`` to emit
    the combinatorial coverage manifest (``gallery_manifest.json``), the rendered
    panels, and line coverage of the model layer (``coverage-gallery.xml``).
-2. Execute the documentation notebooks in place so their outputs are stored for
-   nbsphinx (which renders them with ``nbsphinx_execute = "never"``).
+2. Render the documentation pages over those panels (plain rST + images).
 
-Intended for the scheduled ``gallery`` CI job, not per-PR runs.
+Every model is fit exactly once: the pages are a *view* over the rendered
+output, never a second computation. CI does the same work, but fans step 1 out
+into one job per cell (see ``.github/workflows/gallery.yml``); this script is
+the single-machine equivalent for local runs.
 """
 
-import glob
 import os
 import subprocess
 import sys
@@ -53,6 +54,7 @@ def _env() -> dict[str, str]:
     env["PYTHONPATH"] = os.pathsep.join(
         [str(SPHINXEXT), existing] if existing else [str(SPHINXEXT)]
     )
+    env["NIFREEZE_GALLERY_OUT"] = str(OUT)
     return env
 
 
@@ -80,23 +82,19 @@ def main() -> None:
     )
     _run([sys.executable, "-m", "coverage", "xml", "-o", "coverage-gallery.xml"])
 
-    # 2. Execute the gallery notebooks in place so docs render stored outputs.
-    notebooks = sorted(glob.glob("docs/notebooks/gallery/*.ipynb"))
-    if notebooks:
-        _run(
-            [
-                sys.executable,
-                "-m",
-                "jupyter",
-                "nbconvert",
-                "--to",
-                "notebook",
-                "--execute",
-                "--inplace",
-                "--ExecutePreprocessor.timeout=3600",
-                *notebooks,
-            ]
-        )
+    # 2. Render the docs pages over the panels step 1 just wrote (no re-fitting).
+    _run(
+        [
+            sys.executable,
+            str(Path(__file__).resolve().parent / "gallery_collect.py"),
+            "--staging",
+            str(OUT),
+            "--out",
+            str(OUT),
+            "--pages",
+            "docs/gallery",
+        ]
+    )
 
 
 if __name__ == "__main__":

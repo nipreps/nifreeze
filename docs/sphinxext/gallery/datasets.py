@@ -32,6 +32,7 @@ used for fast, network-free testing.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -85,7 +86,20 @@ class DatasetSpec:
     """Link to the source dataset (e.g. its OpenNeuro page)."""
 
     def load(self) -> DWI:
-        """Load the dataset and assert its scheme matches the declaration."""
+        """Load the dataset and assert its scheme matches the declaration.
+
+        If ``NIFREEZE_GALLERY_H5DIR`` points at a directory holding
+        ``<name>.h5`` (written once by the fetch stage), that pre-cropped
+        dataset is read directly, so the parallel fit jobs never touch datalad
+        or the network.
+        """
+        h5dir = os.environ.get("NIFREEZE_GALLERY_H5DIR")
+        if h5dir:
+            cached = Path(h5dir) / f"{self.name}.h5"
+            if cached.is_file():
+                dwi = DWI.from_filename(cached)
+                verify_scheme(dwi, self.scheme, name=self.name)
+                return dwi
         dwi = self.loader()
         verify_scheme(dwi, self.scheme, name=self.name)
         return dwi
@@ -355,8 +369,23 @@ RESOLVERS = {
 }
 
 
+def sources_sidecar(name: str, h5dir: str | Path | None = None) -> Path | None:
+    """Path of the source-provenance sidecar beside the cached ``<name>.h5``."""
+    root = h5dir if h5dir is not None else os.environ.get("NIFREEZE_GALLERY_H5DIR")
+    return Path(root) / f"{name}.sources.json" if root else None
+
+
 def source_relpaths(name: str, cache_root: str | Path | None = None) -> list[str]:
-    """Return the DWI file path(s) (relative to the dataset) actually loaded."""
+    """Return the DWI file path(s) (relative to the dataset) actually loaded.
+
+    Resolving these from the datalad clone is only possible where the clone
+    exists (the fetch stage), so that stage records them in a sidecar next to the
+    cached ``<name>.h5``. This prefers that sidecar, which keeps the parallel fit
+    jobs off the network entirely.
+    """
+    sidecar = sources_sidecar(name)
+    if sidecar is not None and sidecar.is_file():
+        return list(json.loads(sidecar.read_text()))
     ds, triples = RESOLVERS[name](cache_root)
     return [str(dwi.relative_to(ds)) for dwi, _, _ in triples]
 

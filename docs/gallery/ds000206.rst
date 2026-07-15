@@ -1,0 +1,14 @@
+.. _gallery_ds000206:
+
+=====================
+Legacy DTI (ds000206)
+=====================
+
+.. note::
+
+   Traveling human phantom; 30 directions at b=1000 s/mm² (GD31).
+
+The panels for this dataset have not been published yet. They are produced
+by the ``gallery`` workflow, which fits each *(model × mode)* cell in its own
+job and opens a pull request refreshing these pages.
+
