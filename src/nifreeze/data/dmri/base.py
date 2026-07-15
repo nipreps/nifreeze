@@ -47,6 +47,7 @@ from nifreeze.data.dmri.utils import (
     find_shelling_scheme,
     format_gradients,
 )
+from nifreeze.data.utils import stream_select_last_axis
 
 BZERO_SHAPE_MISMATCH_ERROR_MSG = """\
 DWI 'bzero' shape ({bzero_shape}) does not match dataset volumes ({data_shape}). \
@@ -175,9 +176,11 @@ class DWI(BaseDataset[np.ndarray]):
             self.bzero = bzeros if bzeros.ndim == 3 else np.median(bzeros, axis=-1)
 
         if b0_num > 0:
-            # Remove b0 volumes from dataobj and gradients
+            # Remove b0 volumes from dataobj and gradients. Stream the selection
+            # into a disk-backed memmap so a memory-mapped dataobj stays lazy
+            # (and a NIfTI-sourced one is not retained as a full in-RAM copy).
             self.gradients = self.gradients[~b0_mask, :]
-            self.dataobj = self.dataobj[..., ~b0_mask]
+            self.dataobj = stream_select_last_axis(self.dataobj, ~b0_mask)
 
         if self.gradients.shape[0] < DTI_MIN_ORIENTATIONS:
             raise ValueError(

@@ -29,10 +29,13 @@ of the whole array. They fail on an eager (in-RAM) implementation and pass on
 the memory-mapped one.
 """
 
+import h5py
 import numpy as np
 import pytest
 
 from nifreeze.data.base import BaseDataset
+from nifreeze.data.dmri.base import DWI
+from nifreeze.data.utils import save_dataobj_volume_major
 
 pytestmark = pytest.mark.memory
 
@@ -84,3 +87,47 @@ def test_from_filename_roundtrip_values(tmp_path):
     assert ds.dataobj.shape == _SHAPE
     for i in range(_SHAPE[-1]):
         np.testing.assert_allclose(ds[i][0], expected[..., i])
+
+
+_B0_INDICES = (0, 20, 40)  # interspersed b=0 volumes
+
+
+def _write_dwi_with_b0(path, data):
+    """Write an NFDH5 DWI that still contains b=0 volumes.
+
+    ``DWI.to_filename`` drops b=0 volumes before writing, so to exercise the
+    on-load b0 filter we write the volume-major ``dataobj`` and a b0-bearing
+    gradient table directly.
+    """
+    rng = np.random.default_rng(0)
+    n = data.shape[-1]
+    bvecs = rng.standard_normal((n, 3)).astype(np.float32)
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+    bvals = np.full(n, 1000.0, dtype=np.float32)
+    for i in _B0_INDICES:
+        bvals[i] = 0.0
+        bvecs[i] = 0.0
+    with h5py.File(path, "w") as f:
+        f.attrs["Format"] = "NFDH5"
+        f.attrs["Version"] = np.uint16(2)
+        root = f.create_group("/0")
+        root.attrs["Type"] = "dmri"
+        save_dataobj_volume_major(root, data)
+        root.create_dataset("affine", data=np.eye(4))
+        root.create_dataset("gradients", data=np.column_stack((bvecs, bvals)))
+    return path
+
+
+@pytest.mark.filterwarnings("ignore:The DWI data contains multiple b0 volumes")
+def test_dwi_b0_filtered_dataobj_is_memmap(tmp_path):
+    """After dropping b=0 volumes, dataobj stays a disk-backed memmap."""
+    rng = np.random.default_rng(1234)
+    expected = rng.random(_SHAPE, dtype=np.float32)
+    h5 = _write_dwi_with_b0(tmp_path / "dwi.h5", expected)
+
+    dwi = DWI.from_filename(h5)
+    keep = [i for i in range(_SHAPE[-1]) if i not in _B0_INDICES]
+    assert isinstance(dwi.dataobj, np.memmap)  # not retained as an in-RAM copy
+    assert dwi.dataobj.shape[-1] == len(keep)
+    for j in range(len(keep)):
+        np.testing.assert_allclose(dwi[j][0], expected[..., keep[j]])
