@@ -21,14 +21,14 @@ VOLUME_AXIS_ATTR = "volume_axis"
 def _is_directly_mappable(dset: h5py.Dataset) -> bool:
     """Return whether an HDF5 dataset's raw block can be mapped with ``np.memmap``.
 
-    A dataset is directly mappable only if it is stored as a single contiguous,
-    unfiltered (uncompressed) block in native byte order — the layout
-    :func:`save_dataobj_volume_major` writes by default. See the wiki page
-    ``tool-hdf5-storage-layout`` for the full rationale.
+    A dataset is directly mappable only if it is stored as a single contiguous
+    block in native byte order — the layout :func:`save_dataobj_volume_major`
+    writes by default. ``get_offset()`` returns ``None`` for chunked, compact,
+    virtual, or unallocated datasets; because HDF5 forbids filters on a
+    contiguous layout, a non-``None`` offset also guarantees the block is
+    uncompressed. See the wiki page ``tool-hdf5-storage-layout``.
     """
     if dset.id.get_offset() is None:  # None for chunked / compact / virtual / unallocated
-        return False
-    if dset.id.get_create_plist().get_nfilters() != 0:  # compression/filters
         return False
     byteorder = dset.dtype.byteorder
     return byteorder in ("=", "|") or byteorder == _NATIVE_BYTEORDER
