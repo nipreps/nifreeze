@@ -504,18 +504,18 @@ def test_gqi_lovo_prediction_stanford_hardi(method):
     signal predictor (oscillatory, ill-conditioned reconstruction kernel), which
     is why ``"standard"`` is the NiFreeze default.
     """
-    from typing import cast
 
-    import nibabel as nb
     from dipy.io.gradients import read_bvals_bvecs
     from nibabel.spatialimages import SpatialImage
+
+    from nifreeze.utils.ndimage import load_api
 
     try:
         fdwi, fbval, fbvec = get_fnames(name="stanford_hardi")
     except Exception as exc:  # pragma: no cover - network/cache guard
         pytest.skip(f"Stanford HARDI not available: {exc}")
 
-    img = cast(SpatialImage, nb.load(fdwi))
+    img = load_api(fdwi, SpatialImage)
     # Crop a small central slab to keep the test fast.
     sl = (slice(28, 52), slice(50, 74), slice(35, 40))
     dataobj = np.asarray(img.dataobj[sl].astype(np.float32))

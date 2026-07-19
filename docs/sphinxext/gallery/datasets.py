@@ -288,11 +288,11 @@ def _load_dwi(
     concatenated along the volume axis (used for datasets that store shells as
     separate files, e.g. ds003138).
     """
-    from typing import cast
 
-    import nibabel as nb
     from dipy.io import read_bvals_bvecs
     from nibabel.spatialimages import SpatialImage
+
+    from nifreeze.utils.ndimage import load_api
 
     _get(ds_path, [f for triple in triples for f in triple])
 
@@ -301,7 +301,7 @@ def _load_dwi(
     bvecs_list: list[np.ndarray] = []
     affine: np.ndarray | None = None
     for dwi_file, bval_file, bvec_file in triples:
-        img = cast(SpatialImage, nb.load(str(dwi_file)))
+        img = load_api(dwi_file, SpatialImage)
         affine = img.affine
         data_list.append(np.asarray(img.dataobj, dtype=np.float32))
         bvals, bvecs = read_bvals_bvecs(str(bval_file), str(bvec_file))
