@@ -241,14 +241,16 @@ Contributing to NiFreeze
 Set up for Development
 ----------------------
 
-Install the appropriate modules::
+Install the appropriate modules:
 
-   .. code-block:: bash
+.. code-block:: bash
+
    pip install .[test, doc, style, contributing]
 
-Download data from OSF, OpenNeuro, etc.::
+Download data from OSF, OpenNeuro, etc.:
 
-   .. code-block:: bash
+.. code-block:: bash
+
    download
 
 Typechecking, spellchecking, style, doc
