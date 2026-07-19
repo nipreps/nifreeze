@@ -2,9 +2,9 @@
 
 .. _gallery:
 
-===========================
+==================
 Prediction gallery
-===========================
+==================
 This gallery shows *predicted* diffusion volumes produced by *NiFreeze*'s models
 on several real datasets spanning the acquisition-scheme spectrum — a simple,
 legacy DTI dataset, a single-shell HARDI dataset, a multi-shell dataset, and a
