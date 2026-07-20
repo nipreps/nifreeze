@@ -38,6 +38,8 @@ from nitransforms.linear import LinearTransformsMapping
 from nitransforms.resampling import apply
 from typing_extensions import Self, TypeVarTuple, Unpack
 
+from nifreeze.data.utils import load_nfdh5_fields, save_nfdh5_fields
+
 Ts = TypeVarTuple("Ts")
 
 NFDH5_EXT = ".h5"
@@ -265,7 +267,12 @@ class BaseDataset(Generic[Unpack[Ts]]):
     """
 
     dataobj: np.ndarray = attrs.field(
-        default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=validate_dataobj
+        default=None,
+        repr=_data_repr,
+        # require_same_type=False so a memory-mapped dataobj (np.memmap, loaded
+        # lazily by from_filename) compares equal to a plain ndarray of equal values.
+        eq=attrs.cmp_using(eq=_cmp, require_same_type=False),
+        validator=validate_dataobj,
     )
     """A :obj:`~numpy.ndarray` object for the data array."""
     affine: np.ndarray = attrs.field(
@@ -387,10 +394,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
             The constructed dataset with data loaded from the file.
 
         """
-        with h5py.File(filename, "r") as in_file:
-            root = in_file["/0"]
-            data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}
-        return cls(**data)
+        return cls(**load_nfdh5_fields(filename))
 
     def get_filename(self) -> Path:
         """Get the filepath of the HDF5 file."""
@@ -438,21 +442,10 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
         with h5py.File(filename, "w") as out_file:
             out_file.attrs["Format"] = "NFDH5"  # NiFreeze Data HDF5
-            out_file.attrs["Version"] = np.uint16(1)
+            out_file.attrs["Version"] = np.uint16(2)  # v2: volume-major dataobj
             root = out_file.create_group("/0")
             root.attrs["Type"] = "base dataset"
-            for f in attrs.fields(self.__class__):
-                if f.name.startswith("_"):
-                    continue
-
-                value = getattr(self, f.name)
-                if value is not None:
-                    root.create_dataset(
-                        f.name,
-                        data=value,
-                        compression=compression,
-                        compression_opts=compression_opts,
-                    )
+            save_nfdh5_fields(root, self, compression, compression_opts)
 
     def to_nifti(
         self,
