@@ -223,6 +223,85 @@ def test_build_bspline_knots(x, order, n_ctrl):
         assert max(_x) <= valid_max, f"Training data {_x} has values > {valid_max}"
 
 
+@pytest.mark.parametrize("lock_first, index", [(False, 2), (False, 1), (True, 3), (True, 0)])
+@pytest.mark.filterwarnings("ignore::nifreeze.model.base.SingleFitCanaryWarning")
+def test_fit_predict_after_locked_fit_smoke(setup_random_pet_data, lock_first, index):
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+    pet_obj = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+    model = BSplinePETModel(pet_obj, n_ctrl=3, order=3)
+
+    if lock_first:
+        full = model.fit_predict(index=None)
+        assert model._locked_fit is True
+        assert full is not None
+        assert np.issubdtype(np.asarray(full).dtype, np.floating)
+        assert np.isfinite(np.asarray(full)).all()
+    else:
+        # Initialize via LOVO through public API -> unlocked mode
+        first = model.fit_predict(index=index)
+        assert first is not None
+        assert model._locked_fit is False
+
+    pred = model.fit_predict(index=index)
+
+    assert pred is not None
+    assert pred.shape == pet_obj.dataobj.shape[:3]
+    assert np.issubdtype(pred.dtype, np.floating)
+    assert np.isfinite(pred).all()
+
+
+@pytest.mark.filterwarnings("ignore::nifreeze.model.base.SingleFitCanaryWarning")
+def test_fit_predict_index_none_idempotent(setup_random_pet_data):
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+    pet_obj = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+    model = BSplinePETModel(pet_obj, n_ctrl=3, order=3)
+
+    out1 = model.fit_predict(index=None)
+    assert out1 is not None
+    assert model._locked_fit is True
+
+    out2 = model.fit_predict(index=None)
+    assert out2 is None
+    assert model._locked_fit is True
+
+
+@pytest.mark.filterwarnings("ignore::nifreeze.model.base.SingleFitCanaryWarning")
+def test_fit_predict_locked_then_index_uses_full_mask(setup_random_pet_data):
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+    pet_obj = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+    model = BSplinePETModel(pet_obj, n_ctrl=3, order=3)
+
+    # Lock with full fit
+    out_full = model.fit_predict(index=None)
+    assert out_full is not None
+    assert model._locked_fit is True
+
+    # Held-out prediction should use locked branch (pass)
+    out_idx = model.fit_predict(index=0)
+    assert out_idx is not None
+    assert out_idx.shape == pet_obj.dataobj.shape[:3]
+    assert np.issubdtype(out_idx.dtype, np.floating)
+    assert np.isfinite(out_idx).all()
+
+
 @pytest.mark.parametrize(
     "setup_random_pet_data",
     [
