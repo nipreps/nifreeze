@@ -52,7 +52,7 @@ multi_tensor(gtab, mevals, *, S0=1.0, angles=((0, 0), (90, 0)),
 ## `all_tensor_evecs`
 
 ```python
-all_tensor_evecs(e0)   # -> (3, 3) eigenvector frame (columns)
+all_tensor_evecs(e0)  # -> (3, 3) eigenvector frame (columns)
 ```
 
 - Given a principal axis `e0` (3,), builds an orthonormal eigenvector frame by
