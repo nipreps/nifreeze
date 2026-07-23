@@ -467,10 +467,10 @@ def test_single_fit_canary_warning(request):
         gradients=gradients,
     )
 
-    def warns(model) -> bool:
+    def warns(_model) -> bool:
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
-            model.fit_predict(None)
+            _model.fit_predict(None)
         return any(issubclass(w.category, SingleFitCanaryWarning) for w in caught)
 
     # Self-reconstructing models: single-fit is only a self-consistency canary.
