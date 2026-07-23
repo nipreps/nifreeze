@@ -33,6 +33,7 @@ from dipy.segment.mask import median_otsu
 from joblib import cpu_count
 from scipy.ndimage import binary_dilation
 from skimage.morphology import ball
+from threadpoolctl import threadpool_limits
 
 from nifreeze.data.dmri import DWI
 from nifreeze.model.dmri import DKIModel
@@ -83,7 +84,8 @@ class DKIBenchmark:
     def time_fit_predict(self, n_voxels, n_jobs):
         assert self._dataset is not None
         assert self._index is not None
-        DKIModel(self._dataset).fit_predict(self._index, n_jobs=n_jobs)
+        with threadpool_limits(limits=1, user_api="blas"):
+            DKIModel(self._dataset).fit_predict(self._index, n_jobs=n_jobs)
 
     def track_parallel_speedup(self, n_voxels, n_jobs):
 
@@ -93,15 +95,16 @@ class DKIBenchmark:
         assert self._dataset is not None
         assert self._index is not None
 
-        t_serial_start = time.perf_counter()
-        DKIModel(self._dataset).fit_predict(self._index, n_jobs=1)
-        t_serial = time.perf_counter() - t_serial_start
+        with threadpool_limits(limits=1, user_api="blas"):
+            t_serial_start = time.perf_counter()
+            DKIModel(self._dataset).fit_predict(self._index, n_jobs=1)
+            t_serial = time.perf_counter() - t_serial_start
 
-        t_parallel_start = time.perf_counter()
-        DKIModel(self._dataset).fit_predict(self._index, n_jobs=n_jobs)
-        t_parallel = time.perf_counter() - t_parallel_start
+            t_parallel_start = time.perf_counter()
+            DKIModel(self._dataset).fit_predict(self._index, n_jobs=n_jobs)
+            t_parallel = time.perf_counter() - t_parallel_start
 
-        return t_serial / t_parallel if t_parallel > 0 else float("inf")
+            return t_serial / t_parallel if t_parallel > 0 else float("inf")
 
 
 class DiffusionGPRBenchmark:
