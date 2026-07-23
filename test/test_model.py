@@ -401,26 +401,15 @@ def test_factory_gp_variants(name, setup_random_dwi_data):
 
 
 @pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
-def test_gpmodel_fit_predict(request):
+def test_gpmodel_fit_predict(setup_random_dwi_data):
     """``GPModel`` fits/predicts through the wrapper (LOVO and single-fit)."""
     from nifreeze.model.dmri import GPModel
 
-    rng = request.node.rng
-    size = (2, 2, 2)
-    n_dirs = 12
-
-    bvecs = rng.normal(size=(n_dirs, 3))
-    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
-    # Prepend a b=0 volume so ``DWI`` can extract a b0 reference.
-    bvecs = np.vstack([np.zeros((1, 3)), bvecs])
-    bvals = np.concatenate([[0.0], np.full(n_dirs, 1000.0)])
-    gradients = np.column_stack([bvecs, bvals])
-
-    dataobj = rng.uniform(50.0, 1000.0, size=(*size, n_dirs + 1)).astype("float32")
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
     dwi = DWI(
-        dataobj=dataobj,
-        affine=np.eye(4),
-        brainmask=np.ones(size, dtype=bool),
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
         gradients=gradients,
     )
 
@@ -428,7 +417,7 @@ def test_gpmodel_fit_predict(request):
     gp = GPModel(dwi, kernel_model="spherical")
     predicted = gp.fit_predict(0)
     assert predicted is not None
-    assert predicted.shape == size
+    assert predicted.shape == dwi_dataobj.shape[:-1]
     assert np.all(np.isfinite(predicted))
 
     # Single-fit: locks the fit (returns None), then predicts from the locked fit.
@@ -441,29 +430,22 @@ def test_gpmodel_fit_predict(request):
     assert gp2._locked_fit is True
     predicted2 = gp2.fit_predict(0)
     assert predicted2 is not None
-    assert predicted2.shape == size
+    assert predicted2.shape == dwi_dataobj.shape[:-1]
 
 
 @pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
-def test_single_fit_canary_warning(request):
+def test_single_fit_canary_warning(setup_random_dwi_data):
     """Canary models (GQI, GP) warn on single-fit; DTI and average do not."""
     import warnings
 
     from nifreeze.model.base import SingleFitCanaryWarning
     from nifreeze.model.dmri import AverageDWIModel, DTIModel, GPModel, GQIModel
 
-    rng = request.node.rng
-    size = (2, 2, 2)
-    n_dirs = 20
-    bvecs = rng.normal(size=(n_dirs, 3))
-    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
-    bvecs = np.vstack([np.zeros((1, 3)), bvecs])
-    bvals = np.concatenate([[0.0], np.full(n_dirs, 1000.0)])
-    gradients = np.column_stack([bvecs, bvals])
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
     dwi = DWI(
-        dataobj=rng.uniform(50.0, 1000.0, size=(*size, n_dirs + 1)).astype("float32"),
-        affine=np.eye(4),
-        brainmask=np.ones(size, dtype=bool),
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
         gradients=gradients,
     )
 
