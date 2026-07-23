@@ -19,12 +19,13 @@ page caches the contract at DIPY commit `2ecd3655`. Facet of [[tool-dipy]].
 
 ```python
 class ReconstModel:
-    def __init__(self, gtab): ...                    # stores self.gtab = gtab
-    def fit(self, data, *, mask=None, **kwargs):     # concrete stub -> ReconstFit(self, data)
+    def __init__(self, gtab): ...  # stores self.gtab = gtab
+    def fit(self, data, *, mask=None, **kwargs):  # concrete stub -> ReconstFit(self, data)
         ...
 
+
 class ReconstFit:
-    def __init__(self, model, data): ...             # self.model, self.data
+    def __init__(self, model, data): ...  # self.model, self.data
 ```
 
 Two facts about this pinned version matter:
@@ -42,9 +43,9 @@ Two facts about this pinned version matter:
 Across DIPY's models the shape is:
 
 ```python
-model = SomeModel(gtab, **model_kwargs)   # construct from a gradient table
-fit   = model.fit(data, mask=None)        # fit to (voxels × directions) signal
-pred  = fit.predict(gtab_new, S0=...)     # predict signal at new directions
+model = SomeModel(gtab, **model_kwargs)  # construct from a gradient table
+fit = model.fit(data, mask=None)  # fit to (voxels × directions) signal
+pred = fit.predict(gtab_new, S0=...)  # predict signal at new directions
 ```
 
 nifreeze's `BaseDWIModel` treats this as the uniform interface for every
