@@ -23,11 +23,10 @@
 """Unit tests exercising dMRI models."""
 
 import functools
-import os
 import re
 import time
 import warnings
-from contextlib import contextmanager, nullcontext
+from contextlib import nullcontext
 
 import dipy.data as dpd
 import nibabel as nb
@@ -39,6 +38,7 @@ from dipy.reconst import dki, dti
 from dipy.segment.mask import median_otsu
 from dipy.sims.voxel import single_tensor
 from joblib import cpu_count
+from threadpoolctl import threadpool_limits  # type: ignore[import-untyped]
 
 from nifreeze import model
 from nifreeze.data.dmri import DWI
@@ -1007,28 +1007,6 @@ def test_dki_model_predict(multi_shell_test_data, index, ignore_bzero, use_mask)
         assert np.allclose(predicted_nf, predicted_dp[..., 0])
 
 
-@contextmanager
-def _single_thread_blas():
-    keys = (
-        "OMP_NUM_THREADS",
-        "OPENBLAS_NUM_THREADS",
-        "MKL_NUM_THREADS",
-        "VECLIB_MAXIMUM_THREADS",
-        "NUMEXPR_NUM_THREADS",
-    )
-    old = {k: os.environ.get(k) for k in keys}
-    try:
-        for k in keys:
-            os.environ[k] = "1"
-        yield
-    finally:
-        for k, v in old.items():
-            if v is None:
-                os.environ.pop(k, None)
-            else:
-                os.environ[k] = v
-
-
 def _center_crop(mask, data4d, half_size=10):
     center = tuple(val // 2 for val in mask.shape)
     slices = tuple(slice(val - half_size, val + half_size) for val in center)
@@ -1094,6 +1072,14 @@ def test_dki_parallel_speedup():
     The test is skipped when fewer than ``_MIN_CPUS_REQUIRED`` logical CPUs are
     available, since the parallelism overhead dominates on underpowered hardware.
     """
+
+    def _fit_predict_once_threadpool(_model_cls, _dataset, _index, _n_jobs):
+        with (
+            threadpool_limits(limits=1, user_api="blas"),
+            threadpool_limits(limits=1, user_api="openmp"),
+        ):
+            return _fit_predict_once(_model_cls, _dataset, _index, _n_jobs)
+
     if cpu_count() < _MIN_CPUS_REQUIRED:
         pytest.skip(
             f"Parallel scaling test requires >= {_MIN_CPUS_REQUIRED} CPUs "
@@ -1108,18 +1094,17 @@ def test_dki_parallel_speedup():
     serial_ts = []
     parallel_ts = []
 
-    with _single_thread_blas():
-        for _ in range(_N_REPEATS):
-            # Serial run
-            _, t_serial = _fit_predict_once(model.DKIModel, dataset, index, n_jobs=1)
+    for _ in range(_N_REPEATS):
+        # Serial run
+        _, t_serial = _fit_predict_once_threadpool(model.DKIModel, dataset, index, 1)
 
-            # Parallel run
-            _, t_parallel = _fit_predict_once(
-                model.DKIModel, dataset, index, n_jobs=min(_PARALLEL_JOBS, cpu_count())
-            )
+        # Parallel run
+        _, t_parallel = _fit_predict_once_threadpool(
+            model.DKIModel, dataset, index, min(_PARALLEL_JOBS, cpu_count())
+        )
 
-            serial_ts.append(t_serial)
-            parallel_ts.append(t_parallel)
+        serial_ts.append(t_serial)
+        parallel_ts.append(t_parallel)
 
     t_serial = float(np.median(serial_ts))
     t_parallel = float(np.median(parallel_ts))
