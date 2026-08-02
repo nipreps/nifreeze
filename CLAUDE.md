@@ -73,7 +73,7 @@ python -m ruff check --fix <files>   # lint and auto-fix
 python -m run ruff format <files>        # reformat
 ```
 
-Ruff config: line-length 99, target Python 3.10, rules: F, E, C, W, B, I, ICN. Import convention: `nibabel` aliased as `nb`.
+Ruff config: line-length 99, target Python 3.12, rules: F, E, C, W, B, I, ICN. Import convention: `nibabel` aliased as `nb`.
 
 ### Type checking
 ```bash
@@ -127,6 +127,6 @@ Three-layer design: **Data → Model → Estimator**
 ## Key Conventions
 
 - Calendar-based versioning (nipreps-calver) via hatch-vcs
-- Python 3.10+ required; code targets `py310`
+- Python 3.12+ required; code targets `py312`
 - Uses `attrs` for data classes (not dataclasses)
 - `nibabel` is always imported as `nb`
