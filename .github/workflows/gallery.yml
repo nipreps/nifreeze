@@ -85,7 +85,7 @@ jobs:
           git config --global user.email "nipreps@gmail.com"
           git config --global user.name "nipreps-bot"
       - name: Cache the cropped dataset (cross-run)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           # The sidecar must travel with the .h5: without it the fit jobs would
           # fall back to resolving provenance from the (absent) datalad clone.
@@ -132,7 +132,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[gallery]
       - name: Download dataset
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: gallery-data-${{ matrix.cell.dataset }}
           path: ${{ env.NIFREEZE_GALLERY_H5DIR }}
@@ -191,12 +191,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[gallery]
       - name: Download cell outputs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: gallery-cell-*
           path: gallery-staging
       - name: Download coverage fragments
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: gallery-cov-*
           path: gallery-cov
@@ -244,7 +244,7 @@ jobs:
           path: docs/gallery
       - name: Upload coverage to Codecov
         if: hashFiles('coverage-gallery.xml') != ''
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: coverage-gallery.xml
           flags: gallery
