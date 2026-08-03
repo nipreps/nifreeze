@@ -127,7 +127,7 @@ def _timed_predict(model, idx: int, mode: str, fit_shared: float):
 def _run_cell(
     spec: ModelSpec,
     mode: str,
-    dwi,
+    dataset,
     indices: Sequence[int],
     *,
     dataset_name: str,
@@ -141,7 +141,7 @@ def _run_cell(
     from gallery.render import save_covariance_plot, save_slice_panel
     from nifreeze.model.base import SingleFitCanaryWarning
 
-    model = build_model(spec, dwi)
+    model = build_model(spec, dataset)
     fit_shared = 0.0
     canary = False
     if mode == "single-fit":
@@ -163,7 +163,7 @@ def _run_cell(
             continue
         used_indices.append(idx)
         if render and out_dir is not None:
-            observed = dwi[idx][0]
+            observed = dataset[idx][0]
             rel = f"{dataset_name}/{spec.key}_{mode}_{idx:03d}.png"
             canary_tag = " · canary" if canary else ""
             title = (
@@ -174,8 +174,8 @@ def _run_cell(
                 observed,
                 predicted,
                 out_dir / rel,
-                affine=dwi.affine,
-                mask=dwi.brainmask,
+                affine=dataset.affine,
+                mask=dataset.brainmask,
                 title=title,
             )
             artifacts.append(rel)
@@ -207,7 +207,7 @@ def _evaluate_cell(
     spec: ModelSpec,
     mode: str,
     ds: DatasetSpec,
-    dwi,
+    dataset,
     indices: Sequence[int],
     applicable: bool,
     reason: str | None,
@@ -224,7 +224,7 @@ def _evaluate_cell(
         return _run_cell(
             spec,
             mode,
-            dwi,
+            dataset,
             indices,
             dataset_name=ds.name,
             scheme=ds.scheme,
@@ -279,14 +279,14 @@ def run_gallery(
 
     manifest = GalleryManifest(metadata=_provenance())
 
-    for ds in dataset_specs:
+    for ds_spec in dataset_specs:
         try:
-            dwi = ds.load()
+            ds = ds_spec.load()
         except Exception as exc:
             manifest.cells.append(
                 CellResult(
-                    dataset=ds.name,
-                    scheme=ds.scheme,
+                    dataset=ds_spec.name,
+                    scheme=ds_spec.scheme,
                     model="<load>",
                     mode="-",
                     status=STATUS_ERROR,
@@ -299,20 +299,28 @@ def run_gallery(
         # embeds the panels without the dataset (or its datalad clone) present,
         # so provenance has to travel with the manifest rather than be re-resolved.
         try:
-            manifest.metadata.setdefault("sources", {})[ds.name] = _datasets.source_relpaths(
-                ds.name
+            manifest.metadata.setdefault("sources", {})[ds_spec.name] = _datasets.source_relpaths(
+                ds_spec.name
             )
         except Exception:  # pragma: no cover - provenance is best-effort
             pass
 
-        indices = ds.lovo_indices(dwi)
+        indices = ds_spec.lovo_indices(ds)
 
-        for spec in model_specs:
-            applicable, reason = check_applicability(spec, ds.scheme)
+        for model_spec in model_specs:
+            applicable, reason = check_applicability(model_spec, ds_spec.scheme)
             for mode in modes:
                 manifest.cells.append(
                     _evaluate_cell(
-                        spec, mode, ds, dwi, indices, applicable, reason, out_path, render
+                        model_spec,
+                        mode,
+                        ds_spec,
+                        ds,
+                        indices,
+                        applicable,
+                        reason,
+                        out_path,
+                        render,
                     )
                 )
 
@@ -422,24 +430,24 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.fetch_only:
         # Materialize each dataset once and, when NIFREEZE_GALLERY_H5DIR is set,
-        # persist the cropped DWI as a self-contained ``<name>.h5`` so the fit
+        # persist the cropped dataset as a self-contained ``<name>.h5`` so the fit
         # jobs load it directly and never touch datalad or the network.
         import os
 
         h5dir = os.environ.get("NIFREEZE_GALLERY_H5DIR")
-        for ds in dataset_specs:
-            print(f"Fetching {ds.name} ...", flush=True)
-            dwi = ds.load()
+        for ds_spec in dataset_specs:
+            print(f"Fetching {ds_spec.name} ...", flush=True)
+            ds = ds_spec.load()
             if h5dir:
-                dest = Path(h5dir) / f"{ds.name}.h5"
+                dest = Path(h5dir) / f"{ds_spec.name}.h5"
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                dwi.to_filename(dest)
+                ds.to_filename(dest)
                 print(f"  saved {dest}", flush=True)
                 # Record which subject/run was used while the datalad clone is
                 # still around; the fit jobs read this instead of re-resolving.
-                sidecar = _datasets.sources_sidecar(ds.name, h5dir)
+                sidecar = _datasets.sources_sidecar(ds_spec.name, h5dir)
                 if sidecar is not None:
-                    sidecar.write_text(json.dumps(_datasets.source_relpaths(ds.name)))
+                    sidecar.write_text(json.dumps(_datasets.source_relpaths(ds_spec.name)))
                     print(f"  saved {sidecar}", flush=True)
         return 0
 

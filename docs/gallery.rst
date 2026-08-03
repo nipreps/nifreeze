@@ -5,10 +5,11 @@
 ==================
 Prediction gallery
 ==================
-This gallery shows *predicted* diffusion volumes produced by *NiFreeze*'s models
-on several real datasets spanning the acquisition-scheme spectrum — a simple,
-legacy DTI dataset, a single-shell HARDI dataset, a multi-shell dataset, and a
-DSI dataset. For each dataset, every applicable model is run in **two modes**:
+This gallery shows *predicted* modality volumes produced by *NiFreeze*'s models
+on several real datasets spanning the DWI acquisition-scheme spectrum — a
+simple, legacy DTI dataset, a single-shell HARDI dataset, a multi-shell dataset,
+and a DSI dataset —, and PET data. For each dataset, every applicable model is
+run in **two modes**:
 
 - **LOVO** (leave-one-volume-out): the model is fit on every *other* volume and
   used to predict the held-out orientation, so the prediction is unbiased with
@@ -45,3 +46,4 @@ the gallery a living record of what the models are validated to do on real data.
    gallery/ds000114
    gallery/ds003138
    gallery/ds004737
+   gallery/ds00PET
