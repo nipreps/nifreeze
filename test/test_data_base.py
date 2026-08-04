@@ -251,7 +251,7 @@ def test_affine_shape_error(setup_random_uniform_ndim_data, size):
 def test_brainmask_volume_mismatch_error(request, setup_random_uniform_spatial_data):
     data, affine = setup_random_uniform_spatial_data
     data_shape = data.shape[:3]
-    brainmask_size = tuple(map(lambda x: x + 1, data_shape))
+    brainmask_size = tuple(x + 1 for x in data_shape)
     brainmask = request.node.rng.choice([True, False], size=brainmask_size)
     with pytest.raises(
         ValueError,
