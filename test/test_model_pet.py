@@ -31,6 +31,8 @@ from scipy.interpolate import BSpline
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.pet import PET
 from nifreeze.model.pet import (
+    BSPLINE_CTRL_POINT_SUFFICIENCY_ERROR_MESSAGE,
+    BSPLINE_ORDER_SUFFICIENCY_ERROR_MESSAGE,
     MIN_TIMEPOINTS_ERROR_MSG,
     PET_MIDFRAME_ERROR_MSG,
     PET_OBJECT_ERROR_MSG,
@@ -113,6 +115,59 @@ def test_petmodel_init_dataset_error(setup_random_pet_data, monkeypatch):
 
     with pytest.raises(ValueError, match=PET_MIDFRAME_ERROR_MSG):
         BSplinePETModel(dataset=pet_obj_totald)  # type:ignore[arg-type]
+
+
+@pytest.mark.parametrize("order", [0, -1, -3, -10])
+def test_bspline_model_order_exception(setup_random_pet_data, order):
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+
+    pet_obj = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+
+    with pytest.raises(ValueError, match=BSPLINE_ORDER_SUFFICIENCY_ERROR_MESSAGE):
+        BSplinePETModel(pet_obj, n_ctrl=3, order=order)
+
+
+@pytest.mark.parametrize("n_ctrl", [0, -1, -2, -10])
+def test_bspline_model_ctrl_point_exception(setup_random_pet_data, n_ctrl):
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+
+    pet_obj = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+
+    with pytest.raises(ValueError, match=BSPLINE_CTRL_POINT_SUFFICIENCY_ERROR_MESSAGE):
+        BSplinePETModel(pet_obj, n_ctrl=n_ctrl, order=3)
+
+
+def test_bspline_model_knots_midframe_domain_coverage(setup_random_pet_data):
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+
+    pet_obj = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+    model = BSplinePETModel(pet_obj, n_ctrl=4, order=3)
+
+    t = model._t
+    assert t.ndim == 1
+    assert t[0] <= np.floor(pet_obj.midframe[0])
+    assert t[-1] >= np.ceil(pet_obj.midframe[-1])
+    # open/clamped: first/last repeated order+1 times
+    assert np.all(t[: model._order + 1] == t[0])
+    assert np.all(t[-(model._order + 1) :] == t[-1])
 
 
 @pytest.mark.parametrize(

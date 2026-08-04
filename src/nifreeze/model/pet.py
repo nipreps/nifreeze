@@ -41,6 +41,14 @@ PET_OBJECT_ERROR_MSG = "Dataset MUST be a PET object."
 PET_MIDFRAME_ERROR_MSG = "Dataset MUST have a 'midframe'."
 """PET midframe error message."""
 
+BSPLINE_CTRL_POINT_SUFFICIENCY_ERROR_MESSAGE = (
+    "Number of B-Spline control points must be at least 1."
+)
+"""B-Spline model control point error message."""
+
+BSPLINE_ORDER_SUFFICIENCY_ERROR_MESSAGE = "B-Spline order must be at least 1."
+"""B-spline model order error message."""
+
 DEFAULT_TIMEPOINT_TOL = 1e-2
 """Time frame tolerance in seconds."""
 
@@ -202,10 +210,10 @@ class BSplinePETModel(BasePETModel):
         """
 
         if order < 1:
-            raise ValueError("B-Spline order must be at least 1.")
+            raise ValueError(BSPLINE_ORDER_SUFFICIENCY_ERROR_MESSAGE)
 
-        if n_ctrl is not None and n_ctrl < 1:
-            raise ValueError("Number of B-Spline control points must be at least 1.")
+        if n_ctrl < 1:
+            raise ValueError(BSPLINE_CTRL_POINT_SUFFICIENCY_ERROR_MESSAGE)
 
         super().__init__(dataset, **kwargs)
 
