@@ -216,10 +216,7 @@ def test_pet_instantiation_attribute_validate_1d_arr_errors(
     rng = request.node.rng
     pet_dataobj, affine, _, _, midframe, total_duration = setup_random_pet_data
 
-    attrs_dict = dict(
-        midframe=midframe,
-        total_duration=total_duration,
-    )
+    attrs_dict = {"midframe": midframe, "total_duration": total_duration}
     _attrs_dict = _add_extra_dim(rng, attr_name, extra_dimensions, transpose, **attrs_dict)
 
     with pytest.raises(
@@ -239,13 +236,11 @@ def test_pet_instantiation_attribute_convert_absence_errors(
 
     n_frames = data.shape[-1]
     # Create a dict with default valid attribute values
-    attrs_dict: dict[str, np.ndarray | float | None] = dict(
-        midframe=np.ones(n_frames, dtype=np.float32),
-        total_duration=1.0,
-    )
-
-    # Override only the attribute under test
-    attrs_dict[attr_name] = None
+    attrs_dict: dict[str, np.ndarray | float | None] = {
+        "midframe": np.ones(n_frames, dtype=np.float32),
+        "total_duration": 1.0,
+        attr_name: None,
+    }
 
     with pytest.raises(ValueError, match=ATTRIBUTE_ABSENCE_ERROR_MSG.format(attribute=attr_name)):
         PET(dataobj=data, affine=affine, **attrs_dict)  # type: ignore[arg-type]
@@ -267,13 +262,11 @@ def test_pet_instantiation_attribute_convert_object_errors(
 
     n_frames = data.shape[-1]
     # Create a dict with some valid attributes
-    attrs_dict = dict(
-        midframe=np.ones(n_frames, dtype=np.float32),
-        total_duration=n_frames + 1,
-    )
-
-    # Override only the attribute under test
-    attrs_dict[attr_name] = value
+    attrs_dict = {
+        "midframe": np.ones(n_frames, dtype=np.float32),
+        "total_duration": n_frames + 1,
+        attr_name: value,
+    }
 
     with pytest.raises(
         TypeError, match=ARRAY_ATTRIBUTE_OBJECT_ERROR_MSG.format(attribute=attr_name)
@@ -293,10 +286,7 @@ def test_pet_instantiation_attribute_vol_mismatch_error(
     pet_dataobj, affine, _, _, midframe, total_duration = setup_random_pet_data
 
     n_frames = int(pet_dataobj.shape[-1])
-    attrs_dict = dict(
-        midframe=midframe,
-        total_duration=total_duration,
-    )
+    attrs_dict = {"midframe": midframe, "total_duration": total_duration}
 
     # Add extra volumes: simply concatenate the last volume
     if extra_volume_count:
@@ -342,10 +332,7 @@ def test_pet_instantiation_attribute_inconsistency_error(
     elif attr_name == "total_duration":
         total_duration = midframe[-1] + excess_value
 
-    attrs_dict = dict(
-        midframe=midframe,
-        total_duration=total_duration,
-    )
+    attrs_dict = {"midframe": midframe, "total_duration": total_duration}
 
     with pytest.raises(
         ValueError,
@@ -431,10 +418,10 @@ def test_from_nii(tmp_path, setup_random_pet_data):
 
     assert isinstance(pet_obj_from_nii, PET)
 
-    attrs_dict: dict[str, np.ndarray | float | None] = dict(
-        midframe=midframe,
-        total_duration=total_duration,
-    )
+    attrs_dict: dict[str, np.ndarray | float | None] = {
+        "midframe": midframe,
+        "total_duration": total_duration,
+    }
 
     # Get all user-defined, named attributes
     attrs_to_check = [

@@ -163,11 +163,13 @@ class DWI(BaseDataset[np.ndarray]):
         # no bzero attribute was provided; warn the user if both the DWI
         # contained b0 values and the bzero attribute was provided
         if b0_num > 0 and self.bzero is None:
-            warn(DWI_B0_MULTIPLE_VOLUMES_WARN_MSG, UserWarning) if b0_num > 1 else None
+            warn(
+                DWI_B0_MULTIPLE_VOLUMES_WARN_MSG, UserWarning, stacklevel=2
+            ) if b0_num > 1 else None
             bzeros = self.dataobj[..., b0_mask]
             bzeros = bzeros.squeeze(axis=-1) if bzeros.shape[-1] == 1 else bzeros
         elif b0_num > 0 and self.bzero is not None:
-            warn(DWI_REDUNDANT_B0_WARN_MSG, UserWarning)
+            warn(DWI_REDUNDANT_B0_WARN_MSG, UserWarning, stacklevel=2)
             bzeros = self.bzero
 
         # Set the bzero attribute to the median if necessary
