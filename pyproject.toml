@@ -99,6 +99,7 @@ antsopt = [
 benchmark = [
   "asv",
   "pyperf",
+  "threadpoolctl>=3.0",
   "virtualenv==20.38.0",
 ]
 gallery = [
