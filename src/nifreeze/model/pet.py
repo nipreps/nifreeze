@@ -183,6 +183,8 @@ class BSplinePETModel(BasePETModel):
         "_n_ctrl": "Number of B-Spline control points",
     }
 
+    single_fit_is_canary = True
+
     def __init__(
         self,
         dataset: PET,
@@ -232,18 +234,28 @@ class BSplinePETModel(BasePETModel):
         the prediction for the start time.
         """
 
-        if index is None:
-            raise NotImplementedError(
-                "Fitting all frames at once (index=None) is not yet implemented. "
-                "Use LOVO mode by passing an integer index."
-            )
+        # Generate a time mask for the frames to fit
+        x_mask = np.ones(len(self._dataset), dtype=bool)
+        if self._locked_fit is None:
+            if index is None:
+                self._locked_fit = True
+                self._warn_single_fit_canary()
+            else:
+                # First call in LOVO mode: initialize as unlocked
+                self._locked_fit = False
+                x_mask[index] = False
+        elif index is None:
+            self._warn_single_fit_canary()
+            return None
+        elif self._locked_fit:
+            # Already fit on all frames; for held-out prediction keep full-fit mask
+            pass
+        else:
+            # Unlocked LOVO mode
+            x_mask[index] = False
 
         n_jobs = kwargs.pop("n_jobs", min(cpu_count() or 1, 8))
 
-        # Generate a time mask for the frames to fit
-        x_mask = np.ones(len(self._dataset), dtype=bool)
-
-        x_mask[index] = False if index is not None else x_mask[index]
         x = self._dataset.midframe[x_mask].tolist()
 
         # A.shape = (T, K - 4); t= n. timepoints, K= n. knots (with padding)

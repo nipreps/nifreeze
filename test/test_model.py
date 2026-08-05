@@ -37,6 +37,7 @@ from nifreeze.data.dmri.utils import (
     DEFAULT_MAX_S0,
     DEFAULT_MIN_S0,
 )
+from nifreeze.data.pet import PET
 from nifreeze.model.base import (
     MASK_ABSENCE_WARN_MSG,
     PREDICTED_MAP_ERROR_MSG,
@@ -445,13 +446,15 @@ def test_gpmodel_fit_predict(request):
 
 
 @pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
-def test_single_fit_canary_warning(request):
+def test_single_fit_canary_warning(request, setup_random_pet_data):
     """Canary models (GQI, GP) warn on single-fit; DTI and average do not."""
     import warnings
 
     from nifreeze.model.base import SingleFitCanaryWarning
     from nifreeze.model.dmri import AverageDWIModel, DTIModel, GPModel, GQIModel
+    from nifreeze.model.pet import BSplinePETModel
 
+    # DWI models
     rng = request.node.rng
     size = (2, 2, 2)
     n_dirs = 20
@@ -481,6 +484,21 @@ def test_single_fit_canary_warning(request):
     assert warns(DTIModel(dwi)) is False
     assert warns(AverageDWIModel(dwi)) is False
 
+    # PET models
+    pet_dataobj, pet_affine, pet_brainmask_dataobj, _, midframe, total_duration = (
+        setup_random_pet_data
+    )
+
+    pet = PET(
+        dataobj=pet_dataobj,
+        affine=pet_affine,
+        brainmask=pet_brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+
+    assert warns(BSplinePETModel(pet)) is True
+
 
 def test_model_capability_contract():
     """The declarative capability attributes match each model's real constraints."""
@@ -492,12 +510,15 @@ def test_model_capability_contract():
         GPModel,
         GQIModel,
     )
+    from nifreeze.model.pet import BasePETModel, BSplinePETModel
 
     # single_fit_is_canary is modality-agnostic (lives on the base model); only
     # self-reconstructing models flip it on.
     assert BaseModel.single_fit_is_canary is False
     assert GQIModel.single_fit_is_canary is True
     assert GPModel.single_fit_is_canary is True
+    assert BasePETModel.single_fit_is_canary is False
+    assert BSplinePETModel.single_fit_is_canary is True
 
     # The scheme/shell/b0 attributes are DWI-specific (live on BaseDWIModel).
     assert BaseDWIModel.requires_multishell is False
