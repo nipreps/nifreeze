@@ -37,6 +37,7 @@ from nitransforms.resampling import apply
 from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr, _has_ndim
+from nifreeze.data.utils import load_nfdh5_fields, save_nfdh5_fields
 
 ATTRIBUTE_ABSENCE_ERROR_MSG = "PET '{attribute}' may not be None"
 """PET initialization array attribute absence error message."""
@@ -289,10 +290,10 @@ class PET(BaseDataset[np.ndarray]):
         if not Path(self._filepath).exists():
             self.to_filename(self._filepath)
 
-        # read original PET
+        # read original PET frame (dataobj is stored volume-major: (N, X, Y, Z))
         with h5py.File(self._filepath, "r") as in_file:
             root = in_file["/0"]
-            dframe = np.asanyarray(root["dataobj"][..., index])
+            dframe = np.asanyarray(root["dataobj"][index])
 
         dmoving = nb.Nifti1Image(dframe, self.affine, None)
 
@@ -318,26 +319,12 @@ class PET(BaseDataset[np.ndarray]):
 
         with h5py.File(filename, "w") as out_file:
             out_file.attrs["Format"] = "EMC/PET"
-            out_file.attrs["Version"] = np.uint16(1)
+            out_file.attrs["Version"] = np.uint16(2)  # v2: volume-major dataobj
             root = out_file.create_group("/0")
             root.attrs["Type"] = "pet"
-            for f in attrs.fields(self.__class__):
-                if f.name.startswith("_"):
-                    continue
-
-                value = getattr(self, f.name)
-                if value is not None:
-                    root.create_dataset(
-                        f.name,
-                        data=value,
-                        compression=compression,
-                        compression_opts=compression_opts,
-                    )
+            save_nfdh5_fields(root, self, compression, compression_opts)
 
     @classmethod
     def from_filename(cls, filename: Path | str) -> Self:
         """Read an HDF5 file from disk."""
-        with h5py.File(filename, "r") as in_file:
-            root = in_file["/0"]
-            data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}
-        return cls(**data)
+        return cls(**load_nfdh5_fields(filename))
