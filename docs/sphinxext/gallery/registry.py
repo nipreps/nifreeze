@@ -35,7 +35,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from gallery.datasets import SCHEMES
-from nifreeze.data.dmri import DWI
+from nifreeze.data.base import BaseDataset
 from nifreeze.model.base import BaseModel, ModelFactory
 from nifreeze.model.dmri import (
     AverageDWIModel,
@@ -44,6 +44,7 @@ from nifreeze.model.dmri import (
     GPModel,
     GQIModel,
 )
+from nifreeze.model.pet import BSplinePETModel
 
 #: Every acquisition scheme — the default for a model without ``applicable_schemes``.
 ANY_SCHEME = frozenset(SCHEMES)
@@ -100,6 +101,7 @@ GALLERY_MODELS: list[ModelSpec] = [
         {"kernel_model": "multishell"},
         frozenset({"multi-shell"}),
     ),
+    ModelSpec("bspline", "B-Spline (PET)", "pet", BSplinePETModel),
 ]
 
 
@@ -123,6 +125,14 @@ def check_mode(spec: ModelSpec, mode: str) -> tuple[bool, str | None]:
     return True, None
 
 
-def build_model(spec: ModelSpec, dwi: DWI) -> BaseModel:
-    """Instantiate the model for ``spec`` on ``dwi`` via the factory."""
-    return ModelFactory.init(spec.factory_name, dataset=dwi, **dict(spec.kwargs))
+def build_model(spec: ModelSpec, dataset: BaseDataset) -> BaseModel:
+    """Instantiate the model for ``spec`` on ``dataset`` via the factory.
+
+    Parameters
+    ----------
+    spec : :obj:`ModelSpec`
+        Gallery model specification.
+    dataset : :obj:`~nifreeze.data.base.BaseDataset`
+        Dataset object.
+    """
+    return ModelFactory.init(spec.factory_name, dataset=dataset, **dict(spec.kwargs))
