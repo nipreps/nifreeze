@@ -100,7 +100,7 @@ jobs:
       - name: Materialize ${{ matrix.dataset }}
         run: python -m gallery.run --datasets ${{ matrix.dataset }} --fetch-only
       - name: Upload dataset artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gallery-data-${{ matrix.dataset }}
           path: |
@@ -147,7 +147,7 @@ jobs:
       # and collect is designed to assemble whatever exists.
       - name: Upload cell output (panels + manifest fragment)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gallery-cell-${{ matrix.cell.dataset }}-${{ matrix.cell.model }}-${{ matrix.cell.mode }}
           path: ${{ env.NIFREEZE_GALLERY_OUT }}
@@ -155,7 +155,7 @@ jobs:
           retention-days: 3
       - name: Upload coverage fragment
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gallery-cov-${{ matrix.cell.dataset }}-${{ matrix.cell.model }}-${{ matrix.cell.mode }}
           # ``coverage run --parallel-mode`` writes .coverage.<host>.<pid>.<rand>,
@@ -229,7 +229,7 @@ jobs:
           fi
       - name: Upload gallery output + coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gallery-output
           path: |
@@ -238,7 +238,7 @@ jobs:
           if-no-files-found: warn
       - name: Upload rendered pages
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gallery-pages
           path: docs/gallery
