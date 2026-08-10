@@ -34,6 +34,10 @@ and eddy-current-derived distortion estimation in dMRI.
    :target: https://github.com/nipreps/nifreeze/actions/workflows/notebooks.yml
    :alt: Examples
 
+.. image:: https://github.com/nipreps/nifreeze/actions/workflows/gallery.yml/badge.svg
+   :target: https://github.com/nipreps/nifreeze/actions/workflows/gallery.yml
+   :alt: Prediction gallery
+
 .. image:: https://github.com/nipreps/nifreeze/actions/workflows/pages/pages-build-deployment/badge.svg
    :target: https://www.nipreps.org/nifreeze/main/index.html
    :alt: Documentation
