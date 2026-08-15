@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: hynek/build-and-inspect-python-package@v2
+      - uses: hynek/build-and-inspect-python-package@v3.0.1
         with:
           # Always true, but we will likely want to reuse this job in PR builds
           attest-build-provenance-github: ${{ github.event_name != 'pull_request' }}
