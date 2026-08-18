@@ -29,11 +29,13 @@ from gallery.datasets import (
     DATASETS,
     DSI,
     MULTI_SHELL,
+    PET_SCHEME,
     SINGLE_SHELL,
     _cache_root,
     default_lovo_indices,
     load_ds000206,
     synthetic_dwi,
+    synthetic_pet,
     synthetic_spec,
     verify_scheme,
 )
@@ -50,6 +52,8 @@ from gallery.registry import (
 )
 from gallery.run import applicable_matrix, run_gallery
 
+from nifreeze.data.pet import PET
+
 
 def _cell(manifest, model, mode):
     """Return the single cell matching ``model``/``mode``."""
@@ -58,43 +62,116 @@ def _cell(manifest, model, mode):
     return matches[0]
 
 
-@pytest.mark.parametrize(
-    "scheme", [SINGLE_SHELL, MULTI_SHELL, DSI], ids=["single", "multi", "dsi"]
-)
-def test_synthetic_dwi_scheme(scheme):
-    """The synthetic builder yields data classified as the requested scheme."""
-    dwi = synthetic_dwi(scheme, n_directions=24)
-    assert verify_scheme(dwi, scheme) == scheme
-
-
-def test_verify_scheme_mismatch_raises():
+def test_synthetic_scheme_mismatch_raises():
+    """Scheme verification rejects mismatched schemes."""
     dwi = synthetic_dwi(SINGLE_SHELL)
     with pytest.raises(ValueError, match="Scheme mismatch"):
         verify_scheme(dwi, MULTI_SHELL, name="synthetic")
 
 
-def test_default_lovo_indices():
-    dwi = synthetic_dwi(SINGLE_SHELL, n_directions=24)
-    indices = default_lovo_indices(dwi, count=3)
-    assert len(indices) == 3
-    assert all(0 <= i < len(dwi) for i in indices)
+@pytest.mark.parametrize(
+    "scheme", [SINGLE_SHELL, MULTI_SHELL, DSI], ids=["single", "multi", "dsi"]
+)
+def test_synthetic_dwi_scheme(scheme):
+    """The synthetic DWI builder yields data classified as the requested scheme."""
+    dwi = synthetic_dwi(scheme, n_directions=24)
+    assert verify_scheme(dwi, scheme) == scheme
+
+
+def test_synthetic_pet():
+    """The synthetic PET builder yields valid PET data."""
+    pet = synthetic_pet(n_frames=10)
+    assert verify_scheme(pet, PET_SCHEME) == PET_SCHEME
+    assert len(pet) == 10
+    assert pet.midframe.shape == (10,)
+    assert pet.total_duration > 0
+
+
+def test_synthetic_spec_invalid_modality():
+    """Synthetic spec rejects unknown modalities."""
+    with pytest.raises(ValueError, match="Unknown modality"):
+        synthetic_spec(SINGLE_SHELL, modality="invalid")
+
+
+@pytest.mark.parametrize(
+    "scheme,modality,builder_kwargs",
+    [
+        (SINGLE_SHELL, "dwi", {"n_directions": 24}),
+        (MULTI_SHELL, "dwi", {"n_directions": 24}),
+        (DSI, "dwi", {"n_directions": 24}),
+        (PET_SCHEME, "pet", {"n_frames": 10}),
+    ],
+    ids=["dwi-single", "dwi-multi", "dwi-dsi", "pet"],
+)
+def test_synthetic_spec(scheme, modality, builder_kwargs):
+    """Synthetic spec builder creates valid datasets."""
+    spec = synthetic_spec(scheme, modality=modality, **builder_kwargs)
+    assert spec.scheme == scheme
+    dataset = spec.load()
+    assert verify_scheme(dataset, scheme) == scheme
+    if modality == "dwi":
+        assert len(dataset) >= 1
+    else:  # PET
+        assert isinstance(dataset, PET)
+        assert len(dataset) == builder_kwargs["n_frames"]
+        assert dataset.midframe.shape == (builder_kwargs["n_frames"],)
+        assert dataset.total_duration > 0
+
+
+@pytest.mark.parametrize(
+    "dataset_builder,count",
+    [
+        (lambda: synthetic_dwi(SINGLE_SHELL, n_directions=24), 3),
+        (lambda: synthetic_dwi(MULTI_SHELL, n_directions=24), 3),
+        (lambda: synthetic_pet(n_frames=15), 4),
+    ],
+    ids=["dwi", "dwi-multi", "pet"],
+)
+def test_default_lovo_indices(dataset_builder, count):
+    """LOVO indices work for both DWI and PET datasets."""
+    dataset = dataset_builder()
+    indices = default_lovo_indices(dataset, count=count)
+    assert len(indices) == count
+    assert all(0 <= i < len(dataset) for i in indices)
     assert indices == sorted(set(indices))
 
 
-def test_manifest_roundtrip(tmp_path):
+@pytest.mark.parametrize(
+    "cells,expected_ran_count",
+    [
+        # Single cell
+        (
+            [CellResult("dsX", SINGLE_SHELL, "dti", "lovo", STATUS_RAN, indices=[1, 2])],
+            1,
+        ),
+        # Mixed statuses
+        (
+            [
+                CellResult("dsX", SINGLE_SHELL, "dti", "lovo", STATUS_RAN, indices=[1, 2]),
+                CellResult(
+                    "dsX", SINGLE_SHELL, "average", "single-fit", STATUS_SKIPPED, "no single-fit"
+                ),
+            ],
+            1,
+        ),
+        # PET cell
+        (
+            [CellResult("pet", PET_SCHEME, "bspline", "lovo", STATUS_RAN, indices=[3, 4])],
+            1,
+        ),
+    ],
+    ids=["single-cell", "mixed-statuses", "pet"],
+)
+def test_manifest_roundtrip(tmp_path, cells, expected_ran_count):
+    """Gallery manifest can be serialized and deserialized."""
     manifest = GalleryManifest(
-        cells=[
-            CellResult("dsX", SINGLE_SHELL, "dti", "lovo", STATUS_RAN, indices=[1, 2]),
-            CellResult(
-                "dsX", SINGLE_SHELL, "average", "single-fit", STATUS_SKIPPED, "no single-fit"
-            ),
-        ],
+        cells=cells,
         metadata={"nifreeze_version": "0.0"},
     )
     path = manifest.to_json(tmp_path / "m.json")
     reloaded = GalleryManifest.from_json(path)
     assert reloaded.to_dict() == manifest.to_dict()
-    assert reloaded.counts()[STATUS_RAN] == 1
+    assert reloaded.counts()[STATUS_RAN] == expected_ran_count
     assert "list-table" in manifest.coverage_table_rst()
 
 
@@ -120,35 +197,80 @@ def test_capability_filtering_helpers():
     # DTI excludes DSI.
     assert not check_applicability(specs["dti"], DSI)[0]
 
+    # PET supports both modes
+    assert check_mode(specs["bspline"], "single-fit")[0]
+    assert check_mode(specs["bspline"], "lovo")[0]
+
 
 def test_run_gallery_average_single_shell():
     """Average runs in both modes (single-fit averages all volumes)."""
-    spec = synthetic_spec(SINGLE_SHELL, n_directions=20)
+    spec = synthetic_spec(SINGLE_SHELL, "dwi", n_directions=20)
     manifest = run_gallery([spec], model_keys=["average"], render=False)
 
     assert _cell(manifest, "average", "lovo").status == STATUS_RAN
     assert _cell(manifest, "average", "single-fit").status == STATUS_RAN
 
 
+@pytest.mark.parametrize(
+    "scheme,modality,model_keys,expected_canaries",
+    [
+        # DWI single-shell: GQI and GP-spherical emit canary warnings
+        (
+            SINGLE_SHELL,
+            "dwi",
+            ["dti", "gqi", "gp-spherical", "average"],
+            {"gqi": True, "gp-spherical": True, "dti": False, "average": False},
+        ),
+        # DWI multi-shell: GP-multishell emits canary
+        (
+            MULTI_SHELL,
+            "dwi",
+            ["dti", "dki", "gp-multishell"],
+            {"dki": False, "dti": False, "gp-multishell": True},
+        ),
+        # PET: B-Spline does not emit canary (temporal interpolation is deterministic)
+        (
+            PET_SCHEME,
+            "pet",
+            ["bspline"],
+            {"bspline": False},
+        ),
+    ],
+    ids=["dwi-single-shell", "dwi-multi-shell", "pet"],
+)
 @pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
-def test_run_gallery_single_fit_canary():
-    """The gallery captures the self-consistency-canary warning for GQI/GP."""
-    spec = synthetic_spec(SINGLE_SHELL, n_directions=14)
-    manifest = run_gallery(
-        [spec], model_keys=["dti", "gqi", "gp-spherical", "average"], render=False
-    )
+def test_run_gallery_single_fit_canary(scheme, modality, model_keys, expected_canaries):
+    """The gallery captures self-consistency-canary warnings for applicable models.
 
-    assert _cell(manifest, "gqi", "single-fit").canary is True
-    assert _cell(manifest, "gp-spherical", "single-fit").canary is True
-    assert _cell(manifest, "dti", "single-fit").canary is False
-    assert _cell(manifest, "average", "single-fit").canary is False
+    Tests across DWI schemes and PET modality. LOVO is never a canary;
+    single-fit may emit warnings for models with stochastic fitting.
+    """
+    n_dirs = 14 if scheme == SINGLE_SHELL else (12 if scheme == MULTI_SHELL else None)
+    n_frames = 12 if scheme == PET_SCHEME else None
+
+    if modality == "dwi":
+        spec = synthetic_spec(scheme, modality=modality, n_directions=n_dirs)
+    else:  # PET
+        spec = synthetic_spec(scheme, modality=modality, n_frames=n_frames)
+
+    manifest = run_gallery([spec], model_keys=model_keys, render=False)
+
+    for model_key, expected_canary in expected_canaries.items():
+        cell = _cell(manifest, model_key, "single-fit")
+        assert cell.canary is expected_canary, (
+            f"{model_key} single-fit canary mismatch: "
+            f"expected {expected_canary}, got {cell.canary}"
+        )
+
     # LOVO is never a canary.
-    assert _cell(manifest, "gqi", "lovo").canary is False
+    for model_key in model_keys:
+        cell = _cell(manifest, model_key, "lovo")
+        assert cell.canary is False
 
 
 def test_run_gallery_dti_renders(tmp_path):
     """DTI runs both modes and writes figures + a manifest to disk."""
-    spec = synthetic_spec(SINGLE_SHELL, n_directions=20)
+    spec = synthetic_spec(SINGLE_SHELL, "dwi", n_directions=20)
     manifest = run_gallery([spec], model_keys=["dti"], out_dir=tmp_path, render=True)
 
     lovo = _cell(manifest, "dti", "lovo")
@@ -167,11 +289,12 @@ def test_run_gallery_dti_renders(tmp_path):
 def test_datasets_registry():
     """The OpenNeuro registry declares the four expected scheme datasets."""
     by_name = {d.name: d for d in DATASETS}
-    assert set(by_name) == {"ds000206", "ds000114", "ds003138", "ds004737"}
+    assert set(by_name) == {"ds000206", "ds000114", "ds003138", "ds004737", "ds00PET"}
     assert by_name["ds000206"].scheme == SINGLE_SHELL
     assert by_name["ds000114"].scheme == SINGLE_SHELL
     assert by_name["ds003138"].scheme == MULTI_SHELL
     assert by_name["ds004737"].scheme == DSI
+    assert by_name["ds00PET"].scheme == PET_SCHEME
     assert all(callable(d.loader) for d in DATASETS)
 
 
@@ -256,12 +379,15 @@ def test_applicable_matrix():
     dsi_models = {c["model"] for c in cells if c["dataset"] == "ds004737"}
     assert dsi_models == {"average", "gqi"}
 
-    # DKI is multi-shell only — never on the single-shell datasets.
+    # DKI is multi-shell only — never on the single-shell datasets;
+    # BSpline (PET model) only appears on PET datasets.
     for c in cells:
         if c["model"] == "dki":
             assert c["scheme"] == MULTI_SHELL
         if c["model"] == "gp-spherical":
             assert c["scheme"] == SINGLE_SHELL
+        if c["model"] == "bspline":
+            assert c["scheme"] == PET_SCHEME
 
     # Both modes are enumerated for every applicable (dataset, model) pair.
     pairs = {(c["dataset"], c["model"]) for c in cells}
@@ -496,8 +622,8 @@ def test_source_relpaths_prefers_sidecar(tmp_path, monkeypatch):
 
 def test_run_gallery_dki_scheme_gating():
     """DKI is skipped on single-shell and runs on multi-shell."""
-    ss = synthetic_spec(SINGLE_SHELL, n_directions=12)
-    ms = synthetic_spec(MULTI_SHELL, n_directions=12)
+    ss = synthetic_spec(SINGLE_SHELL, "dwi", n_directions=12)
+    ms = synthetic_spec(MULTI_SHELL, "dwi", n_directions=12)
 
     ss_manifest = run_gallery([ss], model_keys=["dki"], render=False)
     assert _cell(ss_manifest, "dki", "lovo").status == STATUS_SKIPPED
