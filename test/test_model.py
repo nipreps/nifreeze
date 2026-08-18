@@ -68,7 +68,6 @@ class DummyDatasetNoRef:
 
 
 def test_base_model():
-    from nifreeze.model.base import BaseModel
 
     if sys.version_info >= (3, 12):
         expected_message = re.escape(
@@ -81,7 +80,7 @@ def test_base_model():
         )
 
     with pytest.raises(TypeError, match=expected_message):
-        BaseModel(None)  # type: ignore[abstract]
+        model.base.BaseModel(None)  # type: ignore[abstract]
 
 
 @pytest.mark.parametrize("use_mask", (False, True))
@@ -403,7 +402,6 @@ def test_factory_gp_variants(name, setup_random_dwi_data):
 @pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
 def test_gpmodel_fit_predict(request):
     """``GPModel`` fits/predicts through the wrapper (LOVO and single-fit)."""
-    from nifreeze.model.dmri import GPModel
 
     rng = request.node.rng
     size = (2, 2, 2)
@@ -425,7 +423,7 @@ def test_gpmodel_fit_predict(request):
     )
 
     # LOVO: predict the held-out orientation.
-    gp = GPModel(dwi, kernel_model="spherical")
+    gp = model.dmri.GPModel(dwi, kernel_model="spherical")
     predicted = gp.fit_predict(0)
     assert predicted is not None
     assert predicted.shape == size
@@ -433,10 +431,8 @@ def test_gpmodel_fit_predict(request):
 
     # Single-fit: locks the fit (returns None), then predicts from the locked fit.
     # GP single-fit is a self-consistency canary, so it warns.
-    from nifreeze.model.base import SingleFitCanaryWarning
-
-    gp2 = GPModel(dwi, kernel_model="spherical")
-    with pytest.warns(SingleFitCanaryWarning):
+    gp2 = model.dmri.GPModel(dwi, kernel_model="spherical")
+    with pytest.warns(model.base.SingleFitCanaryWarning):
         assert gp2.fit_predict(None) is None
     assert gp2._locked_fit is True
     predicted2 = gp2.fit_predict(0)
@@ -448,9 +444,6 @@ def test_gpmodel_fit_predict(request):
 def test_single_fit_canary_warning(request):
     """Canary models (GQI, GP) warn on single-fit; DTI and average do not."""
     import warnings
-
-    from nifreeze.model.base import SingleFitCanaryWarning
-    from nifreeze.model.dmri import AverageDWIModel, DTIModel, GPModel, GQIModel
 
     rng = request.node.rng
     size = (2, 2, 2)
@@ -472,50 +465,44 @@ def test_single_fit_canary_warning(request):
             warnings.simplefilter("always")
             _model.fit_predict(None)
         assert caught is not None
-        return any(issubclass(w.category, SingleFitCanaryWarning) for w in caught)
+        return any(issubclass(w.category, model.base.SingleFitCanaryWarning) for w in caught)
 
     # Self-reconstructing models: single-fit is only a self-consistency canary.
-    assert warns(GQIModel(dwi)) is True
-    assert warns(GPModel(dwi, kernel_model="spherical")) is True
+    assert warns(model.dmri.GQIModel(dwi)) is True
+    assert warns(model.dmri.GPModel(dwi, kernel_model="spherical")) is True
     # Constrained / averaging models: single-fit is a genuine operation.
-    assert warns(DTIModel(dwi)) is False
-    assert warns(AverageDWIModel(dwi)) is False
+    assert warns(model.dmri.DTIModel(dwi)) is False
+    assert warns(model.dmri.AverageDWIModel(dwi)) is False
 
 
 def test_model_capability_contract():
     """The declarative capability attributes match each model's real constraints."""
-    from nifreeze.model.base import BaseModel
-    from nifreeze.model.dmri import (
-        BaseDWIModel,
-        DKIModel,
-        DTIModel,
-        GPModel,
-        GQIModel,
-    )
 
     # single_fit_is_canary is modality-agnostic (lives on the base model); only
     # self-reconstructing models flip it on.
-    assert BaseModel.single_fit_is_canary is False
-    assert GQIModel.single_fit_is_canary is True
-    assert GPModel.single_fit_is_canary is True
+    assert model.base.BaseModel.single_fit_is_canary is False
+    assert model.dmri.GQIModel.single_fit_is_canary is True
+    assert model.dmri.GPModel.single_fit_is_canary is True
 
     # The scheme/shell/b0 attributes are DWI-specific (live on BaseDWIModel).
-    assert BaseDWIModel.requires_multishell is False
-    assert BaseDWIModel.excludes_b0 is False
-    assert BaseDWIModel.applicable_schemes == frozenset({"single-shell", "multi-shell", "DSI"})
+    assert model.dmri.BaseDWIModel.requires_multishell is False
+    assert model.dmri.BaseDWIModel.excludes_b0 is False
+    assert model.dmri.BaseDWIModel.applicable_schemes == frozenset(
+        {"single-shell", "multi-shell", "DSI"}
+    )
 
     # DTI is a low-b tensor fit; DSI is out of scope.
-    assert DTIModel.applicable_schemes == frozenset({"single-shell", "multi-shell"})
+    assert model.dmri.DTIModel.applicable_schemes == frozenset({"single-shell", "multi-shell"})
 
     # DKI needs >= 3 b-values (multi-shell only).
-    assert DKIModel.requires_multishell is True
-    assert DKIModel.applicable_schemes == frozenset({"multi-shell"})
+    assert model.dmri.DKIModel.requires_multishell is True
+    assert model.dmri.DKIModel.applicable_schemes == frozenset({"multi-shell"})
 
     # GQI drops b=0 volumes.
-    assert GQIModel.excludes_b0 is True
+    assert model.dmri.GQIModel.excludes_b0 is True
 
     # GP targets orientation data (kernel picks the concrete scheme).
-    assert GPModel.applicable_schemes == frozenset({"single-shell", "multi-shell"})
+    assert model.dmri.GPModel.applicable_schemes == frozenset({"single-shell", "multi-shell"})
 
 
 def test_factory_initializations(datadir):
