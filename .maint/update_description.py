@@ -22,7 +22,7 @@
 #
 
 # /// script
-# requires-python = ">=3.10"
+# requires-python = ">=3.12"
 # dependencies = [
 #     "click",
 #     "toml",
