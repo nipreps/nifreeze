@@ -23,11 +23,67 @@
 """py.test configuration."""
 
 import os
+import sys
 from pathlib import Path
 
 import nibabel as nb
 import numpy as np
 import pytest
+
+try:
+    import resource  # POSIX only
+except ImportError:  # pragma: no cover - Windows
+    resource = None  # type: ignore[assignment]
+
+
+def peak_rss_mb(fn, *args, **kwargs) -> float:
+    """Peak *incremental* resident memory (MB) of running ``fn`` in a child.
+
+    The callable runs in a ``fork``-ed child so closures and lambdas execute
+    without pickling. The child measures its own ``ru_maxrss`` high-water delta
+    (from just after the fork to just after ``fn`` returns) and returns it
+    through a pipe, making the measurement immune to the parent's resident
+    footprint or to high-water pollution from earlier tests. POSIX only.
+
+    ``ru_maxrss`` is reported in KiB on Linux and in bytes on macOS.
+    """
+    if resource is None or not hasattr(os, "fork"):
+        pytest.skip("peak-RSS probe requires os.fork and the resource module (POSIX)")
+
+    read_fd, write_fd = os.pipe()
+    pid = os.fork()
+    if pid == 0:  # pragma: no cover - child process
+        code = 0
+        try:
+            os.close(read_fd)
+            start = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            fn(*args, **kwargs)
+            peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            os.write(write_fd, str(peak - start).encode())
+        except BaseException:
+            code = 1
+        finally:
+            os.close(write_fd)
+            os._exit(code)
+
+    os.close(write_fd)
+    payload = b""
+    while chunk := os.read(read_fd, 4096):
+        payload += chunk
+    os.close(read_fd)
+    _, status = os.waitpid(pid, 0)
+    if os.waitstatus_to_exitcode(status) != 0:
+        raise RuntimeError("peak-RSS child process raised while running the probe target")
+
+    units = 1024.0 if sys.platform != "darwin" else 1024.0 * 1024.0  # ru_maxrss -> MB
+    return int(payload) / units
+
+
+@pytest.fixture
+def peak_rss():
+    """Return the :func:`peak_rss_mb` probe as a fixture."""
+    return peak_rss_mb
+
 
 test_data_env = os.getenv("TEST_DATA_HOME", str(Path.home() / "nifreeze-tests"))
 test_output_dir = os.getenv("TEST_OUTPUT_DIR")

@@ -25,6 +25,22 @@ Theory concepts grounding nifreeze (literature-sourced, `namespace: paper`):
 - [Sphere sampling: electrostatic repulsion and octahedral subdivision](pages/entity/concept-sphere-sampling-electrostatic-repulsion.md)
 - [Multi-tensor signal simulation](pages/entity/concept-multi-tensor-signal-simulation.md)
 
+Data-layer / storage concepts (internal, `namespace: rr`):
+
+- [Memory-mapped I/O and demand paging for 4D neuroimaging](pages/entity/concept-memory-mapped-io.md)
+- [Checkpoint-restart for long-running volume-wise estimation](pages/entity/concept-checkpoint-restart.md)
+
+### Storage & memory dependency surface (tool pages)
+
+Dependency-integration knowledge for the data layer: the numpy/HDF5/nibabel APIs
+nifreeze relies on to memory-map and checkpoint 4D data, and the Zarr alternative
+it deferred (see the schema's dependency-integration scope clause).
+
+- [NumPy memory-mapped arrays](pages/entity/tool-numpy-memmap.md)
+- [HDF5 storage layout and the direct-mmap technique](pages/entity/tool-hdf5-storage-layout.md)
+- [NiBabel ArrayProxy lazy image data](pages/entity/tool-nibabel-arrayproxy.md)
+- [Zarr chunked array store (deferred alternative)](pages/entity/tool-zarr-array-store.md)
+
 ### DIPY integration surface (tool pages — pinned to DIPY commit 2ecd3655)
 
 Dependency-integration knowledge: the DIPY API surface nifreeze consumes,
@@ -49,6 +65,7 @@ Project-level technical claims integrating the concepts and references:
 - [The GradientTable rebuild is nifreeze's DIPY interop seam and a hot path](pages/synthesis/gradient-table-interop-hotpath.md)
 - [The vendored GQI model: lineage and divergence from DIPY](pages/synthesis/vendored-gqi-lineage.md)
 - [DIPY version-pin fragility and the wiki-cache sync procedure](pages/synthesis/dipy-version-pin-fragility.md)
+- [Storage backend decision: memmap working array + HDF5 container](pages/synthesis/storage-backend-decision-memmap-hdf5.md)
 
 ## References
 
