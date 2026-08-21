@@ -232,6 +232,8 @@ class BSplinePETModel(BasePETModel):
         the prediction for the start time.
         """
 
+        n_jobs = kwargs.pop("n_jobs", min(cpu_count() or 1, 8))
+
         # Generate a time mask for the frames to fit
         x_mask = np.ones(len(self._dataset), dtype=bool)
         if self._locked_fit is None:
@@ -251,8 +253,6 @@ class BSplinePETModel(BasePETModel):
         else:
             # Unlocked LOVO mode
             x_mask[index] = False
-
-        n_jobs = kwargs.pop("n_jobs", min(cpu_count() or 1, 8))
 
         x = self._dataset.midframe[x_mask].tolist()
 
