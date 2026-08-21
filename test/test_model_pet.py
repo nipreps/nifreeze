@@ -26,6 +26,7 @@ import sys
 
 import numpy as np
 import pytest
+from scipy import linalg as la
 from scipy.interpolate import BSpline
 
 from nifreeze.data.base import BaseDataset
@@ -254,6 +255,31 @@ def test_fit_predict_after_locked_fit_smoke(setup_random_pet_data, lock_first, i
     assert pred.shape == pet_obj.dataobj.shape[:3]
     assert np.issubdtype(pred.dtype, np.floating)
     assert np.isfinite(pred).all()
+
+
+def test_locked_fit_is_reused(setup_random_pet_data, mocker):
+    """A locked fit is computed once and reused for subsequent predictions."""
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+    pet_obj = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+    model = BSplinePETModel(pet_obj, n_ctrl=3, order=3)
+
+    lstsq = mocker.patch("nifreeze.model.pet.la.lstsq", wraps=la.lstsq)
+
+    full = model.fit_predict(index=None)
+    first = model.fit_predict(index=0)
+    second = model.fit_predict(index=1)
+
+    assert full is not None
+    assert first is not None
+    assert second is not None
+    assert model._locked_fit is True
+    assert lstsq.call_count == 1
 
 
 @pytest.mark.filterwarnings("ignore::nifreeze.model.base.SingleFitCanaryWarning")
