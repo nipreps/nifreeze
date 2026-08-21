@@ -183,8 +183,6 @@ class BSplinePETModel(BasePETModel):
         "_n_ctrl": "Number of B-Spline control points",
     }
 
-    single_fit_is_canary = True
-
     def __init__(
         self,
         dataset: PET,

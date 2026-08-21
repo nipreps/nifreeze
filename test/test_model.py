@@ -432,10 +432,9 @@ def test_gpmodel_fit_predict(setup_random_dwi_data):
 
 @pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
 def test_single_fit_canary_warning(setup_random_dwi_data, setup_random_pet_data):
-    """Canary models (GQI, GP) warn on single-fit; DTI and average do not."""
+    """Canary models (GQI, GP) warn on single-fit; DTI, average and PET
+    B-Spline do not."""
     import warnings
-
-    from nifreeze.model.pet import BSplinePETModel
 
     dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
     dwi = DWI(
@@ -472,20 +471,18 @@ def test_single_fit_canary_warning(setup_random_dwi_data, setup_random_pet_data)
         total_duration=total_duration,
     )
 
-    assert warns(BSplinePETModel(pet)) is True
+    assert warns(model.pet.BSplinePETModel(pet)) is False
 
 
 def test_model_capability_contract():
     """The declarative capability attributes match each model's real constraints."""
-    from nifreeze.model.pet import BasePETModel, BSplinePETModel
 
     # single_fit_is_canary is modality-agnostic (lives on the base model); only
     # self-reconstructing models flip it on.
     assert model.base.BaseModel.single_fit_is_canary is False
     assert model.dmri.GQIModel.single_fit_is_canary is True
     assert model.dmri.GPModel.single_fit_is_canary is True
-    assert BasePETModel.single_fit_is_canary is False
-    assert BSplinePETModel.single_fit_is_canary is True
+    assert model.pet.BasePETModel.single_fit_is_canary is False
 
     # The scheme/shell/b0 attributes are DWI-specific (live on BaseDWIModel).
     assert model.dmri.BaseDWIModel.requires_multishell is False
