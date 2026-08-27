@@ -18,6 +18,7 @@ Contents
     gallery
     usage
     running
+    citation
     developers
     changes
     bibliography

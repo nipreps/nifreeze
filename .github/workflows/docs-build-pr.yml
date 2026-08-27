@@ -43,6 +43,19 @@ jobs:
         pip install .[doc]
         python -m hatch version | tail -n1
 
+    - name: Install citation dependencies
+      run: |
+        pip install cffconvert
+        sudo apt-get update -y
+        sudo apt-get install -y --no-install-recommends \
+          texlive-latex-extra \
+          texlive-bibtex-extra \
+          biber \
+          poppler-utils
+
+    - name: Generate citation
+      run: .github/scripts/generate_citation_artifact.sh
+
     - name: Build docs
       run: |
           python -m hatch build --hooks-only
