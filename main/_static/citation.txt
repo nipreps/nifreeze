@@ -1,3 +1,7 @@
-Developers, The NiPreps (n.d.). NiFreeze. url: https://www.nipreps.org/
-   nifreeze/main/index.html.
-
+Legarreta, Jon Haitz, Elodie Savary, Christopher J. Markiewicz, Ariel Rokem,
+   Martin Norgaard, and Oscar Esteban (2025). “An open implementation of
+   FSL’s eddy with volume-to-volume artifact estimation for neuroimaging be-
+   yond diffusion MRI”. In: 34th Annual Conference & Exhibition of the In-
+   ternational Society for Magnetic Resonance in Medicine (ISMRM). Pro-
+   gram #3252. Honolulu, HI, US. doi: 10.58530/2025/3252. url: https:
+   //archive.ismrm.org/2025/3252.html.

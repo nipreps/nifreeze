@@ -1,15 +1,15 @@
 [0] Config.pm:307> INFO - This is Biber 2.19
 [0] Config.pm:310> INFO - Logfile is 'citation.blg'
-[67] biber:340> INFO - === Thu Aug 27, 2026, 08:15:25
-[88] Biber.pm:419> INFO - Reading 'citation.bcf'
-[136] Biber.pm:976> INFO - Using all citekeys in bib section 0
-[146] Biber.pm:4419> INFO - Processing section 0
-[155] Biber.pm:4610> INFO - Looking for bibtex file 'citation.bib' for section 0
-[156] bibtex.pm:1713> INFO - LaTeX decoding ...
-[157] bibtex.pm:1519> INFO - Found BibTeX data source 'citation.bib'
-[168] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
-[168] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
-[168] Biber.pm:4239> INFO - Sorting list 'nyt/global//global/global' of type 'entry' with template 'nyt' and locale 'en-US'
-[168] Biber.pm:4245> INFO - No sort tailoring available for locale 'en-US'
-[295] bbl.pm:660> INFO - Writing 'citation.bbl' with encoding 'UTF-8'
-[296] bbl.pm:763> INFO - Output to citation.bbl
+[67] biber:340> INFO - === Thu Aug 27, 2026, 19:14:53
+[103] Biber.pm:419> INFO - Reading 'citation.bcf'
+[152] Biber.pm:976> INFO - Using all citekeys in bib section 0
+[162] Biber.pm:4419> INFO - Processing section 0
+[172] Biber.pm:4610> INFO - Looking for bibtex file 'citation.bib' for section 0
+[172] bibtex.pm:1713> INFO - LaTeX decoding ...
+[174] bibtex.pm:1519> INFO - Found BibTeX data source 'citation.bib'
+[327] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[327] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[327] Biber.pm:4239> INFO - Sorting list 'nyt/global//global/global' of type 'entry' with template 'nyt' and locale 'en-US'
+[327] Biber.pm:4245> INFO - No sort tailoring available for locale 'en-US'
+[374] bbl.pm:660> INFO - Writing 'citation.bbl' with encoding 'UTF-8'
+[376] bbl.pm:763> INFO - Output to citation.bbl
