@@ -228,3 +228,20 @@ A page that is the target of any edge here is exempt from the orphan rule
 | pages/synthesis/vendored-gqi-lineage.md | informs | pages/entity/concept-generalized-q-sampling-imaging.md | GQI theory |
 | pages/synthesis/dipy-version-pin-fragility.md | depends_on | pages/entity/tool-dipy.md | pin 2ecd3655 |
 | pages/synthesis/dipy-version-pin-fragility.md | critiques | pages/entity/tool-dipy-reconst-contract.md | dotted-string silent break |
+
+## Data-layer / storage (memmap + HDF5 backend, issues #347/#171)
+
+| source | type | target | note |
+|--------|------|--------|------|
+| pages/entity/tool-numpy-memmap.md | implements | pages/entity/concept-memory-mapped-io.md | np.memmap realizes demand paging |
+| pages/entity/tool-hdf5-storage-layout.md | implements | pages/entity/concept-memory-mapped-io.md | contiguous block direct-mmap |
+| pages/entity/tool-hdf5-storage-layout.md | implements | pages/entity/concept-checkpoint-restart.md | NFDH5 = checkpoint store |
+| pages/entity/concept-checkpoint-restart.md | depends_on | pages/entity/tool-hdf5-storage-layout.md | persisted-state container |
+| pages/entity/tool-nibabel-arrayproxy.md | informs | pages/entity/concept-memory-mapped-io.md | prior-art lazy proxy |
+| pages/entity/concept-memory-mapped-io.md | depends_on | pages/entity/concept-leave-one-volume-out.md | volume-wise access pattern |
+| pages/synthesis/storage-backend-decision-memmap-hdf5.md | depends_on | pages/entity/tool-numpy-memmap.md | ndarray-subclass consumer contract |
+| pages/synthesis/storage-backend-decision-memmap-hdf5.md | depends_on | pages/entity/tool-hdf5-storage-layout.md | container + checkpoint |
+| pages/synthesis/storage-backend-decision-memmap-hdf5.md | depends_on | pages/entity/concept-memory-mapped-io.md | bounds RAM to working set |
+| pages/synthesis/storage-backend-decision-memmap-hdf5.md | depends_on | pages/entity/concept-checkpoint-restart.md | crash-safe resume |
+| pages/synthesis/storage-backend-decision-memmap-hdf5.md | critiques | pages/entity/tool-zarr-array-store.md | rejected: not ndarray, pattern unused |
+| pages/synthesis/storage-backend-decision-memmap-hdf5.md | depends_on | pages/entity/concept-leave-one-volume-out.md | per-volume estimation loop |
