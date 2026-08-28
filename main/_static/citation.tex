@@ -1,5 +1,6 @@
 \documentclass{article}
-\usepackage[backend=biber,style=authoryear,maxbibnames=99]{biblatex}
+\usepackage[backend=biber,style=authoryear,maxbibnames=99,giveninits=true]{biblatex}
+\DeclareNameAlias{sortname}{family-given}  % Force all authors to be "Family name, Initials"
 \addbibresource{citation.bib}
 \pagestyle{empty}
 

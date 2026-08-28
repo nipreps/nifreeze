@@ -1,7 +1,8 @@
 Citation
 ========
 
-If you use NiFreeze in your research, please cite it.
+If you use NiFreeze in your research, please cite it using the below
+references as appropriate:
 
 .. literalinclude:: _static/citation.txt
    :language: text
