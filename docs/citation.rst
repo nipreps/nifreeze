@@ -1,5 +1,5 @@
-Citation
-========
+How to cite
+===========
 
 If you use NiFreeze in your research, please cite it using the below
 references as appropriate:
