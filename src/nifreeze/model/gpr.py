@@ -521,9 +521,6 @@ class MultiShellKernel(KernelOperator):
 
     """
 
-    k1: Kernel
-    k2: Kernel
-
     def __init__(
         self,
         orientation_kernel: Kernel | None = None,
@@ -540,6 +537,28 @@ class MultiShellKernel(KernelOperator):
         self.bval_index = bval_index
 
         super().__init__(self.orientation_kernel, self.radial_kernel)
+
+    def _get_k1(self) -> Kernel:
+        """:class:`~sklearn.gaussian_process.kernels.Kernel`: First base kernel
+        (set by :class:`~sklearn.gaussian_process.kernels.KernelOperator` initialization).
+        """
+        return self._k1
+
+    def _set_k1(self, value: Kernel) -> None:
+        self._k1 = value
+
+    k1 = property(_get_k1, _set_k1)  # type: ignore[assignment]
+
+    def _get_k2(self) -> Kernel:
+        """:class:`~sklearn.gaussian_process.kernels.Kernel`: Second base kernel
+        (set by :class:`~sklearn.gaussian_process.kernels.KernelOperator` initialization).
+        """
+        return self._k2
+
+    def _set_k2(self, value: Kernel) -> None:
+        self._k2 = value
+
+    k2 = property(_get_k2, _set_k2)  # type: ignore[assignment]
 
     def get_params(self, deep: bool = True) -> dict:
         # ``clone()`` calls ``get_params(deep=False)`` and re-invokes ``__init__``,
