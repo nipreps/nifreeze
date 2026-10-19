@@ -763,3 +763,48 @@ def test_multishellkernel_gp_optimizes(n_samples):
     mean = cast(np.ndarray, model.predict(X[:3]))
     assert mean.shape == (3,)
     assert np.isfinite(mean).all()
+
+
+@pytest.mark.parametrize("n_dirs", [64, 128])
+def test_spherical_kriging_psd_within_bounds(n_dirs):
+    """The folded spherical covariance is positive semi-definite up to its upper bound."""
+    from nifreeze.testing import simulations as _sim
+
+    X = _sim.create_single_shell_gradient_table(n_dirs, 1000).bvecs[1:]
+    K = gpr.SphericalKriging(beta_a=gpr.BOUNDS_A_SPHERICAL[1], beta_l=1.0)(X)
+    assert np.linalg.eigvalsh(K).min() > -1e-10
+
+    # Beyond pi/2 (e.g., the former 2.35 rad bound), dense schemes become indefinite
+    K = gpr.SphericalKriging(beta_a=2.35, beta_l=1.0, a_bounds=gpr.BOUNDS_A)(X)
+    assert np.linalg.eigvalsh(K).min() < -1e-3
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def test_gpr_optimizer_leaves_start_on_dense_multishell():
+    """L-BFGS-B must not stop at its starting values on a dense multi-shell scheme."""
+    from dipy.core.gradients import gradient_table_from_bvals_bvecs
+    from sklearn.gaussian_process.kernels import WhiteKernel
+
+    from nifreeze.testing import simulations as _sim
+
+    rng = np.random.default_rng(1234)
+    gtabs = [
+        _sim.create_single_shell_gradient_table(n_dirs, bval)
+        for n_dirs, bval in ((20, 1000), (30, 2000), (64, 3000))
+    ]
+    bvecs = np.vstack([g.bvecs[1:] for g in gtabs])
+    bvals = np.concatenate([g.bvals[1:] for g in gtabs])
+    gtab = gradient_table_from_bvals_bvecs(bvals, bvecs)
+    signal = _sim.simulate_one_fiber_multivoxel(gtab, 100, 20, 2000, rng)
+    X, y = np.column_stack([bvecs, bvals]), np.asarray(signal)[:2000].T
+
+    kernel = gpr.MultiShellKernel(gpr.SphericalKriging(), RBF(1.0)) + WhiteKernel(1.0)
+    gp = gpr.DiffusionGPR(kernel=kernel, random_state=0, n_targets=y.shape[1], alpha=1e-10)
+    gp.fit(X, y)
+
+    start_lml = cast(float, gp.log_marginal_likelihood(kernel.theta))
+    fitted_lml = cast(float, gp.log_marginal_likelihood(gp.kernel_.theta))
+    assert not np.allclose(gp.kernel_.theta, kernel.theta)
+    assert gp.log_marginal_likelihood_value_ > start_lml + 1e3
+    # The reported value is the (unscaled) log marginal likelihood at the optimum
+    assert np.isclose(gp.log_marginal_likelihood_value_, fitted_lml)
