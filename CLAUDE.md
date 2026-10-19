@@ -26,7 +26,7 @@ python -m hatch version  # generates src/nifreeze/_version.py
   ```
 - A number of tests use pre-existing data (stored in the git-annex-enabled GIN G-Node https://gin.g-node.org/nipreps-data/tests-nifreeze) that need be found at location indicated by the environment variable `TEST_DATA_HOME`:
   ```bash
-  uvx datalad-installer --sudo ok git-annex
+  uv tool install git-annex
   uv tool install --with=datalad-osf --with=datalad-next datalad
   uv tool install --with=datalad-next datalad-osf
   datalad wtf  # check datalad is installed

@@ -67,7 +67,7 @@ jobs:
       - name: Install datalad
         if: steps.test-data.outputs.cache-hit != 'true'
         run: |
-          uvx datalad-installer --sudo ok git-annex
+          uv tool install git-annex
           uv tool install --with=datalad-osf --with=datalad-next datalad
           uv tool install --with=datalad-next datalad-osf
           datalad wtf
