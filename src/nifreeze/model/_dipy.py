@@ -119,8 +119,8 @@ class GaussianProcessModel(ReconstModel):
     def __init__(
         self,
         kernel_model: str = "spherical",
-        beta_l: float = 2.0,
-        beta_a: float = 0.1,
+        beta_l: float | None = None,
+        beta_a: float | None = None,
         sigma_sq: float = 1.0,
         ell: float = 1.0,
         nvox_prefit: int | None = DEFAULT_NVOX_PREFIT,
@@ -145,11 +145,15 @@ class GaussianProcessModel(ReconstModel):
             covariance was characterized for the single-shell case, so it is not
             wired into the multi-shell kernel here.
         beta_l : :obj:`float`, optional
-            Signal scale parameter determining the variability of the signal.
+            Initial signal scale parameter determining the variability of the
+            signal. Defaults to the angular kernel's own default.
         beta_a : :obj:`float`, optional
-            Distance scale parameter determining how fast the covariance
+            Initial distance scale parameter determining how fast the covariance
             decreases as one moves along the surface of the sphere. Must have a
-            positive value.
+            positive value within the kernel bounds. Defaults to the angular
+            kernel's own default: the spherical covariance is exactly zero beyond
+            ``a``, so a start near the lower bound leaves the marginal likelihood
+            flat in ``a`` and the optimizer cannot move.
         sigma_sq : :obj:`float`, optional
             Initial measurement-noise variance (:math:`\\sigma^2`). It is the
             starting ``noise_level`` of a
@@ -177,19 +181,25 @@ class GaussianProcessModel(ReconstModel):
         self.sigma_sq = sigma_sq
         self.nvox_prefit = nvox_prefit
 
+        KernelType = (
+            SphericalKriging if kernel_model in ("spherical", "multishell") else ExponentialKriging
+        )
+        # Unset starting values fall back to the angular kernel's own defaults
+        defaults = KernelType()
+        angular = KernelType(
+            beta_a=defaults.beta_a if beta_a is None else beta_a,
+            beta_l=defaults.beta_l if beta_l is None else beta_l,
+        )
+
         self.kernel: Kernel
         if kernel_model == "multishell":
             self.kernel = MultiShellKernel(
-                orientation_kernel=SphericalKriging(beta_a=beta_a, beta_l=beta_l),
+                orientation_kernel=angular,
                 radial_kernel=RBF(length_scale=ell),
             )
         else:
-            KernelType = SphericalKriging if kernel_model == "spherical" else ExponentialKriging
             # Add the :math:`\sigma^2` term of Andersson et al. (2015) as a WhiteKernel
-            self.kernel = KernelType(
-                beta_a=beta_a,
-                beta_l=beta_l,
-            ) + WhiteKernel(noise_level=sigma_sq)
+            self.kernel = angular + WhiteKernel(noise_level=sigma_sq)
 
     def fit(
         self,

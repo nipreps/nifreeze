@@ -305,7 +305,7 @@ class ExponentialKriging(Kernel):
 
     def __init__(
         self,
-        beta_a: float = 0.01,
+        beta_a: float = 0.5,
         beta_l: float = 2.0,
         a_bounds: tuple[float, float] = BOUNDS_A,
         l_bounds: tuple[float, float] = BOUNDS_LAMBDA,
