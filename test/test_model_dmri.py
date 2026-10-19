@@ -40,6 +40,7 @@ from dipy.segment.mask import median_otsu
 from dipy.sims.voxel import single_tensor
 from joblib import cpu_count
 from packaging.version import Version
+from sklearn.gaussian_process.kernels import WhiteKernel
 from threadpoolctl import threadpool_limits  # type: ignore[import-untyped]
 
 from nifreeze import model
@@ -1444,7 +1445,8 @@ def test_gp_model_multishell(hsph_dirs):
     X = np.column_stack([bvecs, bvals])
 
     gp = GaussianProcessModel(kernel_model="multishell")
-    assert isinstance(gp.kernel, MultiShellKernel)
+    assert isinstance(gp.kernel.get_params()["k1"], MultiShellKernel)
+    assert isinstance(gp.kernel.get_params()["k2"], WhiteKernel)
 
     # Fit on all but the last two directions, predict those two (LOVO-style).
     gpfit = gp.fit(signal[:-2], X[:-2])

@@ -545,6 +545,36 @@ def test_gp_model_adds_and_optimizes_whitekernel():
     assert np.isfinite(prediction).all()
 
 
+def test_uses_bvalue():
+    """Only kernels containing a multi-shell kernel consume the b-value column."""
+    from sklearn.gaussian_process.kernels import WhiteKernel
+
+    assert gpr.uses_bvalue(gpr.MultiShellKernel()) is True
+    assert gpr.uses_bvalue(gpr.MultiShellKernel() + WhiteKernel()) is True
+    assert gpr.uses_bvalue(2.0 * (gpr.MultiShellKernel() + WhiteKernel())) is True
+    assert gpr.uses_bvalue(gpr.SphericalKriging() + WhiteKernel()) is False
+    assert gpr.uses_bvalue(gpr.ExponentialKriging()) is False
+
+
+def test_gp_model_multishell_whitekernel():
+    """The multi-shell GP carries a noise term and keeps the b-value column."""
+    from sklearn.gaussian_process.kernels import WhiteKernel
+
+    from nifreeze.model._dipy import GaussianProcessModel
+
+    gp = GaussianProcessModel(kernel_model="multishell", sigma_sq=0.5)
+    assert isinstance(gp.kernel.get_params()["k1"], gpr.MultiShellKernel)
+    assert isinstance(gp.kernel.get_params()["k2"], WhiteKernel)
+    assert gp.kernel.get_params()["k2"].noise_level == 0.5
+
+    X = np.column_stack([np.vstack([_ORIENT, _ORIENT]), np.repeat([1000.0, 2000.0], len(_ORIENT))])
+    y = np.exp(-X[:, -1] / 1000.0) * (1.0 + 0.1 * X[:, 0] ** 2)
+    gpfit = gp.fit(y, X)
+    prediction = gpfit.predict(X[:2])
+    assert prediction.shape == (2,)
+    assert np.isfinite(prediction).all()
+
+
 @pytest.mark.parametrize("kernel_cls", [gpr.SphericalKriging, gpr.ExponentialKriging])
 def test_kriging_defaults_within_bounds(kernel_cls):
     """Default starting values lie strictly inside the hyperparameter bounds."""
