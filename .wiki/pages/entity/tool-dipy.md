@@ -1,11 +1,11 @@
 ---
 title: "DIPY — nifreeze's diffusion-MRI dependency (integration surface)"
 entity_type: tool
-last_verified: 2026-07-13
+last_verified: 2026-10-19
 confidence_score: 0.9
-refresh_needed_if: "DIPY pin in pyproject.toml advances past 2ecd3655"
+refresh_needed_if: "DIPY floor in pyproject.toml rises above 1.12.1"
 source_urls:
-  - https://github.com/dipy/dipy/tree/2ecd3655
+  - https://github.com/dipy/dipy/tree/1.12.1
   - https://docs.dipy.org
 ---
 
@@ -20,16 +20,21 @@ dependency-integration scope clause).
 
 ## Pinned version
 
-nifreeze pins DIPY to an **unreleased git commit**, not a PyPI release
-(`pyproject.toml`):
+nifreeze requires a **released** DIPY (`pyproject.toml`):
 
 ```
-dipy @ git+https://github.com/dipy/dipy.git@2ecd3655
+dipy>=1.12.1
 ```
 
-Every signature/behaviour on the facet pages describes DIPY **at commit
-`2ecd3655`**. When that pin moves, this page and its facets go stale by design;
-the sync procedure lives in [[dipy-version-pin-fragility]].
+Every signature/behaviour on the facet pages describes DIPY **at `1.12.1`**. When
+that floor rises, this page and its facets go stale by design; the sync procedure
+lives in [[dipy-version-pin-fragility]].
+
+From 2026-07-09 to 2026-10-19 nifreeze pinned the unreleased commit `2ecd3655`
+instead, to get dipy/dipy#4054. PyPI refuses URL dependencies, so every package
+upload failed (nifreeze#504). The surface diffed between `1.12.1` and `2ecd3655`
+is identical except `dipy/reconst/multi_voxel.py`, where #4054 lives; nifreeze
+backports that fix for DKI (see [[tool-dipy-reconst-models]]).
 
 ## The surface nifreeze imports
 

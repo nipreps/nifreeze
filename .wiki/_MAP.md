@@ -226,5 +226,5 @@ A page that is the target of any edge here is exempt from the orphan rule
 | pages/synthesis/gradient-table-interop-hotpath.md | depends_on | pages/entity/concept-leave-one-volume-out.md | per-volume rebuild |
 | pages/synthesis/vendored-gqi-lineage.md | replicates | pages/entity/tool-dipy-reconst-models.md | vendored gqi copy |
 | pages/synthesis/vendored-gqi-lineage.md | informs | pages/entity/concept-generalized-q-sampling-imaging.md | GQI theory |
-| pages/synthesis/dipy-version-pin-fragility.md | depends_on | pages/entity/tool-dipy.md | pin 2ecd3655 |
+| pages/synthesis/dipy-version-pin-fragility.md | depends_on | pages/entity/tool-dipy.md | floor 1.12.1 |
 | pages/synthesis/dipy-version-pin-fragility.md | critiques | pages/entity/tool-dipy-reconst-contract.md | dotted-string silent break |

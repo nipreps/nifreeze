@@ -1,20 +1,20 @@
 ---
 title: "DIPY sphere & direction machinery (sphere, subdivide_octahedron, geometry)"
 entity_type: tool
-last_verified: 2026-07-13
+last_verified: 2026-10-19
 confidence_score: 0.9
-refresh_needed_if: "DIPY pin in pyproject.toml advances past 2ecd3655"
+refresh_needed_if: "DIPY floor in pyproject.toml rises above 1.12.1"
 source_urls:
-  - https://github.com/dipy/dipy/blob/2ecd3655/dipy/core/sphere.py
-  - https://github.com/dipy/dipy/blob/2ecd3655/dipy/core/subdivide_octahedron.py
-  - https://github.com/dipy/dipy/blob/2ecd3655/dipy/core/geometry.py
+  - https://github.com/dipy/dipy/blob/1.12.1/dipy/core/sphere.py
+  - https://github.com/dipy/dipy/blob/1.12.1/dipy/core/subdivide_octahedron.py
+  - https://github.com/dipy/dipy/blob/1.12.1/dipy/core/geometry.py
 ---
 
 # DIPY sphere & direction machinery
 
 The objects nifreeze uses to build diffusion-encoding direction sets (for phantom
 simulation) and the discrete ODF sphere (inside the vendored GQI model), cached at
-DIPY commit `2ecd3655`. Implements [[concept-sphere-sampling-electrostatic-repulsion]].
+DIPY `1.12.1`. Implements [[concept-sphere-sampling-electrostatic-repulsion]].
 Facet of [[tool-dipy]].
 
 ## Spheres (`dipy.core.sphere`)

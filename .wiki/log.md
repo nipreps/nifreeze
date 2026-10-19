@@ -61,3 +61,10 @@ followed by bullets. See [`schema.md`](schema.md) for the format contract
 - wrote 4 **synthesis** pages: nifreeze↔ReconstModel contract, GradientTable interop hot-path, vendored-GQI lineage, and DIPY version-pin fragility (which **hosts the cache-sync procedure**)
 - wired `index.md` (4 concepts + a DIPY tool-page subsection + 4 synthesis + a DIPY refs group) and `_MAP.md` (28 edges, legal enum only; `implements`/`depends_on`/`informs`/`replicates`/`critiques`); facet→umbrella grouping via prose + index (no illegal `part_of`)
 - cache maintenance: each tool page carries `refresh_needed_if: "DIPY pin in pyproject.toml advances past 2ecd3655"` (suppresses W001) and `source_urls` embedding the SHA; no new `/wiki-*` skill
+
+## 2026-10-19 — DIPY sync — pin 2ecd3655→floor 1.12.1
+- `pyproject.toml` now requires `dipy>=1.12.1`: PyPI refuses the `dipy @ git+…@2ecd3655` URL dependency, so every package upload failed since 2026-07-09 (nifreeze#504)
+- ran the sync procedure of [[dipy-version-pin-fragility]] backwards (`git diff 1.12.1 2ecd3655` over the consumed files): no consumed signature differs; changes are docstrings, string literals and refactors that keep behavior, except `dipy/reconst/multi_voxel.py` (dipy/dipy#4054, unreleased)
+- re-keyed the 6 tool pages and [[vendored-gqi-lineage]] to `1.12.1` (`source_urls`, `refresh_needed_if`, prose) and bumped `last_verified`; reworded the pin prose in [[tool-dipy]], [[dipy-version-pin-fragility]], `schema.md`, `index.md`, `_MAP.md` and `refs/garyfallidis-2014-dipy.md`
+- [[tool-dipy-reconst-models]]: documented the 1.12.1 orchestration-kwarg leak (dipy/dipy#4053; nifreeze backports #4054 for DKI) and a boolean-`weights` drop in DIPY's parallel worker at both 1.12.1 and 2ecd3655 (OLS/LS/CLS DKI fits come out weighted with `n_jobs>1`; reproduced)
+- sync procedure now keys on the floor, adds `multi_voxel.py` to the diff list, and names `test_dipy_orchestration_backport_still_needed` as a trigger
