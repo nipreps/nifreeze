@@ -23,11 +23,41 @@
 """A diffusion kurtosis imaging (DKI) model with a normalized ``fit`` interface."""
 
 import numpy as np
+from dipy.reconst import multi_voxel
 from dipy.reconst.dki import DiffusionKurtosisModel as _DipyDKIModel
+
+_ORCHESTRATION_KWARGS = ("engine", "n_jobs", "vox_per_chunk", "verbose", "inflight_cap")
+"""Parallelization kwargs consumed by DIPY's ``multi_voxel_fit``."""
+
+_DIPY_STRIPS_ORCHESTRATION = hasattr(multi_voxel, "ORCHESTRATION_KWARGS")
+"""Whether DIPY keeps orchestration kwargs out of the per-voxel fit (dipy/dipy#4054)."""
+
+
+class _DropOrchestrationKwargs:
+    """Call a DKI ``fit_method`` without the orchestration kwargs.
+
+    Backport of dipy/dipy#4054 for DIPY releases whose parallel ``multi_voxel_fit``
+    forwards them through ``multi_fit`` into the fit method (dipy/dipy#4053).
+    A class rather than a closure, so the model stays picklable for joblib.
+    Remove once the DIPY floor includes the fix.
+    """
+
+    def __init__(self, func):
+        self.func = func
+
+    def __call__(self, *args, **kwargs):
+        for key in _ORCHESTRATION_KWARGS:
+            kwargs.pop(key, None)
+        return self.func(*args, **kwargs)
 
 
 class DiffusionKurtosisModel(_DipyDKIModel):
     """A :obj:`~dipy.reconst.dki.DiffusionKurtosisModel` with uniform API."""
+
+    def __init__(self, gtab, *args, **kwargs):
+        super().__init__(gtab, *args, **kwargs)
+        if not _DIPY_STRIPS_ORCHESTRATION and self.common_fit_method:
+            self.fit_method = _DropOrchestrationKwargs(self.fit_method)
 
     def fit(self, data, *, mask=None, **kwargs):
         """Fit the model to data."""

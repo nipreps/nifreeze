@@ -1,18 +1,18 @@
 ---
 title: "DIPY signal simulation API (dipy.sims.voxel)"
 entity_type: tool
-last_verified: 2026-07-13
+last_verified: 2026-10-19
 confidence_score: 0.9
-refresh_needed_if: "DIPY pin in pyproject.toml advances past 2ecd3655"
+refresh_needed_if: "DIPY floor in pyproject.toml rises above 1.12.1"
 source_urls:
-  - https://github.com/dipy/dipy/blob/2ecd3655/dipy/sims/voxel.py
-  - https://github.com/dipy/dipy/blob/2ecd3655/dipy/core/geometry.py
+  - https://github.com/dipy/dipy/blob/1.12.1/dipy/sims/voxel.py
+  - https://github.com/dipy/dipy/blob/1.12.1/dipy/core/geometry.py
 ---
 
 # DIPY signal simulation API (`dipy.sims.voxel`)
 
 The forward-model functions nifreeze uses to synthesise ground-truth DWI signal
-for validating motion estimation, cached at DIPY commit `2ecd3655`. Implements
+for validating motion estimation, cached at DIPY `1.12.1`. Implements
 [[concept-multi-tensor-signal-simulation]]. Facet of [[tool-dipy]].
 
 ## `single_tensor`

@@ -528,10 +528,11 @@ class GPModel(BaseDWIModel):
     """
 
     applicable_schemes = frozenset({"single-shell", "multi-shell"})
-    # The GP interpolates the signal, so single-fit reproduces held-in volumes.
+    # The GP smooths over all volumes it was fitted on, so in single-fit the
+    # held-in volume leaks into its own prediction (a self-consistency check).
     single_fit_is_canary = True
 
-    _modelargs = ("kernel_model", "beta_l", "beta_a", "sigma_sq", "ell")
+    _modelargs = ("kernel_model", "beta_l", "beta_a", "sigma_sq", "ell", "nvox_prefit")
     _model_class = "nifreeze.model._dipy.GaussianProcessModel"
 
     def _fit(self, index: int | None = None, n_jobs: int | None = None, **kwargs) -> int:

@@ -53,12 +53,23 @@ __all__ = [
 
 BOUNDS_A: tuple[float, float] = (0.1, 2.35)
 """The limits for the parameter *a* (angular distance in rad)."""
+BOUNDS_A_SPHERICAL: tuple[float, float] = (0.1, np.pi / 2)
+r"""The limits for the parameter *a* of the spherical covariance.
+
+Angles are folded onto :math:`[0, \pi/2]` (``closest_polarity``). For
+:math:`a \leq \pi/2`, the folded spherical covariance equals
+:math:`C(\theta) + C(\pi - \theta)`, which keeps only the even Legendre terms of a
+positive-definite covariance and is therefore positive definite. Beyond
+:math:`\pi/2` this no longer holds, and dense schemes yield indefinite matrices.
+"""
 BOUNDS_LAMBDA: tuple[float, float] = (1e-3, 1000)
 """The limits for the parameter λ (signal scaling factor)."""
 THETA_EPSILON: float = 1e-5
 """Minimum nonzero angle."""
 LBFGS_CONFIGURABLE_OPTIONS = {"disp", "maxiter", "ftol", "gtol"}
 """The set of extended options that can be set on the default BFGS."""
+LBFGS_DEFAULT_GTOL: float = 1e-5
+"""SciPy's default L-BFGS-B projected-gradient tolerance."""
 CONFIGURABLE_OPTIONS: Mapping[str, set] = {
     "Nelder-Mead": {"disp", "maxiter", "adaptive", "fatol"},
     "CG": {"disp", "maxiter", "gtol"},
@@ -239,8 +250,22 @@ class DiffusionGPR(GaussianProcessRegressor):
                 if (value := getattr(self, name, None)) is not None:
                     options[name] = value
 
+            # Optimize the mean log marginal likelihood per observation: the sum
+            # grows with the number of targets (voxels), and so does the first,
+            # bounded L-BFGS-B step, which can then land on a corner of the bounds
+            # where the covariance is singular and stop at the starting values.
+            scale = 1.0 / np.size(self.y_train_)
+            # Keep the (absolute) projected-gradient tolerance in unscaled units
+            options["gtol"] = options.get("gtol", LBFGS_DEFAULT_GTOL) * scale
+
+            def scaled_obj_func(theta: np.ndarray, eval_gradient: bool = True):
+                if eval_gradient:
+                    value, gradient = obj_func(theta, eval_gradient)
+                    return value * scale, gradient * scale
+                return obj_func(theta, eval_gradient) * scale
+
             opt_res = optimize.minimize(
-                obj_func,
+                scaled_obj_func,
                 initial_theta,
                 method="L-BFGS-B",
                 bounds=bounds,
@@ -250,7 +275,7 @@ class DiffusionGPR(GaussianProcessRegressor):
                 tol=self.tol,
             )  # type: ignore[call-overload]
             _check_optimize_result("lbfgs", opt_res)
-            return opt_res.x, opt_res.fun
+            return opt_res.x, opt_res.fun / scale
 
         if isinstance(self.optimizer, str) and self.optimizer in CONFIGURABLE_OPTIONS:
             for name in CONFIGURABLE_OPTIONS[self.optimizer]:
@@ -280,7 +305,7 @@ class ExponentialKriging(Kernel):
 
     def __init__(
         self,
-        beta_a: float = 0.01,
+        beta_a: float = 0.5,
         beta_l: float = 2.0,
         a_bounds: tuple[float, float] = BOUNDS_A,
         l_bounds: tuple[float, float] = BOUNDS_LAMBDA,
@@ -388,7 +413,7 @@ class SphericalKriging(Kernel):
         self,
         beta_a: float = 1.38,
         beta_l: float = 0.5,
-        a_bounds: tuple[float, float] = BOUNDS_A,
+        a_bounds: tuple[float, float] = BOUNDS_A_SPHERICAL,
         l_bounds: tuple[float, float] = BOUNDS_LAMBDA,
     ):
         r"""
@@ -400,7 +425,7 @@ class SphericalKriging(Kernel):
         beta_l : :obj:`float`, optional
             The :math:`\lambda` hyperparameter.
         a_bounds : :obj:`tuple`, optional
-            Bounds for the ``a`` parameter.
+            Bounds for the ``a`` parameter (see :data:`BOUNDS_A_SPHERICAL`).
         l_bounds : :obj:`tuple`, optional
             Bounds for the :math:`\lambda` hyperparameter.
 
@@ -521,9 +546,6 @@ class MultiShellKernel(KernelOperator):
 
     """
 
-    k1: Kernel
-    k2: Kernel
-
     def __init__(
         self,
         orientation_kernel: Kernel | None = None,
@@ -540,6 +562,28 @@ class MultiShellKernel(KernelOperator):
         self.bval_index = bval_index
 
         super().__init__(self.orientation_kernel, self.radial_kernel)
+
+    def _get_k1(self) -> Kernel:
+        """:class:`~sklearn.gaussian_process.kernels.Kernel`: First base kernel
+        (set by :class:`~sklearn.gaussian_process.kernels.KernelOperator` initialization).
+        """
+        return self._k1
+
+    def _set_k1(self, value: Kernel) -> None:
+        self._k1 = value
+
+    k1 = property(_get_k1, _set_k1)  # type: ignore[assignment]
+
+    def _get_k2(self) -> Kernel:
+        """:class:`~sklearn.gaussian_process.kernels.Kernel`: Second base kernel
+        (set by :class:`~sklearn.gaussian_process.kernels.KernelOperator` initialization).
+        """
+        return self._k2
+
+    def _set_k2(self, value: Kernel) -> None:
+        self._k2 = value
+
+    k2 = property(_get_k2, _set_k2)  # type: ignore[assignment]
 
     def get_params(self, deep: bool = True) -> dict:
         # ``clone()`` calls ``get_params(deep=False)`` and re-invokes ``__init__``,
@@ -614,6 +658,27 @@ class MultiShellKernel(KernelOperator):
 
     def __repr__(self) -> str:
         return f"MultiShellKernel({self.k1} * {self.k2})"
+
+
+def uses_bvalue(kernel: Kernel) -> bool:
+    """Whether ``kernel`` (possibly composite) consumes the b-value column.
+
+    Examples
+    --------
+    >>> from sklearn.gaussian_process.kernels import WhiteKernel
+    >>> uses_bvalue(SphericalKriging() + WhiteKernel())
+    False
+    >>> uses_bvalue(MultiShellKernel() + WhiteKernel())
+    True
+
+    """
+    if isinstance(kernel, MultiShellKernel):
+        return True
+    if isinstance(kernel, KernelOperator):
+        # ``get_params()`` is the typed-safe way to reach a KernelOperator's operands.
+        operands = kernel.get_params(deep=False)
+        return uses_bvalue(operands["k1"]) or uses_bvalue(operands["k2"])
+    return False
 
 
 def exponential_covariance(theta: np.ndarray, a: float) -> np.ndarray:

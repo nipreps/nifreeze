@@ -41,11 +41,22 @@ jobs:
       - name: Check remote HEAD
         id: test-head
         run: |
-          SHA=$( git ls-remote $TEST_DATA_REPO HEAD | cut -f 1 )
+          # GIN may refuse CI runners (e.g., HTTP 403): retry, and if it stays
+          # unreachable, leave SHA empty so tests use the latest cached test data.
+          SHA=""
+          for attempt in 1 2 3; do
+            SHA=$( git ls-remote $TEST_DATA_REPO HEAD | cut -f 1 ) || SHA=""
+            [[ -n "$SHA" ]] && break
+            if (( attempt < 3 )); then sleep $(( attempt * 30 )); fi
+          done
+          if [[ -z "$SHA" ]]; then
+            echo "::warning title=Test data::Could not reach ${TEST_DATA_REPO}; tests will use the latest cached test data."
+          fi
           echo SHA=$SHA >> $GITHUB_OUTPUT
           echo SHA7=${SHA:0:7} >> $GITHUB_OUTPUT
       - name: Check for data-v2-${{ steps.test-head.outputs.SHA }}
         uses: actions/cache@v5
+        if: steps.test-head.outputs.SHA != ''
         id: test-data
         with:
           path: ${{ env.TEST_DATA_HOME }}
@@ -53,7 +64,7 @@ jobs:
           lookup-only: true
       - name: Create data-v2-${{ steps.test-head.outputs.SHA }}
         uses: actions/cache@v5
-        if: steps.test-data.outputs.cache-hit != 'true'
+        if: steps.test-head.outputs.SHA != '' && steps.test-data.outputs.cache-hit != 'true'
         with:
           path: ${{ env.TEST_DATA_HOME }}
           key: data-v2-${{ steps.test-head.outputs.SHA }}
@@ -63,16 +74,16 @@ jobs:
             data-v0
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
-        if: steps.test-data.outputs.cache-hit != 'true'
+        if: steps.test-head.outputs.SHA != '' && steps.test-data.outputs.cache-hit != 'true'
       - name: Install datalad
-        if: steps.test-data.outputs.cache-hit != 'true'
+        if: steps.test-head.outputs.SHA != '' && steps.test-data.outputs.cache-hit != 'true'
         run: |
-          uvx datalad-installer --sudo ok git-annex
+          uv tool install git-annex
           uv tool install --with=datalad-osf --with=datalad-next datalad
           uv tool install --with=datalad-next datalad-osf
           datalad wtf
       - name: Checkout commit ${{ steps.test-head.outputs.SHA7 }}
-        if: steps.test-data.outputs.cache-hit != 'true'
+        if: steps.test-head.outputs.SHA != '' && steps.test-data.outputs.cache-hit != 'true'
         run: |
           if [[ ! -d "${TEST_DATA_HOME}" ]]; then
             datalad install -rg --source=${TEST_DATA_REPO} ${TEST_DATA_HOME}
@@ -82,7 +93,7 @@ jobs:
             datalad get -r -J4 *
           fi
       - name: Install DIPY and fetch stanford_hardi dataset
-        if: steps.test-data.outputs.cache-hit != 'true'
+        if: steps.test-head.outputs.SHA != '' && steps.test-data.outputs.cache-hit != 'true'
         run: |
           echo "from dipy.data import fetch_stanford_hardi; fetch_stanford_hardi()" > fetch.py
           uv tool install dipy
@@ -122,6 +133,9 @@ jobs:
         with:
           path: ${{ env.TEST_DATA_HOME }}
           key: data-v2-${{ needs.cache-test-data.outputs.SHA }}
+          # Latest cached test data when GIN could not be reached
+          restore-keys: |
+            data-v2-
       - name: Install TeX Live
         run: |
           sudo apt-get update

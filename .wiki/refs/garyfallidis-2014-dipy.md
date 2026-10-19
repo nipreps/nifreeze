@@ -35,7 +35,7 @@ development). Its API stability is what allows a downstream project to depend on
 `dipy.reconst.*` and `dipy.core.gradients.*` as fixed contracts.
 
 **Location in the project.** nifreeze depends on DIPY as a runtime library
-(`pyproject.toml`, pinned to commit `2ecd3655`). The integration surface it
+(`pyproject.toml`, `dipy>=1.12.1`). The integration surface it
 consumes is cached in this wiki as the DIPY *tool* pages
 ([[tool-dipy]] and its facets: [[tool-dipy-gradient-table]],
 [[tool-dipy-reconst-contract]], [[tool-dipy-reconst-models]],
@@ -43,7 +43,7 @@ consumes is cached in this wiki as the DIPY *tool* pages
 citation those pages descend from.
 
 **Limits.** A software citation dates quickly: the *paper* describes DIPY circa
-2014, but nifreeze pins an unreleased 2025-era commit, so the authoritative
-description of the consumed API is the pinned source, not this paper. The tool
-pages — not this reference — hold the version-specific signatures, and they carry
-`refresh_needed_if` keyed to the pin advancing.
+2014, but nifreeze requires a 2026 release, so the authoritative description of
+the consumed API is the source at that floor, not this paper. The tool pages, not
+this reference, hold the version-specific signatures, and they carry
+`refresh_needed_if` keyed to the floor rising.

@@ -24,17 +24,28 @@
 
 import functools
 import re
+import time
 import warnings
 from contextlib import nullcontext
 
+import dipy
+import dipy.data as dpd
+import nibabel as nb
 import numpy as np
 import pytest
-from dipy.core.gradients import check_multi_b, gradient_table_from_bvals_bvecs
+from dipy.core.gradients import check_multi_b, get_bval_indices, gradient_table_from_bvals_bvecs
+from dipy.io import read_bvals_bvecs
 from dipy.reconst import dki, dti
+from dipy.segment.mask import median_otsu
 from dipy.sims.voxel import single_tensor
+from joblib import cpu_count
+from packaging.version import Version
+from sklearn.gaussian_process.kernels import RBF, WhiteKernel
+from threadpoolctl import threadpool_limits  # type: ignore[import-untyped]
 
 from nifreeze import model
 from nifreeze.data.dmri import DWI
+from nifreeze.data.dmri.base import DWI_REDUNDANT_B0_WARN_MSG
 from nifreeze.data.dmri.utils import (
     DEFAULT_LOWB_THRESHOLD,
     DTI_MIN_ORIENTATIONS,
@@ -42,9 +53,11 @@ from nifreeze.data.dmri.utils import (
 )
 from nifreeze.model._dipy import GaussianProcessModel
 from nifreeze.model.base import MASK_ABSENCE_WARN_MSG
+from nifreeze.model.dki import _DIPY_STRIPS_ORCHESTRATION
 from nifreeze.model.dki import DiffusionKurtosisModel as _NFDKIModel
-from nifreeze.model.gpr import MultiShellKernel
+from nifreeze.model.gpr import MultiShellKernel, SphericalKriging
 from nifreeze.testing import simulations as _sim
+from nifreeze.utils.ndimage import load_api
 
 B_MATRIX = np.array(
     [
@@ -62,6 +75,10 @@ B_MATRIX = np.array(
     ],
     dtype=np.float32,
 )
+
+_N_REPEATS = 5
+_MIN_CPUS_REQUIRED = 4  # Protect against parallelization overhead if underpowered
+_PARALLEL_JOBS = 4  # Target workers for parallel fit
 
 
 def ignore_dipy_divide_warning(func):
@@ -1031,6 +1048,110 @@ def test_dki_model_predict(multi_shell_test_data, index, ignore_bzero, use_mask)
         assert np.allclose(predicted_nf, predicted_dp[..., 0])
 
 
+def _center_crop(mask, data4d, half_size=10):
+    center = tuple(val // 2 for val in mask.shape)
+    slices = tuple(slice(val - half_size, val + half_size) for val in center)
+    return mask[slices], data4d[slices + (slice(None),)]
+
+
+def _build_dki_dataset(half_size=10):
+    """Load the sherbrooke_3shell dataset and return a DWI object and leave-one-out index."""
+    name = "sherbrooke_3shell"
+    dwi_fname, bval_fname, bvec_fname = dpd.get_fnames(name=name)
+
+    img = load_api(dwi_fname, nb.Nifti1Image)
+    dwi_data = img.get_fdata()
+    bvals, bvecs = read_bvals_bvecs(bval_fname, bvec_fname)
+
+    _, brain_mask = median_otsu(dwi_data, vol_idx=[0])
+
+    # Crop the data around a cube sized 2*half_size
+    center = tuple(s // 2 for s in brain_mask.shape)
+    roi = tuple(slice(c - half_size, c + half_size) for c in center)
+
+    brain_mask = brain_mask[roi]
+    dwi_data = dwi_data[roi + (slice(None),)]
+
+    gradients = np.hstack((bvecs, bvals[..., np.newaxis]))
+    bzero = dwi_data[..., bvals < 50].mean(axis=-1)
+
+    dataset = DWI(
+        dataobj=dwi_data,
+        affine=img.affine,
+        brainmask=brain_mask,
+        gradients=gradients,
+        bzero=bzero,
+    )
+
+    shell_1000 = get_bval_indices(bvals, 1000, tol=20)
+    index = shell_1000[len(shell_1000) // 2]
+
+    return dataset, index
+
+
+def _fit_predict_once(model_cls, dataset, index, n_jobs):
+    t0 = time.perf_counter()
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=r".*(invalid value encountered in divide|divide by zero encountered in log).*",
+            category=RuntimeWarning,
+        )
+        predicted = model_cls(dataset).fit_predict(index, n_jobs=n_jobs)
+
+    dt = time.perf_counter() - t0
+    return predicted, dt
+
+
+def test_dki_parallel_speedup():
+    """DKIModel with n_jobs > 1 should be meaningfully faster than n_jobs=1.
+
+    Specifically, running with ``n_jobs=_N_JOBS`` should yield a wall-clock
+    speedup over the serial baseline.
+
+    The test is skipped when fewer than ``_MIN_CPUS_REQUIRED`` logical CPUs are
+    available, since the parallelism overhead dominates on underpowered hardware.
+    """
+
+    def _fit_predict_once_threadpool(_model_cls, _dataset, _index, _n_jobs):
+        with (
+            threadpool_limits(limits=1, user_api="blas"),
+            threadpool_limits(limits=1, user_api="openmp"),
+        ):
+            return _fit_predict_once(_model_cls, _dataset, _index, _n_jobs)
+
+    if cpu_count() < _MIN_CPUS_REQUIRED:
+        pytest.skip(
+            f"Parallel scaling test requires >= {_MIN_CPUS_REQUIRED} CPUs "
+            f"(found {cpu_count()}); skipping."
+        )
+
+    # Ignore warning due to multiple b0 volumes
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=DWI_REDUNDANT_B0_WARN_MSG, category=UserWarning)
+        dataset, index = _build_dki_dataset()
+
+    serial_ts = []
+    parallel_ts = []
+
+    for _ in range(_N_REPEATS):
+        # Serial run
+        _, t_serial = _fit_predict_once_threadpool(model.DKIModel, dataset, index, 1)
+
+        # Parallel run
+        _, t_parallel = _fit_predict_once_threadpool(
+            model.DKIModel, dataset, index, min(_PARALLEL_JOBS, cpu_count())
+        )
+
+        serial_ts.append(t_serial)
+        parallel_ts.append(t_parallel)
+
+    t_serial = float(np.median(serial_ts))
+    t_parallel = float(np.median(parallel_ts))
+    assert t_serial / t_parallel > 1.0 if t_parallel > 0 else float("inf")
+
+
 @pytest.mark.parametrize(
     "multi_shell_test_data",
     [
@@ -1158,6 +1279,40 @@ def test_dki_parallel_matches_serial(multi_shell_test_data, index, use_mask):
     assert parallel is not None
     assert serial.shape == parallel.shape
     assert np.allclose(serial, parallel, rtol=1e-5, atol=1e-6, equal_nan=True)
+
+
+def test_dki_native_parallel_without_fallback():
+    """DIPY's ``joblib`` engine must fit DKI directly, matching the serial fit.
+
+    DIPY releases without dipy/dipy#4054 forward ``engine``/``n_jobs`` into
+    ``ls_fit_dki``, which raises ``TypeError`` and sends ``BaseDWIModel._fit``
+    to its data-chunking fallback. The adapter strips them on those releases.
+    """
+    rng = np.random.default_rng(1234)
+    bvals = np.r_[0, np.full(15, 1000), np.full(15, 2000), np.full(15, 3000)].astype(float)
+    bvecs = rng.standard_normal((bvals.size, 3))
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+    bvecs[0] = 0
+    gtab = gradient_table_from_bvals_bvecs(bvals, bvecs)
+    signal = single_tensor(gtab, S0=100.0, evals=np.array([0.0015, 0.0003, 0.0003]))
+    data = signal + rng.normal(0, 1, size=(40, bvals.size))
+
+    dkimodel = _NFDKIModel(gtab)
+    serial = dkimodel.fit(data).model_params
+    parallel = dkimodel.fit(data, engine="joblib", n_jobs=2).model_params
+
+    assert np.allclose(serial, parallel, equal_nan=True)
+
+
+def test_dipy_orchestration_backport_still_needed():
+    """Fail once a DIPY release ships dipy/dipy#4054, so the backport is not forgotten."""
+    if Version(dipy.__version__).is_devrelease:
+        pytest.skip(f"development DIPY {dipy.__version__}; the floor can only name a release")
+    assert not _DIPY_STRIPS_ORCHESTRATION, (
+        f"DIPY {dipy.__version__} ships dipy/dipy#4054: raise the floor to "
+        f"dipy>={dipy.__version__} in pyproject.toml, then delete "
+        "_DropOrchestrationKwargs from nifreeze/model/dki.py and this test."
+    )
 
 
 @pytest.mark.parametrize(
@@ -1327,7 +1482,8 @@ def test_gp_model_multishell(hsph_dirs):
     X = np.column_stack([bvecs, bvals])
 
     gp = GaussianProcessModel(kernel_model="multishell")
-    assert isinstance(gp.kernel, MultiShellKernel)
+    assert isinstance(gp.kernel.get_params()["k1"], MultiShellKernel)
+    assert isinstance(gp.kernel.get_params()["k2"], WhiteKernel)
 
     # Fit on all but the last two directions, predict those two (LOVO-style).
     gpfit = gp.fit(signal[:-2], X[:-2])
@@ -1348,6 +1504,76 @@ def test_gp_model_multishell_rejects_b0():
     gp = GaussianProcessModel(kernel_model="multishell")
     with pytest.raises(ValueError, match="strictly positive b-values"):
         gp.fit(signal, X)
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+@pytest.mark.parametrize("kernel_model", ("spherical", "exponential"))
+def test_gp_default_optimizes_crossings(kernel_model):
+    """With default starting values, the GP leaves the start and beats the mean predictor."""
+    signal, gtab = _sim.simulate_multifiber_voxels(
+        S0=100, hsph_dirs=60, snr=30, n_voxels=100, seed=1234
+    )
+    # Drop the initial b=0
+    data = np.asarray(signal)[:, 1:]
+    X = np.column_stack([gtab.bvecs, gtab.bvals])[1:]
+
+    predicted, observed, mean_others = [], [], []
+    for index in (0, 15, 30, 45):
+        train = np.ones(len(X), dtype=bool)
+        train[index] = False
+
+        gpfit = GaussianProcessModel(kernel_model=kernel_model).fit(data[:, train], X[train])
+        predicted.append(gpfit.predict(X[index : index + 1]))
+        observed.append(data[:, index])
+        mean_others.append(data[:, train].mean(axis=1))
+
+        # A start on the flat region of the likelihood leaves ``a`` at its lower bound
+        angular = gpfit.model.kernel_.get_params()["k1"]
+        assert angular.beta_a > 1.01 * angular.a_bounds[0]
+
+    r = np.corrcoef(np.ravel(predicted), np.ravel(observed))[0, 1]
+    r_mean = np.corrcoef(np.ravel(mean_others), np.ravel(observed))[0, 1]
+    assert r > 0.9
+    assert r > r_mean
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def test_gp_multishell_noise_prevents_collapse():
+    """On real multi-shell data, the noise term keeps the kernel from decorrelating.
+
+    Without a noise term the GP must interpolate noisy signals, and its
+    hyperparameters collapse (``a`` at its lower bound, a vanishing radial length
+    scale) to a kernel that predicts the mean of the other volumes.
+    """
+    # Ignore warning due to multiple b0 volumes
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=DWI_REDUNDANT_B0_WARN_MSG, category=UserWarning)
+        dataset, _ = _build_dki_dataset(half_size=10)
+
+    X = np.asarray(dataset.gradients, dtype=float)
+    signals = np.asarray(dataset.dataobj)[dataset.brainmask].astype(float)
+    rng = np.random.default_rng(1234)
+    signals = signals[rng.choice(len(signals), size=300, replace=False)]
+
+    predicted, observed, mean_others = [], [], []
+    for index in (10, 80, 150):
+        train = np.ones(len(X), dtype=bool)
+        train[index] = False
+
+        gpfit = GaussianProcessModel(kernel_model="multishell").fit(signals[:, train], X[train])
+        predicted.append(gpfit.predict(X[index : index + 1]))
+        observed.append(signals[:, index])
+        mean_others.append(signals[:, train].mean(axis=1))
+
+        params = gpfit.model.kernel_.get_params(deep=True)
+        orientation = next(p for p in params.values() if isinstance(p, SphericalKriging))
+        radial = next(p for p in params.values() if isinstance(p, RBF))
+        assert orientation.beta_a > 1.01 * orientation.a_bounds[0]
+        assert radial.get_params()["length_scale"] > 1e-3
+
+    r = np.corrcoef(np.ravel(predicted), np.ravel(observed))[0, 1]
+    r_mean = np.corrcoef(np.ravel(mean_others), np.ravel(observed))[0, 1]
+    assert r > r_mean + 0.2
 
 
 def test_btable_asarray_promotes_1d_input():
