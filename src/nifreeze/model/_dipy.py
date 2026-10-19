@@ -24,7 +24,7 @@
 
 from __future__ import annotations
 
-from typing import cast
+from typing import Literal, cast
 
 import numpy as np
 from dipy.core.gradients import GradientTable
@@ -41,6 +41,9 @@ from nifreeze.model.gpr import (
 
 GP_JITTER = 1e-10
 """Small nugget kept on ``alpha`` for numerical stability."""
+
+DEFAULT_NVOX_PREFIT = 1000
+"""Default number of voxels used to fit the hyperparameters."""
 
 
 def _btable_asarray(gtab: GradientTable | np.ndarray) -> np.ndarray:
@@ -109,6 +112,7 @@ class GaussianProcessModel(ReconstModel):
     __slots__ = (
         "kernel",
         "_modelfit",
+        "nvox_prefit",
         "sigma_sq",
     )
 
@@ -119,6 +123,7 @@ class GaussianProcessModel(ReconstModel):
         beta_a: float = 0.1,
         sigma_sq: float = 1.0,
         ell: float = 1.0,
+        nvox_prefit: int | None = DEFAULT_NVOX_PREFIT,
         *args,
         **kwargs,
     ) -> None:
@@ -154,6 +159,12 @@ class GaussianProcessModel(ReconstModel):
         ell : :obj:`float`, optional
             Radial (log-b) length scale for the multi-shell kernel (:math:`\\ell`
             in Eq. 15). Only used when ``kernel_model == "multishell"``.
+        nvox_prefit : :obj:`int`, optional
+            Number of randomly sampled voxels used to fit the hyperparameters;
+            the fitted GP then predicts every voxel.
+            The likelihood gradient needs memory proportional to
+            :math:`N^2 \\times` voxels, so fitting on all voxels of a brain does
+            not scale. :obj:`None` fits the hyperparameters on all voxels.
 
         References
         ----------
@@ -164,6 +175,7 @@ class GaussianProcessModel(ReconstModel):
         ReconstModel.__init__(self, None)
 
         self.sigma_sq = sigma_sq
+        self.nvox_prefit = nvox_prefit
 
         self.kernel: Kernel
         if kernel_model == "multishell":
@@ -229,10 +241,31 @@ class GaussianProcessModel(ReconstModel):
                 f"and gradient table ({grad_dirs})."
             )
 
+        n_targets = y.shape[1]
+        kernel = self.kernel
+        optimizer: Literal["fmin_l_bfgs_b"] | None = "fmin_l_bfgs_b"
+        if self.nvox_prefit is not None and n_targets > self.nvox_prefit:
+            # Fit the hyperparameters on a voxel subsample, then keep them fixed
+            columns = np.random.default_rng(random_state).choice(
+                n_targets, size=self.nvox_prefit, replace=False
+            )
+            kernel = (
+                DiffusionGPR(
+                    kernel=kernel,
+                    random_state=random_state,
+                    n_targets=self.nvox_prefit,
+                    alpha=GP_JITTER,
+                )
+                .fit(X, y[:, columns])
+                .kernel_
+            )
+            optimizer = None
+
         gpr = DiffusionGPR(
-            kernel=self.kernel,
+            kernel=kernel,
+            optimizer=optimizer,
             random_state=random_state,
-            n_targets=y.shape[1],
+            n_targets=n_targets,
             alpha=GP_JITTER,
         )
         self._modelfit = GPFit(

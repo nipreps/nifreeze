@@ -531,7 +531,7 @@ class GPModel(BaseDWIModel):
     # The GP interpolates the signal, so single-fit reproduces held-in volumes.
     single_fit_is_canary = True
 
-    _modelargs = ("kernel_model", "beta_l", "beta_a", "sigma_sq", "ell")
+    _modelargs = ("kernel_model", "beta_l", "beta_a", "sigma_sq", "ell", "nvox_prefit")
     _model_class = "nifreeze.model._dipy.GaussianProcessModel"
 
     def _fit(self, index: int | None = None, n_jobs: int | None = None, **kwargs) -> int:

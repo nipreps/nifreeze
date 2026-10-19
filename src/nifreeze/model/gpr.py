@@ -53,12 +53,23 @@ __all__ = [
 
 BOUNDS_A: tuple[float, float] = (0.1, 2.35)
 """The limits for the parameter *a* (angular distance in rad)."""
+BOUNDS_A_SPHERICAL: tuple[float, float] = (0.1, np.pi / 2)
+r"""The limits for the parameter *a* of the spherical covariance.
+
+Angles are folded onto :math:`[0, \pi/2]` (``closest_polarity``). For
+:math:`a \leq \pi/2`, the folded spherical covariance equals
+:math:`C(\theta) + C(\pi - \theta)`, which keeps only the even Legendre terms of a
+positive-definite covariance and is therefore positive definite. Beyond
+:math:`\pi/2` this no longer holds, and dense schemes yield indefinite matrices.
+"""
 BOUNDS_LAMBDA: tuple[float, float] = (1e-3, 1000)
 """The limits for the parameter λ (signal scaling factor)."""
 THETA_EPSILON: float = 1e-5
 """Minimum nonzero angle."""
 LBFGS_CONFIGURABLE_OPTIONS = {"disp", "maxiter", "ftol", "gtol"}
 """The set of extended options that can be set on the default BFGS."""
+LBFGS_DEFAULT_GTOL: float = 1e-5
+"""SciPy's default L-BFGS-B projected-gradient tolerance."""
 CONFIGURABLE_OPTIONS: Mapping[str, set] = {
     "Nelder-Mead": {"disp", "maxiter", "adaptive", "fatol"},
     "CG": {"disp", "maxiter", "gtol"},
@@ -239,8 +250,22 @@ class DiffusionGPR(GaussianProcessRegressor):
                 if (value := getattr(self, name, None)) is not None:
                     options[name] = value
 
+            # Optimize the mean log marginal likelihood per observation: the sum
+            # grows with the number of targets (voxels), and so does the first,
+            # bounded L-BFGS-B step, which can then land on a corner of the bounds
+            # where the covariance is singular and stop at the starting values.
+            scale = 1.0 / np.size(self.y_train_)
+            # Keep the (absolute) projected-gradient tolerance in unscaled units
+            options["gtol"] = options.get("gtol", LBFGS_DEFAULT_GTOL) * scale
+
+            def scaled_obj_func(theta: np.ndarray, eval_gradient: bool = True):
+                if eval_gradient:
+                    value, gradient = obj_func(theta, eval_gradient)
+                    return value * scale, gradient * scale
+                return obj_func(theta, eval_gradient) * scale
+
             opt_res = optimize.minimize(
-                obj_func,
+                scaled_obj_func,
                 initial_theta,
                 method="L-BFGS-B",
                 bounds=bounds,
@@ -250,7 +275,7 @@ class DiffusionGPR(GaussianProcessRegressor):
                 tol=self.tol,
             )  # type: ignore[call-overload]
             _check_optimize_result("lbfgs", opt_res)
-            return opt_res.x, opt_res.fun
+            return opt_res.x, opt_res.fun / scale
 
         if isinstance(self.optimizer, str) and self.optimizer in CONFIGURABLE_OPTIONS:
             for name in CONFIGURABLE_OPTIONS[self.optimizer]:
@@ -388,7 +413,7 @@ class SphericalKriging(Kernel):
         self,
         beta_a: float = 1.38,
         beta_l: float = 0.5,
-        a_bounds: tuple[float, float] = BOUNDS_A,
+        a_bounds: tuple[float, float] = BOUNDS_A_SPHERICAL,
         l_bounds: tuple[float, float] = BOUNDS_LAMBDA,
     ):
         r"""
@@ -400,7 +425,7 @@ class SphericalKriging(Kernel):
         beta_l : :obj:`float`, optional
             The :math:`\lambda` hyperparameter.
         a_bounds : :obj:`tuple`, optional
-            Bounds for the ``a`` parameter.
+            Bounds for the ``a`` parameter (see :data:`BOUNDS_A_SPHERICAL`).
         l_bounds : :obj:`tuple`, optional
             Bounds for the :math:`\lambda` hyperparameter.
 

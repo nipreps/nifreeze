@@ -763,3 +763,87 @@ def test_multishellkernel_gp_optimizes(n_samples):
     mean = cast(np.ndarray, model.predict(X[:3]))
     assert mean.shape == (3,)
     assert np.isfinite(mean).all()
+
+
+@pytest.mark.parametrize("n_dirs", [64, 128])
+def test_spherical_kriging_psd_within_bounds(n_dirs):
+    """The folded spherical covariance is positive semi-definite up to its upper bound."""
+    from nifreeze.testing import simulations as _sim
+
+    X = _sim.create_single_shell_gradient_table(n_dirs, 1000).bvecs[1:]
+    K = gpr.SphericalKriging(beta_a=gpr.BOUNDS_A_SPHERICAL[1], beta_l=1.0)(X)
+    assert np.linalg.eigvalsh(K).min() > -1e-10
+
+    # Beyond pi/2 (e.g., the former 2.35 rad bound), dense schemes become indefinite
+    K = gpr.SphericalKriging(beta_a=2.35, beta_l=1.0, a_bounds=gpr.BOUNDS_A)(X)
+    assert np.linalg.eigvalsh(K).min() < -1e-3
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def test_gpr_optimizer_leaves_start_on_dense_multishell():
+    """L-BFGS-B must not stop at its starting values on a dense multi-shell scheme."""
+    from dipy.core.gradients import gradient_table_from_bvals_bvecs
+    from sklearn.gaussian_process.kernels import WhiteKernel
+
+    from nifreeze.testing import simulations as _sim
+
+    rng = np.random.default_rng(1234)
+    gtabs = [
+        _sim.create_single_shell_gradient_table(n_dirs, bval)
+        for n_dirs, bval in ((20, 1000), (30, 2000), (64, 3000))
+    ]
+    bvecs = np.vstack([g.bvecs[1:] for g in gtabs])
+    bvals = np.concatenate([g.bvals[1:] for g in gtabs])
+    gtab = gradient_table_from_bvals_bvecs(bvals, bvecs)
+    signal = _sim.simulate_one_fiber_multivoxel(gtab, 100, 20, 2000, rng)
+    X, y = np.column_stack([bvecs, bvals]), np.asarray(signal)[:2000].T
+
+    kernel = gpr.MultiShellKernel(gpr.SphericalKriging(), RBF(1.0)) + WhiteKernel(1.0)
+    gp = gpr.DiffusionGPR(kernel=kernel, random_state=0, n_targets=y.shape[1], alpha=1e-10)
+    gp.fit(X, y)
+
+    start_lml = cast(float, gp.log_marginal_likelihood(kernel.theta))
+    fitted_lml = cast(float, gp.log_marginal_likelihood(gp.kernel_.theta))
+    assert not np.allclose(gp.kernel_.theta, kernel.theta)
+    assert gp.log_marginal_likelihood_value_ > start_lml + 1e3
+    # The reported value is the (unscaled) log marginal likelihood at the optimum
+    assert np.isclose(gp.log_marginal_likelihood_value_, fitted_lml)
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def test_gpr_lbfgs_without_analytic_gradient():
+    """L-BFGS-B with finite-difference gradients also reports the unscaled LML."""
+    rng = np.random.default_rng(1234)
+    y = 1.0 + 0.2 * _ORIENT[:, 0] ** 2 + 0.01 * rng.standard_normal((5, len(_ORIENT))).T
+
+    kernel = gpr.SphericalKriging()
+    gp = gpr.DiffusionGPR(
+        kernel=kernel, random_state=0, n_targets=y.shape[1], alpha=1e-2, eval_gradient=False
+    ).fit(_ORIENT, y)
+
+    fitted_lml = cast(float, gp.log_marginal_likelihood(gp.kernel_.theta))
+    assert np.isclose(gp.log_marginal_likelihood_value_, fitted_lml)
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def test_gp_model_fits_hyperparameters_on_voxel_subsample():
+    """Hyperparameters come from a voxel subsample, but every voxel is fitted."""
+    from nifreeze.model._dipy import GaussianProcessModel
+
+    rng = np.random.default_rng(1234)
+    n_voxels = 50
+    data = (1.0 + 0.2 * _ORIENT[:, 0] ** 2) + 0.05 * rng.standard_normal((n_voxels, len(_ORIENT)))
+
+    gp = GaussianProcessModel(kernel_model="spherical", nvox_prefit=10)
+    gpfit = gp.fit(data, _ORIENT)
+    assert gpfit.model.get_params()["optimizer"] is None
+    assert np.shape(gpfit.model.y_train_) == (len(_ORIENT), n_voxels)
+    assert not np.allclose(gpfit.model.kernel_.theta, gp.kernel.theta)
+
+    # The subsample is seeded, so the hyperparameters are reproducible
+    again = GaussianProcessModel(kernel_model="spherical", nvox_prefit=10).fit(data, _ORIENT)
+    assert np.allclose(again.model.kernel_.theta, gpfit.model.kernel_.theta)
+
+    # Without a cap, all voxels go into the hyperparameter fit
+    full = GaussianProcessModel(kernel_model="spherical", nvox_prefit=None).fit(data, _ORIENT)
+    assert full.model.get_params()["optimizer"] == "fmin_l_bfgs_b"
