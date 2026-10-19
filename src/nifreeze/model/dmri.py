@@ -22,16 +22,33 @@
 #
 
 from importlib import import_module
-from typing import Any, Union
+from pathlib import Path
+from typing import Any, Mapping, Sequence, Union
 
 import numpy as np
 from dipy.core.gradients import check_multi_b, gradient_table_from_bvals_bvecs
 from joblib import Parallel, delayed
+from sklearn.gaussian_process.kernels import Kernel
 
 from nifreeze.data.dmri import DWI
-from nifreeze.data.dmri.utils import DEFAULT_LOWB_THRESHOLD, DEFAULT_MIN_S0, DTI_MIN_ORIENTATIONS
+from nifreeze.data.dmri.utils import (
+    DEFAULT_LOWB_THRESHOLD,
+    DEFAULT_MIN_S0,
+    DTI_MIN_ORIENTATIONS,
+    find_shelling_scheme,
+)
 from nifreeze.data.filtering import BVAL_ATOL, dwi_select_shells, grand_mean_normalization
+from nifreeze.model._dipy import GP_JITTER, GaussianProcessModel
 from nifreeze.model.base import BaseModel, ExpectationModel
+from nifreeze.model.gpr import uses_bvalue
+from nifreeze.model.lovo import (
+    DEFAULT_KRR_LAMBDA_GRID,
+    ClosedFormLOVOMixin,
+    fit_pooled_hyperparameters,
+    kernel_with_hyperparameters,
+    load_hyperparameters,
+    select_krr_lambda,
+)
 
 DEFAULT_S0_CLIP_PERCENTILE = 98
 """Upper percentile threshold for non-diffusion-weighted signal estimation."""
@@ -578,3 +595,139 @@ class GPModel(BaseDWIModel):
         retval = np.zeros(self._data_mask.shape, dtype=out_dtype)
         retval[self._data_mask, ...] = predicted
         return retval
+
+
+class GPLOOModel(ClosedFormLOVOMixin, GPModel):
+    """A Gaussian process with exact, closed-form leave-one-volume-out prediction.
+
+    With hyperparameters held fixed across folds, the GP posterior mean is a
+    linear smoother of the other volumes (see :mod:`nifreeze.model.lovo`), so
+    all LOVO predictions come from one matrix instead of one GP fit per volume.
+    Hyperparameters are either loaded (``hyperparameters``), e.g., pooled across
+    the subjects of an acquisition protocol, or fitted once on a random voxel
+    subsample of all volumes.
+    """
+
+    _center = True  # ``DiffusionGPR`` normalizes the targets (``normalize_y=True``)
+
+    def __init__(
+        self,
+        dataset: DWI,
+        hyperparameters: str | Path | Mapping[str, Any] | None = None,
+        **kwargs,
+    ):
+        """Initialization.
+
+        Parameters
+        ----------
+        dataset : :obj:`~nifreeze.data.dmri.base.DWI`
+            Reference to a DWI object.
+        hyperparameters : :obj:`os.pathlike` or :obj:`~typing.Mapping`, optional
+            A hyperparameter record (see
+            :func:`~nifreeze.model.lovo.save_hyperparameters`). When given, no
+            hyperparameter is fitted at run time.
+        n_voxels_hp : :obj:`int`, optional
+            Number of voxels used to fit the hyperparameters (all if :obj:`None`).
+        random_state : :obj:`int`, optional
+            Seed for the voxel subsample.
+
+        """
+        super().__init__(dataset, **kwargs)
+        self._hyperparameters = (
+            None if hyperparameters is None else load_hyperparameters(hyperparameters)
+        )
+        self._kernel: Kernel | None = None
+
+    def _resolve_kernel(self, gradients: np.ndarray) -> Kernel:
+        record = self._hyperparameters
+        kernel_model = self._model_kwargs.get("kernel_model")
+        if record is not None:
+            if kernel_model is not None and kernel_model != record["kernel_model"]:
+                raise ValueError(
+                    f"Requested kernel_model={kernel_model!r}, but the hyperparameters "
+                    f"were fitted for {record['kernel_model']!r}."
+                )
+            kernel_model = record["kernel_model"]
+        if kernel_model is None:
+            bvals = np.concatenate(([0.0], gradients[:, -1]))
+            scheme = find_shelling_scheme(bvals)[0]
+            kernel_model = "multishell" if scheme == "multi-shell" else "spherical"
+
+        kernel = GaussianProcessModel(
+            **{**self._model_kwargs, "kernel_model": kernel_model}
+        ).kernel
+        if record is not None:
+            return kernel_with_hyperparameters(kernel, record["hyperparameters"])
+        return fit_pooled_hyperparameters(
+            kernel, [_gp_design(gradients, kernel)], [self._hyperparameter_signals()]
+        )
+
+    def _covariance(self, gradients: np.ndarray) -> np.ndarray:
+        if self._kernel is None:
+            self._kernel = self._resolve_kernel(gradients)
+        covariance = self._kernel(_gp_design(gradients, self._kernel))
+        covariance[np.diag_indices_from(covariance)] += GP_JITTER
+        return covariance
+
+
+class GQIKRRModel(ClosedFormLOVOMixin, GQIModel):
+    """GQI as kernel ridge regression, with closed-form leave-one-volume-out prediction.
+
+    The GQI basis :math:`\\mathbf{K}` (gradients by sphere vertices) induces the
+    q-space Gram matrix :math:`\\mathbf{G} = \\mathbf{K}\\mathbf{K}^T`. Kernel ridge
+    regression with :math:`\\mathbf{A} = \\mathbf{G} + \\lambda \\mathbf{I}` predicts
+    each volume from the training Gram matrix (rather than from the target's own
+    norm, as the one-row :class:`GQIModel` prediction does), and its LOVO
+    predictions come from one matrix.
+    """
+
+    def __init__(
+        self,
+        dataset: DWI,
+        krr_lambda: float | None = None,
+        krr_lambda_grid: Sequence[float] = DEFAULT_KRR_LAMBDA_GRID,
+        **kwargs,
+    ):
+        """Initialization.
+
+        Parameters
+        ----------
+        dataset : :obj:`~nifreeze.data.dmri.base.DWI`
+            Reference to a DWI object.
+        krr_lambda : :obj:`float`, optional
+            Ridge strength, relative to the mean diagonal of the Gram matrix. If
+            :obj:`None`, it is chosen from ``krr_lambda_grid`` by closed-form LOVO
+            error on a random voxel subsample.
+        krr_lambda_grid : :obj:`~typing.Sequence` of :obj:`float`, optional
+            Candidate ridge strengths.
+        n_voxels_hp : :obj:`int`, optional
+            Number of voxels used to choose the ridge strength (all if :obj:`None`).
+        random_state : :obj:`int`, optional
+            Seed for the voxel subsample.
+
+        """
+        super().__init__(dataset, **kwargs)
+        self._krr_lambda = krr_lambda
+        self._krr_lambda_grid = tuple(krr_lambda_grid)
+
+    def _covariance(self, gradients: np.ndarray) -> np.ndarray:
+        from nifreeze.model.gqi import GeneralizedQSamplingModel
+
+        gtab = gradient_table_from_bvals_bvecs(gradients[:, -1], gradients[:, :-1])
+        basis = GeneralizedQSamplingModel(gtab, **self._model_kwargs).kernel
+        gram = basis @ basis.T
+        gram /= np.trace(gram) / len(gram)
+        if self._krr_lambda is None:
+            self._krr_lambda = select_krr_lambda(
+                [gram], [self._hyperparameter_signals()], self._krr_lambda_grid
+            )
+        return gram + self._krr_lambda * np.eye(len(gram))
+
+    def _postprocess(self, predicted: np.ndarray) -> np.ndarray:
+        # Diffusion signals are non-negative (as in GQI's own prediction)
+        return np.maximum(predicted, 0)
+
+
+def _gp_design(gradients: np.ndarray, kernel: Kernel) -> np.ndarray:
+    """Return the GP design matrix (the b-value column is kept only for multi-shell)."""
+    return gradients if uses_bvalue(kernel) else gradients[:, :3]

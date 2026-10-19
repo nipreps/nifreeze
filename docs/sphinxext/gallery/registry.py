@@ -26,7 +26,7 @@ Each :class:`ModelSpec` names a gallery model and reads its applicability from
 the model class's declarative *capability contract*
 (:class:`~nifreeze.model.base.BaseModel`), so the constraints are not restated
 here. GP is the one exception: its applicable scheme depends on the kernel, so
-the two GP entries carry an explicit ``scheme_override``.
+the GP entries carry an explicit ``scheme_override``.
 """
 
 from __future__ import annotations
@@ -41,7 +41,9 @@ from nifreeze.model.dmri import (
     AverageDWIModel,
     DKIModel,
     DTIModel,
+    GPLOOModel,
     GPModel,
+    GQIKRRModel,
     GQIModel,
 )
 
@@ -97,6 +99,23 @@ GALLERY_MODELS: list[ModelSpec] = [
         "GP (multi-shell)",
         "gp",
         GPModel,
+        {"kernel_model": "multishell"},
+        frozenset({"multi-shell"}),
+    ),
+    ModelSpec("gqi-krr", "GQI-KRR (closed-form LOVO)", "gqi-krr", GQIKRRModel),
+    ModelSpec(
+        "gp-loo-spherical",
+        "GP (spherical, closed-form LOVO)",
+        "gp-loo",
+        GPLOOModel,
+        {"kernel_model": "spherical"},
+        frozenset({"single-shell"}),
+    ),
+    ModelSpec(
+        "gp-loo-multishell",
+        "GP (multi-shell, closed-form LOVO)",
+        "gp-loo",
+        GPLOOModel,
         {"kernel_model": "multishell"},
         frozenset({"multi-shell"}),
     ),

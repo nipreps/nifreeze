@@ -64,6 +64,9 @@ class ModelFactory:
             ``"GaussianProcess"``) builds a
             :obj:`~nifreeze.model.dmri.GPModel`; pass ``kernel_model`` through
             ``kwargs`` to select the covariance.
+            ``"GP-LOO"`` (:obj:`~nifreeze.model.dmri.GPLOOModel`) and
+            ``"GQI-KRR"`` (:obj:`~nifreeze.model.dmri.GQIKRRModel`) predict
+            each held-out volume in closed form (see :mod:`nifreeze.model.lovo`).
 
         Return
         ------
@@ -89,6 +92,16 @@ class ModelFactory:
             from nifreeze.model.dmri import GPModel
 
             return GPModel(kwargs.pop("dataset"), **kwargs)
+
+        if model.lower() in ("gp-loo", "gploo"):
+            from nifreeze.model.dmri import GPLOOModel
+
+            return GPLOOModel(kwargs.pop("dataset"), **kwargs)
+
+        if model.lower() in ("gqi-krr", "gqikrr"):
+            from nifreeze.model.dmri import GQIKRRModel
+
+            return GQIKRRModel(kwargs.pop("dataset"), **kwargs)
 
         if model.lower() in ("gqi", "dti", "dki", "pet"):
             from importlib import import_module
