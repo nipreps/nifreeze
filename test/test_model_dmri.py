@@ -28,6 +28,7 @@ import time
 import warnings
 from contextlib import nullcontext
 
+import dipy
 import dipy.data as dpd
 import nibabel as nb
 import numpy as np
@@ -38,6 +39,7 @@ from dipy.reconst import dki, dti
 from dipy.segment.mask import median_otsu
 from dipy.sims.voxel import single_tensor
 from joblib import cpu_count
+from packaging.version import Version
 from threadpoolctl import threadpool_limits  # type: ignore[import-untyped]
 
 from nifreeze import model
@@ -50,6 +52,7 @@ from nifreeze.data.dmri.utils import (
 )
 from nifreeze.model._dipy import GaussianProcessModel
 from nifreeze.model.base import MASK_ABSENCE_WARN_MSG
+from nifreeze.model.dki import _DIPY_STRIPS_ORCHESTRATION
 from nifreeze.model.dki import DiffusionKurtosisModel as _NFDKIModel
 from nifreeze.model.gpr import MultiShellKernel
 from nifreeze.testing import simulations as _sim
@@ -1238,6 +1241,40 @@ def test_dki_parallel_matches_serial(multi_shell_test_data, index, use_mask):
     assert parallel is not None
     assert serial.shape == parallel.shape
     assert np.allclose(serial, parallel, rtol=1e-5, atol=1e-6, equal_nan=True)
+
+
+def test_dki_native_parallel_without_fallback():
+    """DIPY's ``joblib`` engine must fit DKI directly, matching the serial fit.
+
+    DIPY releases without dipy/dipy#4054 forward ``engine``/``n_jobs`` into
+    ``ls_fit_dki``, which raises ``TypeError`` and sends ``BaseDWIModel._fit``
+    to its data-chunking fallback. The adapter strips them on those releases.
+    """
+    rng = np.random.default_rng(1234)
+    bvals = np.r_[0, np.full(15, 1000), np.full(15, 2000), np.full(15, 3000)].astype(float)
+    bvecs = rng.standard_normal((bvals.size, 3))
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+    bvecs[0] = 0
+    gtab = gradient_table_from_bvals_bvecs(bvals, bvecs)
+    signal = single_tensor(gtab, S0=100.0, evals=np.array([0.0015, 0.0003, 0.0003]))
+    data = signal + rng.normal(0, 1, size=(40, bvals.size))
+
+    dkimodel = _NFDKIModel(gtab)
+    serial = dkimodel.fit(data).model_params
+    parallel = dkimodel.fit(data, engine="joblib", n_jobs=2).model_params
+
+    assert np.allclose(serial, parallel, equal_nan=True)
+
+
+def test_dipy_orchestration_backport_still_needed():
+    """Fail once a DIPY release ships dipy/dipy#4054, so the backport is not forgotten."""
+    if Version(dipy.__version__).is_devrelease:
+        pytest.skip(f"development DIPY {dipy.__version__}; the floor can only name a release")
+    assert not _DIPY_STRIPS_ORCHESTRATION, (
+        f"DIPY {dipy.__version__} ships dipy/dipy#4054: raise the floor to "
+        f"dipy>={dipy.__version__} in pyproject.toml, then delete "
+        "_DropOrchestrationKwargs from nifreeze/model/dki.py and this test."
+    )
 
 
 @pytest.mark.parametrize(
