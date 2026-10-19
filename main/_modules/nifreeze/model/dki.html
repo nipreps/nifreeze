@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.dki - nifreeze 26.0.0.dev265 documentation</title>
+        <title>nifreeze.model.dki - nifreeze 26.0.0.dev274 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev265 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev274 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev265</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev274</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev265</span>
+  <span class="sidebar-brand-text">26.0.0.dev274</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -340,13 +340,43 @@
 <span class="sd">&quot;&quot;&quot;A diffusion kurtosis imaging (DKI) model with a normalized ``fit`` interface.&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">dipy.reconst</span> <span class="kn">import</span> <span class="n">multi_voxel</span>
 <span class="kn">from</span> <span class="nn">dipy.reconst.dki</span> <span class="kn">import</span> <span class="n">DiffusionKurtosisModel</span> <span class="k">as</span> <span class="n">_DipyDKIModel</span>
+
+<span class="n">_ORCHESTRATION_KWARGS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;engine&quot;</span><span class="p">,</span> <span class="s2">&quot;n_jobs&quot;</span><span class="p">,</span> <span class="s2">&quot;vox_per_chunk&quot;</span><span class="p">,</span> <span class="s2">&quot;verbose&quot;</span><span class="p">,</span> <span class="s2">&quot;inflight_cap&quot;</span><span class="p">)</span>
+<span class="sd">&quot;&quot;&quot;Parallelization kwargs consumed by DIPY&#39;s ``multi_voxel_fit``.&quot;&quot;&quot;</span>
+
+<span class="n">_DIPY_STRIPS_ORCHESTRATION</span> <span class="o">=</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">multi_voxel</span><span class="p">,</span> <span class="s2">&quot;ORCHESTRATION_KWARGS&quot;</span><span class="p">)</span>
+<span class="sd">&quot;&quot;&quot;Whether DIPY keeps orchestration kwargs out of the per-voxel fit (dipy/dipy#4054).&quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">_DropOrchestrationKwargs</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Call a DKI ``fit_method`` without the orchestration kwargs.</span>
+
+<span class="sd">    Backport of dipy/dipy#4054 for DIPY releases whose parallel ``multi_voxel_fit``</span>
+<span class="sd">    forwards them through ``multi_fit`` into the fit method (dipy/dipy#4053).</span>
+<span class="sd">    A class rather than a closure, so the model stays picklable for joblib.</span>
+<span class="sd">    Remove once the DIPY floor includes the fix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">func</span> <span class="o">=</span> <span class="n">func</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_ORCHESTRATION_KWARGS</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="DiffusionKurtosisModel">
 <a class="viewcode-back" href="../../../api/nifreeze.model.dki.html#nifreeze.model.dki.DiffusionKurtosisModel">[docs]</a>
 <span class="k">class</span> <span class="nc">DiffusionKurtosisModel</span><span class="p">(</span><span class="n">_DipyDKIModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A :obj:`~dipy.reconst.dki.DiffusionKurtosisModel` with uniform API.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gtab</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">gtab</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">_DIPY_STRIPS_ORCHESTRATION</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">common_fit_method</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fit_method</span> <span class="o">=</span> <span class="n">_DropOrchestrationKwargs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_method</span><span class="p">)</span>
 
 <div class="viewcode-block" id="DiffusionKurtosisModel.fit">
 <a class="viewcode-back" href="../../../api/nifreeze.model.dki.html#nifreeze.model.dki.DiffusionKurtosisModel.fit">[docs]</a>
@@ -394,7 +424,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=7e9da15e"></script>
+</div><script src="../../../_static/documentation_options.js?v=be2af503"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
