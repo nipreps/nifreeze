@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.gpr - nifreeze 26.0.0.dev274 documentation</title>
+        <title>nifreeze.model.gpr - nifreeze 26.0.0.dev279 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev274 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev279 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev274</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev279</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev274</span>
+  <span class="sidebar-brand-text">26.0.0.dev279</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -370,12 +370,23 @@
 
 <span class="n">BOUNDS_A</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">2.35</span><span class="p">)</span>
 <span class="sd">&quot;&quot;&quot;The limits for the parameter *a* (angular distance in rad).&quot;&quot;&quot;</span>
+<span class="n">BOUNDS_A_SPHERICAL</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+<span class="sa">r</span><span class="sd">&quot;&quot;&quot;The limits for the parameter *a* of the spherical covariance.</span>
+
+<span class="sd">Angles are folded onto :math:`[0, \pi/2]` (``closest_polarity``). For</span>
+<span class="sd">:math:`a \leq \pi/2`, the folded spherical covariance equals</span>
+<span class="sd">:math:`C(\theta) + C(\pi - \theta)`, which keeps only the even Legendre terms of a</span>
+<span class="sd">positive-definite covariance and is therefore positive definite. Beyond</span>
+<span class="sd">:math:`\pi/2` this no longer holds, and dense schemes yield indefinite matrices.</span>
+<span class="sd">&quot;&quot;&quot;</span>
 <span class="n">BOUNDS_LAMBDA</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1e-3</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
 <span class="sd">&quot;&quot;&quot;The limits for the parameter λ (signal scaling factor).&quot;&quot;&quot;</span>
 <span class="n">THETA_EPSILON</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-5</span>
 <span class="sd">&quot;&quot;&quot;Minimum nonzero angle.&quot;&quot;&quot;</span>
 <span class="n">LBFGS_CONFIGURABLE_OPTIONS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;disp&quot;</span><span class="p">,</span> <span class="s2">&quot;maxiter&quot;</span><span class="p">,</span> <span class="s2">&quot;ftol&quot;</span><span class="p">,</span> <span class="s2">&quot;gtol&quot;</span><span class="p">}</span>
 <span class="sd">&quot;&quot;&quot;The set of extended options that can be set on the default BFGS.&quot;&quot;&quot;</span>
+<span class="n">LBFGS_DEFAULT_GTOL</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-5</span>
+<span class="sd">&quot;&quot;&quot;SciPy&#39;s default L-BFGS-B projected-gradient tolerance.&quot;&quot;&quot;</span>
 <span class="n">CONFIGURABLE_OPTIONS</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;Nelder-Mead&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;disp&quot;</span><span class="p">,</span> <span class="s2">&quot;maxiter&quot;</span><span class="p">,</span> <span class="s2">&quot;adaptive&quot;</span><span class="p">,</span> <span class="s2">&quot;fatol&quot;</span><span class="p">},</span>
     <span class="s2">&quot;CG&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;disp&quot;</span><span class="p">,</span> <span class="s2">&quot;maxiter&quot;</span><span class="p">,</span> <span class="s2">&quot;gtol&quot;</span><span class="p">},</span>
@@ -558,8 +569,22 @@
                 <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">:=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">options</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
 
+            <span class="c1"># Optimize the mean log marginal likelihood per observation: the sum</span>
+            <span class="c1"># grows with the number of targets (voxels), and so does the first,</span>
+            <span class="c1"># bounded L-BFGS-B step, which can then land on a corner of the bounds</span>
+            <span class="c1"># where the covariance is singular and stop at the starting values.</span>
+            <span class="n">scale</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_train_</span><span class="p">)</span>
+            <span class="c1"># Keep the (absolute) projected-gradient tolerance in unscaled units</span>
+            <span class="n">options</span><span class="p">[</span><span class="s2">&quot;gtol&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gtol&quot;</span><span class="p">,</span> <span class="n">LBFGS_DEFAULT_GTOL</span><span class="p">)</span> <span class="o">*</span> <span class="n">scale</span>
+
+            <span class="k">def</span> <span class="nf">scaled_obj_func</span><span class="p">(</span><span class="n">theta</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">eval_gradient</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">eval_gradient</span><span class="p">:</span>
+                    <span class="n">value</span><span class="p">,</span> <span class="n">gradient</span> <span class="o">=</span> <span class="n">obj_func</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">eval_gradient</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="n">value</span> <span class="o">*</span> <span class="n">scale</span><span class="p">,</span> <span class="n">gradient</span> <span class="o">*</span> <span class="n">scale</span>
+                <span class="k">return</span> <span class="n">obj_func</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">eval_gradient</span><span class="p">)</span> <span class="o">*</span> <span class="n">scale</span>
+
             <span class="n">opt_res</span> <span class="o">=</span> <span class="n">optimize</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span>
-                <span class="n">obj_func</span><span class="p">,</span>
+                <span class="n">scaled_obj_func</span><span class="p">,</span>
                 <span class="n">initial_theta</span><span class="p">,</span>
                 <span class="n">method</span><span class="o">=</span><span class="s2">&quot;L-BFGS-B&quot;</span><span class="p">,</span>
                 <span class="n">bounds</span><span class="o">=</span><span class="n">bounds</span><span class="p">,</span>
@@ -569,7 +594,7 @@
                 <span class="n">tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span>
             <span class="p">)</span>  <span class="c1"># type: ignore[call-overload]</span>
             <span class="n">_check_optimize_result</span><span class="p">(</span><span class="s2">&quot;lbfgs&quot;</span><span class="p">,</span> <span class="n">opt_res</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">opt_res</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">opt_res</span><span class="o">.</span><span class="n">fun</span>
+            <span class="k">return</span> <span class="n">opt_res</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">opt_res</span><span class="o">.</span><span class="n">fun</span> <span class="o">/</span> <span class="n">scale</span>
 
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span> <span class="ow">in</span> <span class="n">CONFIGURABLE_OPTIONS</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">CONFIGURABLE_OPTIONS</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">]:</span>
@@ -722,7 +747,7 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">beta_a</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.38</span><span class="p">,</span>
         <span class="n">beta_l</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
-        <span class="n">a_bounds</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">BOUNDS_A</span><span class="p">,</span>
+        <span class="n">a_bounds</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">BOUNDS_A_SPHERICAL</span><span class="p">,</span>
         <span class="n">l_bounds</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">BOUNDS_LAMBDA</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
@@ -734,7 +759,7 @@
 <span class="sd">        beta_l : :obj:`float`, optional</span>
 <span class="sd">            The :math:`\lambda` hyperparameter.</span>
 <span class="sd">        a_bounds : :obj:`tuple`, optional</span>
-<span class="sd">            Bounds for the ``a`` parameter.</span>
+<span class="sd">            Bounds for the ``a`` parameter (see :data:`BOUNDS_A_SPHERICAL`).</span>
 <span class="sd">        l_bounds : :obj:`tuple`, optional</span>
 <span class="sd">            Bounds for the :math:`\lambda` hyperparameter.</span>
 
@@ -1174,7 +1199,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=be2af503"></script>
+</div><script src="../../../_static/documentation_options.js?v=c5b058b2"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
