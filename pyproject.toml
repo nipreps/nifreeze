@@ -123,11 +123,19 @@ nifreeze = "nifreeze.cli.run:main"
 [tool.hatch.build.targets.sdist]
 exclude = [
   ".git_archival.txt",  # No longer needed in sdist
+  "/.dockerignore",
+  "/.github",
+  "/.mailmap",
+  "/.maint",
+  "/.pre-commit-config.yaml",
+  "/.wiki",
+  "/.zenodo.json",
   "/AGENTS.md",
   "/CLAUDE.md",
-  "/.wiki",
+  "/benchmarks",
   "/docs",
   "/test/test_gallery.py",  # Tests docs/sphinxext/gallery, not shipped
+  "/tools",
 ]
 
 [tool.hatch.build.targets.wheel]
