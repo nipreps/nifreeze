@@ -1,11 +1,11 @@
 ---
 title: "DIPY gradient-table API (dipy.core.gradients)"
 entity_type: tool
-last_verified: 2026-07-13
+last_verified: 2026-10-19
 confidence_score: 0.9
-refresh_needed_if: "DIPY pin in pyproject.toml advances past 2ecd3655"
+refresh_needed_if: "DIPY floor in pyproject.toml rises above 1.12.1"
 source_urls:
-  - https://github.com/dipy/dipy/blob/2ecd3655/dipy/core/gradients.py
+  - https://github.com/dipy/dipy/blob/1.12.1/dipy/core/gradients.py
   - https://docs.dipy.org/stable/reference/dipy.core.html
 ---
 
@@ -13,7 +13,7 @@ source_urls:
 
 The `GradientTable` is DIPY's canonical description of a diffusion-encoding scheme
 and the object nifreeze converts *into* every time it hands data to a diffusion
-model. This page caches the contract at DIPY commit `2ecd3655`; the theory it
+model. This page caches the contract at DIPY `1.12.1`; the theory it
 encodes is [[concept-diffusion-mri-signal]]. Facet of [[tool-dipy]].
 
 ## `GradientTable`

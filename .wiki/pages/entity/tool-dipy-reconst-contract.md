@@ -1,11 +1,11 @@
 ---
 title: "DIPY ReconstModel / ReconstFit contract (dipy.reconst.base)"
 entity_type: tool
-last_verified: 2026-07-13
+last_verified: 2026-10-19
 confidence_score: 0.9
-refresh_needed_if: "DIPY pin in pyproject.toml advances past 2ecd3655"
+refresh_needed_if: "DIPY floor in pyproject.toml rises above 1.12.1"
 source_urls:
-  - https://github.com/dipy/dipy/blob/2ecd3655/dipy/reconst/base.py
+  - https://github.com/dipy/dipy/blob/1.12.1/dipy/reconst/base.py
   - https://docs.dipy.org/stable/reference/dipy.reconst.html
 ---
 
@@ -13,7 +13,7 @@ source_urls:
 
 The two-object **fit → predict** interface every DIPY diffusion model presents,
 and the contract nifreeze standardises *all* of its signal predictors on. This
-page caches the contract at DIPY commit `2ecd3655`. Facet of [[tool-dipy]].
+page caches the contract at DIPY `1.12.1`. Facet of [[tool-dipy]].
 
 ## The base classes
 

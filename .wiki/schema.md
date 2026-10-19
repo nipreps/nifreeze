@@ -175,9 +175,9 @@ nifreeze `implements` those contracts. The generic "no nifreeze source/API" rule
 is unchanged: nifreeze's own modules appear only as pointers, never as page
 substance.
 
-Currently the only such dependency is **DIPY**, pinned in `pyproject.toml` to
-commit `2ecd3655`. Treat the DIPY tool pages as a *cache* of that pinned surface,
-kept in sync when the pin advances (see the sync procedure in
+Currently the only such dependency is **DIPY**, floored in `pyproject.toml` at
+release `1.12.1`. Treat the DIPY tool pages as a *cache* of the surface at that
+floor, kept in sync when the floor rises (see the sync procedure in
 [[dipy-version-pin-fragility]]).
 
 Concept pages in this wiki use `namespace: paper` (concepts are

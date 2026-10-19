@@ -1,7 +1,7 @@
 ---
 title: "The vendored GQI model: lineage and divergence from DIPY"
 entity_type: synthesis
-last_verified: 2026-07-13
+last_verified: 2026-10-19
 confidence_score: 0.9
 derived_from:
   - pages/entity/tool-dipy-reconst-models.md
@@ -21,7 +21,7 @@ but at the pinned commit it has diverged in ways that matter for maintenance.
 
 ## Why vendor at all
 
-Upstream DIPY's `GeneralizedQSamplingModel` at commit `2ecd3655` is an
+Upstream DIPY's `GeneralizedQSamplingModel` at `1.12.1` is an
 `OdfModel`/`Cache` subclass built for **ODF estimation** (its `fit`/`odf` produce
 orientation functions); it has **no `predict` method**. nifreeze needs GQI as a
 *signal predictor* inside the leave-one-volume-out loop, i.e. it needs the reverse
@@ -33,7 +33,7 @@ contract ([[nifreeze-dipy-reconst-contract]]).
 
 ## Divergence at the pin
 
-| aspect | upstream `dipy.reconst.gqi` @ `2ecd3655` | vendored `nifreeze.model.gqi` |
+| aspect | upstream `dipy.reconst.gqi` @ `1.12.1` | vendored `nifreeze.model.gqi` |
 |---|---|---|
 | base classes | `OdfModel, Cache` | plain `ReconstModel` / `ReconstFit` |
 | default `method` | `"gqi2"` | `"standard"` |

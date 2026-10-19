@@ -25,7 +25,7 @@ Theory concepts grounding nifreeze (literature-sourced, `namespace: paper`):
 - [Sphere sampling: electrostatic repulsion and octahedral subdivision](pages/entity/concept-sphere-sampling-electrostatic-repulsion.md)
 - [Multi-tensor signal simulation](pages/entity/concept-multi-tensor-signal-simulation.md)
 
-### DIPY integration surface (tool pages — pinned to DIPY commit 2ecd3655)
+### DIPY integration surface (tool pages, cached at the DIPY 1.12.1 floor)
 
 Dependency-integration knowledge: the DIPY API surface nifreeze consumes,
 cached at the pinned commit (see the schema's dependency-integration scope clause).

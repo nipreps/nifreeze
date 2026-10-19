@@ -1,19 +1,19 @@
 ---
 title: "DIPY reconstruction models: TensorModel, DiffusionKurtosisModel, GQI"
 entity_type: tool
-last_verified: 2026-07-13
+last_verified: 2026-10-19
 confidence_score: 0.9
-refresh_needed_if: "DIPY pin in pyproject.toml advances past 2ecd3655"
+refresh_needed_if: "DIPY floor in pyproject.toml rises above 1.12.1"
 source_urls:
-  - https://github.com/dipy/dipy/blob/2ecd3655/dipy/reconst/dti.py
-  - https://github.com/dipy/dipy/blob/2ecd3655/dipy/reconst/dki.py
-  - https://github.com/dipy/dipy/blob/2ecd3655/dipy/reconst/gqi.py
+  - https://github.com/dipy/dipy/blob/1.12.1/dipy/reconst/dti.py
+  - https://github.com/dipy/dipy/blob/1.12.1/dipy/reconst/dki.py
+  - https://github.com/dipy/dipy/blob/1.12.1/dipy/reconst/gqi.py
 ---
 
 # DIPY reconstruction models nifreeze uses
 
 The concrete diffusion models nifreeze instantiates as signal predictors, cached
-at DIPY commit `2ecd3655`. Each `implements` a theory concept; read this page for
+at DIPY `1.12.1`. Each `implements` a theory concept; read this page for
 the *code contract*, the concept page for the *algorithm*. Facet of [[tool-dipy]];
 all three obey the [[tool-dipy-reconst-contract]].
 
@@ -54,9 +54,21 @@ predict(dki_params, *, S0=1.0)
   `convexity_constraint` all evaluate `False` and `self.fit_method` is left unset —
   a trap for the nifreeze subclass, which branches on `is_multi_method`/
   `is_iter_method`.
+- **Parallel `multi_fit`.** At `1.12.1`, the parallel branch of `multi_voxel_fit`
+  (`engine="joblib"` and friends) forwards the orchestration kwargs (`engine`,
+  `n_jobs`, `vox_per_chunk`, `verbose`, `inflight_cap`) into `multi_fit`, so
+  `ls_fit_dki` raises `TypeError` (dipy/dipy#4053). dipy/dipy#4054 fixes it and
+  adds `dipy.reconst.multi_voxel.ORCHESTRATION_KWARGS`; it is unreleased as of
+  2026-10-19.
+- **Boolean `weights` dropped in parallel.** At both `1.12.1` and `2ecd3655`, the
+  parallel worker keeps `weights` only when it is an array. `weights=False`
+  (OLS/LS/CLS) is discarded and `ls_fit_dki`/`cls_fit_dki` default to
+  `weights=True`, so unweighted fits come out weighted under a parallel engine.
+  Verified 2026-10-19: OLS parallel and serial `model_params` differ.
 - nifreeze wraps this in `src/nifreeze/model/dki.py` (thin subclass adding a
   normalised `fit(data, *, mask=None, **kwargs)` that delegates to `multi_fit`
-  when orchestration kwargs are present). `DKIModel._model_class =
+  when orchestration kwargs are present, plus a backport of #4054 that is active
+  only when `ORCHESTRATION_KWARGS` is missing). `DKIModel._model_class =
   "nifreeze.model.dki.DiffusionKurtosisModel"`.
 
 ## `GeneralizedQSamplingModel` — vendored, **not** DIPY's
@@ -65,7 +77,7 @@ nifreeze resolves GQI to `nifreeze.model.gqi.GeneralizedQSamplingModel` — a
 **vendored copy** of `dipy.reconst.gqi`, not the upstream class. The differences at
 this pin are load-bearing (full detail in [[vendored-gqi-lineage]]):
 
-| | upstream `dipy.reconst.gqi` @ `2ecd3655` | vendored `nifreeze.model.gqi` |
+| | upstream `dipy.reconst.gqi` @ `1.12.1` | vendored `nifreeze.model.gqi` |
 |---|---|---|
 | base classes | `OdfModel, Cache` | plain `ReconstModel` |
 | default `method` | `"gqi2"` | `"standard"` |
