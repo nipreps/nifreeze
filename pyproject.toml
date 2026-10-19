@@ -124,6 +124,7 @@ nifreeze = "nifreeze.cli.run:main"
 exclude = [
   ".git_archival.txt",  # No longer needed in sdist
   "/.dockerignore",
+  "/.gitattributes",
   "/.github",
   "/.mailmap",
   "/.maint",
@@ -132,8 +133,10 @@ exclude = [
   "/.zenodo.json",
   "/AGENTS.md",
   "/CLAUDE.md",
+  "/CONTRIBUTING.md",
   "/benchmarks",
   "/docs",
+  "/scripts",
   "/test/test_gallery.py",  # Tests docs/sphinxext/gallery, not shipped
   "/tools",
 ]
