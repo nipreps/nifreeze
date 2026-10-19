@@ -40,7 +40,7 @@ from dipy.segment.mask import median_otsu
 from dipy.sims.voxel import single_tensor
 from joblib import cpu_count
 from packaging.version import Version
-from sklearn.gaussian_process.kernels import WhiteKernel
+from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 from threadpoolctl import threadpool_limits  # type: ignore[import-untyped]
 
 from nifreeze import model
@@ -55,7 +55,7 @@ from nifreeze.model._dipy import GaussianProcessModel
 from nifreeze.model.base import MASK_ABSENCE_WARN_MSG
 from nifreeze.model.dki import _DIPY_STRIPS_ORCHESTRATION
 from nifreeze.model.dki import DiffusionKurtosisModel as _NFDKIModel
-from nifreeze.model.gpr import MultiShellKernel
+from nifreeze.model.gpr import MultiShellKernel, SphericalKriging
 from nifreeze.testing import simulations as _sim
 from nifreeze.utils.ndimage import load_api
 
@@ -1498,6 +1498,41 @@ def test_gp_default_optimizes_crossings(kernel_model):
     r_mean = np.corrcoef(np.ravel(mean_others), np.ravel(observed))[0, 1]
     assert r > 0.9
     assert r > r_mean
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def test_gp_multishell_noise_prevents_collapse():
+    """On real multi-shell data, the noise term keeps the kernel from decorrelating.
+
+    Without a noise term the GP must interpolate noisy signals, and its
+    hyperparameters collapse (``a`` at its lower bound, a vanishing radial length
+    scale) to a kernel that predicts the mean of the other volumes.
+    """
+    dataset, _ = _build_dki_dataset(half_size=10)
+    X = np.asarray(dataset.gradients, dtype=float)
+    signals = np.asarray(dataset.dataobj)[dataset.brainmask].astype(float)
+    rng = np.random.default_rng(1234)
+    signals = signals[rng.choice(len(signals), size=300, replace=False)]
+
+    predicted, observed, mean_others = [], [], []
+    for index in (10, 80, 150):
+        train = np.ones(len(X), dtype=bool)
+        train[index] = False
+
+        gpfit = GaussianProcessModel(kernel_model="multishell").fit(signals[:, train], X[train])
+        predicted.append(gpfit.predict(X[index : index + 1]))
+        observed.append(signals[:, index])
+        mean_others.append(signals[:, train].mean(axis=1))
+
+        params = gpfit.model.kernel_.get_params(deep=True)
+        orientation = next(p for p in params.values() if isinstance(p, SphericalKriging))
+        radial = next(p for p in params.values() if isinstance(p, RBF))
+        assert orientation.beta_a > 1.01 * orientation.a_bounds[0]
+        assert radial.get_params()["length_scale"] > 1e-3
+
+    r = np.corrcoef(np.ravel(predicted), np.ravel(observed))[0, 1]
+    r_mean = np.corrcoef(np.ravel(mean_others), np.ravel(observed))[0, 1]
+    assert r > r_mean + 0.2
 
 
 def test_btable_asarray_promotes_1d_input():
