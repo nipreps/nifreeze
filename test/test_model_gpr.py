@@ -823,3 +823,27 @@ def test_gpr_lbfgs_without_analytic_gradient():
 
     fitted_lml = cast(float, gp.log_marginal_likelihood(gp.kernel_.theta))
     assert np.isclose(gp.log_marginal_likelihood_value_, fitted_lml)
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def test_gp_model_fits_hyperparameters_on_voxel_subsample():
+    """Hyperparameters come from a voxel subsample, but every voxel is fitted."""
+    from nifreeze.model._dipy import GaussianProcessModel
+
+    rng = np.random.default_rng(1234)
+    n_voxels = 50
+    data = (1.0 + 0.2 * _ORIENT[:, 0] ** 2) + 0.05 * rng.standard_normal((n_voxels, len(_ORIENT)))
+
+    gp = GaussianProcessModel(kernel_model="spherical", n_voxels_hp=10)
+    gpfit = gp.fit(data, _ORIENT)
+    assert gpfit.model.get_params()["optimizer"] is None
+    assert np.shape(gpfit.model.y_train_) == (len(_ORIENT), n_voxels)
+    assert not np.allclose(gpfit.model.kernel_.theta, gp.kernel.theta)
+
+    # The subsample is seeded, so the hyperparameters are reproducible
+    again = GaussianProcessModel(kernel_model="spherical", n_voxels_hp=10).fit(data, _ORIENT)
+    assert np.allclose(again.model.kernel_.theta, gpfit.model.kernel_.theta)
+
+    # Without a cap, all voxels go into the hyperparameter fit
+    full = GaussianProcessModel(kernel_model="spherical", n_voxels_hp=None).fit(data, _ORIENT)
+    assert full.model.get_params()["optimizer"] == "fmin_l_bfgs_b"
