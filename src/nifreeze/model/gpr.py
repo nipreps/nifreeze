@@ -675,7 +675,9 @@ def uses_bvalue(kernel: Kernel) -> bool:
     if isinstance(kernel, MultiShellKernel):
         return True
     if isinstance(kernel, KernelOperator):
-        return uses_bvalue(kernel.k1) or uses_bvalue(kernel.k2)
+        # ``get_params()`` is the typed-safe way to reach a KernelOperator's operands.
+        operands = kernel.get_params(deep=False)
+        return uses_bvalue(operands["k1"]) or uses_bvalue(operands["k2"])
     return False
 
 
