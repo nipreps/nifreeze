@@ -305,7 +305,7 @@ class ExponentialKriging(Kernel):
 
     def __init__(
         self,
-        beta_a: float = 0.01,
+        beta_a: float = 0.5,
         beta_l: float = 2.0,
         a_bounds: tuple[float, float] = BOUNDS_A,
         l_bounds: tuple[float, float] = BOUNDS_LAMBDA,
@@ -658,6 +658,27 @@ class MultiShellKernel(KernelOperator):
 
     def __repr__(self) -> str:
         return f"MultiShellKernel({self.k1} * {self.k2})"
+
+
+def uses_bvalue(kernel: Kernel) -> bool:
+    """Whether ``kernel`` (possibly composite) consumes the b-value column.
+
+    Examples
+    --------
+    >>> from sklearn.gaussian_process.kernels import WhiteKernel
+    >>> uses_bvalue(SphericalKriging() + WhiteKernel())
+    False
+    >>> uses_bvalue(MultiShellKernel() + WhiteKernel())
+    True
+
+    """
+    if isinstance(kernel, MultiShellKernel):
+        return True
+    if isinstance(kernel, KernelOperator):
+        # ``get_params()`` is the typed-safe way to reach a KernelOperator's operands.
+        operands = kernel.get_params(deep=False)
+        return uses_bvalue(operands["k1"]) or uses_bvalue(operands["k2"])
+    return False
 
 
 def exponential_covariance(theta: np.ndarray, a: float) -> np.ndarray:

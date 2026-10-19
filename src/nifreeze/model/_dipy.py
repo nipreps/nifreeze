@@ -37,6 +37,7 @@ from nifreeze.model.gpr import (
     ExponentialKriging,
     MultiShellKernel,
     SphericalKriging,
+    uses_bvalue,
 )
 
 GP_JITTER = 1e-10
@@ -91,7 +92,8 @@ def gp_prediction(
 
     X = _btable_asarray(gtab)
     # Single-shell kernels consume orientations only; drop the b-value column.
-    if not isinstance(getattr(model, "kernel", None), MultiShellKernel):
+    kernel = getattr(model, "kernel", None)
+    if kernel is None or not uses_bvalue(kernel):
         X = X[:, :3]
 
     # Check it's fitted as they do in sklearn internally
@@ -119,8 +121,8 @@ class GaussianProcessModel(ReconstModel):
     def __init__(
         self,
         kernel_model: str = "spherical",
-        beta_l: float = 2.0,
-        beta_a: float = 0.1,
+        beta_l: float | None = None,
+        beta_a: float | None = None,
         sigma_sq: float = 1.0,
         ell: float = 1.0,
         nvox_prefit: int | None = DEFAULT_NVOX_PREFIT,
@@ -145,16 +147,20 @@ class GaussianProcessModel(ReconstModel):
             covariance was characterized for the single-shell case, so it is not
             wired into the multi-shell kernel here.
         beta_l : :obj:`float`, optional
-            Signal scale parameter determining the variability of the signal.
+            Initial signal scale parameter determining the variability of the
+            signal. Defaults to the angular kernel's own default.
         beta_a : :obj:`float`, optional
-            Distance scale parameter determining how fast the covariance
+            Initial distance scale parameter determining how fast the covariance
             decreases as one moves along the surface of the sphere. Must have a
-            positive value.
+            positive value within the kernel bounds. Defaults to the angular
+            kernel's own default: the spherical covariance is exactly zero beyond
+            ``a``, so a start near the lower bound leaves the marginal likelihood
+            flat in ``a`` and the optimizer cannot move.
         sigma_sq : :obj:`float`, optional
             Initial measurement-noise variance (:math:`\\sigma^2`). It is the
             starting ``noise_level`` of a
             :obj:`~sklearn.gaussian_process.kernels.WhiteKernel` added to the
-            covariance kernel, and is *optimized* along with the other
+            covariance kernel (for every ``kernel_model``), and is *optimized* along with the other
             hyperparameters (rather than held fixed as in a plain ``alpha``).
         ell : :obj:`float`, optional
             Radial (log-b) length scale for the multi-shell kernel (:math:`\\ell`
@@ -177,19 +183,25 @@ class GaussianProcessModel(ReconstModel):
         self.sigma_sq = sigma_sq
         self.nvox_prefit = nvox_prefit
 
-        self.kernel: Kernel
-        if kernel_model == "multishell":
-            self.kernel = MultiShellKernel(
-                orientation_kernel=SphericalKriging(beta_a=beta_a, beta_l=beta_l),
-                radial_kernel=RBF(length_scale=ell),
-            )
-        else:
-            KernelType = SphericalKriging if kernel_model == "spherical" else ExponentialKriging
-            # Add the :math:`\sigma^2` term of Andersson et al. (2015) as a WhiteKernel
-            self.kernel = KernelType(
-                beta_a=beta_a,
-                beta_l=beta_l,
-            ) + WhiteKernel(noise_level=sigma_sq)
+        KernelType = (
+            SphericalKriging if kernel_model in ("spherical", "multishell") else ExponentialKriging
+        )
+        # Unset starting values fall back to the angular kernel's own defaults
+        defaults = KernelType()
+        angular = KernelType(
+            beta_a=defaults.beta_a if beta_a is None else beta_a,
+            beta_l=defaults.beta_l if beta_l is None else beta_l,
+        )
+
+        self.kernel: Kernel = (
+            MultiShellKernel(orientation_kernel=angular, radial_kernel=RBF(length_scale=ell))
+            if kernel_model == "multishell"
+            else angular
+        )
+        # Add the :math:`\sigma^2` term of Andersson et al. (2015) as a WhiteKernel.
+        # Without it, the multi-shell GP must interpolate noisy data and its
+        # hyperparameters collapse to an uncorrelated (mean-predicting) kernel.
+        self.kernel = self.kernel + WhiteKernel(noise_level=sigma_sq)
 
     def fit(
         self,
@@ -225,7 +237,7 @@ class GaussianProcessModel(ReconstModel):
         # ([gx, gy, gz, bval]) for the multi-shell kernel; single-shell kernels
         # consume orientations only, so the b-value column is dropped.
         X = _btable_asarray(gtab)
-        if not isinstance(self.kernel, MultiShellKernel):
+        if not uses_bvalue(self.kernel):
             X = X[:, :3]
 
         # Data must have shape (n_samples, n_targets) where n_samples is
