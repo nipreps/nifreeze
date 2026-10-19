@@ -55,7 +55,7 @@ from scipy.optimize import minimize
 from sklearn.gaussian_process.kernels import Kernel
 
 from nifreeze.model._dipy import DEFAULT_NVOX_PREFIT, GP_JITTER
-from nifreeze.model.gpr import DiffusionGPR
+from nifreeze.model.gpr import LBFGS_DEFAULT_GTOL, DiffusionGPR
 
 DEFAULT_KRR_LAMBDA_GRID = tuple(np.logspace(-4, 1, 11))
 """Default grid of ridge strengths (relative to the mean Gram diagonal)."""
@@ -225,6 +225,9 @@ def fit_pooled_hyperparameters(
         ).fit(X, np.asarray(y, dtype=float))
         for X, y in zip(tables, signals, strict=True)
     ]
+    # As in DiffusionGPR, optimize the mean log marginal likelihood per
+    # observation, so the first bounded L-BFGS-B step does not grow with the data
+    scale = 1.0 / sum(np.size(gpr.y_train_) for gpr in gprs)
 
     def objective(theta: np.ndarray) -> tuple[float, np.ndarray]:
         values, gradients = zip(
@@ -237,7 +240,7 @@ def fit_pooled_hyperparameters(
         lml = float(np.sum(values))
         if not np.isfinite(lml):
             return 1e25, np.zeros_like(theta)
-        return -lml, -np.sum(gradients, axis=0)
+        return -lml * scale, -np.sum(gradients, axis=0) * scale
 
     result = minimize(  # type: ignore[call-overload]
         objective,
@@ -245,7 +248,7 @@ def fit_pooled_hyperparameters(
         jac=True,
         method="L-BFGS-B",
         bounds=kernel.bounds,
-        options={"maxiter": maxiter},
+        options={"maxiter": maxiter, "gtol": LBFGS_DEFAULT_GTOL * scale},
     )
     return kernel.clone_with_theta(result.x)
 

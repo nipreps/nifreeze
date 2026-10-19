@@ -23,17 +23,18 @@
 """Unit tests for closed-form leave-one-volume-out prediction."""
 
 import warnings
+from typing import cast
 
 import numpy as np
 import pytest
 from dipy.core.gradients import gradient_table_from_bvals_bvecs
-from sklearn.gaussian_process.kernels import WhiteKernel
+from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 
 from nifreeze import model
 from nifreeze.data.dmri import DWI
 from nifreeze.model import lovo
 from nifreeze.model._dipy import GP_JITTER
-from nifreeze.model.gpr import DiffusionGPR, SphericalKriging, uses_bvalue
+from nifreeze.model.gpr import DiffusionGPR, MultiShellKernel, SphericalKriging, uses_bvalue
 from nifreeze.model.gqi import GeneralizedQSamplingModel
 from nifreeze.testing import simulations as _sim
 
@@ -209,6 +210,30 @@ def test_fit_pooled_hyperparameters_different_tables():
         kernel, [gradients_a[:, :3], gradients_b[:, :3]], [signals_a, signals_b]
     )
     assert np.all(np.isfinite(pooled.theta))
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def test_fit_pooled_hyperparameters_matches_gpr_on_dense_multishell():
+    """On a dense multi-shell scheme, pooling reaches the optimum of a single GP fit."""
+    rng = np.random.default_rng(1234)
+    gtabs = [
+        _sim.create_single_shell_gradient_table(n_dirs, bval)
+        for n_dirs, bval in ((20, 1000), (30, 2000), (64, 3000))
+    ]
+    bvecs = np.vstack([g.bvecs[1:] for g in gtabs])
+    bvals = np.concatenate([g.bvals[1:] for g in gtabs])
+    gtab = gradient_table_from_bvals_bvecs(bvals, bvecs)
+    signal = _sim.simulate_one_fiber_multivoxel(gtab, 100, 50, 2000, rng)
+    X, y = np.column_stack([bvecs, bvals]), np.asarray(signal)[:2000].T
+
+    kernel = MultiShellKernel(SphericalKriging(), RBF(1.0)) + WhiteKernel(1.0)
+    gp = DiffusionGPR(kernel=kernel, random_state=0, n_targets=y.shape[1], alpha=GP_JITTER)
+    gp.fit(X, y)
+    pooled = lovo.fit_pooled_hyperparameters(kernel, [X, X], [y[:, :1000], y[:, 1000:]])
+
+    # Summed over voxels (not scaled per observation), the objective stops far short
+    pooled_lml = cast(float, gp.log_marginal_likelihood(pooled.theta))
+    assert np.isclose(pooled_lml, gp.log_marginal_likelihood_value_, rtol=1e-3)
 
 
 def test_hyperparameters_roundtrip(tmp_path):
