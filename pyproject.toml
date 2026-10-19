@@ -124,6 +124,8 @@ nifreeze = "nifreeze.cli.run:main"
 exclude = [
   ".git_archival.txt",  # No longer needed in sdist
   "/.wiki",
+  "/docs",
+  "/test/test_gallery.py",  # Tests docs/sphinxext/gallery, not shipped
 ]
 
 [tool.hatch.build.targets.wheel]
