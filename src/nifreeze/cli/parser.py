@@ -114,13 +114,14 @@ def _build_parser() -> ArgumentParser:
         ),
     )
     parser.add_argument(
-        "--nvoxhp",
+        "--nvox-prefit",
         action="store",
         type=int,
         default=None,
         help=(
             "Number of random voxels used to fit the hyperparameters of the "
-            "closed-form LOVO models ('gp-loo', 'gqi-krr')."
+            "Gaussian process models ('gp', 'gp-loo') and to choose the ridge "
+            "strength of 'gqi-krr'."
         ),
     )
     parser.add_argument(
@@ -298,8 +299,8 @@ def parse_args(argv: list[str] | None = None) -> tuple[Namespace, dict, dict, di
     if args.gp_hyperparameters:
         model_kwargs["hyperparameters"] = args.gp_hyperparameters
 
-    if args.nvoxhp is not None:
-        model_kwargs["n_voxels_hp"] = args.nvoxhp
+    if args.nvox_prefit is not None:
+        model_kwargs["nvox_prefit"] = args.nvox_prefit
 
     estimator_kwargs = {}
 

@@ -312,7 +312,7 @@ def test_gploo_fits_hyperparameters_once(setup_random_dwi_data, monkeypatch):
     monkeypatch.setattr(model.dmri, "fit_pooled_hyperparameters", _counting)
 
     dwi = _random_dwi(setup_random_dwi_data)
-    gp = model.dmri.GPLOOModel(dwi, kernel_model="spherical", n_voxels_hp=1)
+    gp = model.dmri.GPLOOModel(dwi, kernel_model="spherical", nvox_prefit=1)
     for index in range(4):
         assert gp.fit_predict(index) is not None
     assert calls == [(len(dwi), 1)]
@@ -373,7 +373,7 @@ def test_gploo_multishell_auto_kernel(request):
         brainmask=np.ones(dataobj.shape[:3], dtype=bool),
         gradients=np.column_stack([bvecs, bvals]),
     )
-    gp = model.dmri.GPLOOModel(dwi, n_voxels_hp=None)
+    gp = model.dmri.GPLOOModel(dwi, nvox_prefit=None)
     assert gp.fit_predict(0) is not None
     assert gp._kernel is not None
     assert uses_bvalue(gp._kernel)

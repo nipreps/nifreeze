@@ -626,7 +626,7 @@ class GPLOOModel(ClosedFormLOVOMixin, GPModel):
             A hyperparameter record (see
             :func:`~nifreeze.model.lovo.save_hyperparameters`). When given, no
             hyperparameter is fitted at run time.
-        n_voxels_hp : :obj:`int`, optional
+        nvox_prefit : :obj:`int`, optional
             Number of voxels used to fit the hyperparameters (all if :obj:`None`).
         random_state : :obj:`int`, optional
             Seed for the voxel subsample.
@@ -700,7 +700,7 @@ class GQIKRRModel(ClosedFormLOVOMixin, GQIModel):
             error on a random voxel subsample.
         krr_lambda_grid : :obj:`~typing.Sequence` of :obj:`float`, optional
             Candidate ridge strengths.
-        n_voxels_hp : :obj:`int`, optional
+        nvox_prefit : :obj:`int`, optional
             Number of voxels used to choose the ridge strength (all if :obj:`None`).
         random_state : :obj:`int`, optional
             Seed for the voxel subsample.

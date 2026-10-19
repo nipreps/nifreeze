@@ -54,11 +54,8 @@ from scipy.linalg import LinAlgError, cho_factor, cho_solve
 from scipy.optimize import minimize
 from sklearn.gaussian_process.kernels import Kernel
 
-from nifreeze.model._dipy import GP_JITTER
+from nifreeze.model._dipy import DEFAULT_NVOX_PREFIT, GP_JITTER
 from nifreeze.model.gpr import DiffusionGPR
-
-DEFAULT_NVOXHP = 1000
-"""Default number of voxels used to estimate hyperparameters (as eddy's ``--nvoxhp``)."""
 
 DEFAULT_KRR_LAMBDA_GRID = tuple(np.logspace(-4, 1, 11))
 """Default grid of ridge strengths (relative to the mean Gram diagonal)."""
@@ -385,12 +382,7 @@ class ClosedFormLOVOMixin:
 
     Hyperparameters (if any) are estimated once, on a random subsample of voxels
     across all volumes. This lets a handful of scalars see the held-out volume,
-    as in eddy :footcite:p:`andersson_integrated_2016`, while every prediction
-    remains held-out.
-
-    References
-    ----------
-    .. footbibliography::
+    while every prediction remains held-out.
 
     """
 
@@ -408,12 +400,12 @@ class ClosedFormLOVOMixin:
         self,
         dataset: Any,
         *,
-        n_voxels_hp: int | None = DEFAULT_NVOXHP,
+        nvox_prefit: int | None = DEFAULT_NVOX_PREFIT,
         random_state: int | None = 0,
         **kwargs: Any,
     ) -> None:
         super().__init__(dataset, **kwargs)  # type: ignore[call-arg]
-        self._n_voxels_hp = n_voxels_hp
+        self._nvox_prefit = nvox_prefit
         self._random_state = random_state
         self._signals: np.ndarray | None = None
         self._smoother: np.ndarray | None = None
@@ -433,13 +425,13 @@ class ClosedFormLOVOMixin:
         return self._signals
 
     def _hyperparameter_signals(self) -> np.ndarray:
-        """Return a seeded random subsample of voxels, shape ``(N, n_voxels_hp)``."""
+        """Return a seeded random subsample of voxels, shape ``(N, nvox_prefit)``."""
         signals = self._lovo_signals()
         n_voxels = signals.shape[1]
-        if self._n_voxels_hp is None or self._n_voxels_hp >= n_voxels:
+        if self._nvox_prefit is None or self._nvox_prefit >= n_voxels:
             return signals.astype(float)
         rng = np.random.default_rng(self._random_state)
-        columns = np.sort(rng.choice(n_voxels, size=self._n_voxels_hp, replace=False))
+        columns = np.sort(rng.choice(n_voxels, size=self._nvox_prefit, replace=False))
         return signals[:, columns].astype(float)
 
     def _fit(self, index: int | None = None, n_jobs: int | None = None, **kwargs: Any) -> int:

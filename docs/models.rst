@@ -230,9 +230,8 @@ unchanged:
    :math:`\mathbf{A} = \mathbf{K}_\theta(\mathbf{X}) + \sigma^2\mathbf{I}`.
    Hyperparameters :math:`\theta` are either loaded from a JSON file
    (``hyperparameters``, CLI ``--gp-hyperparameters``) or fitted **once**, on a
-   random subsample of voxels across all volumes (``n_voxels_hp``, CLI
-   ``--nvoxhp``, 1000 by default, like eddy's ``--nvoxhp``
-   :footcite:p:`andersson_integrated_2016`).
+   random subsample of voxels across all volumes (``nvox_prefit``, CLI
+   ``--nvox-prefit``, 1000 by default).
 
 ``gqi-krr`` (:class:`~nifreeze.model.dmri.GQIKRRModel`)
    GQI :footcite:p:`yeh_generalized_2010` as kernel ridge regression. The GQI
@@ -247,8 +246,8 @@ unchanged:
 
 **Held-out independence.** No prediction uses the held-out volume, so single-fit
 mode returns the same genuine LOVO predictions and is not a canary. The
-hyperparameters fitted at run time (a few scalars) do see all volumes, as in
-eddy. Hyperparameters fitted on other subjects remove even that dependence.
+hyperparameters fitted at run time (a few scalars) do see all volumes.
+Hyperparameters fitted on other subjects remove even that dependence.
 
 **Pooling across subjects.** The hyperparameters of an acquisition protocol can
 be fitted on many subjects with

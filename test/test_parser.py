@@ -238,7 +238,7 @@ def test_parser_closed_form_lovo_options(tmp_path):
 
     *_, model_kwargs = parse_args([str(input_file), "--models", "gp-loo"])
     assert "hyperparameters" not in model_kwargs
-    assert "n_voxels_hp" not in model_kwargs
+    assert "nvox_prefit" not in model_kwargs
 
     *_, model_kwargs = parse_args(
         [
@@ -247,12 +247,12 @@ def test_parser_closed_form_lovo_options(tmp_path):
             "gp-loo",
             "--gp-hyperparameters",
             str(hp_file),
-            "--nvoxhp",
+            "--nvox-prefit",
             "500",
         ]
     )
     assert model_kwargs["hyperparameters"] == hp_file
-    assert model_kwargs["n_voxels_hp"] == 500
+    assert model_kwargs["nvox_prefit"] == 500
 
 
 @pytest.mark.parametrize(
