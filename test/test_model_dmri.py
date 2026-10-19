@@ -1508,7 +1508,11 @@ def test_gp_multishell_noise_prevents_collapse():
     hyperparameters collapse (``a`` at its lower bound, a vanishing radial length
     scale) to a kernel that predicts the mean of the other volumes.
     """
-    dataset, _ = _build_dki_dataset(half_size=10)
+    # Ignore warning due to multiple b0 volumes
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=DWI_REDUNDANT_B0_WARN_MSG, category=UserWarning)
+        dataset, _ = _build_dki_dataset(half_size=10)
+
     X = np.asarray(dataset.gradients, dtype=float)
     signals = np.asarray(dataset.dataobj)[dataset.brainmask].astype(float)
     rng = np.random.default_rng(1234)
