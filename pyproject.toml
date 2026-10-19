@@ -121,7 +121,10 @@ nifreeze = "nifreeze.cli.run:main"
 #
 
 [tool.hatch.build.targets.sdist]
-exclude = [".git_archival.txt"]  # No longer needed in sdist
+exclude = [
+  ".git_archival.txt",  # No longer needed in sdist
+  "/.wiki",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nifreeze"]
