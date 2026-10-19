@@ -5,10 +5,34 @@ on:
   push:
     branches: ['doc/*', 'docs/*', 'main', 'maint/*']
     tags: ['*']
+  # Redeploy when the prediction gallery publishes new pages
+  workflow_run:
+    workflows: ['Prediction gallery']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read  # download the gallery-pages artifact
 
 jobs:
   build:
+    # Gallery runs redeploy when they succeed on main and were triggered by a push
+    # or a manual dispatch; scheduled gallery runs are a check and do not publish.
+    if: >-
+      github.event_name != 'workflow_run' || (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        (github.event.workflow_run.event == 'push' ||
+         github.event.workflow_run.event == 'workflow_dispatch')
+      )
     runs-on: ubuntu-latest
+    # Serialize the deploys of each ref (a gallery redeploy and a push to main)
+    concurrency:
+      group: gh-pages-${{ github.ref }}
+      cancel-in-progress: false
 
     steps:
     - uses: actions/checkout@v5
@@ -67,6 +91,22 @@ jobs:
     - name: Generate citation
       run: .github/scripts/generate_citation_artifact.sh
 
+    - name: Fetch the prediction gallery
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GALLERY_RUN_ID: ${{ github.event.workflow_run.id }}
+      run: |
+        if [[ -n "$GALLERY_RUN_ID" ]]; then
+          ARGS=(--strict --run-id "$GALLERY_RUN_ID")
+        elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+          ARGS=(--sha "$GITHUB_SHA")
+        elif [[ "$GITHUB_REF" == refs/heads/main ]]; then
+          ARGS=(--strict)
+        else
+          ARGS=()
+        fi
+        python tools/fetch_gallery.py "${ARGS[@]}"
+
     - name: Build docs
       run: |
           python -m hatch build --hooks-only
@@ -89,7 +129,11 @@ jobs:
         python -c "from pathlib import Path; import json; f=Path('versions.json'); d=json.loads(f.read_text()); d['tags'].append(\"${MAJOR_MINOR}\"); d['tags'] = list(sorted(set(d['tags']))); f.write_text(json.dumps(d, indent=4)); print('Updated versions.json')"
         git add versions.json
         git commit -m "rel(${CURBRANCH}): Update docs of ${MAJOR_MINOR} series" || true
-        git push
+        for attempt in 1 2 3; do
+          git push && break
+          [[ $attempt == 3 ]] && exit 1
+          git pull --rebase origin gh-pages
+        done
 
     - name: Push "main" docs to gh-pages after a push to main (typically, a PR merge).
       if: github.ref == 'refs/heads/main'
@@ -105,4 +149,8 @@ jobs:
         cp -r $HOME/docs/$CURBRANCH $PWD/main
         git add main
         git commit -am "docs(main): Update docs of development line" || true
-        git push
+        for attempt in 1 2 3; do
+          git push && break
+          [[ $attempt == 3 ]] && exit 1
+          git pull --rebase origin gh-pages
+        done
