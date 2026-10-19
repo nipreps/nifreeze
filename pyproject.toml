@@ -21,7 +21,7 @@ license-files = ["LICEN[CS]E*"]
 requires-python = ">=3.12"
 dependencies = [
   "attrs>=24.1.0",
-  "dipy @ git+https://github.com/dipy/dipy.git@2ecd3655",
+  "dipy>=1.12.1",
   "joblib",
   "matplotlib>=3.11",
   "nipype>=1.11.0,<2.0",
@@ -119,9 +119,6 @@ nifreeze = "nifreeze.cli.run:main"
 #
 # Hatch configurations
 #
-
-[tool.hatch.metadata]
-allow-direct-references = true
 
 [tool.hatch.build.targets.sdist]
 exclude = [".git_archival.txt"]  # No longer needed in sdist
