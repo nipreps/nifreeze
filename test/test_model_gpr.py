@@ -808,3 +808,18 @@ def test_gpr_optimizer_leaves_start_on_dense_multishell():
     assert gp.log_marginal_likelihood_value_ > start_lml + 1e3
     # The reported value is the (unscaled) log marginal likelihood at the optimum
     assert np.isclose(gp.log_marginal_likelihood_value_, fitted_lml)
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def test_gpr_lbfgs_without_analytic_gradient():
+    """L-BFGS-B with finite-difference gradients also reports the unscaled LML."""
+    rng = np.random.default_rng(1234)
+    y = 1.0 + 0.2 * _ORIENT[:, 0] ** 2 + 0.01 * rng.standard_normal((5, len(_ORIENT))).T
+
+    kernel = gpr.SphericalKriging()
+    gp = gpr.DiffusionGPR(
+        kernel=kernel, random_state=0, n_targets=y.shape[1], alpha=1e-2, eval_gradient=False
+    ).fit(_ORIENT, y)
+
+    fitted_lml = cast(float, gp.log_marginal_likelihood(gp.kernel_.theta))
+    assert np.isclose(gp.log_marginal_likelihood_value_, fitted_lml)
