@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.data.filtering - nifreeze 26.0.0.dev334 documentation</title>
+        <title>nifreeze.data.filtering - nifreeze 26.0.0.dev339 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev334 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev339 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev334</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev339</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev334</span>
+  <span class="sidebar-brand-text">26.0.0.dev339</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -382,6 +382,97 @@
 
 
 
+<div class="viewcode-block" id="robust_window">
+<a class="viewcode-back" href="../../../api/nifreeze.data.filtering.html#nifreeze.data.filtering.robust_window">[docs]</a>
+<span class="k">def</span> <span class="nf">robust_window</span><span class="p">(</span>
+    <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">p_min</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">p_max</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">99.98</span><span class="p">,</span>
+    <span class="n">nonnegative</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Estimate an intensity window that isolated outliers cannot set.</span>
+
+<span class="sd">    The percentiles are computed on a median-filtered copy of ``data``. With a</span>
+<span class="sd">    ``mask``, the filter runs only on the mask&#39;s bounding box (plus the</span>
+<span class="sd">    footprint&#39;s radius, so the values inside the mask are unchanged), and only</span>
+<span class="sd">    the voxels inside the mask are summarized.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : :obj:`~numpy.ndarray`</span>
+<span class="sd">        The input n-dimensional data array.</span>
+<span class="sd">    mask : :obj:`~numpy.ndarray`, optional</span>
+<span class="sd">        Boolean mask of the voxels the window is estimated from.</span>
+<span class="sd">    p_min : :obj:`float`, optional</span>
+<span class="sd">        The lower percentile. Defaults to 35 without a mask (which flattens the</span>
+<span class="sd">        background) and to 1 with one.</span>
+<span class="sd">    p_max : :obj:`float`, optional</span>
+<span class="sd">        The upper percentile.</span>
+<span class="sd">    nonnegative : :obj:`bool`, optional</span>
+<span class="sd">        If True, only consider non-negative values when calculating thresholds.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    :obj:`tuple` of :obj:`float`</span>
+<span class="sd">        The lower and upper bounds of the window.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">p_min</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">p_min</span> <span class="o">=</span> <span class="mf">35.0</span> <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="mf">1.0</span>
+
+    <span class="n">footprint</span> <span class="o">=</span> <span class="n">ball</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">denoised</span> <span class="o">=</span> <span class="n">median_filter</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">footprint</span><span class="o">=</span><span class="n">footprint</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mask</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="n">radius</span> <span class="o">=</span> <span class="n">footprint</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span>
+            <span class="n">corners</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+            <span class="n">bbox</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+                <span class="nb">slice</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">lo</span> <span class="o">-</span> <span class="n">radius</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">hi</span> <span class="o">+</span> <span class="n">radius</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">corners</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">corners</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">denoised</span> <span class="o">=</span> <span class="n">median_filter</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">bbox</span><span class="p">],</span> <span class="n">footprint</span><span class="o">=</span><span class="n">footprint</span><span class="p">)[</span><span class="n">mask</span><span class="p">[</span><span class="n">bbox</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">denoised</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+
+    <span class="c1"># Select values for percentile computation.</span>
+    <span class="c1"># If nonnegative=True, we must have at least one finite &gt;=0 value.</span>
+    <span class="n">sel</span> <span class="o">=</span> <span class="n">denoised</span><span class="p">[</span><span class="n">denoised</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">nonnegative</span> <span class="k">else</span> <span class="n">denoised</span>
+    <span class="n">sel</span> <span class="o">=</span> <span class="n">sel</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">sel</span><span class="p">)]</span>
+
+    <span class="k">if</span> <span class="n">sel</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">constraints</span> <span class="o">=</span> <span class="s2">&quot;nonnegative constraint and &quot;</span> <span class="k">if</span> <span class="n">nonnegative</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">raise</span> <span class="n">ClippingValueError</span><span class="p">(</span>
+            <span class="n">CLIPPING_EMPTY_SELECTION_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">constraints</span><span class="o">=</span><span class="n">constraints</span><span class="p">,</span> <span class="n">p_min</span><span class="o">=</span><span class="n">p_min</span><span class="p">,</span> <span class="n">p_max</span><span class="o">=</span><span class="n">p_max</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="n">a_min</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">sel</span><span class="p">,</span> <span class="n">p_min</span><span class="p">))</span>
+    <span class="n">a_max</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">sel</span><span class="p">,</span> <span class="n">p_max</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">a_min</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">a_max</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">ClippingValueError</span><span class="p">(</span>
+            <span class="n">CLIPPING_NONFINITE_THRESHOLDS_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">a_min</span><span class="o">=</span><span class="n">a_min</span><span class="p">,</span> <span class="n">a_max</span><span class="o">=</span><span class="n">a_max</span><span class="p">,</span> <span class="n">p_min</span><span class="o">=</span><span class="n">p_min</span><span class="p">,</span> <span class="n">p_max</span><span class="o">=</span><span class="n">p_max</span><span class="p">,</span> <span class="n">nonnegative</span><span class="o">=</span><span class="n">nonnegative</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">a_max</span> <span class="o">&lt;=</span> <span class="n">a_min</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ClippingValueError</span><span class="p">(</span>
+            <span class="n">CLIPPING_INVALID_THRESHOLDS_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">a_min</span><span class="o">=</span><span class="n">a_min</span><span class="p">,</span> <span class="n">a_max</span><span class="o">=</span><span class="n">a_max</span><span class="p">,</span> <span class="n">p_min</span><span class="o">=</span><span class="n">p_min</span><span class="p">,</span> <span class="n">p_max</span><span class="o">=</span><span class="n">p_max</span><span class="p">,</span> <span class="n">nonnegative</span><span class="o">=</span><span class="n">nonnegative</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">a_min</span><span class="p">,</span> <span class="n">a_max</span></div>
+
+
+
 <div class="viewcode-block" id="advanced_clip">
 <a class="viewcode-back" href="../../../api/nifreeze.data.filtering.html#nifreeze.data.filtering.advanced_clip">[docs]</a>
 <span class="k">def</span> <span class="nf">advanced_clip</span><span class="p">(</span>
@@ -440,37 +531,7 @@
         <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="ow">not</span> <span class="n">inplace</span><span class="p">)</span>
 
     <span class="c1"># Calculate stats on denoised version to avoid outlier bias</span>
-    <span class="n">denoised</span> <span class="o">=</span> <span class="n">median_filter</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">footprint</span><span class="o">=</span><span class="n">ball</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
-
-    <span class="c1"># Select values for percentile computation.</span>
-    <span class="c1"># If nonnegative=True, we must have at least one finite &gt;=0 value.</span>
-    <span class="n">sel</span> <span class="o">=</span> <span class="n">denoised</span><span class="p">[</span><span class="n">denoised</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">nonnegative</span> <span class="k">else</span> <span class="n">denoised</span>
-    <span class="n">sel</span> <span class="o">=</span> <span class="n">sel</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">sel</span><span class="p">)]</span>
-
-    <span class="k">if</span> <span class="n">sel</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="n">constraints</span> <span class="o">=</span> <span class="s2">&quot;nonnegative constraint and &quot;</span> <span class="k">if</span> <span class="n">nonnegative</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
-        <span class="k">raise</span> <span class="n">ClippingValueError</span><span class="p">(</span>
-            <span class="n">CLIPPING_EMPTY_SELECTION_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                <span class="n">constraints</span><span class="o">=</span><span class="n">constraints</span><span class="p">,</span> <span class="n">p_min</span><span class="o">=</span><span class="n">p_min</span><span class="p">,</span> <span class="n">p_max</span><span class="o">=</span><span class="n">p_max</span>
-            <span class="p">)</span>
-        <span class="p">)</span>
-
-    <span class="n">a_min</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">sel</span><span class="p">,</span> <span class="n">p_min</span><span class="p">))</span>
-    <span class="n">a_max</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">sel</span><span class="p">,</span> <span class="n">p_max</span><span class="p">))</span>
-
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">a_min</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">a_max</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="n">ClippingValueError</span><span class="p">(</span>
-            <span class="n">CLIPPING_NONFINITE_THRESHOLDS_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                <span class="n">a_min</span><span class="o">=</span><span class="n">a_min</span><span class="p">,</span> <span class="n">a_max</span><span class="o">=</span><span class="n">a_max</span><span class="p">,</span> <span class="n">p_min</span><span class="o">=</span><span class="n">p_min</span><span class="p">,</span> <span class="n">p_max</span><span class="o">=</span><span class="n">p_max</span><span class="p">,</span> <span class="n">nonnegative</span><span class="o">=</span><span class="n">nonnegative</span>
-            <span class="p">)</span>
-        <span class="p">)</span>
-
-    <span class="k">if</span> <span class="n">a_max</span> <span class="o">&lt;=</span> <span class="n">a_min</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">ClippingValueError</span><span class="p">(</span>
-            <span class="n">CLIPPING_INVALID_THRESHOLDS_ERROR_MSG</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                <span class="n">a_min</span><span class="o">=</span><span class="n">a_min</span><span class="p">,</span> <span class="n">a_max</span><span class="o">=</span><span class="n">a_max</span><span class="p">,</span> <span class="n">p_min</span><span class="o">=</span><span class="n">p_min</span><span class="p">,</span> <span class="n">p_max</span><span class="o">=</span><span class="n">p_max</span><span class="p">,</span> <span class="n">nonnegative</span><span class="o">=</span><span class="n">nonnegative</span>
-            <span class="p">)</span>
-        <span class="p">)</span>
+    <span class="n">a_min</span><span class="p">,</span> <span class="n">a_max</span> <span class="o">=</span> <span class="n">robust_window</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">p_min</span><span class="o">=</span><span class="n">p_min</span><span class="p">,</span> <span class="n">p_max</span><span class="o">=</span><span class="n">p_max</span><span class="p">,</span> <span class="n">nonnegative</span><span class="o">=</span><span class="n">nonnegative</span><span class="p">)</span>
 
     <span class="c1"># Clip and scale data</span>
     <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">a_min</span><span class="o">=</span><span class="n">a_min</span><span class="p">,</span> <span class="n">a_max</span><span class="o">=</span><span class="n">a_max</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
@@ -705,7 +766,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=87b1f80b"></script>
+</div><script src="../../../_static/documentation_options.js?v=fc2b55ba"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

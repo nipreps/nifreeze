@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.registration.ants - nifreeze 26.0.0.dev334 documentation</title>
+        <title>nifreeze.registration.ants - nifreeze 26.0.0.dev339 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev334 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev339 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev334</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev339</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev334</span>
+  <span class="sidebar-brand-text">26.0.0.dev339</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -346,7 +346,6 @@
 <span class="kn">from</span> <span class="nn">importlib.resources</span> <span class="kn">import</span> <span class="n">files</span>
 <span class="kn">from</span> <span class="nn">json</span> <span class="kn">import</span> <span class="n">loads</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">cast</span>
 <span class="kn">from</span> <span class="nn">warnings</span> <span class="kn">import</span> <span class="n">warn</span>
 
 <span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nb</span>
@@ -354,7 +353,6 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">nipype.interfaces.ants.registration</span> <span class="kn">import</span> <span class="n">Registration</span>
 <span class="kn">from</span> <span class="nn">nitransforms.linear</span> <span class="kn">import</span> <span class="n">Affine</span>
-<span class="kn">from</span> <span class="nn">nitransforms.resampling</span> <span class="kn">import</span> <span class="n">apply</span>
 
 <span class="n">PARAMETERS_SINGLE_VALUE</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;collapse_output_transforms&quot;</span><span class="p">,</span>
@@ -380,12 +378,23 @@
 <span class="n">REGISTRATION_MALFORMED_SETTINGS_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;Malformed settings file (levels: </span><span class="si">{levels}</span><span class="s2">)&quot;</span>
 <span class="sd">&quot;&quot;&quot;Registration malformed settings error message.&quot;&quot;&quot;</span>
 
+<span class="n">WINDOW_LEVELS</span> <span class="o">=</span> <span class="mi">4095</span>
+<span class="sd">&quot;&quot;&quot;Highest code of the 12-bit encoding of floating-point registration inputs.&quot;&quot;&quot;</span>
+
 
 <span class="k">def</span> <span class="nf">_to_nifti</span><span class="p">(</span>
-    <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="n">clip</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Save data as a NIfTI file, optionally applying clipping.</span>
+<span class="sd">    Save data as a NIfTI file, optionally clipped to an intensity window.</span>
+
+<span class="sd">    Clipping works on a copy (``data`` may be a view into the dataset) and keeps</span>
+<span class="sd">    the original units. Integer data keep their type and values within the</span>
+<span class="sd">    window. Floating-point data are stored as 12-bit codes (int16), and the</span>
+<span class="sd">    ``scl_slope`` and ``scl_inter`` header fields map them back to the window.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -395,22 +404,29 @@
 <span class="sd">        The affine transformation matrix.</span>
 <span class="sd">    filename : :obj:`os.pathlike`</span>
 <span class="sd">        The file path where the NIfTI file will be saved.</span>
-<span class="sd">    clip : :obj:`bool`, optional</span>
-<span class="sd">        Whether to apply clipping to the data before saving.</span>
+<span class="sd">    window : :obj:`tuple` of :obj:`float`, optional</span>
+<span class="sd">        The intensity window ``(a_min, a_max)`` to clip to. If :obj:`None`,</span>
+<span class="sd">        the data are saved as they are.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">clip</span><span class="p">:</span>
-        <span class="kn">from</span> <span class="nn">nifreeze.data.filtering</span> <span class="kn">import</span> <span class="n">advanced_clip</span>
-
-        <span class="c1"># Clip a copy: ``data`` may be a view into the dataset</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">advanced_clip</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+    <span class="n">slope_inter</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">window</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">a_min</span><span class="p">,</span> <span class="n">a_max</span> <span class="o">=</span> <span class="n">window</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">):</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">a_min</span><span class="p">)),</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">a_max</span><span class="p">)))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">step</span> <span class="o">=</span> <span class="p">(</span><span class="n">a_max</span> <span class="o">-</span> <span class="n">a_min</span><span class="p">)</span> <span class="o">/</span> <span class="n">WINDOW_LEVELS</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">a_min</span><span class="p">,</span> <span class="n">a_max</span><span class="p">)</span> <span class="o">-</span> <span class="n">a_min</span><span class="p">)</span> <span class="o">/</span> <span class="n">step</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span>
+            <span class="n">slope_inter</span> <span class="o">=</span> <span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">a_min</span><span class="p">)</span>
 
     <span class="n">nii</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span>
         <span class="n">data</span><span class="p">,</span>
         <span class="n">affine</span><span class="p">,</span>
         <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span>
+    <span class="k">if</span> <span class="n">slope_inter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">nii</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">set_slope_inter</span><span class="p">(</span><span class="o">*</span><span class="n">slope_inter</span><span class="p">)</span>
     <span class="n">nii</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">set_sform</span><span class="p">(</span><span class="n">affine</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">nii</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">set_qform</span><span class="p">(</span><span class="n">affine</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">nii</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
@@ -424,9 +440,13 @@
     <span class="n">dirname</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">clip</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">init_affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="n">Path</span><span class="p">,</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Prepare the registration data: save the moving and predicted (fixed) images to disk.</span>
+
+<span class="sd">    Both images are clipped (as ``clip`` selects) to the same intensity window,</span>
+<span class="sd">    so that they reach the registration with the same intensity mapping.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -445,6 +465,10 @@
 <span class="sd">        or ``&quot;none&quot;`` of the images.</span>
 <span class="sd">    init_affine : :obj:`~numpy.ndarray`, optional</span>
 <span class="sd">        Initial affine transform.</span>
+<span class="sd">    window : :obj:`tuple` of :obj:`float`, optional</span>
+<span class="sd">        The intensity window ``(a_min, a_max)``. If :obj:`None` and clipping is</span>
+<span class="sd">        requested, it is estimated from ``sample`` with</span>
+<span class="sd">        :obj:`~nifreeze.data.filtering.robust_window`.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -457,21 +481,19 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">predicted_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">dirname</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;predicted_</span><span class="si">{</span><span class="n">vol_idx</span><span class="si">:</span><span class="s2">05d</span><span class="si">}</span><span class="s2">.nii.gz&quot;</span>
-    <span class="n">sample_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">dirname</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;sample_</span><span class="si">{</span><span class="n">vol_idx</span><span class="si">:</span><span class="s2">05d</span><span class="si">}</span><span class="s2">.nii.gz&quot;</span>
+    <span class="n">predicted_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">dirname</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;predicted_</span><span class="si">{</span><span class="n">vol_idx</span><span class="si">:</span><span class="s2">05d</span><span class="si">}</span><span class="s2">.nii&quot;</span>
+    <span class="n">sample_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">dirname</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;sample_</span><span class="si">{</span><span class="n">vol_idx</span><span class="si">:</span><span class="s2">05d</span><span class="si">}</span><span class="s2">.nii&quot;</span>
 
-    <span class="n">_to_nifti</span><span class="p">(</span>
-        <span class="n">sample</span><span class="p">,</span>
-        <span class="n">affine</span><span class="p">,</span>
-        <span class="n">sample_path</span><span class="p">,</span>
-        <span class="n">clip</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">clip</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;sample&quot;</span><span class="p">,</span> <span class="s2">&quot;both&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span><span class="p">),</span>
-    <span class="p">)</span>
-    <span class="n">_to_nifti</span><span class="p">(</span>
-        <span class="n">predicted</span><span class="p">,</span>
-        <span class="n">affine</span><span class="p">,</span>
-        <span class="n">predicted_path</span><span class="p">,</span>
-        <span class="n">clip</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">clip</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;predicted&quot;</span><span class="p">,</span> <span class="s2">&quot;both&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span><span class="p">),</span>
-    <span class="p">)</span>
+    <span class="n">clip</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">clip</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="n">clip_sample</span> <span class="o">=</span> <span class="n">clip</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;sample&quot;</span><span class="p">,</span> <span class="s2">&quot;both&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span><span class="p">)</span>
+    <span class="n">clip_predicted</span> <span class="o">=</span> <span class="n">clip</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;predicted&quot;</span><span class="p">,</span> <span class="s2">&quot;both&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">window</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="p">(</span><span class="n">clip_sample</span> <span class="ow">or</span> <span class="n">clip_predicted</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">nifreeze.data.filtering</span> <span class="kn">import</span> <span class="n">robust_window</span>
+
+        <span class="n">window</span> <span class="o">=</span> <span class="n">robust_window</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+
+    <span class="n">_to_nifti</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="n">sample_path</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="n">window</span> <span class="k">if</span> <span class="n">clip_sample</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">_to_nifti</span><span class="p">(</span><span class="n">predicted</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="n">predicted_path</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="n">window</span> <span class="k">if</span> <span class="n">clip_predicted</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
 
     <span class="n">init_path</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">init_affine</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -822,10 +844,6 @@
             <span class="n">reference</span><span class="o">=</span><span class="n">fixed_path</span><span class="p">,</span> <span class="n">moving</span><span class="o">=</span><span class="n">moving_path</span>
         <span class="p">),</span>
     <span class="p">)</span>
-    <span class="c1"># debugging: generate aligned file for testing</span>
-    <span class="n">apply</span><span class="p">(</span><span class="n">xform</span><span class="p">,</span> <span class="n">moving_path</span><span class="p">,</span> <span class="n">reference</span><span class="o">=</span><span class="n">fixed_path</span><span class="p">)</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span>
-        <span class="n">dirname</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;dbg_</span><span class="si">{</span><span class="n">vol_idx</span><span class="si">:</span><span class="s2">05d</span><span class="si">}</span><span class="s2">.nii.gz&quot;</span>
-    <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">xform</span>
 </pre></div>
@@ -860,7 +878,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=87b1f80b"></script>
+</div><script src="../../../_static/documentation_options.js?v=fc2b55ba"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
