@@ -1,7 +1,7 @@
 ---
 title: "Storage backend decision: memmap working array + HDF5 container"
 entity_type: synthesis
-last_verified: 2026-07-15
+last_verified: 2026-10-20
 confidence_score: 0.9
 refresh_needed_if: "a second storage backend is adopted, or the model consumer surface stops requiring ndarray semantics"
 derived_from:
@@ -37,8 +37,9 @@ crashes without losing completed volumes.
 The decisive constraint is the **model consumer contract**. nifreeze's models
 perform, on `dataobj`, operations that require true `np.ndarray` semantics:
 
-- 3-D boolean masking of a 4-D block (`data[brainmask, ...]`),
-- `.reshape(-1, n_volumes)` returning a view,
+- 3-D boolean masking of a 4-D block (`data[:, brainmask]` since the
+  volumes-first layout below),
+- `.reshape(n_volumes, -1)` returning a view,
 - in-place per-volume assignment (PET frame resampling),
 - `np.array_split(...)` before handing chunks to `joblib.Parallel`.
 
@@ -59,11 +60,34 @@ is genuinely demanded. Decoupling *format* (HDF5) from *in-memory representation
 HDF5 is already the nifreeze serialization format (the NFDH5 layout), is
 self-describing and versioned, and — written contiguous/uncompressed/native-
 endian — exposes a raw data block that `np.memmap` can map **directly** at the
-byte offset from `Dataset.id.get_offset()`. A writable direct map means per-volume
-writes persist into the same file, so the serialization store and the checkpoint
-store are one artifact. The robust primary load path is streaming the dataset into
+byte offset from `Dataset.id.get_offset()`. The direct map is opened copy-on-write,
+so in-place writes (PET frame resampling) stay private and never modify the
+source file; a checkpoint store would need an explicit writable map. The robust primary load path is streaming the dataset into
 a `.npy` memmap (works for any layout); direct-mmap is an opportunistic zero-copy
 optimization on top.
+
+## Volumes-first layout and cache lifecycle (2026-10-20)
+
+Decided with the maintainer while preparing nifreeze#461: `dataobj` is
+C-contiguous `(N, X, Y, Z)` in memory as well as on disk, and `dataset[i]` is
+`dataobj[i]`, one contiguous block. Registration and closed-form smoothers
+(nifreeze#499) read one volume at a time; model fits gather the masked voxels of
+the training volumes one volume at a time into a voxels-by-volumes matrix, as
+DIPY expects, which removes the whole-field-of-view copy each fit used to make.
+Bounding the per-fit copy itself (a masked cache plus block-wise fits) is
+nifreeze#513. NIfTI input and output convert at the boundary.
+
+Lifecycle rules, each from a defect found in review:
+- Temporary caches (legacy v1 conversion, compressed v2, b0 removal from a
+  memory-mapped DWI) are removed when the last array referencing them is
+  released, or at exit. Earlier, every conversion left a full-size `.npy` behind.
+- Caches are filled through file writes, and v1 files are read in x-slabs:
+  loading a 135 MB v1 file went from +145 MB to +8 MB peak RSS.
+- b0 removal from an in-memory DWI stays in memory (no temporary file).
+- `to_filename` writes a temporary file and renames it over the target, so a
+  dataset can be written onto the file its memory map comes from. `h5py.File(path,
+  "w")` truncates in place: on macOS the mapped pages survived, but Linux raises
+  SIGBUS when a mapping is read past the end of the file.
 
 ## Empirical-validation status
 

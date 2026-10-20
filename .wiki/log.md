@@ -76,6 +76,12 @@ followed by bullets. See [`schema.md`](schema.md) for the format contract
 - [[tool-dipy-reconst-models]]: documented the 1.12.1 orchestration-kwarg leak (dipy/dipy#4053; nifreeze backports #4054 for DKI) and a boolean-`weights` drop in DIPY's parallel worker at both 1.12.1 and 2ecd3655 (OLS/LS/CLS DKI fits come out weighted with `n_jobs>1`; reproduced)
 - sync procedure now keys on the floor, adds `multi_voxel.py` to the diff list, and names `test_dipy_orchestration_backport_still_needed` as a trigger
 
+## 2026-10-20 — data-layer — volumes-first API and cache lifecycle (nifreeze#461)
+- [[storage-backend-decision-memmap-hdf5]]: recorded the volumes-first decision (`dataobj` is C-contiguous `(N, X, Y, Z)`; `dataset[i]` is `dataobj[i]`), the lifecycle rules for temporary caches, and the safe `to_filename`; corrected the consumer list and the claim that the direct map is writable (it is copy-on-write)
+- [[tool-numpy-memmap]]: added the dirty-pages-count-toward-RSS gotcha (measured +145 MB vs +8 MB) and the cache ownership rule (`weakref.finalize`, `.base` keeps the map alive, pid guard)
+- [[tool-hdf5-storage-layout]]: documented the file-write cache fill and the x-slab read of version-1 files
+- follow-up issues: nifreeze#513 (masked, time-first cache and block-wise fits), nifreeze#514 (in-place mutation of dataset arrays)
+
 ## 2026-10-20: tool page: asv 0.6.6 behavior behind the benchmark CI (nifreeze#517)
 - wrote [[tool-asv]] from the source of asv 0.6.6 and asv_runner 0.2.5 to 0.3.2: the working-tree suite runs against every commit; discovery uses the first commit; `NotImplementedError` skips; one process per benchmark, parameters and round; a `setup` without arguments runs before `setup_cache`; `--quick` and the factor-only compare; `mem_` is a shallow-copy size and `peakmem_` the lifetime RSS; `asv publish` empties `html_dir` and drops results of other benchmark versions
 - recorded how to count CPU time across loky workers (`process_time` + `RUSAGE_CHILDREN` + live `psutil` children) and what `tracemalloc` sees

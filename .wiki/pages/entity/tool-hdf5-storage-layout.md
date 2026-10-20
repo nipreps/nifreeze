@@ -1,7 +1,7 @@
 ---
 title: "HDF5 storage layout and the direct-mmap technique (h5py)"
 entity_type: tool
-last_verified: 2026-07-15
+last_verified: 2026-10-20
 confidence_score: 0.9
 source_urls:
   - https://docs.h5py.org/en/3.12.1/high/dataset.html
@@ -47,10 +47,9 @@ offset in the file. That offset can be read and handed to `np.memmap`:
 
 ```python
 dset = h5f["/0/dataobj"]
-offset = dset.id.get_offset()          # absolute byte offset, or None
+offset = dset.id.get_offset()  # absolute byte offset, or None
 if offset is not None and _is_directly_mappable(dset):
-    arr = np.memmap(path, dtype=dset.dtype, mode=mode,
-                    offset=offset, shape=dset.shape, order="C")
+    arr = np.memmap(path, dtype=dset.dtype, mode=mode, offset=offset, shape=dset.shape, order="C")
 ```
 
 `np.memmap` opens its own file descriptor against `path`, so the `h5py.File` may
@@ -77,7 +76,7 @@ When the guard fails (compressed, chunked, non-native), stream the dataset into 
 ```python
 mm = np.lib.format.open_memmap(cache_npy, mode="w+", dtype=dset.dtype, shape=dset.shape)
 for i in range(dset.shape[-1]):
-    dset.read_direct(mm, np.s_[..., i], np.s_[..., i])   # ~one volume transient
+    dset.read_direct(mm, np.s_[..., i], np.s_[..., i])  # ~one volume transient
 mm.flush()
 ```
 
@@ -85,6 +84,13 @@ mm.flush()
 peak extra RAM ≈ one volume + the HDF5 chunk cache. Design choice: direct-mmap is
 an *opportunistic* zero-copy fast path; **streaming is the primary mechanism**
 because it works for every layout, dtype, and filesystem.
+
+As implemented (nifreeze#461, 2026-10-20), the cache is filled through file writes
+rather than the mapped pages above, because dirty mapped pages count toward RSS
+(see [[tool-numpy-memmap]]). Version-1 files store `(X, Y, Z, N)` C-ordered, so
+reading `dset[..., i]` re-reads the whole file once per volume. They are instead
+read in x-slabs (`dset[x0:x1]`, contiguous in the file: one sequential pass), and
+each slab is split into the N per-volume runs of the volume-major cache.
 
 ## Failure modes to watch
 

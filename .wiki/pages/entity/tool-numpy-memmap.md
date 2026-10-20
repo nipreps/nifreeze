@@ -1,7 +1,7 @@
 ---
 title: "NumPy memory-mapped arrays (numpy.memmap, np.lib.format.open_memmap)"
 entity_type: tool
-last_verified: 2026-07-15
+last_verified: 2026-10-20
 confidence_score: 0.9
 source_urls:
   - https://numpy.org/doc/stable/reference/generated/numpy.memmap.html
@@ -17,10 +17,10 @@ against **numpy 2.3.5** (pin `numpy>=1.21.3,<2.4.0`).
 ## `numpy.memmap`
 
 ```python
-np.memmap(filename, dtype=uint8, mode='r+', offset=0, shape=None, order='C')
+np.memmap(filename, dtype=uint8, mode="r+", offset=0, shape=None, order="C")
 ```
 
-- **`np.memmap` is a subclass of `np.ndarray`.** This is the load-bearing fact
+- **`np.memmap` is a subclass of `np.ndarray`.** This is the key fact
   for nifreeze: a `memmap` passes `isinstance(x, np.ndarray)`, supports
   `.reshape`, boolean/fancy indexing, in-place assignment, `np.array_split`, and
   every ufunc — so the entire model/estimator consumer surface works on it with
@@ -44,8 +44,9 @@ dtype/shape/order, so the reader must supply them exactly. Prefer:
 ## `np.lib.format.open_memmap`
 
 ```python
-np.lib.format.open_memmap(filename, mode='r+', dtype=None, shape=None,
-                          fortran_order=False, version=None)
+np.lib.format.open_memmap(
+    filename, mode="r+", dtype=None, shape=None, fortran_order=False, version=None
+)
 ```
 
 Creates/opens a **`.npy`** file (self-describing header carrying dtype, shape,
@@ -57,11 +58,14 @@ for scratch outputs (filtered DWI series, resampled `to_nifti` buffer).
 Streaming a large array into one without a full intermediate:
 
 ```python
-mm = np.lib.format.open_memmap(path, mode='w+', dtype=src.dtype, shape=src.shape)
+mm = np.lib.format.open_memmap(path, mode="w+", dtype=src.dtype, shape=src.shape)
 for i in range(src.shape[-1]):
-    mm[..., i] = src[..., i]     # one volume of transient RAM
+    mm[..., i] = src[..., i]  # one volume of transient RAM
 mm.flush()
 ```
+
+nifreeze does not fill its caches this way: it writes the `.npy` through the file
+and maps it afterwards (see "Dirty pages count toward RSS" below).
 
 ## Gotchas / failure modes
 
@@ -80,5 +84,14 @@ mm.flush()
   or fall back to a streamed copy (nifreeze chooses the latter for simplicity).
 - **`w+` truncates.** Opening an existing file `w+` destroys it; use `r+` to
   update in place.
+- **Dirty pages count toward RSS.** Pages written through a `w+` map stay
+  resident, and in `ru_maxrss`, until the kernel writes them back. Converting a
+  135 MB legacy NFDH5 file through the map peaked at +145 MB (nifreeze#461,
+  2026-10-20). Writing the `.npy` with `seek`/`write` and mapping it afterwards
+  keeps the peak at the chunk size (+8 MB with 1 MiB slabs).
+- **A temporary cache needs an owner.** nifreeze registers `weakref.finalize` on
+  the base `memmap`. Every view keeps the base alive through `.base`, so the file
+  is removed with the last view, or at interpreter exit. The finalizer checks the
+  process id, because a forked child inherits it.
 - **Windows** cannot unlink a file while mapped — release the object before
   deleting the scratch file (see [[concept-memory-mapped-io]] portability note).
