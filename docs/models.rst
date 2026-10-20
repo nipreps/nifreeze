@@ -192,3 +192,91 @@ build) for no single-shell benefit, so they are opt-in rather than the default.
        dc, pc = d2d - d2d.mean(1, keepdims=True), p - p.mean(1, keepdims=True)
        slope = ((dc * pc).sum(1) / ((dc**2).sum(1) + 1e-12)).mean()
        print(r, len(create_unit_sphere(recursion_level=r).vertices), round(float(slope), 3))
+
+.. _closed-form-lovo:
+
+Closed-form leave-one-volume-out prediction
+===========================================
+Leave-one-volume-out (LOVO) prediction keeps each registration target
+independent of the volume being registered. Refitting a model for every held-out
+volume is the direct way to achieve this, but for kernel models it is
+unnecessary. With fixed hyperparameters, a kernel predictor is linear in the data
+and its weights depend only on the gradient table. If :math:`\mathbf{A}` is the
+covariance of the :math:`N` diffusion-weighted volumes (including its noise or
+ridge term) and :math:`\mathbf{P} = \mathbf{A}^{-1}`, the prediction of volume
+:math:`i` from all the others is Gaussian conditioning
+(:footcite:t:`rasmussen_gaussian_2006`, Eq. 5.12):
+
+.. math::
+
+   \hat{y}_i = -\sum_{j \neq i} \frac{P_{ij}}{P_{ii}}\, y_j, \qquad
+   \mathbf{S} = \mathbf{I} - \operatorname{diag}(\mathbf{P})^{-1}\mathbf{P}.
+
+All :math:`N` LOVO predictions are then rows of one smoother
+:math:`\mathbf{S}` (:func:`~nifreeze.model.lovo.lovo_smoother`), whose diagonal
+is zero. One :math:`N \times N` inverse replaces :math:`N` model fits, and each
+prediction is a single matrix-vector product over the masked voxels. When the
+model estimates a constant mean on the :math:`N - 1` training volumes (as
+:class:`~nifreeze.model.gpr.DiffusionGPR` does with ``normalize_y=True``), a
+closed-form correction makes every row sum to one; the standard deviation of the
+normalization cancels in the posterior mean.
+
+Two models implement this through
+:class:`~nifreeze.model.lovo.ClosedFormLOVOMixin`, leaving the refitting models
+unchanged:
+
+``gp-loo`` (:class:`~nifreeze.model.dmri.GPLOOModel`)
+   The Gaussian process of :footcite:t:`andersson_non-parametric_2015`, with
+   :math:`\mathbf{A} = \mathbf{K}_\theta(\mathbf{X}) + \sigma^2\mathbf{I}`.
+   Hyperparameters :math:`\theta` are either loaded from a JSON file
+   (``hyperparameters``, CLI ``--gp-hyperparameters``) or fitted **once**, on a
+   random subsample of voxels across all volumes (``nvox_prefit``, CLI
+   ``--nvox-prefit``, 1000 by default).
+
+``gqi-krr`` (:class:`~nifreeze.model.dmri.GQIKRRModel`)
+   GQI :footcite:p:`yeh_generalized_2010` as kernel ridge regression. The GQI
+   basis :math:`\mathbf{K}` induces the q-space Gram matrix
+   :math:`\mathbf{G} = \mathbf{K}\mathbf{K}^{\mathsf T}` and
+   :math:`\mathbf{A} = \mathbf{G} + \lambda\mathbf{I}`, with :math:`\lambda`
+   relative to the mean diagonal of :math:`\mathbf{G}`. Unlike the one-row
+   prediction of :class:`~nifreeze.model.dmri.GQIModel`, which normalizes by the
+   target direction's own norm and overscales the signal, it predicts from the
+   training Gram matrix. :math:`\lambda` is given (``krr_lambda``) or chosen by
+   closed-form LOVO error (:func:`~nifreeze.model.lovo.select_krr_lambda`).
+
+**Held-out independence.** No prediction uses the held-out volume, so single-fit
+mode returns the same genuine LOVO predictions and is not a canary. The
+hyperparameters fitted at run time (a few scalars) do see all volumes.
+Hyperparameters fitted on other subjects remove even that dependence.
+
+**Pooling across subjects.** The hyperparameters of an acquisition protocol can
+be fitted on many subjects with
+:func:`~nifreeze.model.lovo.fit_pooled_hyperparameters`, which maximizes the sum
+of the per-subject log marginal likelihoods, each subject with its own gradient
+table (identical tables make this equal to fitting the concatenated voxels).
+:func:`~nifreeze.model.lovo.save_hyperparameters` writes the result for
+``--gp-hyperparameters``:
+
+.. code-block:: json
+
+   {
+     "schema": "nifreeze-gp-hyperparameters/1",
+     "kernel_model": "spherical",
+     "hyperparameters": {"k1__beta_a": 1.6, "k1__beta_l": 0.5, "k2__noise_level": 1e-05},
+     "provenance": {"n_subjects": 20}
+   }
+
+Because :math:`\mathbf{S}` depends on the gradients only through their pairwise
+angles (and b-values), a global rotation of the gradient table leaves it
+unchanged. Rotating a single volume's b-vector changes only one row and one
+column of :math:`\mathbf{A}`.
+
+**Caveats.** :func:`~nifreeze.model.lovo.lovo_smoother` warns when
+:math:`\mathbf{A}` is ill-conditioned. The constant mean is shared across shells,
+as in :class:`~nifreeze.model.dmri.GPModel`. Related ideas exist for denoising,
+where Patch2Self regresses each volume on the others
+:footcite:p:`fadnavis_patch2self_2020`.
+
+.. rubric:: References
+
+.. footbibliography::

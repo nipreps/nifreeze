@@ -45,6 +45,7 @@ from gallery.manifest import (
 )
 from gallery.registry import (
     GALLERY_MODELS,
+    GALLERY_MODES,
     check_applicability,
     check_mode,
 )
@@ -128,6 +129,19 @@ def test_run_gallery_average_single_shell():
 
     assert _cell(manifest, "average", "lovo").status == STATUS_RAN
     assert _cell(manifest, "average", "single-fit").status == STATUS_RAN
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def test_run_gallery_closed_form_models():
+    """Closed-form LOVO models run in both modes, and their single-fit is not a canary."""
+    spec = synthetic_spec(SINGLE_SHELL, n_directions=14)
+    keys = ["gqi-krr", "gp-loo-spherical"]
+    manifest = run_gallery([spec], model_keys=keys, render=False)
+
+    for key in keys:
+        for mode in GALLERY_MODES:
+            assert _cell(manifest, key, mode).status == STATUS_RAN
+            assert _cell(manifest, key, mode).canary is False
 
 
 @pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
@@ -252,15 +266,15 @@ def test_applicable_matrix():
         assert check_applicability(specs[c["model"]], c["scheme"])[0]
         assert check_mode(specs[c["model"]], c["mode"])[0]
 
-    # DSI (ds004737) supports only average + GQI; GP and DKI never appear there.
+    # DSI (ds004737) supports only average + GQI (either predictor); GP and DKI never appear there.
     dsi_models = {c["model"] for c in cells if c["dataset"] == "ds004737"}
-    assert dsi_models == {"average", "gqi"}
+    assert dsi_models == {"average", "gqi", "gqi-krr"}
 
     # DKI is multi-shell only — never on the single-shell datasets.
     for c in cells:
         if c["model"] == "dki":
             assert c["scheme"] == MULTI_SHELL
-        if c["model"] == "gp-spherical":
+        if c["model"] in ("gp-spherical", "gp-loo-spherical"):
             assert c["scheme"] == SINGLE_SHELL
 
     # Both modes are enumerated for every applicable (dataset, model) pair.

@@ -31,7 +31,9 @@ from nifreeze.model.dmri import (
     AverageDWIModel,
     DKIModel,
     DTIModel,
+    GPLOOModel,
     GPModel,
+    GQIKRRModel,
 )
 from nifreeze.model.pet import BSplinePETModel
 
@@ -42,6 +44,8 @@ __all__ = (
     "DKIModel",
     "DTIModel",
     "GPModel",
+    "GPLOOModel",
+    "GQIKRRModel",
     "TrivialModel",
     "BSplinePETModel",
 )

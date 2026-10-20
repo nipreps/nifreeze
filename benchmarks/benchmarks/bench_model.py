@@ -38,6 +38,7 @@ from threadpoolctl import threadpool_limits  # type: ignore[import-untyped]
 from nifreeze.data.dmri import DWI
 from nifreeze.model.dmri import DKIModel
 from nifreeze.model.gpr import DiffusionGPR, SphericalKriging
+from nifreeze.model.lovo import lovo_smoother
 from nifreeze.utils.ndimage import load_api
 
 
@@ -207,3 +208,29 @@ class DiffusionGPRBenchmark:
     def time_predict(self):
         assert self._estimator is not None
         self._estimator.predict(self._X_test)
+
+
+class ClosedFormLOVOBenchmark:
+    """Closed-form leave-one-volume-out prediction (``nifreeze.model.lovo``).
+
+    Uses synthetic inputs, so nothing is downloaded.
+    """
+
+    params = ([90, 270], [10_000, 100_000])
+    param_names = ["n_volumes", "n_voxels"]
+
+    def setup(self, n_volumes, n_voxels):
+        rng = np.random.default_rng(1234)
+        factor = rng.standard_normal((n_volumes, n_volumes + 10))
+        self.covariance = factor @ factor.T / n_volumes + 0.1 * np.eye(n_volumes)
+        self.smoother = lovo_smoother(self.covariance, center=True)
+        self.signals = rng.random((n_volumes, n_voxels), dtype=np.float32)
+
+    def time_lovo_smoother(self, n_volumes, n_voxels):
+        lovo_smoother(self.covariance, center=True)
+
+    def time_predict_volume(self, n_volumes, n_voxels):
+        self.smoother[0].astype(self.signals.dtype) @ self.signals
+
+    def time_predict_all_volumes(self, n_volumes, n_voxels):
+        self.smoother.astype(self.signals.dtype) @ self.signals

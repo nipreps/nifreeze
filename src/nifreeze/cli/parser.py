@@ -96,7 +96,32 @@ def _build_parser() -> ArgumentParser:
             "fit (still predicting per volume from it). Single-fit is faster but "
             "leaks the queried volume into its own target (biasing motion toward zero); "
             "use it for development, testing, or coarse initialization only, "
-            "not for accuracy-critical estimation."
+            "not for accuracy-critical estimation. The closed-form LOVO models "
+            "('gp-loo', 'gqi-krr') predict every held-out volume exactly from one "
+            "matrix, so the 'single' prefix makes no difference for them."
+        ),
+    )
+    parser.add_argument(
+        "--gp-hyperparameters",
+        action="store",
+        type=Path,
+        metavar="FILE",
+        default=None,
+        help=(
+            "JSON file with Gaussian process hyperparameters for the 'gp-loo' model "
+            "(e.g., pooled across the subjects of an acquisition protocol). When "
+            "given, no hyperparameter is fitted at run time."
+        ),
+    )
+    parser.add_argument(
+        "--nvox-prefit",
+        action="store",
+        type=int,
+        default=None,
+        help=(
+            "Number of random voxels used to fit the hyperparameters of the "
+            "Gaussian process models ('gp', 'gp-loo') and to choose the ridge "
+            "strength of 'gqi-krr'."
         ),
     )
     parser.add_argument(
@@ -270,6 +295,12 @@ def parse_args(argv: list[str] | None = None) -> tuple[Namespace, dict, dict, di
 
     if args.ignore_b0:
         model_kwargs["ignore_bzero"] = True
+
+    if args.gp_hyperparameters:
+        model_kwargs["hyperparameters"] = args.gp_hyperparameters
+
+    if args.nvox_prefit is not None:
+        model_kwargs["nvox_prefit"] = args.nvox_prefit
 
     estimator_kwargs = {}
 

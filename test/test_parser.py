@@ -230,6 +230,31 @@ def test_parser_dwi_data(repodata, datadir, models, gradient_filebasename, ignor
         assert model_kwargs["ignore_bzero"] == ignore_b0
 
 
+def test_parser_closed_form_lovo_options(tmp_path):
+    """Closed-form LOVO options reach the model keyword arguments."""
+    input_file = tmp_path / "dwi.h5"
+    input_file.touch()
+    hp_file = tmp_path / "hp.json"
+
+    *_, model_kwargs = parse_args([str(input_file), "--models", "gp-loo"])
+    assert "hyperparameters" not in model_kwargs
+    assert "nvox_prefit" not in model_kwargs
+
+    *_, model_kwargs = parse_args(
+        [
+            str(input_file),
+            "--models",
+            "gp-loo",
+            "--gp-hyperparameters",
+            str(hp_file),
+            "--nvox-prefit",
+            "500",
+        ]
+    )
+    assert model_kwargs["hyperparameters"] == hp_file
+    assert model_kwargs["nvox_prefit"] == 500
+
+
 @pytest.mark.parametrize(
     "models",
     [

@@ -486,6 +486,13 @@ def test_model_capability_contract():
     # GP targets orientation data (kernel picks the concrete scheme).
     assert model.dmri.GPModel.applicable_schemes == frozenset({"single-shell", "multi-shell"})
 
+    # Closed-form LOVO models never see the held-out volume, so single-fit is genuine.
+    assert model.dmri.GPLOOModel.single_fit_is_canary is False
+    assert model.dmri.GPLOOModel.applicable_schemes == model.dmri.GPModel.applicable_schemes
+    assert model.dmri.GQIKRRModel.single_fit_is_canary is False
+    assert model.dmri.GQIKRRModel.excludes_b0 is True
+    assert "DSI" in model.dmri.GQIKRRModel.applicable_schemes
+
 
 def test_factory_initializations(datadir):
     """Check that the two different initialisations result in the same models"""
