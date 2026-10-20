@@ -24,6 +24,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 from warnings import warn
@@ -70,6 +71,48 @@ DWI 'dataobj' has shape {shape}, with the {n_gradients} volumes on the last axis
 Datasets store volumes on the first axis, (N, X, Y, Z): \
 use ``np.moveaxis(data, -1, 0)`` (or nifreeze.data.utils.to_time_first)."""
 """DWI volumes-last data object error message."""
+
+
+def select_b0(
+    gradients: np.ndarray,
+    bzero: np.ndarray | None,
+    read_volumes: Callable[[np.ndarray], np.ndarray],
+) -> tuple[np.ndarray, np.ndarray | None]:
+    """Find the *b=0* volumes of a series and the *b=0* reference to keep.
+
+    Parameters
+    ----------
+    gradients : :obj:`~numpy.ndarray`
+        The ``(N, 4)`` gradient table of the series.
+    bzero : :obj:`~numpy.ndarray` or :obj:`None`
+        A *b=0* reference given by the user, which takes precedence.
+    read_volumes : :obj:`callable`
+        Return the volumes that a boolean mask selects, stacked on the first axis.
+        It is only called when the reference must be computed from the series.
+
+    Returns
+    -------
+    b0_mask : :obj:`~numpy.ndarray`
+        Which of the ``N`` volumes are *b=0* volumes.
+    bzero : :obj:`~numpy.ndarray` or :obj:`None`
+        The given reference; else the only *b=0* volume, or the voxelwise median
+        of several; :obj:`None` if there are neither.
+
+    """
+    b0_mask = gradients[:, -1] <= DEFAULT_LOWB_THRESHOLD
+    if not b0_mask.any():
+        return b0_mask, bzero
+
+    # Warn the user if both the DWI contained b0 volumes and the bzero attribute
+    # was provided, or if multiple b0 volumes were found and it was not
+    if bzero is not None:
+        warn(DWI_REDUNDANT_B0_WARN_MSG, UserWarning, stacklevel=3)
+        return b0_mask, bzero
+
+    if b0_mask.sum() > 1:
+        warn(DWI_B0_MULTIPLE_VOLUMES_WARN_MSG, UserWarning, stacklevel=3)
+    bzeros = read_volumes(b0_mask)
+    return b0_mask, bzeros[0] if bzeros.shape[0] == 1 else np.median(bzeros, axis=0)
 
 
 def validate_gradients(
@@ -168,28 +211,11 @@ class DWI(BaseDataset[np.ndarray]):
                     )
                 )
 
-        b0_mask = self.gradients[:, -1] <= DEFAULT_LOWB_THRESHOLD
-        b0_num = np.sum(b0_mask)
+        b0_mask, self.bzero = select_b0(
+            self.gradients, self.bzero, lambda mask: self.dataobj[mask]
+        )
 
-        bzeros = None
-        # Warn the user if multiple b0 volumes were found in the DWI data and
-        # no bzero attribute was provided; warn the user if both the DWI
-        # contained b0 values and the bzero attribute was provided
-        if b0_num > 0 and self.bzero is None:
-            warn(
-                DWI_B0_MULTIPLE_VOLUMES_WARN_MSG, UserWarning, stacklevel=2
-            ) if b0_num > 1 else None
-            bzeros = self.dataobj[b0_mask]
-            bzeros = bzeros.squeeze(axis=0) if bzeros.shape[0] == 1 else bzeros
-        elif b0_num > 0 and self.bzero is not None:
-            warn(DWI_REDUNDANT_B0_WARN_MSG, UserWarning, stacklevel=2)
-            bzeros = self.bzero
-
-        # Set the bzero attribute to the median if necessary
-        if bzeros is not None:
-            self.bzero = bzeros if bzeros.ndim == 3 else np.median(bzeros, axis=0)
-
-        if b0_num > 0:
+        if b0_mask.any():
             # Remove b0 volumes from dataobj and gradients. A memory-mapped
             # dataobj is streamed into a disk-backed cache so it stays lazy.
             self.gradients = self.gradients[~b0_mask, :]

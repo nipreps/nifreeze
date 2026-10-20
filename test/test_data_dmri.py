@@ -23,6 +23,7 @@
 """Unit tests exercising the dMRI data structure."""
 
 import re
+import tracemalloc
 import warnings
 from pathlib import Path
 
@@ -604,6 +605,54 @@ def test_load_gradients(tmp_path, setup_random_dwi_data, row_major_gradients):
     assert hasattr(dwi_obj, "gradients")
     assert dwi_obj.gradients.shape == expected_nonzero_grads.shape
     assert np.allclose(dwi_obj.gradients, expected_nonzero_grads, atol=1e-6)
+
+
+@pytest.mark.parametrize("row_major_gradients", (True, False))
+@pytest.mark.parametrize("with_b0_file", (False, True))
+def test_from_nii_drops_b0_while_loading(tmp_path, row_major_gradients, with_b0_file):
+    """``from_nii`` leaves the b=0 volumes out of the volumes-first copy of the series.
+
+    The dataset is the same as ``DWI`` builds from the whole series, and loading
+    allocates one copy of the series, not one to reorder it and another to drop
+    the b=0 volumes.
+    """
+    rng = np.random.default_rng(1234)
+    shape3d, n_volumes = (32, 32, 20), 24
+    bvals = np.where(np.arange(n_volumes) % 8 == 0, 0.0, 1000.0)
+    bvecs = rng.standard_normal((n_volumes, 3))
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+    bvecs[bvals == 0] = 0
+    gradients = np.column_stack((bvecs, bvals))
+    # Uncompressed, so nibabel maps the file instead of decompressing it in memory
+    data = rng.random((*shape3d, n_volumes), dtype=np.float32)
+    nb.Nifti1Image(data, np.eye(4)).to_filename(tmp_path / "dwi.nii")
+    np.savetxt(
+        tmp_path / "grads.txt", gradients if row_major_gradients else gradients.T, fmt="%.6f"
+    )
+
+    kwargs = {}
+    expected_bzero = np.median(data[..., bvals == 0], axis=-1)
+    expected_warning = DWI_B0_MULTIPLE_VOLUMES_WARN_MSG
+    if with_b0_file:
+        expected_bzero = rng.random(shape3d, dtype=np.float32)
+        nb.Nifti1Image(expected_bzero, np.eye(4)).to_filename(tmp_path / "b0.nii")
+        kwargs["b0_file"] = tmp_path / "b0.nii"
+        expected_warning = DWI_REDUNDANT_B0_WARN_MSG
+
+    tracemalloc.start()
+    try:
+        with pytest.warns(UserWarning, match=re.escape(expected_warning)):
+            dwi = from_nii(tmp_path / "dwi.nii", gradients_file=tmp_path / "grads.txt", **kwargs)
+        peak = tracemalloc.get_traced_memory()[1]
+    finally:
+        tracemalloc.stop()
+
+    keep = bvals > 0
+    assert np.array_equal(dwi.dataobj, np.moveaxis(data[..., keep], -1, 0))
+    assert np.allclose(dwi.gradients, gradients[keep], atol=1e-5)
+    assert dwi.bzero is not None
+    assert np.allclose(dwi.bzero, expected_bzero)
+    assert peak < 1.4 * data.nbytes
 
 
 @pytest.mark.random_gtab_data(10, (1000, 2000), 1)
