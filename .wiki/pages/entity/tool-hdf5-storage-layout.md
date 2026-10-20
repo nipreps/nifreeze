@@ -7,7 +7,7 @@ source_urls:
   - https://docs.h5py.org/en/3.12.1/high/dataset.html
   - https://docs.h5py.org/en/3.12.1/high/lowlevel.html
   - https://support.hdfgroup.org/documentation/hdf5/latest/_l_b_dset_layout.html
-refresh_needed_if: "h5py dependency advances past 3.12.x / HDF5 past 1.14.x, or the NFDH5 container schema changes"
+refresh_needed_if: "h5py dependency advances past 3.12.x / HDF5 past 1.14.x, or the nfHDF5 container schema changes"
 ---
 
 # HDF5 storage layout and the direct-mmap technique
@@ -18,10 +18,16 @@ both the serialization format *and* the checkpoint store
 raw data block can be memory-mapped directly ([[tool-numpy-memmap]],
 [[concept-memory-mapped-io]]).
 
-## NFDH5 container format (what nifreeze writes)
+## nfHDF5 container format (what nifreeze writes)
 
-- File attrs `Format="NFDH5"`, `Version` (uint16). A single group `/0` with a
-  group attr `Type` (`"base dataset"` / `"dmri"` / `"EMC/PET"`).
+- *nfHDF5* names this layout: HDF5 shaped for nifreeze. The user-facing
+  description is `docs/design.rst` (label `nfhdf5`).
+- File attrs `Format="nfHDF5"`, `Version` (uint16, `2`). A single group `/0`
+  with a group attr `Type` (`"base dataset"`, DWI included, or `"pet"`); DWI
+  files also carry a file attr `Type="dmri"`.
+- Version-1 files carry `Format="NFDH5"` ("NiFreeze Data HDF5"), or
+  `"EMC/PET"` for PET. The loader tells the versions apart by the
+  `volume_axis` attr on `dataobj`, never by `Format` or `Version`.
 - One dataset per data field under `/0` (`dataobj`, `affine`, `brainmask`,
   `motion_affines`, and modality extras `gradients`/`midframe`). The 4D `dataobj`
   dominates size.

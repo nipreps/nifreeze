@@ -4,7 +4,7 @@ entity_type: concept
 namespace: rr
 last_verified: 2026-07-15
 confidence_score: 0.9
-refresh_needed_if: "the estimator's per-volume loop contract or the NFDH5 container format changes"
+refresh_needed_if: "the estimator's per-volume loop contract or the nfHDF5 container format changes"
 ---
 
 # Checkpoint-restart
@@ -67,6 +67,6 @@ PET path already writes its dataset to an HDF5 file on first transform, reads a
 pristine frame back from it on demand, resamples, and writes the frame in place.
 That is a per-volume disk round-trip through the same container — the checkpoint
 writer is the same operation, plus a completion flag and resume-time skip logic.
-The unifying artifact is the NFDH5 container documented in
+The unifying artifact is the nfHDF5 container documented in
 [[tool-hdf5-storage-layout]]; the end-to-end rationale is
 [[storage-backend-decision-memmap-hdf5]].

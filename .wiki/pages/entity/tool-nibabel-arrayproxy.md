@@ -35,7 +35,7 @@ nifreeze's loaders convert the proxy to a dense array eagerly at ingestion —
 analogue of the HDF5 eager-read hog ([[tool-hdf5-storage-layout]]). This is the
 natural place to instead stream volume-by-volume into a `.npy` memmap
 ([[tool-numpy-memmap]]) so a freshly loaded NIfTI series is disk-backed from the
-start, not just after a round-trip through the NFDH5 container.
+start, not just after a round-trip through the nfHDF5 container.
 
 ## Comparison to numpy.memmap
 

@@ -235,7 +235,7 @@ A page that is the target of any edge here is exempt from the orphan rule
 |--------|------|--------|------|
 | pages/entity/tool-numpy-memmap.md | implements | pages/entity/concept-memory-mapped-io.md | np.memmap realizes demand paging |
 | pages/entity/tool-hdf5-storage-layout.md | implements | pages/entity/concept-memory-mapped-io.md | contiguous block direct-mmap |
-| pages/entity/tool-hdf5-storage-layout.md | implements | pages/entity/concept-checkpoint-restart.md | NFDH5 = checkpoint store |
+| pages/entity/tool-hdf5-storage-layout.md | implements | pages/entity/concept-checkpoint-restart.md | nfHDF5 = checkpoint store |
 | pages/entity/concept-checkpoint-restart.md | depends_on | pages/entity/tool-hdf5-storage-layout.md | persisted-state container |
 | pages/entity/tool-nibabel-arrayproxy.md | informs | pages/entity/concept-memory-mapped-io.md | prior-art lazy proxy |
 | pages/entity/concept-memory-mapped-io.md | depends_on | pages/entity/concept-leave-one-volume-out.md | volume-wise access pattern |

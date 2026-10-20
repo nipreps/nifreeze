@@ -82,6 +82,11 @@ followed by bullets. See [`schema.md`](schema.md) for the format contract
 - [[tool-hdf5-storage-layout]]: documented the file-write cache fill and the x-slab read of version-1 files
 - follow-up issues: nifreeze#513 (masked, time-first cache and block-wise fits), nifreeze#514 (in-place mutation of dataset arrays)
 
+## 2026-10-20: data-layer: name the HDF5 layout nfHDF5 (nifreeze#461)
+- renamed the container from NFDH5 to *nfHDF5* (HDF5 shaped for nifreeze) in [[tool-hdf5-storage-layout]], [[concept-checkpoint-restart]], [[tool-nibabel-arrayproxy]], [[tool-numpy-memmap]], [[storage-backend-decision-memmap-hdf5]] and `_MAP.md`, after review on nifreeze#461; version-2 files write `Format="nfHDF5"` (PET included), version-1 files keep `"NFDH5"` or `"EMC/PET"`
+- [[tool-hdf5-storage-layout]]: corrected the `Type` attrs (`/0` says `"base dataset"` or `"pet"`; DWI adds a file attr `Type="dmri"`) and recorded that the loader keys on `volume_axis`, not on `Format`
+- user-facing description added to `docs/design.rst` (label `nfhdf5`)
+
 ## 2026-10-20: tool page: asv 0.6.6 behavior behind the benchmark CI (nifreeze#517)
 - wrote [[tool-asv]] from the source of asv 0.6.6 and asv_runner 0.2.5 to 0.3.2: the working-tree suite runs against every commit; discovery uses the first commit; `NotImplementedError` skips; one process per benchmark, parameters and round; a `setup` without arguments runs before `setup_cache`; `--quick` and the factor-only compare; `mem_` is a shallow-copy size and `peakmem_` the lifetime RSS; `asv publish` empties `html_dir` and drops results of other benchmark versions
 - recorded how to count CPU time across loky workers (`process_time` + `RUSAGE_CHILDREN` + live `psutil` children) and what `tracemalloc` sees

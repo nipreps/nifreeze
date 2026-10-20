@@ -86,7 +86,7 @@ and maps it afterwards (see "Dirty pages count toward RSS" below).
   update in place.
 - **Dirty pages count toward RSS.** Pages written through a `w+` map stay
   resident, and in `ru_maxrss`, until the kernel writes them back. Converting a
-  135 MB legacy NFDH5 file through the map peaked at +145 MB (nifreeze#461,
+  135 MB version-1 nfHDF5 file through the map peaked at +145 MB (nifreeze#461,
   2026-10-20). Writing the `.npy` with `seek`/`write` and mapping it afterwards
   keeps the peak at the chunk size (+8 MB with 1 MiB slabs).
 - **A temporary cache needs an owner.** nifreeze registers `weakref.finalize` on

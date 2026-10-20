@@ -57,7 +57,7 @@ is genuinely demanded. Decoupling *format* (HDF5) from *in-memory representation
 
 ## Why HDF5 as the container
 
-HDF5 is already the nifreeze serialization format (the NFDH5 layout), is
+HDF5 is already the nifreeze serialization format (the nfHDF5 layout), is
 self-describing and versioned, and — written contiguous/uncompressed/native-
 endian — exposes a raw data block that `np.memmap` can map **directly** at the
 byte offset from `Dataset.id.get_offset()`. The direct map is opened copy-on-write,
