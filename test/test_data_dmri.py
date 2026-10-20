@@ -28,6 +28,7 @@ import warnings
 from pathlib import Path
 
 import attrs
+import h5py
 import nibabel as nb
 import numpy as np
 import pytest
@@ -1077,6 +1078,39 @@ def test_equality_operator(tmp_path, setup_random_dwi_data):
     # Symmetric equality
     assert dwi_obj_from_nii == round_trip_dwi_obj
     assert round_trip_dwi_obj == dwi_obj_from_nii
+
+
+@pytest.mark.random_dwi_data(50, (8, 8, 8), True)
+@pytest.mark.parametrize("existing", [False, True])
+def test_to_filename_appends_extension(tmp_path, setup_random_dwi_data, existing):
+    """A name without ``.h5`` gets the extension, and only that file is modified."""
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
+
+    # Ignore warning due to redundant b0 volumes
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", message=DWI_B0_MULTIPLE_VOLUMES_WARN_MSG, category=UserWarning
+        )
+        dwi_obj = DWI(
+            dataobj=dwi_dataobj,
+            affine=affine,
+            brainmask=brainmask_dataobj,
+            gradients=gradients,
+        )
+
+    filename = tmp_path / "dwi"
+    if existing:
+        with h5py.File(filename, "w") as other:
+            other.attrs["Type"] = "unrelated"
+
+    dwi_obj.to_filename(filename)
+
+    with h5py.File(tmp_path / "dwi.h5", "r") as out_file:
+        assert out_file.attrs["Type"] == "dmri"
+    if existing:
+        with h5py.File(filename, "r") as other:
+            assert other.attrs["Type"] == "unrelated"
+    assert DWI.from_filename(tmp_path / "dwi.h5") == dwi_obj
 
 
 @pytest.mark.random_dwi_data(50, (34, 36, 24), False)
