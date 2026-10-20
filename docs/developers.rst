@@ -40,6 +40,19 @@ The results of each commit to ``main`` are published in the `nifreeze dashboard`
 ``benchmarks/README.rst`` describes the thresholds, how to run the benchmarks locally,
 and how to write new ones.
 
+End-to-end tests
+----------------
+
+``test/test_e2e_motion.py`` moves every diffusion-weighted volume of DIPY's
+*Sherbrooke* dataset by a known random rigid transform, runs the command line with
+several models, and compares the estimated motion with the ground truth.
+These tests are deselected by default; they need ANTs and run with::
+
+  pytest -m e2e test/test_e2e_motion.py
+
+The *End-to-end tests* workflow runs them weekly, on demand, and on pull requests
+that change them, and lists the errors of every model in its job summary.
+
 Library API (application program interface)
 -------------------------------------------
 Information on specific functions, classes, and methods.
