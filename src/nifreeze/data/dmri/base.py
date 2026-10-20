@@ -35,7 +35,7 @@ import numpy as np
 import numpy.typing as npt
 from typing_extensions import Self
 
-from nifreeze.data.base import BaseDataset, _cmp, _data_repr
+from nifreeze.data.base import NFDH5_EXT, BaseDataset, _cmp, _data_repr
 from nifreeze.data.dmri.utils import (
     DEFAULT_HIGHB_THRESHOLD,
     DEFAULT_LOWB_THRESHOLD,
@@ -301,6 +301,12 @@ class DWI(BaseDataset[np.ndarray]):
             `filters <https://docs.h5py.org/en/stable/high/dataset.html#dataset-compression>`__.
 
         """
+        # Add the extension here as the base class does, so the file reopened below
+        # is the one it writes
+        filename = Path(filename)
+        if not filename.name.endswith(NFDH5_EXT):
+            filename = filename.parent / f"{filename.name}{NFDH5_EXT}"
+
         super().to_filename(filename, compression=compression, compression_opts=compression_opts)
         # Overriding if you'd like to set a custom attribute, for example:
         with h5py.File(filename, "r+") as out_file:
