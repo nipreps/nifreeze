@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Prediction gallery" href="gallery.html"><link rel="prev" title="Design Principles" href="design.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>Model implementation - nifreeze 26.0.0.dev292 documentation</title>
+        <title>Model implementation - nifreeze 26.0.0.dev299 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev292 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev299 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev292</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev299</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev292</span>
+  <span class="sidebar-brand-text">26.0.0.dev299</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -256,6 +256,7 @@
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.dmri.html">nifreeze.model.dmri module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.gpr.html">nifreeze.model.gpr module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.gqi.html">nifreeze.model.gqi module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.lovo.html">nifreeze.model.lovo module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.pet.html">nifreeze.model.pet module</a></li>
 </ul>
 </li>
@@ -419,9 +420,9 @@ leave-one-out prediction.</p>
 HARDI dataset (DIPY <code class="docutils literal notranslate"><span class="pre">get_fnames(&quot;stanford_hardi&quot;)</span></code>), central slab
 <code class="docutils literal notranslate"><span class="pre">[20:60,</span> <span class="pre">40:80,</span> <span class="pre">28:45]</span></code>, brain = b=0 reference above its 60th percentile → 150
 diffusion-weighted directions, 10 880 voxels. b=0 excluded in both.</p>
-<div class="table-wrapper colwidths-given docutils container" id="id1">
-<table class="docutils align-default" id="id1">
-<caption><span class="caption-number">Table 1 </span><span class="caption-text">Round-trip fidelity vs. sphere subdivision (standard method)</span><a class="headerlink" href="#id1" title="Link to this table">¶</a></caption>
+<div class="table-wrapper colwidths-given docutils container" id="id6">
+<table class="docutils align-default" id="id6">
+<caption><span class="caption-number">Table 1 </span><span class="caption-text">Round-trip fidelity vs. sphere subdivision (standard method)</span><a class="headerlink" href="#id6" title="Link to this table">¶</a></caption>
 <colgroup>
 <col style="width: 12.2%" />
 <col style="width: 14.6%" />
@@ -514,6 +515,102 @@ build) for no single-shell benefit, so they are opt-in rather than the default.<
 </div>
 </section>
 </section>
+<section id="closed-form-leave-one-volume-out-prediction">
+<span id="closed-form-lovo"></span><h2>Closed-form leave-one-volume-out prediction<a class="headerlink" href="#closed-form-leave-one-volume-out-prediction" title="Link to this heading">¶</a></h2>
+<p>Leave-one-volume-out (LOVO) prediction keeps each registration target
+independent of the volume being registered. Refitting a model for every held-out
+volume is the direct way to achieve this, but for kernel models it is
+unnecessary. With fixed hyperparameters, a kernel predictor is linear in the data
+and its weights depend only on the gradient table. If <span class="math notranslate nohighlight">\(\mathbf{A}\)</span> is the
+covariance of the <span class="math notranslate nohighlight">\(N\)</span> diffusion-weighted volumes (including its noise or
+ridge term) and <span class="math notranslate nohighlight">\(\mathbf{P} = \mathbf{A}^{-1}\)</span>, the prediction of volume
+<span class="math notranslate nohighlight">\(i\)</span> from all the others is Gaussian conditioning
+(Rasmussen and Williams<a class="footnote-reference brackets" href="#footcite-rasmussen-gaussian-2006" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>, Eq. 5.12):</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\hat{y}_i = -\sum_{j \neq i} \frac{P_{ij}}{P_{ii}}\, y_j, \qquad
+\mathbf{S} = \mathbf{I} - \operatorname{diag}(\mathbf{P})^{-1}\mathbf{P}.\]</div>
+</div>
+<p>All <span class="math notranslate nohighlight">\(N\)</span> LOVO predictions are then rows of one smoother
+<span class="math notranslate nohighlight">\(\mathbf{S}\)</span> (<a class="reference internal" href="api/nifreeze.model.lovo.html#nifreeze.model.lovo.lovo_smoother" title="nifreeze.model.lovo.lovo_smoother"><code class="xref py py-func docutils literal notranslate"><span class="pre">lovo_smoother()</span></code></a>), whose diagonal
+is zero. One <span class="math notranslate nohighlight">\(N \times N\)</span> inverse replaces <span class="math notranslate nohighlight">\(N\)</span> model fits, and each
+prediction is a single matrix-vector product over the masked voxels. When the
+model estimates a constant mean on the <span class="math notranslate nohighlight">\(N - 1\)</span> training volumes (as
+<a class="reference internal" href="api/nifreeze.model.gpr.html#nifreeze.model.gpr.DiffusionGPR" title="nifreeze.model.gpr.DiffusionGPR"><code class="xref py py-class docutils literal notranslate"><span class="pre">DiffusionGPR</span></code></a> does with <code class="docutils literal notranslate"><span class="pre">normalize_y=True</span></code>), a
+closed-form correction makes every row sum to one; the standard deviation of the
+normalization cancels in the posterior mean.</p>
+<p>Two models implement this through
+<a class="reference internal" href="api/nifreeze.model.lovo.html#nifreeze.model.lovo.ClosedFormLOVOMixin" title="nifreeze.model.lovo.ClosedFormLOVOMixin"><code class="xref py py-class docutils literal notranslate"><span class="pre">ClosedFormLOVOMixin</span></code></a>, leaving the refitting models
+unchanged:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">gp-loo</span></code> (<a class="reference internal" href="api/nifreeze.model.dmri.html#nifreeze.model.dmri.GPLOOModel" title="nifreeze.model.dmri.GPLOOModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GPLOOModel</span></code></a>)</dt><dd><p>The Gaussian process of Andersson and Sotiropoulos<a class="footnote-reference brackets" href="#footcite-andersson-non-parametric-2015" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>, with
+<span class="math notranslate nohighlight">\(\mathbf{A} = \mathbf{K}_\theta(\mathbf{X}) + \sigma^2\mathbf{I}\)</span>.
+Hyperparameters <span class="math notranslate nohighlight">\(\theta\)</span> are either loaded from a JSON file
+(<code class="docutils literal notranslate"><span class="pre">hyperparameters</span></code>, CLI <code class="docutils literal notranslate"><span class="pre">--gp-hyperparameters</span></code>) or fitted <strong>once</strong>, on a
+random subsample of voxels across all volumes (<code class="docutils literal notranslate"><span class="pre">nvox_prefit</span></code>, CLI
+<code class="docutils literal notranslate"><span class="pre">--nvox-prefit</span></code>, 1000 by default).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">gqi-krr</span></code> (<a class="reference internal" href="api/nifreeze.model.dmri.html#nifreeze.model.dmri.GQIKRRModel" title="nifreeze.model.dmri.GQIKRRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GQIKRRModel</span></code></a>)</dt><dd><p>GQI <a class="footnote-reference brackets" href="#footcite-yeh-generalized-2010" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a> as kernel ridge regression. The GQI
+basis <span class="math notranslate nohighlight">\(\mathbf{K}\)</span> induces the q-space Gram matrix
+<span class="math notranslate nohighlight">\(\mathbf{G} = \mathbf{K}\mathbf{K}^{\mathsf T}\)</span> and
+<span class="math notranslate nohighlight">\(\mathbf{A} = \mathbf{G} + \lambda\mathbf{I}\)</span>, with <span class="math notranslate nohighlight">\(\lambda\)</span>
+relative to the mean diagonal of <span class="math notranslate nohighlight">\(\mathbf{G}\)</span>. Unlike the one-row
+prediction of <a class="reference internal" href="api/nifreeze.model.dmri.html#nifreeze.model.dmri.GQIModel" title="nifreeze.model.dmri.GQIModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GQIModel</span></code></a>, which normalizes by the
+target direction’s own norm and overscales the signal, it predicts from the
+training Gram matrix. <span class="math notranslate nohighlight">\(\lambda\)</span> is given (<code class="docutils literal notranslate"><span class="pre">krr_lambda</span></code>) or chosen by
+closed-form LOVO error (<a class="reference internal" href="api/nifreeze.model.lovo.html#nifreeze.model.lovo.select_krr_lambda" title="nifreeze.model.lovo.select_krr_lambda"><code class="xref py py-func docutils literal notranslate"><span class="pre">select_krr_lambda()</span></code></a>).</p>
+</dd>
+</dl>
+<p><strong>Held-out independence.</strong> No prediction uses the held-out volume, so single-fit
+mode returns the same genuine LOVO predictions and is not a canary. The
+hyperparameters fitted at run time (a few scalars) do see all volumes.
+Hyperparameters fitted on other subjects remove even that dependence.</p>
+<p><strong>Pooling across subjects.</strong> The hyperparameters of an acquisition protocol can
+be fitted on many subjects with
+<a class="reference internal" href="api/nifreeze.model.lovo.html#nifreeze.model.lovo.fit_pooled_hyperparameters" title="nifreeze.model.lovo.fit_pooled_hyperparameters"><code class="xref py py-func docutils literal notranslate"><span class="pre">fit_pooled_hyperparameters()</span></code></a>, which maximizes the sum
+of the per-subject log marginal likelihoods, each subject with its own gradient
+table (identical tables make this equal to fitting the concatenated voxels).
+<a class="reference internal" href="api/nifreeze.model.lovo.html#nifreeze.model.lovo.save_hyperparameters" title="nifreeze.model.lovo.save_hyperparameters"><code class="xref py py-func docutils literal notranslate"><span class="pre">save_hyperparameters()</span></code></a> writes the result for
+<code class="docutils literal notranslate"><span class="pre">--gp-hyperparameters</span></code>:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;nifreeze-gp-hyperparameters/1&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;kernel_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;spherical&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;hyperparameters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;k1__beta_a&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.6</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;k1__beta_l&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;k2__noise_level&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1e-05</span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;provenance&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;n_subjects&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Because <span class="math notranslate nohighlight">\(\mathbf{S}\)</span> depends on the gradients only through their pairwise
+angles (and b-values), a global rotation of the gradient table leaves it
+unchanged. Rotating a single volume’s b-vector changes only one row and one
+column of <span class="math notranslate nohighlight">\(\mathbf{A}\)</span>.</p>
+<p><strong>Caveats.</strong> <a class="reference internal" href="api/nifreeze.model.lovo.html#nifreeze.model.lovo.lovo_smoother" title="nifreeze.model.lovo.lovo_smoother"><code class="xref py py-func docutils literal notranslate"><span class="pre">lovo_smoother()</span></code></a> warns when
+<span class="math notranslate nohighlight">\(\mathbf{A}\)</span> is ill-conditioned. The constant mean is shared across shells,
+as in <a class="reference internal" href="api/nifreeze.model.dmri.html#nifreeze.model.dmri.GPModel" title="nifreeze.model.dmri.GPModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GPModel</span></code></a>. Related ideas exist for denoising,
+where Patch2Self regresses each volume on the others
+<a class="footnote-reference brackets" href="#footcite-fadnavis-patch2self-2020" id="id4" role="doc-noteref"><span class="fn-bracket">[</span>4<span class="fn-bracket">]</span></a>.</p>
+<p class="rubric">References</p>
+<div class="docutils container" id="id5">
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="footcite-rasmussen-gaussian-2006" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>Carl Edward Rasmussen and Christopher K. I. Williams. <em>Gaussian Processes for Machine Learning</em>. MIT Press, Cambridge, MA, 2006. ISBN 026218253X. <a class="reference external" href="https://doi.org/10.7551/mitpress/3206.001.0001">doi:10.7551/mitpress/3206.001.0001</a>.</p>
+</aside>
+<aside class="footnote brackets" id="footcite-andersson-non-parametric-2015" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">2</a><span class="fn-bracket">]</span></span>
+<p>Jesper L. R. Andersson and Stamatios N. Sotiropoulos. Non-parametric representation and prediction of single- and multi-shell diffusion-weighted MRI data using Gaussian processes. <em>NeuroImage</em>, 122:166–176, November 2015. URL: <a class="reference external" href="https://www.sciencedirect.com/science/article/pii/S1053811915006874">https://www.sciencedirect.com/science/article/pii/S1053811915006874</a> (visited on 2024-11-06), <a class="reference external" href="https://doi.org/10.1016/j.neuroimage.2015.07.067">doi:10.1016/j.neuroimage.2015.07.067</a>.</p>
+</aside>
+<aside class="footnote brackets" id="footcite-yeh-generalized-2010" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">3</a><span class="fn-bracket">]</span></span>
+<p>Fang-Cheng Yeh, Van Jay Wedeen, and Wen-Yih Isaac Tseng. Generalized q-sampling imaging. <em>IEEE Transactions on Medical Imaging</em>, 29(9):1626–1635, 2010. <a class="reference external" href="https://doi.org/10.1109/TMI.2010.2045126">doi:10.1109/TMI.2010.2045126</a>.</p>
+</aside>
+<aside class="footnote brackets" id="footcite-fadnavis-patch2self-2020" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id4">4</a><span class="fn-bracket">]</span></span>
+<p>Shreyas Fadnavis, Joshua Batson, and Eleftherios Garyfallidis. Patch2Self: denoising diffusion MRI with self-supervised learning. In <em>Advances in Neural Information Processing Systems</em>, volume 33, 16293–16303. 2020.</p>
+</aside>
+</aside>
+</div>
+</section>
 </section>
 
         </article>
@@ -578,6 +675,7 @@ build) for no single-shell benefit, so they are opt-in rather than the default.<
 <li><a class="reference internal" href="#sphere-density-and-the-default-recursion-level">Sphere density and the default recursion level</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#closed-form-leave-one-volume-out-prediction">Closed-form leave-one-volume-out prediction</a></li>
 </ul>
 </li>
 </ul>
@@ -589,7 +687,7 @@ build) for no single-shell benefit, so they are opt-in rather than the default.<
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=c09688ac"></script>
+</div><script src="_static/documentation_options.js?v=d4fd31c9"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

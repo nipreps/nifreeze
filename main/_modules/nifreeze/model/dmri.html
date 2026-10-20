@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.dmri - nifreeze 26.0.0.dev292 documentation</title>
+        <title>nifreeze.model.dmri - nifreeze 26.0.0.dev299 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev292 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev299 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev292</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev299</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev292</span>
+  <span class="sidebar-brand-text">26.0.0.dev299</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -255,6 +255,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.model.dmri.html">nifreeze.model.dmri module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.model.gpr.html">nifreeze.model.gpr module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.model.gqi.html">nifreeze.model.gqi module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.model.lovo.html">nifreeze.model.lovo module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.model.pet.html">nifreeze.model.pet module</a></li>
 </ul>
 </li>
@@ -339,16 +340,33 @@
 <span class="c1">#</span>
 
 <span class="kn">from</span> <span class="nn">importlib</span> <span class="kn">import</span> <span class="n">import_module</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">dipy.core.gradients</span> <span class="kn">import</span> <span class="n">check_multi_b</span><span class="p">,</span> <span class="n">gradient_table_from_bvals_bvecs</span>
 <span class="kn">from</span> <span class="nn">joblib</span> <span class="kn">import</span> <span class="n">Parallel</span><span class="p">,</span> <span class="n">delayed</span>
+<span class="kn">from</span> <span class="nn">sklearn.gaussian_process.kernels</span> <span class="kn">import</span> <span class="n">Kernel</span>
 
 <span class="kn">from</span> <span class="nn">nifreeze.data.dmri</span> <span class="kn">import</span> <span class="n">DWI</span>
-<span class="kn">from</span> <span class="nn">nifreeze.data.dmri.utils</span> <span class="kn">import</span> <span class="n">DEFAULT_LOWB_THRESHOLD</span><span class="p">,</span> <span class="n">DEFAULT_MIN_S0</span><span class="p">,</span> <span class="n">DTI_MIN_ORIENTATIONS</span>
+<span class="kn">from</span> <span class="nn">nifreeze.data.dmri.utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DEFAULT_LOWB_THRESHOLD</span><span class="p">,</span>
+    <span class="n">DEFAULT_MIN_S0</span><span class="p">,</span>
+    <span class="n">DTI_MIN_ORIENTATIONS</span><span class="p">,</span>
+    <span class="n">find_shelling_scheme</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span> <span class="nn">nifreeze.data.filtering</span> <span class="kn">import</span> <span class="n">BVAL_ATOL</span><span class="p">,</span> <span class="n">dwi_select_shells</span><span class="p">,</span> <span class="n">grand_mean_normalization</span>
+<span class="kn">from</span> <span class="nn">nifreeze.model._dipy</span> <span class="kn">import</span> <span class="n">GP_JITTER</span><span class="p">,</span> <span class="n">GaussianProcessModel</span>
 <span class="kn">from</span> <span class="nn">nifreeze.model.base</span> <span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ExpectationModel</span>
+<span class="kn">from</span> <span class="nn">nifreeze.model.gpr</span> <span class="kn">import</span> <span class="n">uses_bvalue</span>
+<span class="kn">from</span> <span class="nn">nifreeze.model.lovo</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DEFAULT_KRR_LAMBDA_GRID</span><span class="p">,</span>
+    <span class="n">ClosedFormLOVOMixin</span><span class="p">,</span>
+    <span class="n">fit_pooled_hyperparameters</span><span class="p">,</span>
+    <span class="n">kernel_with_hyperparameters</span><span class="p">,</span>
+    <span class="n">load_hyperparameters</span><span class="p">,</span>
+    <span class="n">select_krr_lambda</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="n">DEFAULT_S0_CLIP_PERCENTILE</span> <span class="o">=</span> <span class="mi">98</span>
 <span class="sd">&quot;&quot;&quot;Upper percentile threshold for non-diffusion-weighted signal estimation.&quot;&quot;&quot;</span>
@@ -922,6 +940,148 @@
         <span class="k">return</span> <span class="n">retval</span></div>
 </div>
 
+
+
+<div class="viewcode-block" id="GPLOOModel">
+<a class="viewcode-back" href="../../../api/nifreeze.model.dmri.html#nifreeze.model.GPLOOModel">[docs]</a>
+<span class="k">class</span> <span class="nc">GPLOOModel</span><span class="p">(</span><span class="n">ClosedFormLOVOMixin</span><span class="p">,</span> <span class="n">GPModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A Gaussian process with exact, closed-form leave-one-volume-out prediction.</span>
+
+<span class="sd">    With hyperparameters held fixed across folds, the GP posterior mean is a</span>
+<span class="sd">    linear smoother of the other volumes (see :mod:`nifreeze.model.lovo`), so</span>
+<span class="sd">    all LOVO predictions come from one matrix instead of one GP fit per volume.</span>
+<span class="sd">    Hyperparameters are either loaded (``hyperparameters``), e.g., pooled across</span>
+<span class="sd">    the subjects of an acquisition protocol, or fitted once on a random voxel</span>
+<span class="sd">    subsample of all volumes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_center</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># ``DiffusionGPR`` normalizes the targets (``normalize_y=True``)</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">dataset</span><span class="p">:</span> <span class="n">DWI</span><span class="p">,</span>
+        <span class="n">hyperparameters</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialization.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset : :obj:`~nifreeze.data.dmri.base.DWI`</span>
+<span class="sd">            Reference to a DWI object.</span>
+<span class="sd">        hyperparameters : :obj:`os.pathlike` or :obj:`~typing.Mapping`, optional</span>
+<span class="sd">            A hyperparameter record (see</span>
+<span class="sd">            :func:`~nifreeze.model.lovo.save_hyperparameters`). When given, no</span>
+<span class="sd">            hyperparameter is fitted at run time.</span>
+<span class="sd">        nvox_prefit : :obj:`int`, optional</span>
+<span class="sd">            Number of voxels used to fit the hyperparameters (all if :obj:`None`).</span>
+<span class="sd">        random_state : :obj:`int`, optional</span>
+<span class="sd">            Seed for the voxel subsample.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_hyperparameters</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="kc">None</span> <span class="k">if</span> <span class="n">hyperparameters</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">load_hyperparameters</span><span class="p">(</span><span class="n">hyperparameters</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_kernel</span><span class="p">:</span> <span class="n">Kernel</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_resolve_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gradients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Kernel</span><span class="p">:</span>
+        <span class="n">record</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hyperparameters</span>
+        <span class="n">kernel_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model_kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kernel_model&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">record</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">kernel_model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">kernel_model</span> <span class="o">!=</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;kernel_model&quot;</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Requested kernel_model=</span><span class="si">{</span><span class="n">kernel_model</span><span class="si">!r}</span><span class="s2">, but the hyperparameters &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;were fitted for </span><span class="si">{</span><span class="n">record</span><span class="p">[</span><span class="s1">&#39;kernel_model&#39;</span><span class="p">]</span><span class="si">!r}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span>
+            <span class="n">kernel_model</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;kernel_model&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">kernel_model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">bvals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(([</span><span class="mf">0.0</span><span class="p">],</span> <span class="n">gradients</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="n">scheme</span> <span class="o">=</span> <span class="n">find_shelling_scheme</span><span class="p">(</span><span class="n">bvals</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">kernel_model</span> <span class="o">=</span> <span class="s2">&quot;multishell&quot;</span> <span class="k">if</span> <span class="n">scheme</span> <span class="o">==</span> <span class="s2">&quot;multi-shell&quot;</span> <span class="k">else</span> <span class="s2">&quot;spherical&quot;</span>
+
+        <span class="n">kernel</span> <span class="o">=</span> <span class="n">GaussianProcessModel</span><span class="p">(</span>
+            <span class="o">**</span><span class="p">{</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_model_kwargs</span><span class="p">,</span> <span class="s2">&quot;kernel_model&quot;</span><span class="p">:</span> <span class="n">kernel_model</span><span class="p">}</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">kernel</span>
+        <span class="k">if</span> <span class="n">record</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">kernel_with_hyperparameters</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;hyperparameters&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">fit_pooled_hyperparameters</span><span class="p">(</span>
+            <span class="n">kernel</span><span class="p">,</span> <span class="p">[</span><span class="n">_gp_design</span><span class="p">(</span><span class="n">gradients</span><span class="p">,</span> <span class="n">kernel</span><span class="p">)],</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_hyperparameter_signals</span><span class="p">()]</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_covariance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gradients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_kernel</span><span class="p">(</span><span class="n">gradients</span><span class="p">)</span>
+        <span class="n">covariance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel</span><span class="p">(</span><span class="n">_gp_design</span><span class="p">(</span><span class="n">gradients</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel</span><span class="p">))</span>
+        <span class="n">covariance</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">diag_indices_from</span><span class="p">(</span><span class="n">covariance</span><span class="p">)]</span> <span class="o">+=</span> <span class="n">GP_JITTER</span>
+        <span class="k">return</span> <span class="n">covariance</span></div>
+
+
+
+<div class="viewcode-block" id="GQIKRRModel">
+<a class="viewcode-back" href="../../../api/nifreeze.model.dmri.html#nifreeze.model.GQIKRRModel">[docs]</a>
+<span class="k">class</span> <span class="nc">GQIKRRModel</span><span class="p">(</span><span class="n">ClosedFormLOVOMixin</span><span class="p">,</span> <span class="n">GQIModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;GQI as kernel ridge regression, with closed-form leave-one-volume-out prediction.</span>
+
+<span class="sd">    The GQI basis :math:`\\mathbf{K}` (gradients by sphere vertices) induces the</span>
+<span class="sd">    q-space Gram matrix :math:`\\mathbf{G} = \\mathbf{K}\\mathbf{K}^T`. Kernel ridge</span>
+<span class="sd">    regression with :math:`\\mathbf{A} = \\mathbf{G} + \\lambda \\mathbf{I}` predicts</span>
+<span class="sd">    each volume from the training Gram matrix (rather than from the target&#39;s own</span>
+<span class="sd">    norm, as the one-row :class:`GQIModel` prediction does), and its LOVO</span>
+<span class="sd">    predictions come from one matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">dataset</span><span class="p">:</span> <span class="n">DWI</span><span class="p">,</span>
+        <span class="n">krr_lambda</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">krr_lambda_grid</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">DEFAULT_KRR_LAMBDA_GRID</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialization.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset : :obj:`~nifreeze.data.dmri.base.DWI`</span>
+<span class="sd">            Reference to a DWI object.</span>
+<span class="sd">        krr_lambda : :obj:`float`, optional</span>
+<span class="sd">            Ridge strength, relative to the mean diagonal of the Gram matrix. If</span>
+<span class="sd">            :obj:`None`, it is chosen from ``krr_lambda_grid`` by closed-form LOVO</span>
+<span class="sd">            error on a random voxel subsample.</span>
+<span class="sd">        krr_lambda_grid : :obj:`~typing.Sequence` of :obj:`float`, optional</span>
+<span class="sd">            Candidate ridge strengths.</span>
+<span class="sd">        nvox_prefit : :obj:`int`, optional</span>
+<span class="sd">            Number of voxels used to choose the ridge strength (all if :obj:`None`).</span>
+<span class="sd">        random_state : :obj:`int`, optional</span>
+<span class="sd">            Seed for the voxel subsample.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_krr_lambda</span> <span class="o">=</span> <span class="n">krr_lambda</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_krr_lambda_grid</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">krr_lambda_grid</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_covariance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gradients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">nifreeze.model.gqi</span> <span class="kn">import</span> <span class="n">GeneralizedQSamplingModel</span>
+
+        <span class="n">gtab</span> <span class="o">=</span> <span class="n">gradient_table_from_bvals_bvecs</span><span class="p">(</span><span class="n">gradients</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">gradients</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">basis</span> <span class="o">=</span> <span class="n">GeneralizedQSamplingModel</span><span class="p">(</span><span class="n">gtab</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_model_kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">kernel</span>
+        <span class="n">gram</span> <span class="o">=</span> <span class="n">basis</span> <span class="o">@</span> <span class="n">basis</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">gram</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">gram</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">gram</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_krr_lambda</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_krr_lambda</span> <span class="o">=</span> <span class="n">select_krr_lambda</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">gram</span><span class="p">],</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_hyperparameter_signals</span><span class="p">()],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_krr_lambda_grid</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">gram</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_krr_lambda</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">gram</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_postprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">predicted</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="c1"># Diffusion signals are non-negative (as in GQI&#39;s own prediction)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">predicted</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_gp_design</span><span class="p">(</span><span class="n">gradients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">kernel</span><span class="p">:</span> <span class="n">Kernel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the GP design matrix (the b-value column is kept only for multi-shell).&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">gradients</span> <span class="k">if</span> <span class="n">uses_bvalue</span><span class="p">(</span><span class="n">kernel</span><span class="p">)</span> <span class="k">else</span> <span class="n">gradients</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span>
 </pre></div>
         </article>
       </div>
@@ -954,7 +1114,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=c09688ac"></script>
+</div><script src="../../../_static/documentation_options.js?v=d4fd31c9"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="How to cite" href="citation.html"><link rel="prev" title="How to Use" href="usage.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>Running NiFreeze - nifreeze 26.0.0.dev292 documentation</title>
+        <title>Running NiFreeze - nifreeze 26.0.0.dev299 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev292 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev299 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev292</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev299</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev292</span>
+  <span class="sidebar-brand-text">26.0.0.dev299</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -256,6 +256,7 @@
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.dmri.html">nifreeze.model.dmri module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.gpr.html">nifreeze.model.gpr module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.gqi.html">nifreeze.model.gqi module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.lovo.html">nifreeze.model.lovo module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.pet.html">nifreeze.model.pet module</a></li>
 </ul>
 </li>
@@ -328,10 +329,11 @@
 <p><p>A model-based algorithm for the realignment of 4D brain images.</p>
 </p>
 <div class="highlight-default notranslate" id="nifreeze"><div class="highlight"><pre><span></span><span class="n">usage</span><span class="p">:</span> <span class="n">nifreeze</span> <span class="p">[</span><span class="o">-</span><span class="n">h</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">brainmask</span> <span class="n">BRAINMASK</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">align</span><span class="o">-</span><span class="n">config</span> <span class="n">ALIGN_CONFIG</span><span class="p">]</span>
-                <span class="p">[</span><span class="o">--</span><span class="n">models</span> <span class="n">MODELS</span> <span class="p">[</span><span class="n">MODELS</span> <span class="o">...</span><span class="p">]]</span> <span class="p">[</span><span class="o">--</span><span class="n">nthreads</span> <span class="n">NTHREADS</span><span class="p">]</span>
-                <span class="p">[</span><span class="o">-</span><span class="n">J</span> <span class="n">N_JOBS</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">seed</span> <span class="n">SEED</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">output</span><span class="o">-</span><span class="nb">dir</span> <span class="n">OUTPUT_DIR</span><span class="p">]</span>
-                <span class="p">[</span><span class="o">--</span><span class="n">write</span><span class="o">-</span><span class="n">hdf5</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">gradient</span><span class="o">-</span><span class="n">file</span> <span class="n">FILE</span> <span class="p">[</span><span class="n">FILE</span> <span class="o">...</span><span class="p">]]</span>
-                <span class="p">[</span><span class="o">--</span><span class="n">b0</span><span class="o">-</span><span class="n">file</span> <span class="n">FILE</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">ignore</span><span class="o">-</span><span class="n">b0</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">timing</span><span class="o">-</span><span class="n">file</span> <span class="n">FILE</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">models</span> <span class="n">MODELS</span> <span class="p">[</span><span class="n">MODELS</span> <span class="o">...</span><span class="p">]]</span> <span class="p">[</span><span class="o">--</span><span class="n">gp</span><span class="o">-</span><span class="n">hyperparameters</span> <span class="n">FILE</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">nvox</span><span class="o">-</span><span class="n">prefit</span> <span class="n">NVOX_PREFIT</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">nthreads</span> <span class="n">NTHREADS</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">J</span> <span class="n">N_JOBS</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">seed</span> <span class="n">SEED</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">output</span><span class="o">-</span><span class="nb">dir</span> <span class="n">OUTPUT_DIR</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">write</span><span class="o">-</span><span class="n">hdf5</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">gradient</span><span class="o">-</span><span class="n">file</span> <span class="n">FILE</span> <span class="p">[</span><span class="n">FILE</span> <span class="o">...</span><span class="p">]]</span> <span class="p">[</span><span class="o">--</span><span class="n">b0</span><span class="o">-</span><span class="n">file</span> <span class="n">FILE</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">ignore</span><span class="o">-</span><span class="n">b0</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">timing</span><span class="o">-</span><span class="n">file</span> <span class="n">FILE</span><span class="p">]</span>
                 <span class="n">input_file</span>
 </pre></div>
 </div>
@@ -353,7 +355,13 @@
 <dd><p>Path to the yaml file containing the parameters to configure the image registration process.</p>
 </dd>
 <dt><kbd>--models</kbd></dt>
-<dd><p>Select the data model(s) used to generate registration targets; multiple models run as a cascade. By default each model runs in Leave-One-Volume-Out mode (refit per held-out volume). Prefix a model name with ‘single’ (e.g. ‘singledti’) to run it in single-fit mode: fit once on all volumes and reuse that locked fit (still predicting per volume from it). Single-fit is faster but leaks the queried volume into its own target (biasing motion toward zero); use it for development, testing, or coarse initialization only, not for accuracy-critical estimation.</p>
+<dd><p>Select the data model(s) used to generate registration targets; multiple models run as a cascade. By default each model runs in Leave-One-Volume-Out mode (refit per held-out volume). Prefix a model name with ‘single’ (e.g. ‘singledti’) to run it in single-fit mode: fit once on all volumes and reuse that locked fit (still predicting per volume from it). Single-fit is faster but leaks the queried volume into its own target (biasing motion toward zero); use it for development, testing, or coarse initialization only, not for accuracy-critical estimation. The closed-form LOVO models (‘gp-loo’, ‘gqi-krr’) predict every held-out volume exactly from one matrix, so the ‘single’ prefix makes no difference for them.</p>
+</dd>
+<dt><kbd>--gp-hyperparameters</kbd></dt>
+<dd><p>JSON file with Gaussian process hyperparameters for the ‘gp-loo’ model (e.g., pooled across the subjects of an acquisition protocol). When given, no hyperparameter is fitted at run time.</p>
+</dd>
+<dt><kbd>--nvox-prefit</kbd></dt>
+<dd><p>Number of random voxels used to fit the hyperparameters of the Gaussian process models (‘gp’, ‘gp-loo’) and to choose the ridge strength of ‘gqi-krr’.</p>
 </dd>
 <dt><kbd>--nthreads, --omp-nthreads, --ncpus</kbd></dt>
 <dd><p>Maximum number of threads an individual process may use.</p>
@@ -471,7 +479,7 @@
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=c09688ac"></script>
+</div><script src="_static/documentation_options.js?v=d4fd31c9"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

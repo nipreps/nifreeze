@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.cli.parser - nifreeze 26.0.0.dev292 documentation</title>
+        <title>nifreeze.cli.parser - nifreeze 26.0.0.dev299 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev292 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev299 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev292</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev299</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev292</span>
+  <span class="sidebar-brand-text">26.0.0.dev299</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -255,6 +255,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.model.dmri.html">nifreeze.model.dmri module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.model.gpr.html">nifreeze.model.gpr module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.model.gqi.html">nifreeze.model.gqi module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.model.lovo.html">nifreeze.model.lovo module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.model.pet.html">nifreeze.model.pet module</a></li>
 </ul>
 </li>
@@ -413,7 +414,32 @@
             <span class="s2">&quot;fit (still predicting per volume from it). Single-fit is faster but &quot;</span>
             <span class="s2">&quot;leaks the queried volume into its own target (biasing motion toward zero); &quot;</span>
             <span class="s2">&quot;use it for development, testing, or coarse initialization only, &quot;</span>
-            <span class="s2">&quot;not for accuracy-critical estimation.&quot;</span>
+            <span class="s2">&quot;not for accuracy-critical estimation. The closed-form LOVO models &quot;</span>
+            <span class="s2">&quot;(&#39;gp-loo&#39;, &#39;gqi-krr&#39;) predict every held-out volume exactly from one &quot;</span>
+            <span class="s2">&quot;matrix, so the &#39;single&#39; prefix makes no difference for them.&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--gp-hyperparameters&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="n">Path</span><span class="p">,</span>
+        <span class="n">metavar</span><span class="o">=</span><span class="s2">&quot;FILE&quot;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;JSON file with Gaussian process hyperparameters for the &#39;gp-loo&#39; model &quot;</span>
+            <span class="s2">&quot;(e.g., pooled across the subjects of an acquisition protocol). When &quot;</span>
+            <span class="s2">&quot;given, no hyperparameter is fitted at run time.&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--nvox-prefit&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Number of random voxels used to fit the hyperparameters of the &quot;</span>
+            <span class="s2">&quot;Gaussian process models (&#39;gp&#39;, &#39;gp-loo&#39;) and to choose the ridge &quot;</span>
+            <span class="s2">&quot;strength of &#39;gqi-krr&#39;.&quot;</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
@@ -590,6 +616,12 @@
     <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">ignore_b0</span><span class="p">:</span>
         <span class="n">model_kwargs</span><span class="p">[</span><span class="s2">&quot;ignore_bzero&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
 
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">gp_hyperparameters</span><span class="p">:</span>
+        <span class="n">model_kwargs</span><span class="p">[</span><span class="s2">&quot;hyperparameters&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">gp_hyperparameters</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">nvox_prefit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">model_kwargs</span><span class="p">[</span><span class="s2">&quot;nvox_prefit&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">nvox_prefit</span>
+
     <span class="n">estimator_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
 
     <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">_model</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">models</span><span class="p">):</span>
@@ -632,7 +664,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=c09688ac"></script>
+</div><script src="../../../_static/documentation_options.js?v=d4fd31c9"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

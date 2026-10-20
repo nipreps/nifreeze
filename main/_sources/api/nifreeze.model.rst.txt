@@ -17,4 +17,5 @@ Submodules
    nifreeze.model.dmri
    nifreeze.model.gpr
    nifreeze.model.gqi
+   nifreeze.model.lovo
    nifreeze.model.pet
