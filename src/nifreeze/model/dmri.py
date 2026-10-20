@@ -103,8 +103,8 @@ def _compute_data_mask(
     :obj:`~numpy.ndarray`
         The computed data mask.
     """
-    # Use the brainmask if available, else create a default mask
-    data_mask = brainmask if brainmask is not None else np.ones(shape, dtype=bool)
+    # Use a copy of the brainmask if available, else create a default mask
+    data_mask = brainmask.copy() if brainmask is not None else np.ones(shape, dtype=bool)
 
     # Modify the mask if b0 is not ignored
     if not ignore_bzero and bzero is not None:

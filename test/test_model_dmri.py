@@ -590,6 +590,29 @@ def test_dti_prediction_shape(setup_random_dwi_data, index):
         assert predicted is None
 
 
+@pytest.mark.random_dwi_data(50, (14, 16, 8), True)
+def test_model_keeps_dataset_brainmask(setup_random_dwi_data):
+    """Initializing a DWI model leaves the dataset's brain mask unchanged."""
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
+
+    dataset = DWI(
+        dataobj=dwi_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        gradients=gradients,
+    )
+    assert dataset.bzero is not None and dataset.brainmask is not None
+    # Voxels with a null S0 are left out of the model's data mask
+    dataset.bzero[:2] = 0.0
+    original = dataset.brainmask.copy()
+
+    dtimodel = model.DTIModel(dataset)
+
+    assert np.array_equal(dataset.brainmask, original)
+    assert np.array_equal(dtimodel._data_mask, original & (dataset.bzero > 0))
+    assert dtimodel._data_mask.sum() < original.sum()
+
+
 @pytest.mark.parametrize(
     "single_shell_test_data",
     [

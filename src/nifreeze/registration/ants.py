@@ -28,6 +28,7 @@ from collections import namedtuple
 from importlib.resources import files
 from json import loads
 from pathlib import Path
+from typing import cast
 from warnings import warn
 
 import nibabel as nb
@@ -84,7 +85,8 @@ def _to_nifti(
     if clip:
         from nifreeze.data.filtering import advanced_clip
 
-        advanced_clip(data, inplace=True)
+        # Clip a copy: ``data`` may be a view into the dataset
+        data = cast(np.ndarray, advanced_clip(data))
 
     nii = nb.Nifti1Image(
         data,

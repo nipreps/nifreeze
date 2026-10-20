@@ -39,6 +39,7 @@ from nibabel.eulerangles import euler2mat
 from nipype.interfaces.ants.registration import Registration
 from nipype.interfaces.base import Undefined
 
+from nifreeze.data.filtering import advanced_clip
 from nifreeze.registration import ants
 from nifreeze.registration.ants import (
     REGISTRATION_MALFORMED_SETTINGS_ERROR_MSG,
@@ -142,6 +143,32 @@ def test_prepare_registration_data(tmp_path, init_affine, expect_init_file):
         # file should exist
         assert init_path is None, "init_path should be None when init_affine is not provided"
         assert not init_file_expected_path.exists(), "Unexpected init file found on disk"
+
+
+@pytest.mark.parametrize("dtype", ["float32", "int16"])
+def test_prepare_registration_data_clip(request, tmp_path, dtype):
+    """Clipping writes clipped images and leaves the input arrays unchanged."""
+    rng = request.node.rng
+    sample = (rng.random((16, 16, 16)) * 1000).astype(dtype)
+    predicted = (rng.random((16, 16, 16)) * 1000).astype(dtype)
+    originals = (sample.copy(), predicted.copy())
+
+    predicted_path, sample_path, _ = _prepare_registration_data(
+        sample=sample,
+        predicted=predicted,
+        affine=np.eye(4),
+        vol_idx=0,
+        dirname=tmp_path,
+        clip="both",
+    )
+
+    assert np.array_equal(sample, originals[0])
+    assert np.array_equal(predicted, originals[1])
+    for path, original in zip((sample_path, predicted_path), originals, strict=True):
+        written = np.asanyarray(load_api(str(path), nb.Nifti1Image).dataobj)
+        clipped = advanced_clip(original)
+        assert clipped is not None
+        assert np.array_equal(written, clipped)
 
 
 def test_generate_command_malformed_settings(tmp_path, monkeypatch, random_nifti_file, json_file):
