@@ -31,6 +31,15 @@ Benchmarking
 *NiFreeze* components (e.g., models, data I/O, estimator) is critical for the
 efficiency of pipelines using it.
 
+The benchmarks measure the memory that operations allocate, their peak resident memory,
+their CPU time and their wall time.
+Every pull request is benchmarked together with the tip of ``main`` in the same job,
+and fails if it makes a benchmark regress past the threshold of its kind;
+the job summary lists every result.
+The results of each commit to ``main`` are published in the `nifreeze dashboard`_.
+``benchmarks/README.rst`` describes the thresholds, how to run the benchmarks locally,
+and how to write new ones.
+
 Library API (application program interface)
 -------------------------------------------
 Information on specific functions, classes, and methods.

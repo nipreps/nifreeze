@@ -37,6 +37,10 @@ cached at the pinned commit (see the schema's dependency-integration scope claus
 - [DIPY sphere & direction machinery](pages/entity/tool-dipy-sphere-directions.md)
 - [DIPY signal simulation API](pages/entity/tool-dipy-sims-voxel.md)
 
+### Benchmark tooling (cached at asv 0.6.6)
+
+- [Airspeed Velocity (asv, asv_runner): the behavior the benchmark CI relies on](pages/entity/tool-asv.md)
+
 ## Synthesis
 
 Project-level technical claims integrating the concepts and references:
