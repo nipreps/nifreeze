@@ -13,7 +13,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  # Push to gh-pages with GITHUB_TOKEN: the NIPREPS_DEPLOY ssh-key secret is not set
+  contents: write
   actions: read  # download the gallery-pages artifact
 
 jobs:
