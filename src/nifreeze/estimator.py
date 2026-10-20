@@ -29,6 +29,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from timeit import default_timer as timer
 from typing import TypeVar
+from warnings import warn
 
 import nibabel as nb
 import numpy as np
@@ -36,6 +37,7 @@ from tqdm import tqdm
 from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset
+from nifreeze.data.filtering import ClippingValueError, robust_window
 from nifreeze.model.base import BaseModel, ModelFactory
 from nifreeze.registration.ants import (
     _prepare_registration_data,
@@ -142,6 +144,13 @@ class Estimator:
         ----------
         dataset : :obj:`~nifreeze.data.base.BaseDataset`
             The input dataset this estimator operates on.
+        clip : :obj:`str`, optional
+            Clip the intensity of ``"sample"``, ``"predicted"``, ``"both"``
+            (default) or ``"none"`` of the images before registration.
+        clip_windows : :obj:`dict`, optional
+            Intensity windows by volume index. A volume's window is estimated
+            from the volume the first time it is registered, and then reused
+            for its prediction and by every later estimator of the chain.
 
         Returns
         -------
@@ -149,6 +158,8 @@ class Estimator:
             The estimator, after fitting.
 
         """
+        # Shared with the previous estimators of the chain
+        windows = kwargs.setdefault("clip_windows", {})
         if self._prev is not None:
             result = self._prev.run(dataset, **kwargs)
             if isinstance(self._prev, Filter):
@@ -216,6 +227,9 @@ class Estimator:
 
         kwargs["num_threads"] = n_threads
         kwargs = self._align_kwargs | kwargs
+        clip = kwargs.pop("clip", "both")
+        clipping = str(clip).lower() in ("sample", "predicted", "both", "true")
+        kwargs.pop("clip_windows", None)
 
         # Calculate effective dataset length for progress bar
         if self._stop_index is not None:
@@ -229,7 +243,7 @@ class Estimator:
 
             bmask_path = None
             if dataset.brainmask is not None:
-                bmask_path = ptmp_dir / "brainmask.nii.gz"
+                bmask_path = ptmp_dir / "brainmask.nii"
                 nb.Nifti1Image(
                     dataset.brainmask.astype(np.uint8), dataset.affine, None
                 ).to_filename(bmask_path)
@@ -245,14 +259,24 @@ class Estimator:
                         **fit_pred_kwargs,
                     )
 
+                    volume = dataset[i][0]  # Access the target volume
+                    if clipping and i not in windows:
+                        try:
+                            windows[i] = robust_window(volume, dataset.brainmask)
+                        except ClippingValueError as exc:
+                            warn(f"Registering volume {i} without clipping: {exc}", stacklevel=2)
+                            windows[i] = None
+                    window = windows.get(i)
+
                     # prepare data for running ANTs
                     predicted_path, volume_path, init_path = _prepare_registration_data(
-                        dataset[i][0],  # Access the target volume
+                        volume,
                         predicted,
                         dataset.affine,
                         i,
                         ptmp_dir,
-                        kwargs.pop("clip", "both"),
+                        clip=clip if window is not None else "none",
+                        window=window,
                     )
 
                     pbar.set_description_str(f"{REG_MSG: <16} vol. <{i}>")

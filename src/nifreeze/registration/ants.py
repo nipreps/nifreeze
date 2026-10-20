@@ -28,7 +28,6 @@ from collections import namedtuple
 from importlib.resources import files
 from json import loads
 from pathlib import Path
-from typing import cast
 from warnings import warn
 
 import nibabel as nb
@@ -36,7 +35,6 @@ import nitransforms as nt
 import numpy as np
 from nipype.interfaces.ants.registration import Registration
 from nitransforms.linear import Affine
-from nitransforms.resampling import apply
 
 PARAMETERS_SINGLE_VALUE = {
     "collapse_output_transforms",
@@ -62,12 +60,23 @@ PARAMETERS_DOUBLE_LIST = {"shrink_factors", "smoothing_sigmas", "transform_param
 REGISTRATION_MALFORMED_SETTINGS_ERROR_MSG = "Malformed settings file (levels: {levels})"
 """Registration malformed settings error message."""
 
+WINDOW_LEVELS = 4095
+"""Highest code of the 12-bit encoding of floating-point registration inputs."""
+
 
 def _to_nifti(
-    data: np.ndarray, affine: np.ndarray, filename: str | Path, clip: bool = True
+    data: np.ndarray,
+    affine: np.ndarray,
+    filename: str | Path,
+    window: tuple[float, float] | None = None,
 ) -> None:
     """
-    Save data as a NIfTI file, optionally applying clipping.
+    Save data as a NIfTI file, optionally clipped to an intensity window.
+
+    Clipping works on a copy (``data`` may be a view into the dataset) and keeps
+    the original units. Integer data keep their type and values within the
+    window. Floating-point data are stored as 12-bit codes (int16), and the
+    ``scl_slope`` and ``scl_inter`` header fields map them back to the window.
 
     Parameters
     ----------
@@ -77,22 +86,29 @@ def _to_nifti(
         The affine transformation matrix.
     filename : :obj:`os.pathlike`
         The file path where the NIfTI file will be saved.
-    clip : :obj:`bool`, optional
-        Whether to apply clipping to the data before saving.
+    window : :obj:`tuple` of :obj:`float`, optional
+        The intensity window ``(a_min, a_max)`` to clip to. If :obj:`None`,
+        the data are saved as they are.
 
     """
     data = np.squeeze(data)
-    if clip:
-        from nifreeze.data.filtering import advanced_clip
-
-        # Clip a copy: ``data`` may be a view into the dataset
-        data = cast(np.ndarray, advanced_clip(data))
+    slope_inter = None
+    if window is not None:
+        a_min, a_max = window
+        if np.issubdtype(data.dtype, np.integer):
+            data = np.clip(data, int(np.ceil(a_min)), int(np.floor(a_max)))
+        else:
+            step = (a_max - a_min) / WINDOW_LEVELS
+            data = np.round((np.clip(data, a_min, a_max) - a_min) / step).astype(np.int16)
+            slope_inter = (step, a_min)
 
     nii = nb.Nifti1Image(
         data,
         affine,
         None,
     )
+    if slope_inter is not None:
+        nii.header.set_slope_inter(*slope_inter)
     nii.header.set_sform(affine, code=1)
     nii.header.set_qform(affine, code=1)
     nii.to_filename(filename)
@@ -106,9 +122,13 @@ def _prepare_registration_data(
     dirname: Path | str,
     clip: str | bool | None = None,
     init_affine: np.ndarray | None = None,
+    window: tuple[float, float] | None = None,
 ) -> tuple[Path, Path, Path | None]:
     """
     Prepare the registration data: save the moving and predicted (fixed) images to disk.
+
+    Both images are clipped (as ``clip`` selects) to the same intensity window,
+    so that they reach the registration with the same intensity mapping.
 
     Parameters
     ----------
@@ -127,6 +147,10 @@ def _prepare_registration_data(
         or ``"none"`` of the images.
     init_affine : :obj:`~numpy.ndarray`, optional
         Initial affine transform.
+    window : :obj:`tuple` of :obj:`float`, optional
+        The intensity window ``(a_min, a_max)``. If :obj:`None` and clipping is
+        requested, it is estimated from ``sample`` with
+        :obj:`~nifreeze.data.filtering.robust_window`.
 
     Returns
     -------
@@ -139,21 +163,19 @@ def _prepare_registration_data(
 
     """
 
-    predicted_path = Path(dirname) / f"predicted_{vol_idx:05d}.nii.gz"
-    sample_path = Path(dirname) / f"sample_{vol_idx:05d}.nii.gz"
+    predicted_path = Path(dirname) / f"predicted_{vol_idx:05d}.nii"
+    sample_path = Path(dirname) / f"sample_{vol_idx:05d}.nii"
 
-    _to_nifti(
-        sample,
-        affine,
-        sample_path,
-        clip=str(clip).lower() in ("sample", "both", "true"),
-    )
-    _to_nifti(
-        predicted,
-        affine,
-        predicted_path,
-        clip=str(clip).lower() in ("predicted", "both", "true"),
-    )
+    clip = str(clip).lower()
+    clip_sample = clip in ("sample", "both", "true")
+    clip_predicted = clip in ("predicted", "both", "true")
+    if window is None and (clip_sample or clip_predicted):
+        from nifreeze.data.filtering import robust_window
+
+        window = robust_window(sample)
+
+    _to_nifti(sample, affine, sample_path, window=window if clip_sample else None)
+    _to_nifti(predicted, affine, predicted_path, window=window if clip_predicted else None)
 
     init_path = None
     if init_affine is not None:
@@ -500,10 +522,6 @@ def _run_registration(
         nt.io.itk.ITKLinearTransform.from_filename(result.forward_transforms[0]).to_ras(
             reference=fixed_path, moving=moving_path
         ),
-    )
-    # debugging: generate aligned file for testing
-    apply(xform, moving_path, reference=fixed_path).to_filename(
-        dirname / f"dbg_{vol_idx:05d}.nii.gz"
     )
 
     return xform

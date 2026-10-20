@@ -30,6 +30,7 @@ import pytest
 import nifreeze.estimator
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.dmri.utils import DEFAULT_LOWB_THRESHOLD
+from nifreeze.data.filtering import ClippingValueError
 from nifreeze.data.pet.utils import compute_uptake_statistic
 from nifreeze.estimator import Estimator
 from nifreeze.model.base import BaseModel
@@ -162,6 +163,83 @@ def test_estimator_start_index(request, monkeypatch):
     assert recorded_indices == [3, 4, 5, 6]
 
 
+def test_estimator_clip_reaches_every_volume(request, monkeypatch):
+    """A ``clip`` setting applies to every volume, not only the first."""
+    recorded_clips = []
+
+    dataset = DummyDataset(rng=request.node.rng)
+
+    def fake_prepare(*args, clip=None, **kwargs):
+        recorded_clips.append(args[5] if len(args) > 5 else clip)
+        return None, None, None
+
+    class DummyXForm:
+        matrix = np.eye(4)
+
+    monkeypatch.setattr(nifreeze.estimator, "_prepare_registration_data", fake_prepare)
+    monkeypatch.setattr(nifreeze.estimator, "_run_registration", lambda *a, **k: DummyXForm())
+
+    model = DummyInsiderModel(dataset=dataset)
+    Estimator(model, strategy="linear", clip="none").run(dataset)
+
+    assert recorded_clips == ["none"] * len(dataset)
+
+
+def test_estimator_clip_windows_cached(request, monkeypatch):
+    """Each window is estimated once and reused by the next estimator of the chain."""
+    dataset = DummyDataset(rng=request.node.rng)
+    estimated = []
+    received = []
+
+    def fake_window(volume, mask=None):
+        estimated.append(volume)
+        return float(len(estimated)), float(len(estimated)) + 1.0
+
+    def fake_prepare(*args, window=None, **kwargs):
+        received.append((args[3], window))
+        return None, None, None
+
+    class DummyXForm:
+        matrix = np.eye(4)
+
+    monkeypatch.setattr(nifreeze.estimator, "robust_window", fake_window)
+    monkeypatch.setattr(nifreeze.estimator, "_prepare_registration_data", fake_prepare)
+    monkeypatch.setattr(nifreeze.estimator, "_run_registration", lambda *a, **k: DummyXForm())
+
+    first = Estimator(DummyInsiderModel(dataset=dataset), strategy="linear")
+    Estimator(DummyInsiderModel(dataset=dataset), strategy="linear", prev=first).run(dataset)
+
+    n = len(dataset)
+    assert len(estimated) == n
+    assert [index for index, _ in received] == list(range(n)) * 2
+    assert received[:n] == received[n:]
+
+
+def test_estimator_clip_degenerate_window(request, monkeypatch):
+    """A volume whose window cannot be estimated is registered without clipping."""
+    dataset = DummyDataset(rng=request.node.rng)
+    received = []
+
+    def fake_window(volume, mask=None):
+        raise ClippingValueError("degenerate")
+
+    def fake_prepare(*args, clip=None, window=None, **kwargs):
+        received.append((clip, window))
+        return None, None, None
+
+    class DummyXForm:
+        matrix = np.eye(4)
+
+    monkeypatch.setattr(nifreeze.estimator, "robust_window", fake_window)
+    monkeypatch.setattr(nifreeze.estimator, "_prepare_registration_data", fake_prepare)
+    monkeypatch.setattr(nifreeze.estimator, "_run_registration", lambda *a, **k: DummyXForm())
+
+    with pytest.warns(UserWarning, match="without clipping"):
+        Estimator(DummyInsiderModel(dataset=dataset), strategy="linear").run(dataset)
+
+    assert received == [("none", None)] * len(dataset)
+
+
 def test_estimator_start_and_end_index(request, monkeypatch):
     """Test that estimator respects both start_index and end_index."""
     recorded_indices = []
@@ -193,6 +271,8 @@ def test_estimator_start_and_end_index(request, monkeypatch):
     assert recorded_indices == [2, 3, 4]
 
 
+# The random DWI volumes are 2x2x2, too small to estimate a clipping window
+@pytest.mark.filterwarnings("ignore:Registering volume .* without clipping:UserWarning")
 @pytest.mark.parametrize(
     "strategy, iterator_func, modality",
     [

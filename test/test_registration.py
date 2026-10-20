@@ -35,11 +35,12 @@ import nitransforms as nt
 import numpy as np
 import pytest
 from nibabel.affines import from_matvec
+from nibabel.arrayproxy import ArrayProxy
 from nibabel.eulerangles import euler2mat
 from nipype.interfaces.ants.registration import Registration
 from nipype.interfaces.base import Undefined
 
-from nifreeze.data.filtering import advanced_clip
+from nifreeze.data.filtering import robust_window
 from nifreeze.registration import ants
 from nifreeze.registration.ants import (
     REGISTRATION_MALFORMED_SETTINGS_ERROR_MSG,
@@ -145,9 +146,10 @@ def test_prepare_registration_data(tmp_path, init_affine, expect_init_file):
         assert not init_file_expected_path.exists(), "Unexpected init file found on disk"
 
 
+@pytest.mark.parametrize("window", [None, (200.0, 800.0)])
 @pytest.mark.parametrize("dtype", ["float32", "int16"])
-def test_prepare_registration_data_clip(request, tmp_path, dtype):
-    """Clipping writes clipped images and leaves the input arrays unchanged."""
+def test_prepare_registration_data_clip(request, tmp_path, dtype, window):
+    """Both images are clipped to one window, in their units, and the inputs are unchanged."""
     rng = request.node.rng
     sample = (rng.random((16, 16, 16)) * 1000).astype(dtype)
     predicted = (rng.random((16, 16, 16)) * 1000).astype(dtype)
@@ -160,15 +162,51 @@ def test_prepare_registration_data_clip(request, tmp_path, dtype):
         vol_idx=0,
         dirname=tmp_path,
         clip="both",
+        window=window,
     )
 
     assert np.array_equal(sample, originals[0])
     assert np.array_equal(predicted, originals[1])
+
+    # Without a window, the sample sets it
+    a_min, a_max = window or robust_window(sample)
+    step = (a_max - a_min) / ants.WINDOW_LEVELS
     for path, original in zip((sample_path, predicted_path), originals, strict=True):
-        written = np.asanyarray(load_api(str(path), nb.Nifti1Image).dataobj)
-        clipped = advanced_clip(original)
-        assert clipped is not None
-        assert np.array_equal(written, clipped)
+        assert path.suffix == ".nii"
+        img = load_api(str(path), nb.Nifti1Image)
+        assert img.get_data_dtype() == np.int16
+        if dtype == "int16":
+            # Integers keep their values within the window
+            expected = np.clip(original, np.ceil(a_min), np.floor(a_max))
+            assert np.array_equal(img.get_fdata(), expected)
+        else:
+            # Floats are stored as 12-bit codes that map back to the window
+            assert isinstance(img.dataobj, ArrayProxy)
+            codes = np.asanyarray(img.dataobj.get_unscaled())
+            assert codes.min() >= 0
+            assert codes.max() <= ants.WINDOW_LEVELS
+            expected = np.clip(original, a_min, a_max)
+            assert np.allclose(img.get_fdata(), expected, rtol=0, atol=0.51 * step)
+
+
+def test_prepare_registration_data_clip_sample(tmp_path):
+    """With ``clip="sample"``, the prediction is written as it is."""
+    sample = np.linspace(0.0, 1000.0, 16**3, dtype="float32").reshape((16, 16, 16))
+    predicted = 2.0 * sample
+
+    predicted_path, sample_path, _ = _prepare_registration_data(
+        sample=sample,
+        predicted=predicted,
+        affine=np.eye(4),
+        vol_idx=0,
+        dirname=tmp_path,
+        clip="sample",
+        window=(100.0, 900.0),
+    )
+
+    assert np.array_equal(load_api(str(predicted_path), nb.Nifti1Image).get_fdata(), predicted)
+    written = load_api(str(sample_path), nb.Nifti1Image).get_fdata()
+    assert np.allclose([written.min(), written.max()], [100.0, 900.0])
 
 
 def test_generate_command_malformed_settings(tmp_path, monkeypatch, random_nifti_file, json_file):
