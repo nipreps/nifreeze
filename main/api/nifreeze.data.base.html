@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.data.filtering module" href="nifreeze.data.filtering.html"><link rel="prev" title="nifreeze.data.pet.utils module" href="nifreeze.data.pet.utils.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.data.base module - nifreeze 26.0.0.dev307 documentation</title>
+        <title>nifreeze.data.base module - nifreeze 26.0.0.dev322 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev307 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev322 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev307</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev322</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev307</span>
+  <span class="sidebar-brand-text">26.0.0.dev322</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -357,12 +357,15 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nifreeze.data.base.BaseDataset">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.data.base.</span></span><span class="sig-name descname"><span class="pre">BaseDataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataobj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">affine</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">brainmask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">motion_affines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datahdr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'nb.Nifti1Header</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'Path'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">NOTHING</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/base.html#BaseDataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.base.BaseDataset" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.data.base.</span></span><span class="sig-name descname"><span class="pre">BaseDataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataobj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'Any'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">affine</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">brainmask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">motion_affines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datahdr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'nb.Nifti1Header</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'Path'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">NOTHING</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/base.html#BaseDataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.base.BaseDataset" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Unpack" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Unpack</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">Ts</span></code>]]</p>
 <p>Base dataset representation structure.</p>
 <p>A general data structure to represent 4D images and the necessary metadata
 for head motion estimation (that is, potentially a brain mask and the head
 motion estimates).</p>
+<p>Volumes are stored on the <em>first</em> axis: <code class="docutils literal notranslate"><span class="pre">dataobj</span></code> has shape <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">X,</span> <span class="pre">Y,</span> <span class="pre">Z)</span></code>
+for <code class="docutils literal notranslate"><span class="pre">N</span></code> volumes, and <code class="docutils literal notranslate"><span class="pre">dataset[i]</span></code> selects <code class="docutils literal notranslate"><span class="pre">dataobj[i]</span></code>. The array is kept
+C-contiguous, so each volume is a contiguous block in memory and on disk.</p>
 <p>The data structure has a direct HDF5 mapping to facilitate memory efficiency.
 For modalities requiring additional metadata such as DWI (which requires the gradient table
 and potentially a b=0 reference), this class may be derived to override certain behaviors
@@ -396,13 +399,18 @@ specification).</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="nifreeze.data.base.BaseDataset.dataobj">
 <span class="sig-name descname"><span class="pre">dataobj</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a></em><a class="headerlink" href="#nifreeze.data.base.BaseDataset.dataobj" title="Link to this definition">¶</a></dt>
-<dd><p>A <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a> object for the data array.</p>
+<dd><p><code class="docutils literal notranslate"><span class="pre">N</span></code> volumes on the first axis.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a> of shape <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">X,</span> <span class="pre">Y,</span> <span class="pre">Z)</span></code></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nifreeze.data.base.BaseDataset.from_filename">
 <em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_filename</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Self" title="(in Python v3.15)"><span class="pre">Self</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/base.html#BaseDataset.from_filename"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.base.BaseDataset.from_filename" title="Link to this definition">¶</a></dt>
-<dd><p>Read an HDF5 file from disk and create a BaseDataset.</p>
+<dd><p>Read an <a class="reference internal" href="../design.html#nfhdf5"><span class="std std-ref">nfHDF5</span></a> file from disk and create a BaseDataset.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>filename</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>) – The HDF5 file path to read.</p>
@@ -444,7 +452,7 @@ specification).</p>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="nifreeze.data.base.BaseDataset.shape3d">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">shape3d</span></span><a class="headerlink" href="#nifreeze.data.base.BaseDataset.shape3d" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">shape3d</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#nifreeze.data.base.BaseDataset.shape3d" title="Link to this definition">¶</a></dt>
 <dd><p>Get the shape of the 3D volume.</p>
 </dd></dl>
 
@@ -457,7 +465,7 @@ specification).</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="nifreeze.data.base.BaseDataset.to_filename">
 <span class="sig-name descname"><span class="pre">to_filename</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">compression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compression_opts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/base.html#BaseDataset.to_filename"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.base.BaseDataset.to_filename" title="Link to this definition">¶</a></dt>
-<dd><p>Write an HDF5 file to disk.</p>
+<dd><p>Write the dataset to an <a class="reference internal" href="../design.html#nfhdf5"><span class="std std-ref">nfHDF5</span></a> file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -701,7 +709,7 @@ dimensions (<code class="docutils literal notranslate"><span class="pre">ndim</s
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=1d1902ad"></script>
+</div><script src="../_static/documentation_options.js?v=8c8f3c9b"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../../genindex.html"><link rel="search" title="Search" href="../../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.data.pet.base - nifreeze 26.0.0.dev307 documentation</title>
+        <title>nifreeze.data.pet.base - nifreeze 26.0.0.dev322 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../../index.html"><div class="brand">nifreeze 26.0.0.dev307 documentation</div></a>
+      <a href="../../../../index.html"><div class="brand">nifreeze 26.0.0.dev322 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev307</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev322</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev307</span>
+  <span class="sidebar-brand-text">26.0.0.dev322</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -355,6 +355,11 @@
 <span class="kn">from</span> <span class="nn">typing_extensions</span> <span class="kn">import</span> <span class="n">Self</span>
 
 <span class="kn">from</span> <span class="nn">nifreeze.data.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span><span class="p">,</span> <span class="n">_cmp</span><span class="p">,</span> <span class="n">_data_repr</span><span class="p">,</span> <span class="n">_has_ndim</span>
+<span class="kn">from</span> <span class="nn">nifreeze.data.utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">load_nfhdf5_fields</span><span class="p">,</span>
+    <span class="n">replace_on_success</span><span class="p">,</span>
+    <span class="n">save_nfhdf5_fields</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="n">ATTRIBUTE_ABSENCE_ERROR_MSG</span> <span class="o">=</span> <span class="s2">&quot;PET &#39;</span><span class="si">{attribute}</span><span class="s2">&#39; may not be None&quot;</span>
 <span class="sd">&quot;&quot;&quot;PET initialization array attribute absence error message.&quot;&quot;&quot;</span>
@@ -551,7 +556,7 @@
 <span class="sd">        instantiation time.</span>
 
 <span class="sd">        Specifically, the length of the frame_time and uptake attributes must</span>
-<span class="sd">        match the last dimension of the data (number of frames).</span>
+<span class="sd">        match the first dimension of the data (number of frames).</span>
 
 <span class="sd">        Computes the values for the private attributes.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -568,7 +573,7 @@
                     <span class="p">)</span>
                 <span class="p">)</span>
 
-        <span class="n">n_frames</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">n_frames</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
         <span class="n">_check_attr_vol_length_match</span><span class="p">(</span><span class="s2">&quot;midframe&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">midframe</span><span class="p">,</span> <span class="n">n_frames</span><span class="p">)</span>
 
         <span class="c1"># Ensure that the total duration is larger than last midframe</span>
@@ -593,14 +598,14 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        idx : :obj:`int` or :obj:`slice` or :obj:`tuple` or :obj:`~numpy.ndarray`</span>
-<span class="sd">            Indexer for the last dimension (or possibly other dimensions if extended).</span>
+<span class="sd">            Indexer for the volume (first) dimension.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        volumes : :obj:`~numpy.ndarray`</span>
 <span class="sd">            The selected data subset.</span>
 <span class="sd">            If ``idx`` is a single integer, this will have shape ``(X, Y, Z)``,</span>
-<span class="sd">            otherwise it may have shape ``(X, Y, Z, k)``.</span>
+<span class="sd">            otherwise it may have shape ``(k, X, Y, Z)``.</span>
 <span class="sd">        motion_affine : :obj:`~numpy.ndarray` or :obj:`None`</span>
 <span class="sd">            The corresponding per-volume motion affine(s) or :obj:`None` if identity transform(s).</span>
 <span class="sd">        time : :obj:`~numpy.ndarray`</span>
@@ -614,21 +619,21 @@
     <span class="k">def</span> <span class="nf">set_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Set an affine, and update data object and gradients.&quot;&quot;&quot;</span>
         <span class="n">ImageGrid</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;ImageGrid&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="s2">&quot;affine&quot;</span><span class="p">))</span>
-        <span class="n">reference</span> <span class="o">=</span> <span class="n">ImageGrid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">)</span>
+        <span class="n">reference</span> <span class="o">=</span> <span class="n">ImageGrid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape3d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">)</span>
         <span class="n">xform</span> <span class="o">=</span> <span class="n">Affine</span><span class="p">(</span><span class="n">matrix</span><span class="o">=</span><span class="n">affine</span><span class="p">,</span> <span class="n">reference</span><span class="o">=</span><span class="n">reference</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span><span class="p">)</span>
 
-        <span class="c1"># read original PET</span>
+        <span class="c1"># read original PET frame</span>
         <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">in_file</span><span class="p">:</span>
             <span class="n">root</span> <span class="o">=</span> <span class="n">in_file</span><span class="p">[</span><span class="s2">&quot;/0&quot;</span><span class="p">]</span>
-            <span class="n">dframe</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">root</span><span class="p">[</span><span class="s2">&quot;dataobj&quot;</span><span class="p">][</span><span class="o">...</span><span class="p">,</span> <span class="n">index</span><span class="p">])</span>
+            <span class="n">dframe</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">root</span><span class="p">[</span><span class="s2">&quot;dataobj&quot;</span><span class="p">][</span><span class="n">index</span><span class="p">])</span>
 
         <span class="n">dmoving</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">dframe</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
         <span class="c1"># resample and update orientation at index</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span>
             <span class="n">apply</span><span class="p">(</span><span class="n">xform</span><span class="p">,</span> <span class="n">dmoving</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span><span class="o">.</span><span class="n">dataobj</span><span class="p">,</span>
             <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
         <span class="p">)</span>
@@ -645,39 +650,25 @@
     <span class="k">def</span> <span class="nf">to_filename</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span> <span class="n">compression</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">compression_opts</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write an HDF5 file to disk.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write the dataset to an :ref:`nfHDF5 &lt;nfhdf5&gt;` file.&quot;&quot;&quot;</span>
         <span class="n">filename</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">filename</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.h5&quot;</span><span class="p">):</span>
             <span class="n">filename</span> <span class="o">=</span> <span class="n">filename</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">filename</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.h5&quot;</span>
 
-        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
-            <span class="n">out_file</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;Format&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;EMC/PET&quot;</span>
-            <span class="n">out_file</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;Version&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">replace_on_success</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">,</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
+            <span class="n">out_file</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;Format&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;nfHDF5&quot;</span>
+            <span class="n">out_file</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;Version&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># v2: volume-major dataobj</span>
             <span class="n">root</span> <span class="o">=</span> <span class="n">out_file</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s2">&quot;/0&quot;</span><span class="p">)</span>
             <span class="n">root</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;Type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;pet&quot;</span>
-            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">attrs</span><span class="o">.</span><span class="n">fields</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">):</span>
-                <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">):</span>
-                    <span class="k">continue</span>
-
-                <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="n">root</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
-                        <span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-                        <span class="n">data</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
-                        <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span>
-                        <span class="n">compression_opts</span><span class="o">=</span><span class="n">compression_opts</span><span class="p">,</span>
-                    <span class="p">)</span></div>
+            <span class="n">save_nfhdf5_fields</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="bp">self</span><span class="p">,</span> <span class="n">compression</span><span class="p">,</span> <span class="n">compression_opts</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="PET.from_filename">
 <a class="viewcode-back" href="../../../../api/nifreeze.data.pet.base.html#nifreeze.data.pet.PET.from_filename">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_filename</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read an HDF5 file from disk.&quot;&quot;&quot;</span>
-        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">in_file</span><span class="p">:</span>
-            <span class="n">root</span> <span class="o">=</span> <span class="n">in_file</span><span class="p">[</span><span class="s2">&quot;/0&quot;</span><span class="p">]</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)}</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="n">data</span><span class="p">)</span></div>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read an :ref:`nfHDF5 &lt;nfhdf5&gt;` file from disk.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="n">load_nfhdf5_fields</span><span class="p">(</span><span class="n">filename</span><span class="p">))</span></div>
 </div>
 
 </pre></div>
@@ -712,7 +703,7 @@
       
     </aside>
   </div>
-</div><script src="../../../../_static/documentation_options.js?v=1d1902ad"></script>
+</div><script src="../../../../_static/documentation_options.js?v=8c8f3c9b"></script>
     <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../../_static/scripts/furo.js?v=46bd48cc"></script>

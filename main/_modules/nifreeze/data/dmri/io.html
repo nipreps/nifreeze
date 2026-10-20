@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../../genindex.html"><link rel="search" title="Search" href="../../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.data.dmri.io - nifreeze 26.0.0.dev307 documentation</title>
+        <title>nifreeze.data.dmri.io - nifreeze 26.0.0.dev322 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../../index.html"><div class="brand">nifreeze 26.0.0.dev307 documentation</div></a>
+      <a href="../../../../index.html"><div class="brand">nifreeze 26.0.0.dev322 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev307</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev322</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev307</span>
+  <span class="sidebar-brand-text">26.0.0.dev322</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -348,8 +348,13 @@
 <span class="kn">from</span> <span class="nn">nibabel.spatialimages</span> <span class="kn">import</span> <span class="n">SpatialImage</span>
 
 <span class="kn">from</span> <span class="nn">nifreeze.data.base</span> <span class="kn">import</span> <span class="n">to_nifti</span> <span class="k">as</span> <span class="n">_base_to_nifti</span>
-<span class="kn">from</span> <span class="nn">nifreeze.data.dmri.base</span> <span class="kn">import</span> <span class="n">DWI</span>
-<span class="kn">from</span> <span class="nn">nifreeze.data.dmri.utils</span> <span class="kn">import</span> <span class="n">transform_fsl_bvec</span>
+<span class="kn">from</span> <span class="nn">nifreeze.data.dmri.base</span> <span class="kn">import</span> <span class="n">DWI</span><span class="p">,</span> <span class="n">select_b0</span>
+<span class="kn">from</span> <span class="nn">nifreeze.data.dmri.utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR</span><span class="p">,</span>
+    <span class="n">format_gradients</span><span class="p">,</span>
+    <span class="n">transform_fsl_bvec</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">nifreeze.data.utils</span> <span class="kn">import</span> <span class="n">to_time_first</span>
 <span class="kn">from</span> <span class="nn">nifreeze.utils.ndimage</span> <span class="kn">import</span> <span class="n">get_data</span><span class="p">,</span> <span class="n">load_api</span>
 
 <span class="n">GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
@@ -412,9 +417,8 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">filename</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
 
-    <span class="c1"># 1) Load a NIfTI</span>
+    <span class="c1"># 1) Open a NIfTI; its data are read below</span>
     <span class="n">img</span> <span class="o">=</span> <span class="n">load_api</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">SpatialImage</span><span class="p">)</span>
-    <span class="n">fulldata</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
 
     <span class="c1"># 2) Determine the gradients array from either gradients_file or bvec/bval</span>
     <span class="k">if</span> <span class="n">gradients_file</span><span class="p">:</span>
@@ -443,11 +447,27 @@
         <span class="n">mask_img</span> <span class="o">=</span> <span class="n">load_api</span><span class="p">(</span><span class="n">brainmask_file</span><span class="p">,</span> <span class="n">SpatialImage</span><span class="p">)</span>
         <span class="n">brainmask_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">mask_img</span><span class="o">.</span><span class="n">dataobj</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
 
-    <span class="c1"># 5) Create and return the DWI instance.</span>
+    <span class="c1"># 5) NIfTI stores volumes last; datasets store them first. Leave the b=0</span>
+    <span class="c1"># volumes out while converting, so the series is copied once: ``DWI`` would</span>
+    <span class="c1"># copy it again to drop them.</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">get_data</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+    <span class="n">gradients</span> <span class="o">=</span> <span class="n">format_gradients</span><span class="p">(</span><span class="n">grad</span><span class="p">)</span>  <span class="c1"># oriented and normalized as ``DWI`` does</span>
+    <span class="k">assert</span> <span class="n">gradients</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>  <span class="c1"># format_gradients raises on None</span>
+    <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">gradients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="n">GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">n_volumes</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n_gradients</span><span class="o">=</span><span class="n">gradients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+    <span class="n">b0_mask</span><span class="p">,</span> <span class="n">b0_data</span> <span class="o">=</span> <span class="n">select_b0</span><span class="p">(</span><span class="n">gradients</span><span class="p">,</span> <span class="n">b0_data</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">mask</span><span class="p">:</span> <span class="n">to_time_first</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">keep</span><span class="o">=</span><span class="n">mask</span><span class="p">))</span>
+    <span class="n">fulldata</span> <span class="o">=</span> <span class="n">to_time_first</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">keep</span><span class="o">=~</span><span class="n">b0_mask</span><span class="p">)</span>
+    <span class="n">img</span><span class="o">.</span><span class="n">uncache</span><span class="p">()</span>  <span class="c1"># drop nibabel&#39;s cached copy of the volumes-last array</span>
+
+    <span class="c1"># 6) Create and return the DWI instance.</span>
     <span class="k">return</span> <span class="n">DWI</span><span class="p">(</span>
         <span class="n">dataobj</span><span class="o">=</span><span class="n">fulldata</span><span class="p">,</span>
         <span class="n">affine</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span>
-        <span class="n">gradients</span><span class="o">=</span><span class="n">grad</span><span class="p">,</span>
+        <span class="n">gradients</span><span class="o">=</span><span class="n">gradients</span><span class="p">[</span><span class="o">~</span><span class="n">b0_mask</span><span class="p">],</span>
         <span class="n">bzero</span><span class="o">=</span><span class="n">b0_data</span><span class="p">,</span>
         <span class="n">brainmask</span><span class="o">=</span><span class="n">brainmask_data</span><span class="p">,</span>
     <span class="p">)</span></div>
@@ -528,8 +548,8 @@
                 <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
             <span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">dwi</span><span class="o">.</span><span class="n">bzero</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="n">dwi</span><span class="o">.</span><span class="n">dataobj</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
-        <span class="n">nii</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">nii</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">nii</span><span class="o">.</span><span class="n">header</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">dwi</span><span class="o">.</span><span class="n">bzero</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="n">dwi</span><span class="o">.</span><span class="n">dataobj</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+        <span class="n">nii</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">moveaxis</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">nii</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">nii</span><span class="o">.</span><span class="n">header</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">nii</span><span class="o">.</span><span class="n">to_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
@@ -590,7 +610,7 @@
       
     </aside>
   </div>
-</div><script src="../../../../_static/documentation_options.js?v=1d1902ad"></script>
+</div><script src="../../../../_static/documentation_options.js?v=8c8f3c9b"></script>
     <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../../_static/scripts/furo.js?v=46bd48cc"></script>

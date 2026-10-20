@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Model implementation" href="models.html"><link rel="prev" title="Installation" href="installation.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>Design Principles - nifreeze 26.0.0.dev307 documentation</title>
+        <title>Design Principles - nifreeze 26.0.0.dev322 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev307 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev322 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev307</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev322</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev307</span>
+  <span class="sidebar-brand-text">26.0.0.dev322</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -368,6 +368,31 @@ class (e.g. through the <a class="reference internal" href="api/nifreeze.data.dm
 non-diffusion-weighted volumes. Note that following this design choice,
 the gradient data hosted by the <code class="xref py py-class docutils literal notranslate"><span class="pre">api/nifreeze.data.dmri.DWI</span></code> instance
 only contains (nonzero) diffusion-weighted gradient values.</p>
+</section>
+<section id="nfhdf5-files">
+<span id="nfhdf5"></span><h4>nfHDF5 files<a class="headerlink" href="#nfhdf5-files" title="Link to this heading">¶</a></h4>
+<p><em>nfHDF5</em> is the HDF5 layout <em>NiFreeze</em> saves datasets in.
+<a class="reference internal" href="api/nifreeze.data.base.html#nifreeze.data.base.BaseDataset.to_filename" title="nifreeze.data.base.BaseDataset.to_filename"><code class="xref py py-meth docutils literal notranslate"><span class="pre">to_filename()</span></code></a> writes it, and
+<a class="reference internal" href="api/nifreeze.data.html#nifreeze.data.load" title="nifreeze.data.load"><code class="xref py py-func docutils literal notranslate"><span class="pre">load()</span></code></a> and
+<a class="reference internal" href="api/nifreeze.data.base.html#nifreeze.data.base.BaseDataset.from_filename" title="nifreeze.data.base.BaseDataset.from_filename"><code class="xref py py-meth docutils literal notranslate"><span class="pre">from_filename()</span></code></a> read it back.</p>
+<ul class="simple">
+<li><p>The file attributes <code class="docutils literal notranslate"><span class="pre">Format</span></code> (<code class="docutils literal notranslate"><span class="pre">&quot;nfHDF5&quot;</span></code>) and <code class="docutils literal notranslate"><span class="pre">Version</span></code> (<code class="docutils literal notranslate"><span class="pre">2</span></code>)
+identify the layout.</p></li>
+<li><p>The group <code class="docutils literal notranslate"><span class="pre">/0</span></code> holds one HDF5 dataset per field of the dataset object:
+<code class="docutils literal notranslate"><span class="pre">dataobj</span></code>, <code class="docutils literal notranslate"><span class="pre">affine</span></code>, <code class="docutils literal notranslate"><span class="pre">brainmask</span></code> and <code class="docutils literal notranslate"><span class="pre">motion_affines</span></code>, plus the
+modality’s own fields, such as <code class="docutils literal notranslate"><span class="pre">gradients</span></code> and <code class="docutils literal notranslate"><span class="pre">bzero</span></code> (dMRI) or
+<code class="docutils literal notranslate"><span class="pre">midframe</span></code> and <code class="docutils literal notranslate"><span class="pre">total_duration</span></code> (PET).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dataobj</span></code> stores the volumes on the first axis, <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">X,</span> <span class="pre">Y,</span> <span class="pre">Z)</span></code>, and has
+the attribute <code class="docutils literal notranslate"><span class="pre">volume_axis</span></code> set to <code class="docutils literal notranslate"><span class="pre">0</span></code>.
+Each volume is one contiguous block, so the file is memory-mapped when
+loaded and volumes are read from disk as they are accessed.
+Compressed files (<code class="docutils literal notranslate"><span class="pre">to_filename(...,</span> <span class="pre">compression=&quot;gzip&quot;)</span></code>) are
+decompressed into a temporary file first.</p></li>
+</ul>
+<p>Files written by earlier versions of <em>NiFreeze</em> (version 1) store the volumes
+last, and their <code class="docutils literal notranslate"><span class="pre">Format</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;NFDH5&quot;</span></code> (<code class="docutils literal notranslate"><span class="pre">&quot;EMC/PET&quot;</span></code> for PET).
+They still load, after a conversion into a temporary file;
+save them again with <code class="docutils literal notranslate"><span class="pre">to_filename</span></code> to skip that step.</p>
 </section>
 </section>
 </section>
@@ -618,6 +643,7 @@ contributor acknowledgements.</p>
 <li><a class="reference internal" href="#main-concepts">Main Concepts</a><ul>
 <li><a class="reference internal" href="#data-ingestion">Data Ingestion</a><ul>
 <li><a class="reference internal" href="#dmri">dMRI</a></li>
+<li><a class="reference internal" href="#nfhdf5-files">nfHDF5 files</a></li>
 </ul>
 </li>
 </ul>
@@ -653,7 +679,7 @@ contributor acknowledgements.</p>
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=1d1902ad"></script>
+</div><script src="_static/documentation_options.js?v=8c8f3c9b"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

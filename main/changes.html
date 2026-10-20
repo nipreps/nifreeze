@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="References" href="bibliography.html"><link rel="prev" title="nifreeze.viz.signals module" href="api/nifreeze.viz.signals.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>What’s new? - nifreeze 26.0.0.dev307 documentation</title>
+        <title>What’s new? - nifreeze 26.0.0.dev322 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev307 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev322 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev307</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev322</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev307</span>
+  <span class="sidebar-brand-text">26.0.0.dev322</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -324,6 +324,22 @@
         <article role="main" id="furo-main-content">
           <section id="what-s-new">
 <h1>What’s new?<a class="headerlink" href="#what-s-new" title="Link to this heading">¶</a></h1>
+<section id="upcoming-release">
+<h2>Upcoming release<a class="headerlink" href="#upcoming-release" title="Link to this heading">¶</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p><strong>Volumes are now stored on the first axis</strong> (#461).
+<code class="docutils literal notranslate"><span class="pre">dataset.dataobj</span></code> has shape <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">X,</span> <span class="pre">Y,</span> <span class="pre">Z)</span></code>, and <code class="docutils literal notranslate"><span class="pre">dataset[i]</span></code> returns <code class="docutils literal notranslate"><span class="pre">dataobj[i]</span></code>.
+Code that builds datasets directly (<code class="docutils literal notranslate"><span class="pre">BaseDataset</span></code>, <code class="docutils literal notranslate"><span class="pre">DWI</span></code> or <code class="docutils literal notranslate"><span class="pre">PET</span></code> with <code class="docutils literal notranslate"><span class="pre">dataobj=</span></code>)
+must pass the volumes first, for example <code class="docutils literal notranslate"><span class="pre">np.moveaxis(data,</span> <span class="pre">-1,</span> <span class="pre">0)</span></code>.
+<code class="docutils literal notranslate"><span class="pre">from_nii</span></code> and <code class="docutils literal notranslate"><span class="pre">to_nifti</span></code> convert to and from the NIfTI order (volumes last).
+HDF5 files are now written as <em>nfHDF5</em> version 2 (<code class="docutils literal notranslate"><span class="pre">Format=&quot;nfHDF5&quot;</span></code>, for PET too)
+and memory-mapped when loaded.
+Version 1 files (<code class="docutils literal notranslate"><span class="pre">Format=&quot;NFDH5&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;EMC/PET&quot;</span></code>) still load, after a conversion
+into a temporary file; save them again with <code class="docutils literal notranslate"><span class="pre">to_filename</span></code> to load them lazily.
+<code class="docutils literal notranslate"><span class="pre">nifreeze.data.NFDH5_EXT</span></code> is renamed <code class="docutils literal notranslate"><span class="pre">NFHDF5_EXT</span></code>.</p>
+</div>
+</section>
 <section id="eddymotion-fork">
 <h2><em>eddymotion</em> fork<a class="headerlink" href="#eddymotion-fork" title="Link to this heading">¶</a></h2>
 <p>The <em>NiFreeze</em> codebase has been ported from <em>eddymotion</em> on commit
@@ -387,6 +403,7 @@
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">What’s new?</a><ul>
+<li><a class="reference internal" href="#upcoming-release">Upcoming release</a></li>
 <li><a class="reference internal" href="#eddymotion-fork"><em>eddymotion</em> fork</a></li>
 </ul>
 </li>
@@ -399,7 +416,7 @@
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=1d1902ad"></script>
+</div><script src="_static/documentation_options.js?v=8c8f3c9b"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

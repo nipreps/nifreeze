@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.data.filtering - nifreeze 26.0.0.dev307 documentation</title>
+        <title>nifreeze.data.filtering - nifreeze 26.0.0.dev322 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev307 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev322 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev307</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev322</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev307</span>
+  <span class="sidebar-brand-text">26.0.0.dev322</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -533,9 +533,9 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    data : :obj:`~numpy.ndarray`</span>
-<span class="sd">        Data to be normalized.</span>
+<span class="sd">        Data to be normalized, with volumes on the first axis.</span>
 <span class="sd">    mask : :obj:`~numpy.ndarray`, optional</span>
-<span class="sd">        Mask. If provided, only the data within the mask are considered.</span>
+<span class="sd">        Boolean mask of volumes. If provided, only those volumes are considered.</span>
 <span class="sd">    p_min : :obj:`float`, optional</span>
 <span class="sd">        The lower percentile value for normalization.</span>
 <span class="sd">    p_max : :obj:`float`, optional</span>
@@ -551,13 +551,14 @@
 
     <span class="n">normalized</span> <span class="o">=</span> <span class="n">data</span> <span class="k">if</span> <span class="n">inplace</span> <span class="k">else</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
-    <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span> <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
-    <span class="n">volumes</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">mask</span><span class="p">]</span>
-    <span class="n">reshape_shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">volumes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">sum</span><span class="p">(</span><span class="n">mask</span><span class="p">))</span>
-    <span class="n">reshaped_data</span> <span class="o">=</span> <span class="n">volumes</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">reshape_shape</span><span class="p">)</span>
-    <span class="n">p5</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">reshaped_data</span><span class="p">,</span> <span class="n">p_min</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-    <span class="n">p95</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">reshaped_data</span><span class="p">,</span> <span class="n">p_max</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">-</span> <span class="n">p5</span>
-    <span class="n">normalized</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">volumes</span> <span class="o">-</span> <span class="n">p5</span><span class="p">)</span> <span class="o">*</span> <span class="n">p95</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">/</span> <span class="n">p95</span> <span class="o">+</span> <span class="n">p5</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span> <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="n">volumes</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+    <span class="n">reshaped_data</span> <span class="o">=</span> <span class="n">volumes</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">volumes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">p5</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">reshaped_data</span><span class="p">,</span> <span class="n">p_min</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">p95</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">reshaped_data</span><span class="p">,</span> <span class="n">p_max</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">p5</span>
+    <span class="c1"># Broadcast the per-volume values along the first axis</span>
+    <span class="n">per_volume</span> <span class="o">=</span> <span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">),)</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,)</span> <span class="o">*</span> <span class="p">(</span><span class="n">volumes</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">normalized</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">volumes</span> <span class="o">-</span> <span class="n">p5</span><span class="p">[</span><span class="n">per_volume</span><span class="p">])</span> <span class="o">*</span> <span class="n">p95</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">/</span> <span class="n">p95</span><span class="p">[</span><span class="n">per_volume</span><span class="p">]</span> <span class="o">+</span> <span class="n">p5</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
 
     <span class="k">if</span> <span class="n">inplace</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
@@ -584,9 +585,9 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    data : :obj:`~numpy.ndarray`</span>
-<span class="sd">        Data to be normalized.</span>
+<span class="sd">        Data to be normalized, with volumes on the first axis.</span>
 <span class="sd">    mask : :obj:`~numpy.ndarray`, optional</span>
-<span class="sd">        Mask. If provided, only the data within the mask are considered.</span>
+<span class="sd">        Boolean mask of volumes. If provided, only those volumes are considered.</span>
 <span class="sd">    center : float, optional</span>
 <span class="sd">        Central value around which to normalize the data.</span>
 <span class="sd">    inplace : :obj:`bool`, optional</span>
@@ -600,14 +601,15 @@
 
     <span class="n">normalized</span> <span class="o">=</span> <span class="n">data</span> <span class="k">if</span> <span class="n">inplace</span> <span class="k">else</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
-    <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span> <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
-    <span class="n">volumes</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">mask</span><span class="p">]</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span> <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="n">volumes</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
 
-    <span class="n">centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">volumes</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">volumes</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">volumes</span><span class="o">.</span><span class="n">ndim</span><span class="p">)))</span>
     <span class="n">reference</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">centers</span><span class="p">[</span><span class="n">centers</span> <span class="o">&gt;=</span> <span class="mf">1.0</span><span class="p">],</span> <span class="n">center</span><span class="p">)</span>
     <span class="n">centers</span><span class="p">[</span><span class="n">centers</span> <span class="o">&lt;</span> <span class="mf">1.0</span><span class="p">]</span> <span class="o">=</span> <span class="n">reference</span>
     <span class="n">drift</span> <span class="o">=</span> <span class="n">reference</span> <span class="o">/</span> <span class="n">centers</span>
-    <span class="n">normalized</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">volumes</span> <span class="o">*</span> <span class="n">drift</span>
+    <span class="c1"># Broadcast the per-volume values along the first axis</span>
+    <span class="n">normalized</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">volumes</span> <span class="o">*</span> <span class="n">drift</span><span class="p">[(</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">),)</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,)</span> <span class="o">*</span> <span class="p">(</span><span class="n">volumes</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]</span>
 
     <span class="k">if</span> <span class="n">inplace</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
@@ -703,7 +705,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=1d1902ad"></script>
+</div><script src="../../../_static/documentation_options.js?v=8c8f3c9b"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.data.base module" href="nifreeze.data.base.html"><link rel="prev" title="nifreeze.data.pet.io module" href="nifreeze.data.pet.io.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.data.pet.utils module - nifreeze 26.0.0.dev307 documentation</title>
+        <title>nifreeze.data.pet.utils module - nifreeze 26.0.0.dev322 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev307 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev322 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev307</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev322</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev307</span>
+  <span class="sidebar-brand-text">26.0.0.dev322</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -377,7 +377,7 @@ simplicity.</p>
 <dt class="sig sig-object py" id="nifreeze.data.pet.utils.compute_uptake_statistic">
 <span class="sig-prename descclassname"><span class="pre">nifreeze.data.pet.utils.</span></span><span class="sig-name descname"><span class="pre">compute_uptake_statistic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">data:</span> <span class="pre">~numpy.ndarray,</span> <span class="pre">stat_func:</span> <span class="pre">~collections.abc.Callable[[...],</span> <span class="pre">~numpy.ndarray]</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">sum&gt;</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/data/pet/utils.html#compute_uptake_statistic"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.pet.utils.compute_uptake_statistic" title="Link to this definition">¶</a></dt>
 <dd><p>Compute a statistic over all voxels for each frame on a PET sequence.</p>
-<p>Assumes the last dimension corresponds to the number of frames in the
+<p>Assumes the first dimension corresponds to the number of frames in the
 sequence.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -467,7 +467,7 @@ sequence.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=1d1902ad"></script>
+</div><script src="../_static/documentation_options.js?v=8c8f3c9b"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

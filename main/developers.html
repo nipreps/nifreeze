@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="nifreeze.analysis package" href="api/nifreeze.analysis.html"><link rel="prev" title="How to cite" href="citation.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>For developers - nifreeze 26.0.0.dev307 documentation</title>
+        <title>For developers - nifreeze 26.0.0.dev322 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev307 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev322 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev307</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev322</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev307</span>
+  <span class="sidebar-brand-text">26.0.0.dev322</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -445,6 +445,8 @@ and how to write new ones.</p>
 </li>
 <li class="toctree-l6"><a class="reference internal" href="api/nifreeze.data.dmri.base.html#nifreeze.data.dmri.base.DWI_B0_MULTIPLE_VOLUMES_WARN_MSG"><code class="docutils literal notranslate"><span class="pre">DWI_B0_MULTIPLE_VOLUMES_WARN_MSG</span></code></a></li>
 <li class="toctree-l6"><a class="reference internal" href="api/nifreeze.data.dmri.base.html#nifreeze.data.dmri.base.DWI_REDUNDANT_B0_WARN_MSG"><code class="docutils literal notranslate"><span class="pre">DWI_REDUNDANT_B0_WARN_MSG</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/nifreeze.data.dmri.base.html#nifreeze.data.dmri.base.VOLUMES_LAST_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">VOLUMES_LAST_ERROR_MSG</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="api/nifreeze.data.dmri.base.html#nifreeze.data.dmri.base.select_b0"><code class="docutils literal notranslate"><span class="pre">select_b0()</span></code></a></li>
 <li class="toctree-l6"><a class="reference internal" href="api/nifreeze.data.dmri.base.html#nifreeze.data.dmri.base.validate_gradients"><code class="docutils literal notranslate"><span class="pre">validate_gradients()</span></code></a></li>
 </ul>
 </li>
@@ -583,7 +585,16 @@ and how to write new ones.</p>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.data.utils.html">nifreeze.data.utils module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.utils.html#nifreeze.data.utils.CONVERSION_SLAB_BYTES"><code class="docutils literal notranslate"><span class="pre">CONVERSION_SLAB_BYTES</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.utils.html#nifreeze.data.utils.VOLUME_AXIS_ATTR"><code class="docutils literal notranslate"><span class="pre">VOLUME_AXIS_ATTR</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.utils.html#nifreeze.data.utils.apply_affines"><code class="docutils literal notranslate"><span class="pre">apply_affines()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.utils.html#nifreeze.data.utils.load_nfhdf5_fields"><code class="docutils literal notranslate"><span class="pre">load_nfhdf5_fields()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.utils.html#nifreeze.data.utils.open_dataobj_memmap"><code class="docutils literal notranslate"><span class="pre">open_dataobj_memmap()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.utils.html#nifreeze.data.utils.replace_on_success"><code class="docutils literal notranslate"><span class="pre">replace_on_success()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.utils.html#nifreeze.data.utils.save_dataobj_volume_major"><code class="docutils literal notranslate"><span class="pre">save_dataobj_volume_major()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.utils.html#nifreeze.data.utils.save_nfhdf5_fields"><code class="docutils literal notranslate"><span class="pre">save_nfhdf5_fields()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.utils.html#nifreeze.data.utils.stream_select_volumes"><code class="docutils literal notranslate"><span class="pre">stream_select_volumes()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.utils.html#nifreeze.data.utils.to_time_first"><code class="docutils literal notranslate"><span class="pre">to_time_first()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -1012,7 +1023,7 @@ and how to write new ones.</p>
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=1d1902ad"></script>
+</div><script src="_static/documentation_options.js?v=8c8f3c9b"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
