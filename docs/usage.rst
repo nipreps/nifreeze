@@ -55,6 +55,18 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
 
          dataset = dmri.DWI.from_filename("/path/to/downloaded/dwi_full.h5")
 
+   .. note::
+
+      Datasets store the volumes on the *first* axis: ``dataset.dataobj`` has
+      shape ``(N, X, Y, Z)`` and ``dataset[i]`` returns volume ``i``.
+      NIfTI files store the volumes last; :func:`~nifreeze.data.dmri.io.from_nii`
+      and :meth:`~nifreeze.data.base.BaseDataset.to_nifti` convert between the two.
+      HDF5 files are memory-mapped when loaded, so volumes are read from disk as
+      they are accessed.
+      Files written by earlier versions of *NiFreeze* (format version 1) still
+      load, but they are converted into a temporary file first; save them again
+      with ``to_filename`` to skip that step.
+
 
 3. **Instantiate an NiFreeze Estimator Object**: Create an instance of the
    :class:`~nifreeze.estimator.Estimator` class, which encapsulates tools
