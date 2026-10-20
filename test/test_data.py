@@ -39,7 +39,7 @@ def _raise_type(*args, **kwargs):
 
 
 def test_load_hdf5_error(monkeypatch, tmp_path):
-    fname = tmp_path / ("dataset" + data.NFDH5_EXT)
+    fname = tmp_path / ("dataset" + data.NFHDF5_EXT)
 
     # All three dataclasses raise TypeError: load should raise TypeError
     monkeypatch.setattr(
@@ -68,7 +68,7 @@ def test_load_hdf5_error(monkeypatch, tmp_path):
     ],
 )
 def test_load_hdf5_sentinel(monkeypatch, tmp_path, target, prior_failures):
-    fname = tmp_path / ("dataset" + data.NFDH5_EXT)
+    fname = tmp_path / ("dataset" + data.NFHDF5_EXT)
 
     sentinel = object()
 
@@ -109,7 +109,7 @@ def test_load_hdf5_data(request, tmp_path, monkeypatch, target, prior_failures, 
     _affine = np.eye(4).astype(np.float64)
     _brainmask_dataobj = rng.choice([True, False], size=_dataobj.shape[:3]).astype(np.uint8)
 
-    fname = tmp_path / ("dataset" + data.NFDH5_EXT)
+    fname = tmp_path / ("dataset" + data.NFHDF5_EXT)
 
     # Write a minimal HDF5 layout that our patched reader will understand
     with h5py.File(fname, "w") as f:
@@ -221,7 +221,8 @@ def test_load_base_nifti(
     assert hasattr(retval, "affine")
 
     assert retval.dataobj is not None
-    assert np.allclose(retval.dataobj, dataobj)
+    # NIfTI stores the volumes last; datasets store them first
+    assert np.allclose(retval.dataobj, np.moveaxis(dataobj, -1, 0))
 
     assert retval.affine is not None
     assert np.allclose(retval.affine, affine)

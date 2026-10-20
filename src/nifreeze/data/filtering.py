@@ -207,9 +207,9 @@ def robust_minmax_normalization(
     Parameters
     ----------
     data : :obj:`~numpy.ndarray`
-        Data to be normalized.
+        Data to be normalized, with volumes on the first axis.
     mask : :obj:`~numpy.ndarray`, optional
-        Mask. If provided, only the data within the mask are considered.
+        Boolean mask of volumes. If provided, only those volumes are considered.
     p_min : :obj:`float`, optional
         The lower percentile value for normalization.
     p_max : :obj:`float`, optional
@@ -225,13 +225,14 @@ def robust_minmax_normalization(
 
     normalized = data if inplace else data.copy()
 
-    mask = mask if mask is not None else np.ones(data.shape[-1], dtype=bool)
-    volumes = data[..., mask]
-    reshape_shape = (-1, volumes.shape[-1]) if mask is None else (-1, sum(mask))
-    reshaped_data = volumes.reshape(reshape_shape)
-    p5 = np.percentile(reshaped_data, p_min, axis=0)
-    p95 = np.percentile(reshaped_data, p_max, axis=0) - p5
-    normalized[..., mask] = (volumes - p5) * p95.mean() / p95 + p5.mean()
+    mask = mask if mask is not None else np.ones(data.shape[0], dtype=bool)
+    volumes = data[mask]
+    reshaped_data = volumes.reshape(volumes.shape[0], -1)
+    p5 = np.percentile(reshaped_data, p_min, axis=1)
+    p95 = np.percentile(reshaped_data, p_max, axis=1) - p5
+    # Broadcast the per-volume values along the first axis
+    per_volume = (slice(None),) + (np.newaxis,) * (volumes.ndim - 1)
+    normalized[mask] = (volumes - p5[per_volume]) * p95.mean() / p95[per_volume] + p5.mean()
 
     if inplace:
         return None
@@ -255,9 +256,9 @@ def grand_mean_normalization(
     Parameters
     ----------
     data : :obj:`~numpy.ndarray`
-        Data to be normalized.
+        Data to be normalized, with volumes on the first axis.
     mask : :obj:`~numpy.ndarray`, optional
-        Mask. If provided, only the data within the mask are considered.
+        Boolean mask of volumes. If provided, only those volumes are considered.
     center : float, optional
         Central value around which to normalize the data.
     inplace : :obj:`bool`, optional
@@ -271,14 +272,15 @@ def grand_mean_normalization(
 
     normalized = data if inplace else data.copy()
 
-    mask = mask if mask is not None else np.ones(data.shape[-1], dtype=bool)
-    volumes = data[..., mask]
+    mask = mask if mask is not None else np.ones(data.shape[0], dtype=bool)
+    volumes = data[mask]
 
-    centers = np.median(volumes, axis=(0, 1, 2))
+    centers = np.median(volumes, axis=tuple(range(1, volumes.ndim)))
     reference = np.percentile(centers[centers >= 1.0], center)
     centers[centers < 1.0] = reference
     drift = reference / centers
-    normalized[..., mask] = volumes * drift
+    # Broadcast the per-volume values along the first axis
+    normalized[mask] = volumes * drift[(slice(None),) + (np.newaxis,) * (volumes.ndim - 1)]
 
     if inplace:
         return None

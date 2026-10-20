@@ -239,7 +239,7 @@ class ExpectationModel(BaseModel):
         if index is not None:
             index_mask[index] = False
             # Calculate the average
-            return avg_func(self._dataset[index_mask][0], axis=-1)
+            return avg_func(self._dataset[index_mask][0], axis=0)
 
-        self._locked_fit = avg_func(self._dataset[index_mask][0], axis=-1)
+        self._locked_fit = avg_func(self._dataset[index_mask][0], axis=0)
         return self._locked_fit

@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any, Type
 
 import attrs
+import h5py
 import nibabel as nb
 import numpy as np
 import pytest
@@ -51,7 +52,8 @@ from nifreeze.utils.ndimage import load_api
 
 
 def _pet_data_to_nifti(pet_dataobj, affine, brainmask_dataobj):
-    pet = nb.Nifti1Image(pet_dataobj, affine)
+    # NIfTI stores the volumes last
+    pet = nb.Nifti1Image(np.moveaxis(pet_dataobj, 0, -1), affine)
     brainmask = nb.Nifti1Image(brainmask_dataobj, affine)
 
     return pet, brainmask
@@ -233,8 +235,9 @@ def test_pet_instantiation_attribute_convert_absence_errors(
     attr_name,
 ):
     data, affine = setup_random_uniform_spatial_data
+    data = np.moveaxis(data, -1, 0)
 
-    n_frames = data.shape[-1]
+    n_frames = data.shape[0]
     # Create a dict with default valid attribute values
     attrs_dict: dict[str, np.ndarray | float | None] = {
         "midframe": np.ones(n_frames, dtype=np.float32),
@@ -259,8 +262,9 @@ def test_pet_instantiation_attribute_convert_object_errors(
     setup_random_uniform_spatial_data, attr_name, value
 ):
     data, affine = setup_random_uniform_spatial_data
+    data = np.moveaxis(data, -1, 0)
 
-    n_frames = data.shape[-1]
+    n_frames = data.shape[0]
     # Create a dict with some valid attributes
     attrs_dict = {
         "midframe": np.ones(n_frames, dtype=np.float32),
@@ -285,14 +289,14 @@ def test_pet_instantiation_attribute_vol_mismatch_error(
 ):
     pet_dataobj, affine, _, _, midframe, total_duration = setup_random_pet_data
 
-    n_frames = int(pet_dataobj.shape[-1])
+    n_frames = int(pet_dataobj.shape[0])
     attrs_dict = {"midframe": midframe, "total_duration": total_duration}
 
     # Add extra volumes: simply concatenate the last volume
     if extra_volume_count:
-        extra_dwi_dataobj = np.tile(pet_dataobj[..., -1:], (1, extra_volume_count))
-        pet_dataobj = np.concatenate((pet_dataobj, extra_dwi_dataobj), axis=-1)
-        n_frames = int(pet_dataobj.shape[-1])
+        extra_dwi_dataobj = np.repeat(pet_dataobj[-1:], extra_volume_count, axis=0)
+        pet_dataobj = np.concatenate((pet_dataobj, extra_dwi_dataobj), axis=0)
+        n_frames = int(pet_dataobj.shape[0])
     # Add extra values to attribute: simply concatenate the attribute
     if extra_attribute_count:
         base = attrs_dict[attr_name]
@@ -364,8 +368,9 @@ def test_compute_uptake_statistic(stat_func):
     data = rng.random((4, 4, 4, 5), dtype=np.float32)
 
     expected = stat_func(data.reshape(-1, data.shape[-1]), axis=0)
-    obtained = compute_uptake_statistic(data, stat_func=stat_func)
-    np.testing.assert_array_equal(obtained, expected)
+    # The function takes volumes first; the summation order may differ
+    obtained = compute_uptake_statistic(np.moveaxis(data, -1, 0), stat_func=stat_func)
+    np.testing.assert_allclose(obtained, expected, rtol=1e-6)
 
 
 @pytest.mark.random_pet_data(4, (2, 2, 2), np.asarray([1.0, 2.0, 3.0, 4.0]))
@@ -465,7 +470,7 @@ def test_to_nifti(tmp_path, setup_random_pet_data):
     pet_obj.to_nifti(str(out_filename))
     assert out_filename.exists()
     loaded_img = load_api(str(out_filename), nb.Nifti1Image)
-    assert np.allclose(loaded_img.get_fdata(), pet_obj.dataobj)
+    assert np.allclose(loaded_img.get_fdata(), np.moveaxis(pet_obj.dataobj, 0, -1))
     assert np.allclose(loaded_img.affine, pet_obj.affine)
     units = loaded_img.header.get_xyzt_units()
     assert units[0] == "mm"
@@ -541,6 +546,8 @@ def test_equality_operator(tmp_path, setup_random_pet_data):
     # Test equality operator against an instance from HDF5
     hdf5_filename = tmp_path / "test_pet.h5"
     pet_obj_from_nii.to_filename(hdf5_filename)
+    with h5py.File(hdf5_filename, "r") as in_file:
+        assert in_file.attrs["Format"] == "nfHDF5"
 
     round_trip_pet_obj = PET.from_filename(hdf5_filename)
 
@@ -562,12 +569,12 @@ def test_pet_set_transform_updates_motion_affines(setup_random_pet_data):
     )
 
     idx = 2
-    data_before = np.copy(pet_obj.dataobj[..., idx])
+    data_before = np.copy(pet_obj.dataobj[idx])
 
     affine = np.eye(4)
     pet_obj.set_transform(idx, affine)
 
-    np.testing.assert_allclose(pet_obj.dataobj[..., idx], data_before)
+    np.testing.assert_allclose(pet_obj.dataobj[idx], data_before)
     assert pet_obj.motion_affines is not None
     assert len(pet_obj.motion_affines) == len(pet_obj)
     assert isinstance(pet_obj.motion_affines[idx], Affine)

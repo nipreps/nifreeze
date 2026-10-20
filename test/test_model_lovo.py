@@ -63,7 +63,7 @@ def _crossing_dwi(n_dirs=40, side=6, seed=1234):
     )
     dataobj = np.asarray(signal)[: side**2].reshape(side, side, 1, -1).astype(np.float32)
     return DWI(
-        dataobj=dataobj,
+        dataobj=np.moveaxis(dataobj, -1, 0),  # simulated volumes last; datasets take them first
         affine=np.eye(4),
         brainmask=np.ones(dataobj.shape[:3], dtype=bool),
         gradients=np.column_stack([gtab.bvecs, gtab.bvals]),
@@ -290,19 +290,19 @@ def test_hyperparameters_roundtrip(tmp_path):
 def test_masked_signal_matrix_memmap(tmp_path, request):
     """Signals are gathered volume by volume, also from memory-mapped data."""
     rng = request.node.rng
-    data = np.memmap(tmp_path / "data.dat", dtype=np.float32, mode="w+", shape=(3, 4, 5, 6))
-    data[:] = rng.random((3, 4, 5, 6))
+    data = np.memmap(tmp_path / "data.dat", dtype=np.float32, mode="w+", shape=(6, 3, 4, 5))
+    data[:] = rng.random((6, 3, 4, 5))
     mask = rng.random((3, 4, 5)) > 0.5
 
     class _Dataset:
         dataobj = data
 
         def __len__(self):
-            return data.shape[-1]
+            return data.shape[0]
 
     signals = lovo.masked_signal_matrix(_Dataset(), mask)
     assert signals.shape == (6, mask.sum())
-    assert np.allclose(signals, np.asarray(data)[mask].T)
+    assert np.allclose(signals, np.asarray(data)[:, mask])
 
 
 @pytest.mark.parametrize(
@@ -329,7 +329,7 @@ def test_gploo_matches_fixed_hyperparameter_refits(setup_random_dwi_data):
 
     mask = gp._data_mask
     X = np.asarray(dwi.gradients)[:, :3]
-    signals = np.moveaxis(np.asarray(dwi.dataobj), -1, 0)[:, mask].astype(float)
+    signals = np.asarray(dwi.dataobj)[:, mask].astype(float)
     for index in (0, len(dwi) // 2):
         train = np.ones(len(dwi), dtype=bool)
         train[index] = False
@@ -343,7 +343,7 @@ def test_gploo_matches_fixed_hyperparameter_refits(setup_random_dwi_data):
 
         predicted = gp.fit_predict(index)
         assert predicted is not None
-        assert predicted.shape == dwi.dataobj.shape[:-1]
+        assert predicted.shape == dwi.shape3d
         assert np.allclose(predicted[mask], expected, rtol=1e-4, atol=1e-5)
         assert np.all(predicted[~mask] == 0)
 
@@ -417,7 +417,7 @@ def test_gploo_multishell_auto_kernel(request):
     bvecs = np.concatenate([gtabs[0].bvecs, gtabs[1].bvecs[1:]])
     dataobj = (rng.random((3, 3, 2, len(bvals))) + 0.5).astype(np.float32)
     dwi = DWI(
-        dataobj=dataobj,
+        dataobj=np.moveaxis(dataobj, -1, 0),  # drawn volumes last; datasets take them first
         affine=np.eye(4),
         brainmask=np.ones(dataobj.shape[:3], dtype=bool),
         gradients=np.column_stack([bvecs, bvals]),
@@ -440,7 +440,7 @@ def test_gqikrr_matches_explicit_ridge(setup_random_dwi_data):
     gram /= np.trace(gram) / len(gram)
 
     mask = krr._data_mask
-    signals = np.moveaxis(np.asarray(dwi.dataobj), -1, 0)[:, mask].astype(float)
+    signals = np.asarray(dwi.dataobj)[:, mask].astype(float)
     for index in (0, len(dwi) // 2):
         train = np.ones(len(dwi), dtype=bool)
         train[index] = False
@@ -454,15 +454,15 @@ def test_gqikrr_matches_explicit_ridge(setup_random_dwi_data):
 def test_gqikrr_fixes_gqi_amplitude():
     """Unlike the one-row GQI prediction, GQI-KRR predicts the signal amplitude."""
     dwi = _crossing_dwi()
-    mask = np.ones(dwi.dataobj.shape[:3], dtype=bool)
+    mask = np.ones(dwi.shape3d, dtype=bool)
     krr = model.dmri.GQIKRRModel(dwi)
     gqi = model.dmri.GQIModel(dwi)
 
     def nrmse(_model):
         errors, observed = [], []
         for index in (0, 10, 20, 30):
-            errors.append(_model.fit_predict(index)[mask] - dwi.dataobj[..., index][mask])
-            observed.append(dwi.dataobj[..., index][mask])
+            errors.append(_model.fit_predict(index)[mask] - dwi.dataobj[index][mask])
+            observed.append(dwi.dataobj[index][mask])
         return np.sqrt(np.mean(np.square(errors))) / np.mean(observed)
 
     assert krr._krr_lambda is None

@@ -354,7 +354,7 @@ def masked_signal_matrix(dataset: Any, mask: np.ndarray, dtype: Any = np.float32
     Parameters
     ----------
     dataset : :obj:`~nifreeze.data.base.BaseDataset`
-        Dataset whose ``dataobj`` has volumes along its last axis.
+        Dataset whose ``dataobj`` has volumes along its first axis.
     mask : :obj:`~numpy.ndarray`
         Boolean mask of the voxels to gather.
     dtype : :obj:`~numpy.dtype`, optional
@@ -368,7 +368,7 @@ def masked_signal_matrix(dataset: Any, mask: np.ndarray, dtype: Any = np.float32
     """
     signals = np.empty((len(dataset), int(mask.sum())), dtype=dtype)
     for index in range(len(dataset)):
-        signals[index] = np.asarray(dataset.dataobj[..., index])[mask]
+        signals[index] = np.asarray(dataset.dataobj[index])[mask]
     return signals
 
 
