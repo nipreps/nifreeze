@@ -68,11 +68,12 @@ jobs:
     - name: Benchmark both commits
       run: |
         asv machine --yes --config "$ASV_CONFIG" --machine "$ASV_MACHINE"
-        printf '%s\n' "$TARGET" "$BASE" > commits.txt
+        # ASV reads the file relative to the directory of its configuration
+        printf '%s\n' "$TARGET" "$BASE" > "$RUNNER_TEMP/commits.txt"
         # Both commits run in this job, alternating rounds (ABBA). The report
         # below decides what fails the job, including benchmarks that crash.
         asv run --config "$ASV_CONFIG" --machine "$ASV_MACHINE" --show-stderr \
-          --interleave-rounds --record-samples "HASHFILE:commits.txt" \
+          --interleave-rounds --record-samples "HASHFILE:$RUNNER_TEMP/commits.txt" \
           || echo "::warning::asv run exited with status $?"
 
     - name: Report
