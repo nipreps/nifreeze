@@ -271,6 +271,8 @@ def test_estimator_start_and_end_index(request, monkeypatch):
     assert recorded_indices == [2, 3, 4]
 
 
+# The random DWI volumes are 2x2x2, too small to estimate a clipping window
+@pytest.mark.filterwarnings("ignore:Registering volume .* without clipping:UserWarning")
 @pytest.mark.parametrize(
     "strategy, iterator_func, modality",
     [
