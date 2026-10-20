@@ -39,6 +39,7 @@ from nibabel.arrayproxy import ArrayProxy
 from nibabel.eulerangles import euler2mat
 from nipype.interfaces.ants.registration import Registration
 from nipype.interfaces.base import Undefined
+from nitransforms.resampling import apply
 
 from nifreeze.data.filtering import robust_window
 from nifreeze.registration import ants
@@ -207,6 +208,36 @@ def test_prepare_registration_data_clip_sample(tmp_path):
     assert np.array_equal(load_api(str(predicted_path), nb.Nifti1Image).get_fdata(), predicted)
     written = load_api(str(sample_path), nb.Nifti1Image).get_fdata()
     assert np.allclose([written.min(), written.max()], [100.0, 900.0])
+
+
+def test_write_aligned(tmp_path):
+    """The aligned trace shows the moving image where resampling would put it."""
+    affine = from_matvec(np.diag([2.0, 2.0, 2.5]), [-20.0, -22.0, -18.0])
+    grid = np.indices((20, 22, 16)).astype("float32")
+    blob = 1000.0 * np.exp(-((grid[0] - 9) ** 2 + (grid[1] - 12) ** 2 + (grid[2] - 7) ** 2) / 18)
+    fixed_path = tmp_path / "fixed.nii"
+    moving_path = tmp_path / "moving.nii"
+    ants._to_nifti(blob, affine, fixed_path)
+    # The 12-bit encoding ANTs receives
+    ants._to_nifti(blob, affine, moving_path, window=(0.0, 1000.0))
+    # Fixed-to-moving transform in world coordinates, as `_run_registration` returns it
+    matrix = from_matvec(euler2mat(0.05, -0.03, 0.08), [1.5, -2.0, 0.8])
+    aligned_path = tmp_path / "aligned.nii"
+
+    ants._write_aligned(moving_path, matrix, aligned_path)
+
+    moving = load_api(str(moving_path), nb.Nifti1Image)
+    aligned = load_api(str(aligned_path), nb.Nifti1Image)
+    assert isinstance(moving.dataobj, ArrayProxy)
+    assert isinstance(aligned.dataobj, ArrayProxy)
+    # The data are copied as they are, scaling included
+    assert np.array_equal(aligned.dataobj.get_unscaled(), moving.dataobj.get_unscaled())
+    assert np.array_equal(aligned.get_fdata(), moving.get_fdata())
+    assert np.allclose(aligned.affine, np.linalg.inv(matrix) @ moving.affine)
+    # Seen on the fixed grid, the trace matches the moving image resampled through the transform
+    resampled = apply(nt.linear.Affine(matrix), moving_path, reference=fixed_path)
+    viewed = apply(nt.linear.Affine(np.eye(4)), aligned_path, reference=fixed_path)
+    assert np.allclose(np.asanyarray(viewed.dataobj), np.asanyarray(resampled.dataobj), atol=1e-3)
 
 
 def test_generate_command_malformed_settings(tmp_path, monkeypatch, random_nifti_file, json_file):

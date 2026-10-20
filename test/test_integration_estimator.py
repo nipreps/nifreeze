@@ -24,6 +24,7 @@
 import re
 from typing import Union
 
+import nibabel as nb
 import numpy as np
 import pytest
 
@@ -35,6 +36,7 @@ from nifreeze.data.pet.utils import compute_uptake_statistic
 from nifreeze.estimator import Estimator
 from nifreeze.model.base import BaseModel
 from nifreeze.utils import iterators
+from nifreeze.utils.ndimage import load_api
 
 DATAOBJ_SIZE = (7, 5, 5, 5)
 
@@ -213,6 +215,40 @@ def test_estimator_clip_windows_cached(request, monkeypatch):
     assert len(estimated) == n
     assert [index for index, _ in received] == list(range(n)) * 2
     assert received[:n] == received[n:]
+
+
+def test_estimator_debug_dir(request, monkeypatch, tmp_path):
+    """With ``debug_dir``, each pass keeps its inputs and an aligned trace per volume."""
+    dataset = DummyDataset(rng=request.node.rng)
+    shift = np.eye(4)
+    shift[:3, 3] = [1.0, -2.0, 0.5]
+
+    class DummyXForm:
+        matrix = shift
+
+    workdirs = set()
+
+    def fake_registration(fixed_path, moving_path, vol_idx, dirname, **kwargs):
+        workdirs.add(dirname)
+        return DummyXForm()
+
+    monkeypatch.setattr(nifreeze.estimator, "_run_registration", fake_registration)
+    # A relative debug_dir must reach the registration as an absolute path,
+    # because nipype runs ANTs from within the working directory
+    monkeypatch.chdir(tmp_path)
+
+    first = Estimator(DummyInsiderModel(dataset=dataset), strategy="linear")
+    Estimator(DummyInsiderModel(dataset=dataset), strategy="linear", prev=first).run(
+        dataset, clip="none", debug_dir="debug"
+    )
+
+    pass_dirs = [tmp_path / "debug" / f"{n:02d}-dummyinsidermodel" for n in range(2)]
+    assert workdirs == set(pass_dirs)
+    for pass_dir in pass_dirs:
+        for i in range(len(dataset)):
+            sample = load_api(pass_dir / f"sample_{i:05d}.nii", nb.Nifti1Image)
+            aligned = load_api(pass_dir / f"aligned_{i:05d}.nii", nb.Nifti1Image)
+            assert np.allclose(aligned.affine, np.linalg.inv(shift) @ sample.affine)
 
 
 def test_estimator_clip_degenerate_window(request, monkeypatch):
