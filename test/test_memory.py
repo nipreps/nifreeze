@@ -70,6 +70,28 @@ def test_from_filename_peak_rss(peak_rss, tmp_path):
     )
 
 
+def test_from_filename_legacy_peak_rss(peak_rss, tmp_path):
+    """Converting a legacy (volumes-last) file must not materialize the series."""
+    h5 = tmp_path / "legacy.h5"
+    rng = np.random.default_rng(1234)
+    with h5py.File(h5, "w") as out_file:
+        out_file.attrs["Format"] = "NFDH5"
+        out_file.attrs["Version"] = np.uint16(1)
+        root = out_file.create_group("/0")
+        root.create_dataset("dataobj", data=rng.random(_SHAPE, dtype=np.float32))
+        root.create_dataset("affine", data=np.eye(4))
+
+    def _load_and_index(p):
+        ds: BaseDataset[Any] = BaseDataset.from_filename(p)
+        _ = np.asarray(ds[len(ds) // 2][0]).sum()
+
+    peak_mb = peak_rss(_load_and_index, h5)
+    assert peak_mb < 0.4 * _FULL_MB, (
+        f"legacy from_filename peaked at {peak_mb:.1f} MB for a {_FULL_MB:.1f} MB series "
+        "(expected a bounded-memory conversion)"
+    )
+
+
 def test_from_filename_returns_memmap(tmp_path):
     """The loaded ``dataobj`` is a memory-mapped ndarray subclass."""
     h5 = _write_dataset(tmp_path / "big.h5")

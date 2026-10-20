@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import os
+import shutil
 import sys
+import weakref
 from pathlib import Path
 from tempfile import mkdtemp
 from typing import Literal
@@ -17,6 +20,9 @@ _NATIVE_BYTEORDER = "<" if sys.byteorder == "little" else ">"
 #: axis on disk, so a single volume is a contiguous block that memory-maps locally).
 #: Legacy files store the last axis as volumes and carry no such attribute.
 VOLUME_AXIS_ATTR = "volume_axis"
+
+CONVERSION_SLAB_BYTES = 2**20
+"""Bytes read per step when converting a legacy ``dataobj`` (at least one x-plane)."""
 
 
 def _is_directly_mappable(dset: h5py.Dataset) -> bool:
@@ -61,6 +67,69 @@ def save_dataobj_volume_major(
         dset[i] = dataobj[..., i]
 
 
+class _VolumeCache:
+    """A volume-major ``(N, X, Y, Z)`` ``.npy`` file filled through file I/O.
+
+    Writing through ``write`` instead of the memory map keeps the resident set
+    to the chunk being written: dirty pages of a mapping count toward the
+    process's RSS until the kernel writes them back.
+    """
+
+    def __init__(
+        self,
+        shape: tuple[int, ...],
+        dtype: np.dtype,
+        name: str = "dataobj",
+        cache_dir: Path | str | None = None,
+    ):
+        self.owned_dir = None
+        if cache_dir is None:
+            cache_dir = self.owned_dir = Path(mkdtemp(prefix="nifreeze-"))
+        cache_dir = Path(cache_dir)
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        self.path = cache_dir / f"{name.strip('/').replace('/', '_')}.npy"
+        self.shape = tuple(shape)
+        self.dtype = np.dtype(dtype)
+        # Write the header and size the file without touching any data page
+        header = np.lib.format.open_memmap(
+            self.path, mode="w+", dtype=self.dtype, shape=self.shape
+        )
+        self.offset = header.offset
+        del header
+        self._file = open(self.path, "r+b")
+
+    def __enter__(self) -> _VolumeCache:
+        return self
+
+    def __exit__(self, exc_type, *_) -> None:
+        # On success the file stays for ``open_memmap``; on failure nothing is left.
+        if exc_type is not None:
+            self._file.close()
+            _remove_cache(self.path, self.owned_dir, os.getpid())
+
+    def write(self, start: tuple[int, ...], values: np.ndarray) -> None:
+        """Write ``values``, which must be C-contiguous in the cache, at index ``start``."""
+        position = int(np.ravel_multi_index(start, self.shape))
+        self._file.seek(self.offset + position * self.dtype.itemsize)
+        self._file.write(np.ascontiguousarray(values, dtype=self.dtype).data)
+
+    def open_memmap(self) -> np.memmap:
+        """Close the writer and map the cache; the file is removed with the map."""
+        self._file.close()
+        mm = np.lib.format.open_memmap(self.path, mode="r+")
+        weakref.finalize(mm, _remove_cache, self.path, self.owned_dir, os.getpid())
+        return mm
+
+
+def _remove_cache(path: Path, owned_dir: Path | None, pid: int) -> None:
+    # A forked child inherits the finalizer: only the creating process cleans up.
+    if os.getpid() != pid:
+        return
+    path.unlink(missing_ok=True)
+    if owned_dir is not None:
+        shutil.rmtree(owned_dir, ignore_errors=True)
+
+
 def open_dataobj_memmap(
     filename: Path | str,
     key: str = "/0/dataobj",
@@ -75,13 +144,19 @@ def open_dataobj_memmap(
     - **volume-major** (``VOLUME_AXIS_ATTR == 0``, written by
       :func:`save_dataobj_volume_major`): directly mapped zero-copy when
       contiguous/uncompressed/native-endian, then transposed to ``(X, Y, Z, N)``
-      — each volume is a contiguous block.
-    - **legacy** ``(X, Y, Z, N)`` (no attribute): streamed once into a
-      Fortran-ordered ``.npy`` cache so that volumes become contiguous. This has
-      a one-time O(N) cost; new files never take this path.
+      — each volume is a contiguous block. Compressed or chunked datasets are
+      decompressed one volume at a time into a temporary cache.
+    - **legacy** ``(X, Y, Z, N)`` (no attribute): converted into a volume-major
+      temporary cache in a single sequential pass over the file, reading slabs of
+      at most :data:`CONVERSION_SLAB_BYTES`. Re-save the dataset with
+      ``to_filename`` to skip this conversion on later loads.
 
-    ``mode="c"`` (copy-on-write) is the default: reads are lazy and shared with
-    the file, while writes fault private pages and never mutate the source.
+    Temporary caches are deleted when the last array referencing them is
+    released (or at interpreter exit).
+
+    ``mode`` applies to the direct mapping: ``"c"`` (copy-on-write, the default)
+    reads lazily from the file, while writes fault private pages and never mutate
+    the source. Caches are always opened ``"r+"``.
     """
     filename = Path(filename)
     with h5py.File(filename, "r") as in_file:
@@ -89,35 +164,29 @@ def open_dataobj_memmap(
         shape = dset.shape
         dtype = dset.dtype
         volume_major = int(dset.attrs.get(VOLUME_AXIS_ATTR, -1)) == 0
-        mappable = _is_directly_mappable(dset)
+        mappable = volume_major and _is_directly_mappable(dset)
         offset = dset.id.get_offset() if mappable else None
 
-    if volume_major:
-        if mappable:
-            assert offset is not None  # guaranteed by mappable
-            mm = np.memmap(filename, dtype=dtype, mode=mode, offset=offset, shape=shape, order="C")
-            return np.moveaxis(mm, 0, -1)
-        # Compressed/chunked volume-major: stream (N, X, Y, Z) then transpose.
-        cache = _cache_npy(cache_dir, key)
-        mm = np.lib.format.open_memmap(cache, mode="w+", dtype=dtype, shape=shape)
-        with h5py.File(filename, "r") as in_file:
-            dset = in_file[key]
-            for i in range(shape[0]):
-                dset.read_direct(mm, np.s_[i], np.s_[i])  # C-contiguous slice
-        mm.flush()
-        return np.moveaxis(mm, 0, -1)
+        if not mappable:
+            if volume_major:
+                with _VolumeCache(shape, dtype, key, cache_dir) as cache:
+                    for i in range(shape[0]):
+                        cache.write((i, 0, 0, 0), dset[i])
+            else:
+                # Legacy (X, Y, Z, N): an x-slab is contiguous in the file and
+                # holds a contiguous run of every output volume.
+                with _VolumeCache((shape[-1], *shape[:-1]), dtype, key, cache_dir) as cache:
+                    plane_bytes = int(np.prod(shape[1:])) * dtype.itemsize
+                    step = max(1, CONVERSION_SLAB_BYTES // plane_bytes)
+                    for x0 in range(0, shape[0], step):
+                        slab = dset[x0 : x0 + step]
+                        for i in range(shape[-1]):
+                            cache.write((i, x0, 0, 0), slab[..., i])
+            return np.moveaxis(cache.open_memmap(), 0, -1)
 
-    # Legacy (X, Y, Z, N): stream into a Fortran-ordered cache for volume locality.
-    # The Fortran-ordered ``[..., i]`` slice is not C-contiguous, so plain
-    # assignment (not ``read_direct``) is used; each step reads one volume.
-    cache = _cache_npy(cache_dir, key)
-    mm = np.lib.format.open_memmap(cache, mode="w+", dtype=dtype, shape=shape, fortran_order=True)
-    with h5py.File(filename, "r") as in_file:
-        dset = in_file[key]
-        for i in range(shape[-1]):
-            mm[..., i] = dset[..., i]
-    mm.flush()
-    return mm
+    assert offset is not None  # guaranteed by mappable
+    mm = np.memmap(filename, dtype=dtype, mode=mode, offset=offset, shape=shape, order="C")
+    return np.moveaxis(mm, 0, -1)
 
 
 def stream_select_last_axis(
@@ -125,30 +194,18 @@ def stream_select_last_axis(
     keep_mask: np.ndarray,
     cache_dir: Path | str | None = None,
     name: str = "dataobj",
-) -> np.memmap:
+) -> np.ndarray:
     """Select volumes along the last axis into a disk-backed memmap.
 
-    Copies ``src[..., keep_mask]`` one volume at a time into a Fortran-ordered
-    ``.npy`` memmap (per-volume contiguous). The result is disk-backed, so once
-    the source is released the selection holds no resident RAM — used to drop
-    b=0 volumes from a DWI without retaining a full in-memory copy.
+    Copies ``src[..., keep_mask]`` one volume at a time into a volume-major
+    temporary cache, which is deleted when the result is released. Used to drop
+    b=0 volumes from a memory-mapped DWI without materializing it.
     """
     keep = np.flatnonzero(keep_mask)
-    out_shape = (*src.shape[:-1], keep.size)
-    cache = _cache_npy(cache_dir, name)
-    mm = np.lib.format.open_memmap(
-        cache, mode="w+", dtype=src.dtype, shape=out_shape, fortran_order=True
-    )
-    for j, i in enumerate(keep):
-        mm[..., j] = src[..., i]
-    mm.flush()
-    return mm
-
-
-def _cache_npy(cache_dir: Path | str | None, key: str) -> Path:
-    cache_dir = Path(cache_dir) if cache_dir is not None else Path(mkdtemp())
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    return cache_dir / f"{key.strip('/').replace('/', '_')}.npy"
+    with _VolumeCache((keep.size, *src.shape[:-1]), src.dtype, name, cache_dir) as cache:
+        for j, i in enumerate(keep):
+            cache.write((j, 0, 0, 0), src[..., i])
+    return np.moveaxis(cache.open_memmap(), 0, -1)
 
 
 def save_nfdh5_fields(
