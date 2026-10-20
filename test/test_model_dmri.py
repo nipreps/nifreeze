@@ -224,7 +224,7 @@ def setup_single_shell_fit_predict_data(single_shell_test_data, ignore_bzero, us
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
         dataset = DWI(
-            dataobj=dwi_dataobj,
+            dataobj=np.moveaxis(dwi_dataobj, -1, 0),
             affine=np.eye(4),
             brainmask=brainmask_dataobj,
             gradients=gradients,
@@ -314,7 +314,7 @@ def setup_multi_shell_fit_predict_data(multi_shell_test_data, ignore_bzero, use_
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
         dataset = DWI(
-            dataobj=dwi_dataobj,
+            dataobj=np.moveaxis(dwi_dataobj, -1, 0),
             affine=np.eye(4),
             brainmask=brainmask_dataobj,
             gradients=gradients,
@@ -394,7 +394,7 @@ def test_compute_S0(request, use_none_bzero, ignore_bzero, default_percentile):
         bzero = np.ones(shape) * 10
 
     obtained_S0 = model.dmri._compute_S0(
-        data,
+        data[np.newaxis],
         data_mask,
         bzero=bzero,
         ignore_bzero=ignore_bzero,
@@ -485,12 +485,12 @@ def test_base_model_exceptions():
 
     class DummyDWI(DWI):
         def __init__(
-            self, bzero=True, gradients=True, data_shape=(10, 10, 10, 35), brainmask=None
+            self, bzero=True, gradients=True, data_shape=(35, 10, 10, 10), brainmask=None
         ):
             if bzero:
-                self.bzero = np.ones(data_shape[:3])
+                self.bzero = np.ones(data_shape[1:])
             if gradients:
-                self.gradients = np.ones((data_shape[-1], 4))
+                self.gradients = np.ones((data_shape[0], 4))
             self.dataobj = np.ones(data_shape)
             self.brainmask = brainmask
 
@@ -508,7 +508,7 @@ def test_base_model_exceptions():
         model.dmri.BaseDWIModel(dwi)
 
     min_dir = DTI_MIN_ORIENTATIONS - 1
-    dwi = DummyDWI(data_shape=(10, 10, 10, min_dir))
+    dwi = DummyDWI(data_shape=(min_dir, 10, 10, 10))
     with pytest.raises(
         ValueError, match=re.escape(model.dmri.DWI_SIZE_ERROR_MSG.format(directions=min_dir))
     ):
@@ -517,11 +517,11 @@ def test_base_model_exceptions():
 
 def test_base_max_b_attribute():
     class DummyDWI(DWI):
-        def __init__(self, data_shape=(10, 10, 10, 35)):
-            self.bzero = np.ones(data_shape[:3])
-            self.gradients = np.ones((data_shape[-1], 4))
+        def __init__(self, data_shape=(35, 10, 10, 10)):
+            self.bzero = np.ones(data_shape[1:])
+            self.gradients = np.ones((data_shape[0], 4))
             self.dataobj = np.ones(data_shape)
-            self.brainmask = np.ones(data_shape[:-1]).astype(bool)
+            self.brainmask = np.ones(data_shape[1:]).astype(bool)
 
         def __len__(self):
             return self.gradients.shape[0]
@@ -537,11 +537,11 @@ def test_average_model():
     """Check the implementation of the average DW model."""
 
     gtab = B_MATRIX.copy()
-    size = (10, 10, 10, gtab.shape[0])
+    size = (gtab.shape[0], 10, 10, 10)
     data = np.ones(size, dtype=float)
-    mask = np.ones(size[:3], dtype=bool)
+    mask = np.ones(size[1:], dtype=bool)
 
-    data *= gtab[:, -1]
+    data *= gtab[:, -1, np.newaxis, np.newaxis, np.newaxis]
     dataset = DWI(dataobj=data, affine=np.eye(4), gradients=gtab, brainmask=mask)
 
     avgmodel_mean = model.AverageDWIModel(dataset, stat="mean")
@@ -585,7 +585,7 @@ def test_dti_prediction_shape(setup_random_dwi_data, index):
     predicted = dtimodel.fit_predict(index)
     if index is not None:
         assert predicted is not None
-        assert predicted.shape == dwi_dataobj.shape[:-1]
+        assert predicted.shape == dwi_dataobj.shape[1:]
     else:
         assert predicted is None
 
@@ -663,8 +663,8 @@ def test_dti_model_fit(single_shell_test_data, index, ignore_bzero, use_mask):
 
     dtimodel_nf._fit(index)
 
-    # Fit using the DIPY DTI model directly
-    data = dataset.dataobj
+    # Fit using the DIPY DTI model directly (DIPY takes volumes last)
+    data = np.moveaxis(dataset.dataobj, 0, -1)
 
     idxmask = np.ones(data.shape[-1], dtype=bool)
     if index is not None:
@@ -749,8 +749,8 @@ def test_dti_model_predict(single_shell_test_data, index, ignore_bzero, use_mask
 
     predicted_nf = dtimodel_nf.fit_predict(index)
 
-    # Fit & predict using the DIPY DTI model directly
-    data = dataset.dataobj
+    # Fit & predict using the DIPY DTI model directly (DIPY takes volumes last)
+    data = np.moveaxis(dataset.dataobj, 0, -1)
 
     idxmask = np.ones(data.shape[-1], dtype=bool)
     if index is not None:
@@ -837,7 +837,7 @@ def test_dki_prediction_shape(setup_random_dwi_data, index):
     predicted = dkimodel.fit_predict(index)
     if index is not None:
         assert predicted is not None
-        assert predicted.shape == dwi_dataobj.shape[:-1]
+        assert predicted.shape == dwi_dataobj.shape[1:]
     else:
         assert predicted is None
 
@@ -884,11 +884,12 @@ def test_dki_model_fit(multi_shell_test_data, index, ignore_bzero, use_mask):
     dkimodel_nf._fit(index)
 
     # Fit using the DIPY DKI model directly
-    idxmask = np.ones(dataset.dataobj.shape[-1], dtype=bool)
+    idxmask = np.ones(len(dataset), dtype=bool)
     if index is not None:
         idxmask[index] = False
 
-    data = dataset.dataobj
+    # DIPY takes volumes last
+    data = np.moveaxis(dataset.dataobj, 0, -1)
 
     b0_bval = np.array([])
     b0_bvec = np.empty((0, 3))
@@ -898,7 +899,7 @@ def test_dki_model_fit(multi_shell_test_data, index, ignore_bzero, use_mask):
         assert dataset.bzero is not None
         b0_bval = np.array([0])
         b0_bvec = np.zeros((1, 3))
-        data = np.concatenate([dataset.dataobj, dataset.bzero[..., np.newaxis]], axis=-1)
+        data = np.concatenate([data, dataset.bzero[..., np.newaxis]], axis=-1)
 
     # Regenerate gtab with the b0 gradient (if added) at the end
     _bvals = np.concatenate(
@@ -963,11 +964,12 @@ def test_dki_model_predict(multi_shell_test_data, index, ignore_bzero, use_mask)
     predicted_nf = dkimodel_nf.fit_predict(index)
 
     # Fit & predict using the DIPY DKI model directly
-    idxmask = np.ones(dataset.dataobj.shape[-1], dtype=bool)
+    idxmask = np.ones(len(dataset), dtype=bool)
     if index is not None:
         idxmask[index] = False
 
-    data = dataset.dataobj
+    # DIPY takes volumes last
+    data = np.moveaxis(dataset.dataobj, 0, -1)
 
     b0_bval = np.array([])
     b0_bvec = np.empty((0, 3))
@@ -977,7 +979,7 @@ def test_dki_model_predict(multi_shell_test_data, index, ignore_bzero, use_mask)
         assert dataset.bzero is not None
         b0_bval = np.array([0])
         b0_bvec = np.zeros((1, 3))
-        data = np.concatenate([dataset.dataobj, dataset.bzero[..., np.newaxis]], axis=-1)
+        data = np.concatenate([data, dataset.bzero[..., np.newaxis]], axis=-1)
 
     # Regenerate gtab with the b0 gradient (if added) at the end
     _bvals = np.concatenate(
@@ -1039,7 +1041,7 @@ def _build_dki_dataset(half_size=10):
     bzero = dwi_data[..., bvals < 50].mean(axis=-1)
 
     dataset = DWI(
-        dataobj=dwi_data,
+        dataobj=np.moveaxis(dwi_data, -1, 0),
         affine=img.affine,
         brainmask=brain_mask,
         gradients=gradients,
@@ -1316,7 +1318,7 @@ def test_dki_single_fit_locked_reuse(multi_shell_test_data):
         predicted = dkimodel.fit_predict(4, n_jobs=2)
 
     assert predicted is not None
-    assert predicted.shape == dataset.dataobj.shape[:-1]
+    assert predicted.shape == dataset.dataobj.shape[1:]
     assert np.any(predicted != 0)
 
 
@@ -1514,7 +1516,7 @@ def test_gp_multishell_noise_prevents_collapse():
         dataset, _ = _build_dki_dataset(half_size=10)
 
     X = np.asarray(dataset.gradients, dtype=float)
-    signals = np.asarray(dataset.dataobj)[dataset.brainmask].astype(float)
+    signals = np.asarray(dataset.dataobj)[:, dataset.brainmask].T.astype(float)
     rng = np.random.default_rng(1234)
     signals = signals[rng.choice(len(signals), size=300, replace=False)]
 

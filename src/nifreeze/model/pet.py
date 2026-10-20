@@ -249,16 +249,16 @@ class BSplinePETModel(BasePETModel):
         # A.shape = (T, K - 4); t= n. timepoints, K= n. knots (with padding)
         A = BSpline.design_matrix(x, t=self._t, k=self._order, extrapolate=False)
 
-        # Get data as 2D array (voxels x timepoints)
+        # Get data as 2D array (timepoints x voxels)
         data = (
-            self._dataset.dataobj.reshape((-1, len(self._dataset)))
+            self._dataset.dataobj.reshape((len(self._dataset), -1))
             if self._dataset.brainmask is None
-            else self._dataset.dataobj[self._dataset.brainmask, :]
+            else self._dataset.dataobj[:, self._dataset.brainmask]
         )
 
         X = la.lstsq(
             A.toarray().astype("float64"),
-            data[:, x_mask].T.astype("float64"),
+            data[x_mask].astype("float64"),
             cond=None,
             lapack_driver="gelsd",
         )
@@ -278,11 +278,11 @@ class BSplinePETModel(BasePETModel):
         predicted = np.squeeze(A @ coefficients.T).T
 
         brainmask = self._dataset.brainmask
-        datashape = self._dataset.dataobj.shape[:3]
+        datashape = self._dataset.shape3d
 
         if brainmask is None:
             return predicted.reshape(datashape)
 
-        retval = np.squeeze(np.zeros_like(self._dataset.dataobj[..., interp_mask]))
+        retval = np.zeros(datashape, dtype=self._dataset.dataobj.dtype)
         retval[brainmask] = predicted
         return retval

@@ -35,7 +35,7 @@ from nifreeze.estimator import Estimator
 from nifreeze.model.base import BaseModel
 from nifreeze.utils import iterators
 
-DATAOBJ_SIZE = (5, 5, 5, 7)
+DATAOBJ_SIZE = (7, 5, 5, 5)
 
 
 class DummyInsiderModel(BaseModel):
@@ -44,21 +44,21 @@ class DummyInsiderModel(BaseModel):
 
     def fit_predict(self, index: int | None = None, **kwargs):
         # Return the indexed volume
-        return self._dataset.dataobj[..., index]
+        return self._dataset.dataobj[index]
 
 
 class DummyDataset(BaseDataset):
     def __init__(self, rng):
         self.dataobj = rng.uniform(0.0, 1.0, DATAOBJ_SIZE)  # np.ones(DATAOBJ_SIZE)
-        self.brainmask = rng.choice([True, False], size=self.dataobj.shape[:-1]).astype(bool)
+        self.brainmask = rng.choice([True, False], size=self.dataobj.shape[1:]).astype(bool)
         self.affine = np.eye(4)
 
     def __len__(self):
-        return self.dataobj.shape[-1]
+        return self.dataobj.shape[0]
 
     def __getitem__(self, idx):
         # Return the indexed volume and a dummy value
-        return self.dataobj[..., idx], None
+        return self.dataobj[idx], None
 
     def set_transform(self, idx, matrix):
         pass
@@ -73,10 +73,10 @@ class DummyDWIDataset(BaseDataset):
         self.gradients = gradients
 
     def __len__(self):
-        return self.dataobj.shape[-1]
+        return self.dataobj.shape[0]
 
     def __getitem__(self, idx):
-        return self.dataobj[..., idx], None, self.gradients[idx, ...]
+        return self.dataobj[idx], None, self.gradients[idx, ...]
 
 
 class DummyPETDataset(BaseDataset):
@@ -88,10 +88,10 @@ class DummyPETDataset(BaseDataset):
         self.total_duration = total_duration
 
     def __len__(self):
-        return self.dataobj.shape[-1]
+        return self.dataobj.shape[0]
 
     def __getitem__(self, idx):
-        return self.dataobj[..., idx], None, self.midframe[idx]
+        return self.dataobj[idx], None, self.midframe[idx]
 
 
 def test_estimator_invalid_start_index(request):
@@ -214,7 +214,7 @@ def test_estimator_iterator_index_match(
         dwi_dataobj, affine, brainmask_dataobj, gradients, b0_thres = setup_random_dwi_data
 
         b0s_mask = gradients[:, -1] <= b0_thres
-        b0_dataobj = dwi_dataobj[..., b0s_mask].squeeze()
+        b0_dataobj = dwi_dataobj[b0s_mask].squeeze()
 
         dataset = DummyDWIDataset(dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients)
         bvals = gradients[:, -1][gradients[:, -1] > DEFAULT_LOWB_THRESHOLD]

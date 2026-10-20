@@ -30,8 +30,13 @@ import numpy as np
 from nibabel.spatialimages import SpatialImage
 
 from nifreeze.data.base import to_nifti as _base_to_nifti
-from nifreeze.data.dmri.base import DWI
-from nifreeze.data.dmri.utils import transform_fsl_bvec
+from nifreeze.data.dmri.base import DWI, select_b0
+from nifreeze.data.dmri.utils import (
+    GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR,
+    format_gradients,
+    transform_fsl_bvec,
+)
+from nifreeze.data.utils import to_time_first
 from nifreeze.utils.ndimage import get_data, load_api
 
 GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG = """\
@@ -92,9 +97,8 @@ def from_nii(
     """
     filename = Path(filename)
 
-    # 1) Load a NIfTI
+    # 1) Open a NIfTI; its data are read below
     img = load_api(filename, SpatialImage)
-    fulldata = get_data(img)
 
     # 2) Determine the gradients array from either gradients_file or bvec/bval
     if gradients_file:
@@ -123,11 +127,27 @@ def from_nii(
         mask_img = load_api(brainmask_file, SpatialImage)
         brainmask_data = np.asanyarray(mask_img.dataobj, dtype=bool)
 
-    # 5) Create and return the DWI instance.
+    # 5) NIfTI stores volumes last; datasets store them first. Leave the b=0
+    # volumes out while converting, so the series is copied once: ``DWI`` would
+    # copy it again to drop them.
+    data = get_data(img)
+    gradients = format_gradients(grad)  # oriented and normalized as ``DWI`` does
+    assert gradients is not None  # format_gradients raises on None
+    if data.shape[-1] != gradients.shape[0]:
+        raise ValueError(
+            GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR.format(
+                n_volumes=data.shape[-1], n_gradients=gradients.shape[0]
+            )
+        )
+    b0_mask, b0_data = select_b0(gradients, b0_data, lambda mask: to_time_first(data, keep=mask))
+    fulldata = to_time_first(data, keep=~b0_mask)
+    img.uncache()  # drop nibabel's cached copy of the volumes-last array
+
+    # 6) Create and return the DWI instance.
     return DWI(
         dataobj=fulldata,
         affine=img.affine,
-        gradients=grad,
+        gradients=gradients[~b0_mask],
         bzero=b0_data,
         brainmask=brainmask_data,
     )
@@ -205,8 +225,8 @@ def to_nifti(
                 stacklevel=2,
             )
     else:
-        data = np.concatenate((dwi.bzero[..., np.newaxis], dwi.dataobj), axis=-1)  # type: ignore
-        nii = nb.Nifti1Image(data, nii.affine, nii.header)
+        data = np.concatenate((dwi.bzero[np.newaxis], dwi.dataobj), axis=0)  # type: ignore
+        nii = nb.Nifti1Image(np.moveaxis(data, 0, -1), nii.affine, nii.header)
 
         if filename is not None:
             nii.to_filename(filename)

@@ -457,8 +457,13 @@ def test_gqimodel_forwards_model_kwargs():
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        dataset = DWI(dataobj=data.astype(np.float32), affine=np.eye(4), gradients=gradients)
-        index = dataset.dataobj.shape[-1] // 2
+        # DIPY returns the volumes last; datasets take them first
+        dataset = DWI(
+            dataobj=np.moveaxis(data, -1, 0).astype(np.float32),
+            affine=np.eye(4),
+            gradients=gradients,
+        )
+        index = len(dataset) // 2
 
         def predict(**kwargs):
             return model.dmri.GQIModel(dataset, **kwargs).fit_predict(index, n_jobs=1)
@@ -527,13 +532,13 @@ def test_gqi_lovo_prediction_stanford_hardi(method):
         warnings.filterwarnings(
             "ignore", message=DWI_B0_MULTIPLE_VOLUMES_WARN_MSG, category=UserWarning
         )
-        dataset = DWI(dataobj=dataobj, affine=img.affine, gradients=gradients)
+        dataset = DWI(dataobj=np.moveaxis(dataobj, -1, 0), affine=img.affine, gradients=gradients)
 
     # A simple intensity mask from the b=0 reference confines the comparison.
     assert dataset.bzero is not None
     brainmask = dataset.bzero > np.percentile(dataset.bzero, 60)
 
-    index = dataset.dataobj.shape[-1] // 2
+    index = len(dataset) // 2
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message=MASK_ABSENCE_WARN_MSG, category=UserWarning)
         predicted = model.dmri.GQIModel(
@@ -541,9 +546,9 @@ def test_gqi_lovo_prediction_stanford_hardi(method):
         ).fit_predict(index, n_jobs=1)
 
     assert predicted is not None
-    assert predicted.shape == dataset.dataobj.shape[:3]
+    assert predicted.shape == dataset.shape3d
     assert np.all(predicted >= 0)
 
-    truth = dataset.dataobj[..., index]
+    truth = dataset.dataobj[index]
     corr = np.corrcoef(truth[brainmask], predicted[brainmask])[0, 1]
     assert corr > 0.6, f"LOVO prediction poorly correlated with truth: {corr:.3f}"

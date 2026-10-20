@@ -87,7 +87,8 @@ def _identity_run_registration(*args, **kwargs):
 
 
 def _dwi_data_to_nifti(dwi_dataobj, affine, brainmask_dataobj, b0_dataobj):
-    dwi = nb.Nifti1Image(dwi_dataobj, affine)
+    # NIfTI stores the volumes last
+    dwi = nb.Nifti1Image(np.moveaxis(dwi_dataobj, 0, -1), affine)
     brainmask = nb.Nifti1Image(brainmask_dataobj, affine)
     b0 = nb.Nifti1Image(b0_dataobj, affine)
 
@@ -150,10 +151,10 @@ def _create_dmri_data_files(
 
     b0_mask = gradients[:, -1] <= b0_thres
     dwi, brainmask, b0 = _dwi_data_to_nifti(
-        dwi_dataobj[..., ~b0_mask],
+        dwi_dataobj[~b0_mask],
         affine,
         brainmask_dataobj.astype(np.uint8),
-        dwi_dataobj[..., b0_mask][..., 0],
+        dwi_dataobj[b0_mask][0],
     )
 
     (
@@ -237,7 +238,7 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path, p_error=20.0):
     masknii = nb.Nifti1Image(
         dwi_orig.brainmask.astype(np.uint8)  # type: ignore
         if has_mask
-        else np.ones(dwi_orig.dataobj.shape[:-1], dtype=np.uint8),
+        else np.ones(dwi_orig.shape3d, dtype=np.uint8),
         dwi_orig.affine,
         None,
     )

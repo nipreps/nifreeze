@@ -249,7 +249,7 @@ def test_load_ds000206_real():
     assert verify_scheme(dwi, SINGLE_SHELL) == SINGLE_SHELL
     assert len(dwi) >= 6
     assert dwi.brainmask is not None
-    assert dwi.brainmask.shape == dwi.dataobj.shape[:3]
+    assert dwi.brainmask.shape == dwi.shape3d
 
     # The exact subject/run is resolvable for the gallery page.
     paths = source_relpaths("ds000206")
