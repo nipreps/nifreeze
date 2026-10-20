@@ -30,11 +30,15 @@ involved — the pages are plain rST and the docs build only has to copy images.
 
 from __future__ import annotations
 
+import json
 import shutil
 from pathlib import Path
 
 from gallery.datasets import DATASETS
 from gallery.manifest import STATUS_RAN, GalleryManifest
+
+PROVENANCE_FILE = "provenance.json"
+"""Record of the ``gallery`` workflow run the fetched pages come from."""
 
 
 def _heading(text: str, char: str = "=", overline: bool = False) -> str:
@@ -62,11 +66,48 @@ def placeholder_page_rst(name: str) -> str:
     if spec is not None and spec.notes:
         parts.append(f".. note::\n\n   {spec.notes}\n")
     parts.append(
-        "The panels for this dataset have not been published yet. They are produced\n"
-        "by the ``gallery`` workflow, which fits each *(model × mode)* cell in its own\n"
-        "job and opens a pull request refreshing these pages.\n"
+        "The panels for this dataset have not been published yet, or this build did\n"
+        "not fetch them. They are produced by the ``gallery`` workflow, which fits each\n"
+        "*(model × mode)* cell in its own job, and ``tools/fetch_gallery.py`` downloads\n"
+        "the latest published pages.\n"
     )
     return "\n".join(parts) + "\n"
+
+
+def ensure_pages(pages_dir: Path, datasets: list[str]) -> list[str]:
+    """Make the gallery buildable from whatever pages ``pages_dir`` holds.
+
+    The pages are not tracked: the docs build downloads them (see
+    ``tools/fetch_gallery.py``). Every dataset in ``datasets`` without a page gets
+    a placeholder, so the toctree never references a missing document; fetched
+    pages are never overwritten.
+
+    Returns
+    -------
+    :obj:`list` of :obj:`str`
+        Pages present for datasets not in ``datasets`` (e.g., fetched from a run
+        of another branch), which the build should exclude.
+
+    """
+    pages_dir = Path(pages_dir)
+    pages_dir.mkdir(parents=True, exist_ok=True)
+    for name in datasets:
+        page = pages_dir / f"{name}.rst"
+        if not page.exists():
+            page.write_text(placeholder_page_rst(name))
+    return sorted(p.stem for p in pages_dir.glob("*.rst") if p.stem not in datasets)
+
+
+def provenance_rst(pages_dir: Path) -> str:
+    """Describe, as one rST sentence, which ``gallery`` run the pages come from."""
+    record = Path(pages_dir) / PROVENANCE_FILE
+    if not record.is_file():
+        return "This build did not fetch the published pages, so each dataset shows a placeholder."
+    run = json.loads(record.read_text())
+    return (
+        f"These pages were published by run `{run['run_id']} <{run['url']}>`__ of the "
+        f"``gallery`` workflow, at commit ``{run['head_sha'][:8]}`` ({run['created_at'][:10]})."
+    )
 
 
 def dataset_page_rst(manifest: GalleryManifest, name: str) -> str:

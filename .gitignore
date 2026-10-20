@@ -68,6 +68,8 @@ instance/
 # Sphinx documentation
 docs/_build/
 docs/api/
+# Prediction gallery pages, fetched by tools/fetch_gallery.py
+docs/gallery/
 
 # PyBuilder
 target/

@@ -9,6 +9,7 @@ http://www.sphinx-doc.org/en/master/config
 
 import os
 import sys
+from pathlib import Path
 
 from packaging.version import Version
 
@@ -115,6 +116,19 @@ exclude_patterns = [
     "notebooks/*.ipynb",
     ".ipynb_checkpoints",
 ]
+
+# The prediction gallery pages are not tracked: CI downloads those published by the
+# ``gallery`` workflow (``tools/fetch_gallery.py``). Datasets without a page get a
+# placeholder, and fetched pages of unregistered datasets are left out, so the
+# toctree in ``gallery.rst`` stays consistent either way.
+from gallery.datasets import DATASETS as GALLERY_DATASETS  # noqa: E402
+from gallery.pages import ensure_pages, provenance_rst  # noqa: E402
+
+GALLERY_DIR = Path(__file__).parent / "gallery"
+exclude_patterns += [
+    f"gallery/{name}.rst" for name in ensure_pages(GALLERY_DIR, [d.name for d in GALLERY_DATASETS])
+]
+rst_epilog = f".. |gallery_provenance| replace:: {provenance_rst(GALLERY_DIR)}\n"
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
