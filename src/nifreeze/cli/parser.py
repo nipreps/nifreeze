@@ -162,6 +162,18 @@ def _build_parser() -> ArgumentParser:
     )
 
     parser.add_argument("--write-hdf5", action="store_true", help=("Generate an HDF5 file also."))
+    parser.add_argument(
+        "--debug-dir",
+        action="store",
+        type=Path,
+        default=None,
+        help=(
+            "Keep the registration working files of each model in a folder of this "
+            "directory, with an 'aligned_<index>.nii' image per volume: the registered "
+            "volume with its affine corrected by the estimated motion (no resampling), "
+            "which a viewer shows on top of its target 'predicted_<index>.nii'."
+        ),
+    )
 
     g_dmri = parser.add_argument_group("Options for dMRI inputs")
     g_dmri.add_argument(
