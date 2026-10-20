@@ -51,6 +51,18 @@ Coverage
      - single-fit
      - ✓
      - 
+   * - ds004737
+     - DSI
+     - gqi-krr
+     - lovo
+     - ✓
+     - 
+   * - ds004737
+     - DSI
+     - gqi-krr
+     - single-fit
+     - ✓
+     - 
 
 average · lovo
 --------------
@@ -87,4 +99,22 @@ gqi · single-fit (canary)
 
 .. figure:: ds004737/gqi_single-fit_063.png
    :alt: gqi single-fit ds004737
+
+gqi-krr · lovo
+--------------
+
+.. figure:: ds004737/gqi-krr_lovo_031.png
+   :alt: gqi-krr lovo ds004737
+
+.. figure:: ds004737/gqi-krr_lovo_063.png
+   :alt: gqi-krr lovo ds004737
+
+gqi-krr · single-fit
+--------------------
+
+.. figure:: ds004737/gqi-krr_single-fit_031.png
+   :alt: gqi-krr single-fit ds004737
+
+.. figure:: ds004737/gqi-krr_single-fit_063.png
+   :alt: gqi-krr single-fit ds004737
 

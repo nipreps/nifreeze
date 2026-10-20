@@ -65,6 +65,18 @@ Coverage
      - 
    * - ds003138
      - multi-shell
+     - gp-loo-multishell
+     - lovo
+     - ✓
+     - 
+   * - ds003138
+     - multi-shell
+     - gp-loo-multishell
+     - single-fit
+     - ✓
+     - 
+   * - ds003138
+     - multi-shell
      - gp-multishell
      - lovo
      - ✓
@@ -84,6 +96,18 @@ Coverage
    * - ds003138
      - multi-shell
      - gqi
+     - single-fit
+     - ✓
+     - 
+   * - ds003138
+     - multi-shell
+     - gqi-krr
+     - lovo
+     - ✓
+     - 
+   * - ds003138
+     - multi-shell
+     - gqi-krr
      - single-fit
      - ✓
      - 
@@ -142,6 +166,24 @@ dti · single-fit
 .. figure:: ds003138/dti_single-fit_075.png
    :alt: dti single-fit ds003138
 
+gp-loo-multishell · lovo
+------------------------
+
+.. figure:: ds003138/gp-loo-multishell_lovo_038.png
+   :alt: gp-loo-multishell lovo ds003138
+
+.. figure:: ds003138/gp-loo-multishell_lovo_075.png
+   :alt: gp-loo-multishell lovo ds003138
+
+gp-loo-multishell · single-fit
+------------------------------
+
+.. figure:: ds003138/gp-loo-multishell_single-fit_038.png
+   :alt: gp-loo-multishell single-fit ds003138
+
+.. figure:: ds003138/gp-loo-multishell_single-fit_075.png
+   :alt: gp-loo-multishell single-fit ds003138
+
 gp-multishell · lovo
 --------------------
 
@@ -183,4 +225,22 @@ gqi · single-fit (canary)
 
 .. figure:: ds003138/gqi_single-fit_075.png
    :alt: gqi single-fit ds003138
+
+gqi-krr · lovo
+--------------
+
+.. figure:: ds003138/gqi-krr_lovo_038.png
+   :alt: gqi-krr lovo ds003138
+
+.. figure:: ds003138/gqi-krr_lovo_075.png
+   :alt: gqi-krr lovo ds003138
+
+gqi-krr · single-fit
+--------------------
+
+.. figure:: ds003138/gqi-krr_single-fit_038.png
+   :alt: gqi-krr single-fit ds003138
+
+.. figure:: ds003138/gqi-krr_single-fit_075.png
+   :alt: gqi-krr single-fit ds003138
 

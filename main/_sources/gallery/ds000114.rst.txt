@@ -53,6 +53,18 @@ Coverage
      - 
    * - ds000114
      - single-shell
+     - gp-loo-spherical
+     - lovo
+     - ✓
+     - 
+   * - ds000114
+     - single-shell
+     - gp-loo-spherical
+     - single-fit
+     - ✓
+     - 
+   * - ds000114
+     - single-shell
      - gp-spherical
      - lovo
      - ✓
@@ -72,6 +84,18 @@ Coverage
    * - ds000114
      - single-shell
      - gqi
+     - single-fit
+     - ✓
+     - 
+   * - ds000114
+     - single-shell
+     - gqi-krr
+     - lovo
+     - ✓
+     - 
+   * - ds000114
+     - single-shell
+     - gqi-krr
      - single-fit
      - ✓
      - 
@@ -111,6 +135,24 @@ dti · single-fit
 
 .. figure:: ds000114/dti_single-fit_042.png
    :alt: dti single-fit ds000114
+
+gp-loo-spherical · lovo
+-----------------------
+
+.. figure:: ds000114/gp-loo-spherical_lovo_021.png
+   :alt: gp-loo-spherical lovo ds000114
+
+.. figure:: ds000114/gp-loo-spherical_lovo_042.png
+   :alt: gp-loo-spherical lovo ds000114
+
+gp-loo-spherical · single-fit
+-----------------------------
+
+.. figure:: ds000114/gp-loo-spherical_single-fit_021.png
+   :alt: gp-loo-spherical single-fit ds000114
+
+.. figure:: ds000114/gp-loo-spherical_single-fit_042.png
+   :alt: gp-loo-spherical single-fit ds000114
 
 gp-spherical · lovo
 -------------------
@@ -153,4 +195,22 @@ gqi · single-fit (canary)
 
 .. figure:: ds000114/gqi_single-fit_042.png
    :alt: gqi single-fit ds000114
+
+gqi-krr · lovo
+--------------
+
+.. figure:: ds000114/gqi-krr_lovo_021.png
+   :alt: gqi-krr lovo ds000114
+
+.. figure:: ds000114/gqi-krr_lovo_042.png
+   :alt: gqi-krr lovo ds000114
+
+gqi-krr · single-fit
+--------------------
+
+.. figure:: ds000114/gqi-krr_single-fit_021.png
+   :alt: gqi-krr single-fit ds000114
+
+.. figure:: ds000114/gqi-krr_single-fit_042.png
+   :alt: gqi-krr single-fit ds000114
 
