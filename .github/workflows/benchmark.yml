@@ -5,201 +5,199 @@ on:
     branches: ['main', 'maint/*']
   pull_request:
     branches: ['main', 'maint/*']
-  # Allow job to be triggered manually from GitHub interface
+  # Record a range of commits, e.g. to fill the dashboard's history
   workflow_dispatch:
+    inputs:
+      commits:
+        description: 'ASV range of commits to record, e.g. "HEAD~20..HEAD" (default: the selected commit)'
+        required: false
+        default: ''
 
 defaults:
   run:
     shell: bash
 
+# Cancel superseded runs of a pull request; never those of a push, each of which
+# records the results of its own commit
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
-  contents: write
+  contents: read
 
 env:
-  BENCHMARK_ARTIFACT_PREFIX: benchmark-results
-  BENCHMARK_MAIN_ARTIFACT: benchmark-results-main-latest
-  BENCHMARK_RESULTS_PATH: benchmarks/results
+  ASV_CONFIG: benchmarks/asv.conf.json
+  ASV_MACHINE: gha
+  # One BLAS/OpenMP thread, so CPU time is not inflated by spinning threads
+  OPENBLAS_NUM_THREADS: 1
+  MKL_NUM_THREADS: 1
+  OMP_NUM_THREADS: 1
 
 jobs:
-  benchmark:
-    name: Linux
+  compare:
+    name: Compare with main
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: [ '3.12' ]
+    timeout-minutes: 45
 
     steps:
-    - name: Set up system
-      uses: actions/checkout@v5
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
-    - name: Determine commit SHAs
+    - name: Determine the commits
       run: |
-        git fetch origin
+        # HEAD is the pull request merged into the tip of its base branch, so
+        # the comparison measures exactly what merging would change
+        echo "TARGET=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+        echo "BASE=$(git rev-parse HEAD^1)" >> "$GITHUB_ENV"
 
-        MAIN_SHA=$(git rev-parse origin/main)
-        HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
-        MERGE_BASE_SHA=$(git merge-base HEAD origin/main)
-
-        echo "Main SHA: $MAIN_SHA"
-        echo "Head SHA: $HEAD_SHA"
-        echo "Merge base SHA: $MERGE_BASE_SHA"
-
-        echo "MAIN_SHA=$MAIN_SHA" >> $GITHUB_ENV
-        echo "HEAD_SHA=$HEAD_SHA" >> $GITHUB_ENV
-        echo "MERGE_BASE_SHA=$MERGE_BASE_SHA" >> $GITHUB_ENV
-
-    # Check staleness against main tip (PRs only)
-    - name: Check staleness against main tip
-      if: github.event_name == 'pull_request'
-      id: staleness
-      run: |
-        # Count commits behind
-        COMMITS_BEHIND=$(git rev-list --count ${MERGE_BASE_SHA}..${MAIN_SHA})
-        echo "commits-behind=$COMMITS_BEHIND" >> $GITHUB_OUTPUT
-        
-        # Check if stale (more than 1 commit behind)
-        if [ $COMMITS_BEHIND -gt 1 ]; then
-          echo "::warning::PR is $COMMITS_BEHIND commits behind main tip. Benchmarks may not reflect true merge impact."
-          echo "::warning::Consider rebasing to ensure benchmarks reflect true merge impact."
-          exit 1
-        fi
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v6
+    - uses: actions/setup-python@v6
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.12'
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install .[antsopt,benchmark]
+        pip install .[benchmark] pytest
 
-    - name: Set threading parameters for reliable benchmarking
+    - name: Test the report
+      run: python -m pytest -p no:cacheprovider benchmarks/tests
+
+    - name: Benchmark both commits
       run: |
-        echo "OPENBLAS_NUM_THREADS=1" >> $GITHUB_ENV
-        echo "MKL_NUM_THREADS=1" >> $GITHUB_ENV
-        echo "OMP_NUM_THREADS=1" >> $GITHUB_ENV
+        asv machine --yes --config "$ASV_CONFIG" --machine "$ASV_MACHINE"
+        # ASV reads the file relative to the directory of its configuration
+        printf '%s\n' "$TARGET" "$BASE" > "$RUNNER_TEMP/commits.txt"
+        # Both commits run in this job, alternating rounds (ABBA). The report
+        # below decides what fails the job, including benchmarks that crash.
+        asv run --config "$ASV_CONFIG" --machine "$ASV_MACHINE" --show-stderr \
+          --interleave-rounds --record-samples "HASHFILE:$RUNNER_TEMP/commits.txt" \
+          || echo "::warning::asv run exited with status $?"
 
-    - name: Configure ASV
+    - name: Report
       run: |
-        CONFIG_FILE="$(pwd)/benchmarks/asv.conf.json"
+        python benchmarks/report.py --machine "$ASV_MACHINE" \
+          --base "$BASE" --target "$TARGET" \
+          --summary "$GITHUB_STEP_SUMMARY" --output benchmarks/report.txt
 
-        # Force a stable machine name for GitHub Actions so baseline + PR results match
-        ASV_MACHINE="github-actions-ubuntu-latest-py${{ matrix.python-version }}"
-
-        asv machine --yes --config "$CONFIG_FILE" --machine "$ASV_MACHINE"
-
-        echo "ASV_CONFIG=$CONFIG_FILE" >> $GITHUB_ENV
-        echo "ASV_MACHINE=$ASV_MACHINE" >> $GITHUB_ENV
-        echo "ASV_RESULTS_DIR=$(pwd)/$BENCHMARK_RESULTS_PATH" >> $GITHUB_ENV
-
-    # For PRs: Download baseline from main tip
-    - name: Download baseline benchmarks from main
-      if: github.event_name == 'pull_request'
-      id: download-main
-      uses: dawidd6/action-download-artifact@v19
-      continue-on-error: true
-      with:
-        workflow: benchmark.yml
-        branch: main
-        name: ${{ env.BENCHMARK_MAIN_ARTIFACT }}
-        path: ${{ env.BENCHMARK_RESULTS_PATH }}
-        repo: nipreps/nifreeze
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        search_artifacts: true
-        if_no_artifact_found: ignore
-
-    # Report download status
-    - name: Check baseline download status
-      if: github.event_name == 'pull_request'
-      run: |
-        if [ -d "$BENCHMARK_RESULTS_PATH" ] && [ -n "$(ls -A $BENCHMARK_RESULTS_PATH 2>/dev/null)" ]; then
-          echo "✅ Baseline benchmarks downloaded successfully from main"
-          ls -lah $BENCHMARK_RESULTS_PATH
-        else
-          echo "::warning::️No baseline benchmarks found - will run benchmarks on main tip $MAIN_SHA"
-        fi
-
-    # Check if we actually got results
-    - name: Check if baseline exists
-      if: github.event_name == 'pull_request'
-      id: baseline-check
-      run: |
-        if [ -d "$BENCHMARK_RESULTS_PATH" ] && [ -n "$(ls -A $BENCHMARK_RESULTS_PATH 2>/dev/null)" ]; then
-          echo "found=true" >> $GITHUB_OUTPUT
-        else
-          echo "found=false" >> $GITHUB_OUTPUT
-        fi
-
-    # If artifact download failed, run benchmarks on main tip
-    - name: Run benchmarks on main tip (if needed)
-      if: github.event_name == 'pull_request' && steps.baseline-check.outputs.found == 'false'
-      run: |
-        echo "Running benchmarks on main tip $MAIN_SHA..."
-        asv run --config "$ASV_CONFIG" --show-stderr --quick "$MAIN_SHA^!"
-
-    # Run benchmarks on current commit
-    - name: Run benchmarks on head commit
-      run: |
-        echo "Running benchmarks on head commit $HEAD_SHA..."
-        asv run --config "$ASV_CONFIG" --show-stderr --quick "$HEAD_SHA^!"
-
-    # Compare PR benchmarks to main tip
-    - name: Compare benchmarks
-      if: github.event_name == 'pull_request'
-      id: compare
-      run: |
-        echo "Comparing $HEAD_SHA against main tip $MAIN_SHA..."
-
-        FACTOR=$(python -c "import json; print(json.load(open('$ASV_CONFIG')).get('regression_factor', 1.1))")
-        echo "FACTOR=$FACTOR" >> "$GITHUB_ENV"
-
-
-        asv compare --config "$ASV_CONFIG" --machine "$ASV_MACHINE" \
-          --factor $FACTOR --split "$MAIN_SHA" "$HEAD_SHA" | tee comparison.txt
-
-        # Check for regressions
-        if grep -q "got worse" comparison.txt; then
-          echo "regression=true" >> $GITHUB_OUTPUT
-          echo "::error::Performance regression detected compared to main tip!"
-        else
-          echo "regression=false" >> $GITHUB_OUTPUT
-          echo "✅ No significant regressions detected"
-        fi
-
-    # Fail CI if has regression
-    - name: Fail on performance regression
-      if: |
-        github.event_name == 'pull_request' && steps.compare.outputs.regression == 'true'
-      run: |
-        echo "::error::Performance regression detected. Benchmarks are $FACTOR times slower than main tip."
-        echo "See comparison output above for details."
-        exit 1
-
-    # Upload benchmark results as artifact (for main branch)
-    - name: Upload benchmark results (main only)
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/upload-artifact@v7
-      with:
-        name: ${{ env.BENCHMARK_MAIN_ARTIFACT }}
-        path: ${{ env.BENCHMARK_RESULTS_PATH }}
-        compression-level: 9
-
-    # Also save per-commit for debugging
-    - name: Save head commit benchmarks
+    - name: Upload the results
       if: always()
       uses: actions/upload-artifact@v7
       with:
-        name: ${{ env.BENCHMARK_ARTIFACT_PREFIX }}-${{ github.sha }}
-        path: ${{ env.BENCHMARK_RESULTS_PATH }}
+        name: benchmark-results-${{ github.sha }}
+        path: |
+          benchmarks/results
+          benchmarks/report.txt
         compression-level: 9
+
+  record:
+    name: Record
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .[benchmark]
+
+    - name: Benchmark
+      env:
+        COMMITS: ${{ inputs.commits }}
+      run: |
+        asv machine --yes --config "$ASV_CONFIG" --machine "$ASV_MACHINE"
+        if [[ -n "$COMMITS" ]]; then
+          # Skip the commits the dashboard already has
+          git restore --source origin/gh-pages --worktree benchmarks/results 2>/dev/null || true
+          asv run --config "$ASV_CONFIG" --machine "$ASV_MACHINE" --show-stderr \
+            --skip-existing-commits "$COMMITS" || echo "::warning::asv run exited with status $?"
+        else
+          asv run --config "$ASV_CONFIG" --machine "$ASV_MACHINE" --show-stderr \
+            "$GITHUB_SHA^!" || echo "::warning::asv run exited with status $?"
+        fi
+
+    - name: Upload the results
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: benchmark-results-${{ github.sha }}
+        path: benchmarks/results
+        compression-level: 9
+
+    - name: Report
+      run: |
+        python benchmarks/report.py --machine "$ASV_MACHINE" --target "$GITHUB_SHA" \
+          --summary "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Publish the dashboard
+    needs: record
+    # Publish even when a benchmark failed, so the dashboard shows the gap
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && needs.record.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    # The docs deploy also pushes to gh-pages, but only into other directories:
+    # concurrent pushes are rebased by the loop below
+    concurrency:
+      group: benchmark-dashboard
+      cancel-in-progress: false
+
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .[benchmark]
+
+    - uses: actions/download-artifact@v8
+      with:
+        name: benchmark-results-${{ github.sha }}
+        path: new-results
+
+    - name: Build the dashboard and push it to gh-pages
+      run: |
+        git config --global user.email "nipreps@gmail.com"
+        git config --global user.name "NiPreps Bot"
+        PAGES="$RUNNER_TEMP/gh-pages"
+        git worktree add -B gh-pages "$PAGES" origin/gh-pages
+
+        # The results published so far, plus this run's
+        mkdir -p benchmarks/results
+        if [[ -d "$PAGES/benchmarks/results" ]]; then
+          cp -r "$PAGES/benchmarks/results/." benchmarks/results/
+        fi
+        cp -r new-results/. benchmarks/results/
+
+        # ``asv publish`` empties its output directory, so the raw results are
+        # copied back in afterwards
+        asv publish --config "$ASV_CONFIG" --html-dir "$PAGES/benchmarks"
+        cp -r benchmarks/results "$PAGES/benchmarks/results"
+
+        cd "$PAGES"
+        git add benchmarks
+        git commit -m "benchmarks: publish the results of ${GITHUB_SHA::8}" || exit 0
+        for attempt in 1 2 3; do
+          git push origin gh-pages && break
+          [[ $attempt == 3 ]] && exit 1
+          git pull --rebase origin gh-pages
+        done

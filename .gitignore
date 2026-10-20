@@ -121,3 +121,7 @@ src/nifreeze/_version.py
 # LLM-Wiki: original source PDFs backing wiki pages (not versioned)
 .wiki/_sources/
 .local.yaml
+
+# ASV benchmark results and dashboard
+benchmarks/results/
+benchmarks/html/
