@@ -200,16 +200,40 @@ def test_fit_pooled_hyperparameters_identical_tables_equals_appending():
 
 
 @pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def _summed_lml(kernel, theta, tables, signals):
+    """Sum of the per-dataset log marginal likelihoods (the pooled objective)."""
+    return sum(
+        cast(
+            float,
+            DiffusionGPR(
+                kernel=kernel,
+                optimizer=None,
+                alpha=GP_JITTER,
+                normalize_y=True,
+                n_targets=y.shape[1],
+            )
+            .fit(X, y)
+            .log_marginal_likelihood(theta),
+        )
+        for X, y in zip(tables, signals, strict=True)
+    )
+
+
 def test_fit_pooled_hyperparameters_different_tables():
-    """Datasets with their own gradient tables can be pooled."""
+    """With their own gradient tables, pooling maximizes the summed likelihood."""
     signals_a, gradients_a = _crossing_signals(n_dirs=30, seed=1)
     signals_b, gradients_b = _crossing_signals(n_dirs=40, seed=2)
+    tables, signals = [gradients_a[:, :3], gradients_b[:, :3]], [signals_a, signals_b]
     kernel = SphericalKriging() + WhiteKernel()
 
-    pooled = lovo.fit_pooled_hyperparameters(
-        kernel, [gradients_a[:, :3], gradients_b[:, :3]], [signals_a, signals_b]
-    )
-    assert np.all(np.isfinite(pooled.theta))
+    pooled = lovo.fit_pooled_hyperparameters(kernel, tables, signals)
+    pooled_lml = _summed_lml(kernel, pooled.theta, tables, signals)
+
+    # Each dataset's own optimum scores no better on the pool than the pooled one
+    for X, y in zip(tables, signals, strict=True):
+        own = lovo.fit_pooled_hyperparameters(kernel, [X], [y])
+        assert not np.allclose(own.theta, pooled.theta, atol=1e-3)
+        assert pooled_lml > _summed_lml(kernel, own.theta, tables, signals)
 
 
 @pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
