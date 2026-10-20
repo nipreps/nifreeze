@@ -96,8 +96,8 @@ antsopt = [
   "smac",
 ]
 benchmark = [
-  "asv",
-  "pyperf",
+  "asv==0.6.6",
+  "psutil",
   "threadpoolctl>=3.0",
   "virtualenv==20.38.0",
 ]
