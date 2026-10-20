@@ -317,6 +317,14 @@ class Estimator:
                             windows[i] = None
                     window = windows.get(i)
 
+                    # Start from the current estimate (left by a previous estimator of the
+                    # chain, or stored in the dataset)
+                    init_affine = None
+                    if dataset.motion_affines is not None:
+                        current = np.asarray(dataset.motion_affines[i], dtype=float)
+                        if not np.allclose(current, np.eye(4)):
+                            init_affine = current
+
                     # prepare data for running ANTs
                     predicted_path, volume_path, init_path = _prepare_registration_data(
                         volume,
@@ -326,6 +334,7 @@ class Estimator:
                         ptmp_dir,
                         clip=clip if window is not None else "none",
                         window=window,
+                        init_affine=init_affine,
                     )
 
                     pbar.set_description_str(f"{REG_MSG: <16} vol. <{i}>")

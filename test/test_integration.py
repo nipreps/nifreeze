@@ -32,6 +32,8 @@ import nibabel as nb
 import nitransforms as nt
 import numpy as np
 import pytest
+from nibabel.affines import from_matvec
+from nibabel.eulerangles import euler2mat
 
 import nifreeze.registration.ants as ants
 from nifreeze.data import dmri
@@ -275,6 +277,54 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path, p_error=20.0):
         )
         + f" (N={masksize} voxels)."
     )
+
+
+@pytest.mark.parametrize("perturb", [False, True])
+def test_registration_initial_transform(datadir, tmp_path, perturb):
+    """Started at (or near) the true transform, ANTs returns the true transform."""
+    dwi_motion = dmri.DWI.from_filename(
+        datadir / "dmri_data" / "motion_test_data" / "dwi_motion.h5"
+    )
+    dwi_motion._filepath = tmp_path / "dwi_motion.h5"  # Prevent accidental overwriting
+    assert dwi_motion.motion_affines is not None and dwi_motion.bzero is not None
+    index = 3
+    truth = np.array(dwi_motion.motion_affines[index])
+    init = truth.copy()
+    if perturb:
+        # About 1 degree and 0.8 mm away from the truth
+        init = from_matvec(euler2mat(0.01, -0.01, 0.015), [0.5, -0.5, 0.3]) @ truth
+
+    dwi_orig = dmri.DWI.from_filename(datadir / "dwi.h5")
+    assert dwi_orig.brainmask is not None
+    masknii = nb.Nifti1Image(dwi_orig.brainmask.astype(np.uint8), dwi_orig.affine, None)
+    mask_path = tmp_path / "brainmask.nii"
+    masknii.to_filename(mask_path)
+
+    fixed_path, moving_path, init_path = ants._prepare_registration_data(
+        dwi_motion.dataobj[index],
+        dwi_motion.bzero,
+        dwi_motion.affine,
+        index,
+        tmp_path,
+        clip="both",
+        init_affine=init,
+    )
+    assert init_path is not None
+    xform = ants._run_registration(
+        fixed_path,
+        moving_path,
+        index,
+        tmp_path,
+        init_affine=init_path,
+        fixedmask_path=mask_path,
+        output_transform_prefix=f"ants-{index:05d}",
+        seed=12345,
+    )
+
+    error = displacements_within_mask(
+        masknii, nt.linear.Affine(xform.matrix), nt.linear.Affine(truth)
+    ).max()
+    assert error < 0.2
 
 
 @pytest.mark.random_gtab_data(6, (1000,), 1)
