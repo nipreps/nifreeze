@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any, Type
 
 import attrs
+import h5py
 import nibabel as nb
 import numpy as np
 import pytest
@@ -545,6 +546,8 @@ def test_equality_operator(tmp_path, setup_random_pet_data):
     # Test equality operator against an instance from HDF5
     hdf5_filename = tmp_path / "test_pet.h5"
     pet_obj_from_nii.to_filename(hdf5_filename)
+    with h5py.File(hdf5_filename, "r") as in_file:
+        assert in_file.attrs["Format"] == "nfHDF5"
 
     round_trip_pet_obj = PET.from_filename(hdf5_filename)
 

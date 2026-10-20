@@ -19,7 +19,7 @@ import numpy.typing as npt
 
 _NATIVE_BYTEORDER = "<" if sys.byteorder == "little" else ">"
 
-#: NFDH5 marks a volume-major ``dataobj`` (volumes are the *first*, slowest-varying
+#: nfHDF5 marks a volume-major ``dataobj`` (volumes are the *first*, slowest-varying
 #: axis on disk, so a single volume is a contiguous block that memory-maps locally).
 #: Legacy files store the last axis as volumes and carry no such attribute.
 VOLUME_AXIS_ATTR = "volume_axis"
@@ -245,7 +245,7 @@ def stream_select_volumes(
     return cache.open_memmap()
 
 
-def save_nfdh5_fields(
+def save_nfhdf5_fields(
     root: h5py.Group,
     dataset,
     compression: str | None = None,
@@ -273,8 +273,8 @@ def save_nfdh5_fields(
             )
 
 
-def load_nfdh5_fields(filename: Path | str, lazy_keys: tuple[str, ...] = ("dataobj",)) -> dict:
-    """Read the ``/0`` group of an NFDH5 file into a field dict.
+def load_nfhdf5_fields(filename: Path | str, lazy_keys: tuple[str, ...] = ("dataobj",)) -> dict:
+    """Read the ``/0`` group of an nfHDF5 file into a field dict.
 
     ``dataobj`` (named in ``lazy_keys``) is returned as a lazy, per-volume-local
     :obj:`~numpy.memmap` (via :func:`open_dataobj_memmap`); every other field is

@@ -29,11 +29,12 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
+import h5py
 import nibabel as nb
 import numpy as np
 import pytest
 
-from nifreeze.data import NFDH5_EXT, BaseDataset, load
+from nifreeze.data import NFHDF5_EXT, BaseDataset, load
 from nifreeze.data.base import (
     AFFINE_ABSENCE_ERROR_MSG,
     AFFINE_NDIM_ERROR_MSG,
@@ -327,11 +328,14 @@ def test_set_transform(random_dataset: BaseDataset):
 def test_to_filename_and_from_filename(random_dataset: BaseDataset):
     """Test writing a dataset to disk and reading it back from file."""
     with TemporaryDirectory() as tmpdir:
-        h5_file = Path(tmpdir) / f"test_dataset{NFDH5_EXT}"
+        h5_file = Path(tmpdir) / f"test_dataset{NFHDF5_EXT}"
         random_dataset.to_filename(h5_file)
 
         # Check file exists
         assert h5_file.is_file()
+        with h5py.File(h5_file, "r") as in_file:
+            assert in_file.attrs["Format"] == "nfHDF5"
+            assert in_file.attrs["Version"] == 2
 
         # Read from filename
         ds2: BaseDataset[Any] = BaseDataset.from_filename(h5_file)
@@ -350,7 +354,7 @@ def test_from_filename_compressed_roundtrip(random_dataset: BaseDataset):
     copied volume-by-volume into a ``.npy`` memmap instead.
     """
     with TemporaryDirectory() as tmpdir:
-        h5_file = Path(tmpdir) / f"compressed{NFDH5_EXT}"
+        h5_file = Path(tmpdir) / f"compressed{NFHDF5_EXT}"
         random_dataset.to_filename(h5_file, compression="gzip")
 
         ds2: BaseDataset[Any] = BaseDataset.from_filename(h5_file)
@@ -509,7 +513,7 @@ def test_to_nifti(
 def test_load_hdf5(random_dataset: BaseDataset):
     """Test the 'load' function with an HDF5 file."""
     with TemporaryDirectory() as tmpdir:
-        h5_file = Path(tmpdir) / f"test_dataset{NFDH5_EXT}"
+        h5_file = Path(tmpdir) / f"test_dataset{NFHDF5_EXT}"
         random_dataset.to_filename(h5_file)
 
         ds2 = load(h5_file)

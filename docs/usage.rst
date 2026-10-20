@@ -49,7 +49,7 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
 
       To run the examples and tests from this page,
       find `sample data <https://osf.io/download/6at98/>`__ on OSF.
-      To load from an HDF5 file, use:
+      To load from an :ref:`nfHDF5 <nfhdf5>` file, use:
 
       .. code-block:: python
 
@@ -61,8 +61,9 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
       shape ``(N, X, Y, Z)`` and ``dataset[i]`` returns volume ``i``.
       NIfTI files store the volumes last; :func:`~nifreeze.data.dmri.io.from_nii`
       and :meth:`~nifreeze.data.base.BaseDataset.to_nifti` convert between the two.
-      HDF5 files are memory-mapped when loaded, so volumes are read from disk as
-      they are accessed.
+      *NiFreeze* saves datasets as :ref:`nfHDF5 <nfhdf5>` files, which are
+      memory-mapped when loaded, so volumes are read from disk as they are
+      accessed.
       Files written by earlier versions of *NiFreeze* (format version 1) still
       load, but they are converted into a temporary file first; save them again
       with ``to_filename`` to skip that step.
@@ -139,7 +140,7 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
           seed=42,
       )
 
-5. **Save Results**: Once transformations are estimated, save the realigned data in your preferred output format, either HDF5 or NIfTI:
+5. **Save Results**: Once transformations are estimated, save the realigned data in your preferred output format, either :ref:`nfHDF5 <nfhdf5>` or NIfTI:
 
    .. code-block:: python
 

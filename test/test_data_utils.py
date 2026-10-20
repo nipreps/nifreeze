@@ -72,7 +72,7 @@ def test_apply_affines(request, tmp_path):
 
 
 def _write_legacy(path, data):
-    """Write ``data`` (volumes last) as a version-1 NFDH5 ``dataobj``."""
+    """Write ``data`` (volumes last) as a version-1 nfHDF5 ``dataobj``."""
     with h5py.File(path, "w") as out_file:
         out_file.attrs["Format"] = "NFDH5"
         out_file.attrs["Version"] = np.uint16(1)
@@ -184,7 +184,7 @@ def test_to_filename_failure_keeps_target(tmp_path, monkeypatch):
     def _fail(*args, **kwargs):
         raise RuntimeError("write failed")
 
-    monkeypatch.setattr("nifreeze.data.base.save_nfdh5_fields", _fail)
+    monkeypatch.setattr("nifreeze.data.base.save_nfhdf5_fields", _fail)
     with pytest.raises(RuntimeError, match="write failed"):
         BaseDataset(dataobj=data * 2, affine=np.eye(4)).to_filename(path)
 

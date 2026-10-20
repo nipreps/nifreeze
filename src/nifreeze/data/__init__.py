@@ -24,7 +24,7 @@
 
 from pathlib import Path
 
-from nifreeze.data.base import NFDH5_EXT, BaseDataset
+from nifreeze.data.base import NFHDF5_EXT, BaseDataset
 from nifreeze.data.dmri import DWI
 from nifreeze.data.pet import PET
 
@@ -66,7 +66,7 @@ def load(
     from nifreeze.utils.ndimage import load_api
 
     filename = Path(filename)
-    if filename.name.endswith(NFDH5_EXT):
+    if filename.name.endswith(NFHDF5_EXT):
         for dataclass in (BaseDataset, PET, DWI):
             with suppress(TypeError):
                 return dataclass.from_filename(filename)

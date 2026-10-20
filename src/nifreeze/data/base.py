@@ -39,14 +39,14 @@ from nitransforms.resampling import apply
 from typing_extensions import Self, TypeVarTuple, Unpack
 
 from nifreeze.data.utils import (
-    load_nfdh5_fields,
+    load_nfhdf5_fields,
     replace_on_success,
-    save_nfdh5_fields,
+    save_nfhdf5_fields,
 )
 
 Ts = TypeVarTuple("Ts")
 
-NFDH5_EXT = ".h5"
+NFHDF5_EXT = ".h5"
 
 ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
 
@@ -402,7 +402,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
     @classmethod
     def from_filename(cls, filename: Path | str) -> Self:
         """
-        Read an HDF5 file from disk and create a BaseDataset.
+        Read an :ref:`nfHDF5 <nfhdf5>` file from disk and create a BaseDataset.
 
         Parameters
         ----------
@@ -415,7 +415,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
             The constructed dataset with data loaded from the file.
 
         """
-        return cls(**load_nfdh5_fields(filename))
+        return cls(**load_nfhdf5_fields(filename))
 
     def get_filename(self) -> Path:
         """Get the filepath of the HDF5 file."""
@@ -443,7 +443,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
         self, filename: Path | str, compression: str | None = None, compression_opts: Any = None
     ) -> None:
         """
-        Write an HDF5 file to disk.
+        Write the dataset to an :ref:`nfHDF5 <nfhdf5>` file.
 
         Parameters
         ----------
@@ -458,15 +458,15 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
         """
         filename = Path(filename)
-        if not filename.name.endswith(NFDH5_EXT):
+        if not filename.name.endswith(NFHDF5_EXT):
             filename = filename.parent / f"{filename.name}.h5"
 
         with replace_on_success(filename) as tmp, h5py.File(tmp, "w") as out_file:
-            out_file.attrs["Format"] = "NFDH5"  # NiFreeze Data HDF5
+            out_file.attrs["Format"] = "nfHDF5"  # version-1 files carry "NFDH5"
             out_file.attrs["Version"] = np.uint16(2)  # v2: volume-major dataobj
             root = out_file.create_group("/0")
             root.attrs["Type"] = "base dataset"
-            save_nfdh5_fields(root, self, compression, compression_opts)
+            save_nfhdf5_fields(root, self, compression, compression_opts)
 
     def to_nifti(
         self,

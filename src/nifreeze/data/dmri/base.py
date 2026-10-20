@@ -305,7 +305,7 @@ class DWI(BaseDataset[np.ndarray]):
         compression_opts: Any = None,
     ) -> None:
         """
-        Write the dMRI dataset to an HDF5 file on disk.
+        Write the dMRI dataset to an :ref:`nfHDF5 <nfhdf5>` file on disk.
 
         Parameters
         ----------

@@ -119,7 +119,7 @@ _B0_INDICES = (0, 20, 40)  # interspersed b=0 volumes
 
 
 def _write_dwi_with_b0(path, data):
-    """Write an NFDH5 DWI that still contains b=0 volumes.
+    """Write an nfHDF5 DWI that still contains b=0 volumes.
 
     ``DWI.to_filename`` drops b=0 volumes before writing, so to exercise the
     on-load b0 filter we write the volume-major ``dataobj`` and a b0-bearing
@@ -134,7 +134,7 @@ def _write_dwi_with_b0(path, data):
         bvals[i] = 0.0
         bvecs[i] = 0.0
     with h5py.File(path, "w") as f:
-        f.attrs["Format"] = "NFDH5"
+        f.attrs["Format"] = "nfHDF5"
         f.attrs["Version"] = np.uint16(2)
         root = f.create_group("/0")
         root.attrs["Type"] = "dmri"

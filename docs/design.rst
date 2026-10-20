@@ -52,6 +52,34 @@ non-diffusion-weighted volumes. Note that following this design choice,
 the gradient data hosted by the :class:`api/nifreeze.data.dmri.DWI` instance
 only contains (nonzero) diffusion-weighted gradient values.
 
+.. _nfhdf5:
+
+nfHDF5 files
+""""""""""""
+
+*nfHDF5* is the HDF5 layout *NiFreeze* saves datasets in.
+:meth:`~nifreeze.data.base.BaseDataset.to_filename` writes it, and
+:func:`~nifreeze.data.load` and
+:meth:`~nifreeze.data.base.BaseDataset.from_filename` read it back.
+
+- The file attributes ``Format`` (``"nfHDF5"``) and ``Version`` (``2``)
+  identify the layout.
+- The group ``/0`` holds one HDF5 dataset per field of the dataset object:
+  ``dataobj``, ``affine``, ``brainmask`` and ``motion_affines``, plus the
+  modality's own fields, such as ``gradients`` and ``bzero`` (dMRI) or
+  ``midframe`` and ``total_duration`` (PET).
+- ``dataobj`` stores the volumes on the first axis, ``(N, X, Y, Z)``, and has
+  the attribute ``volume_axis`` set to ``0``.
+  Each volume is one contiguous block, so the file is memory-mapped when
+  loaded and volumes are read from disk as they are accessed.
+  Compressed files (``to_filename(..., compression="gzip")``) are
+  decompressed into a temporary file first.
+
+Files written by earlier versions of *NiFreeze* (version 1) store the volumes
+last, and their ``Format`` is ``"NFDH5"`` (``"EMC/PET"`` for PET).
+They still load, after a conversion into a temporary file;
+save them again with ``to_filename`` to skip that step.
+
 Preprocessing
 -------------
 

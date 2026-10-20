@@ -38,9 +38,9 @@ from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr, _has_ndim
 from nifreeze.data.utils import (
-    load_nfdh5_fields,
+    load_nfhdf5_fields,
     replace_on_success,
-    save_nfdh5_fields,
+    save_nfhdf5_fields,
 )
 
 ATTRIBUTE_ABSENCE_ERROR_MSG = "PET '{attribute}' may not be None"
@@ -316,19 +316,19 @@ class PET(BaseDataset[np.ndarray]):
     def to_filename(
         self, filename: Path | str, compression: str | None = None, compression_opts: Any = None
     ) -> None:
-        """Write an HDF5 file to disk."""
+        """Write the dataset to an :ref:`nfHDF5 <nfhdf5>` file."""
         filename = Path(filename)
         if not filename.name.endswith(".h5"):
             filename = filename.parent / f"{filename.name}.h5"
 
         with replace_on_success(filename) as tmp, h5py.File(tmp, "w") as out_file:
-            out_file.attrs["Format"] = "EMC/PET"
+            out_file.attrs["Format"] = "nfHDF5"
             out_file.attrs["Version"] = np.uint16(2)  # v2: volume-major dataobj
             root = out_file.create_group("/0")
             root.attrs["Type"] = "pet"
-            save_nfdh5_fields(root, self, compression, compression_opts)
+            save_nfhdf5_fields(root, self, compression, compression_opts)
 
     @classmethod
     def from_filename(cls, filename: Path | str) -> Self:
-        """Read an HDF5 file from disk."""
-        return cls(**load_nfdh5_fields(filename))
+        """Read an :ref:`nfHDF5 <nfhdf5>` file from disk."""
+        return cls(**load_nfhdf5_fields(filename))
