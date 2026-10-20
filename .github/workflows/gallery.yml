@@ -102,7 +102,7 @@ jobs:
           path: |
             ${{ env.NIFREEZE_GALLERY_H5DIR }}/${{ matrix.dataset }}.h5
             ${{ env.NIFREEZE_GALLERY_H5DIR }}/${{ matrix.dataset }}.sources.json
-          key: gallery-h5-${{ matrix.dataset }}-v1
+          key: gallery-h5-${{ matrix.dataset }}-v2
       - name: Install package (gallery extra)
         run: |
           python -m pip install --upgrade pip
