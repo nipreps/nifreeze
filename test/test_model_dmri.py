@@ -601,6 +601,7 @@ def test_model_keeps_dataset_brainmask(setup_random_dwi_data):
         brainmask=brainmask_dataobj,
         gradients=gradients,
     )
+    assert dataset.bzero is not None and dataset.brainmask is not None
     # Voxels with a null S0 are left out of the model's data mask
     dataset.bzero[:2] = 0.0
     original = dataset.brainmask.copy()

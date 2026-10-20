@@ -165,8 +165,10 @@ def test_prepare_registration_data_clip(request, tmp_path, dtype):
     assert np.array_equal(sample, originals[0])
     assert np.array_equal(predicted, originals[1])
     for path, original in zip((sample_path, predicted_path), originals, strict=True):
-        written = np.asanyarray(nb.load(path).dataobj)
-        assert np.array_equal(written, advanced_clip(original))
+        written = np.asanyarray(load_api(str(path), nb.Nifti1Image).dataobj)
+        clipped = advanced_clip(original)
+        assert clipped is not None
+        assert np.array_equal(written, clipped)
 
 
 def test_generate_command_malformed_settings(tmp_path, monkeypatch, random_nifti_file, json_file):
