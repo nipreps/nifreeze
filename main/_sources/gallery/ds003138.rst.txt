@@ -43,26 +43,26 @@ Coverage
      - multi-shell
      - dki
      - lovo
-     - ✓
-     - 
+     - ✗
+     - index 155138 is out of bounds for axis 0 with size 155138
    * - ds003138
      - multi-shell
      - dki
      - single-fit
-     - ✓
-     - 
+     - ✗
+     - index 155138 is out of bounds for axis 0 with size 155138
    * - ds003138
      - multi-shell
      - dti
      - lovo
-     - ✓
-     - 
+     - ✗
+     - could not broadcast input array from shape (155138,) into shape (155141,)
    * - ds003138
      - multi-shell
      - dti
      - single-fit
-     - ✓
-     - 
+     - ✗
+     - could not broadcast input array from shape (155138,) into shape (155141,)
    * - ds003138
      - multi-shell
      - gp-loo-multishell
@@ -91,14 +91,14 @@ Coverage
      - multi-shell
      - gqi
      - lovo
-     - ✓
-     - 
+     - ✗
+     - shape mismatch: value array of shape (155141,) could not be broadcast to indexing result of shape (155138,)
    * - ds003138
      - multi-shell
      - gqi
      - single-fit
-     - ✓
-     - 
+     - ✗
+     - shape mismatch: value array of shape (155141,) could not be broadcast to indexing result of shape (155138,)
    * - ds003138
      - multi-shell
      - gqi-krr
@@ -129,42 +129,6 @@ average · single-fit
 
 .. figure:: ds003138/average_single-fit_075.png
    :alt: average single-fit ds003138
-
-dki · lovo
-----------
-
-.. figure:: ds003138/dki_lovo_038.png
-   :alt: dki lovo ds003138
-
-.. figure:: ds003138/dki_lovo_075.png
-   :alt: dki lovo ds003138
-
-dki · single-fit
-----------------
-
-.. figure:: ds003138/dki_single-fit_038.png
-   :alt: dki single-fit ds003138
-
-.. figure:: ds003138/dki_single-fit_075.png
-   :alt: dki single-fit ds003138
-
-dti · lovo
-----------
-
-.. figure:: ds003138/dti_lovo_038.png
-   :alt: dti lovo ds003138
-
-.. figure:: ds003138/dti_lovo_075.png
-   :alt: dti lovo ds003138
-
-dti · single-fit
-----------------
-
-.. figure:: ds003138/dti_single-fit_038.png
-   :alt: dti single-fit ds003138
-
-.. figure:: ds003138/dti_single-fit_075.png
-   :alt: dti single-fit ds003138
 
 gp-loo-multishell · lovo
 ------------------------
@@ -207,24 +171,6 @@ gp-multishell · single-fit (canary)
 
 .. figure:: ds003138/gp-multishell_single-fit_covariance.png
    :alt: gp-multishell single-fit ds003138
-
-gqi · lovo
-----------
-
-.. figure:: ds003138/gqi_lovo_038.png
-   :alt: gqi lovo ds003138
-
-.. figure:: ds003138/gqi_lovo_075.png
-   :alt: gqi lovo ds003138
-
-gqi · single-fit (canary)
--------------------------
-
-.. figure:: ds003138/gqi_single-fit_038.png
-   :alt: gqi single-fit ds003138
-
-.. figure:: ds003138/gqi_single-fit_075.png
-   :alt: gqi single-fit ds003138
 
 gqi-krr · lovo
 --------------
