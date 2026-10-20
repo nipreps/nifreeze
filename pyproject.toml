@@ -166,6 +166,8 @@ version-file = "src/nifreeze/_version.py"
 check_untyped_defs = true
 # The prediction-gallery package lives under docs/ (docs tooling, not shipped).
 mypy_path = "docs/sphinxext"
+# Environments and dashboards that asv builds when the benchmarks run locally
+exclude = ["^benchmarks/env/", "^benchmarks/html/"]
 
 [[tool.mypy.overrides]]
 module = [
@@ -185,6 +187,7 @@ module = [
   "skimage.*",
   "pandas",
   "attrs",
+  "psutil",
 ]
 ignore_missing_imports = true
 

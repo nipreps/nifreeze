@@ -46,7 +46,7 @@ from .bench_memory import MODEL_BVALS, write_model_dataset
 try:
     from nifreeze.model.lovo import lovo_smoother
 except ImportError:  # not on commits before nifreeze#499
-    lovo_smoother = None
+    lovo_smoother = None  # type: ignore[assignment]
 
 _HELD_OUT = len(MODEL_BVALS) // 2
 

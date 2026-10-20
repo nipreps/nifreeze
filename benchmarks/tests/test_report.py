@@ -25,6 +25,7 @@
 import importlib.util
 import json
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -32,6 +33,7 @@ import pytest
 _spec = importlib.util.spec_from_file_location(
     "report", Path(__file__).parent.parent / "report.py"
 )
+assert _spec is not None and _spec.loader is not None
 report = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(report)
 
@@ -66,7 +68,7 @@ def write_results(tmp_path, benchmarks, base, target):
     """Write ``benchmarks.json`` and one result file per commit, as ASV does."""
     results = tmp_path / "results"
     (results / "gha").mkdir(parents=True)
-    info = {
+    info: dict[str, Any] = {
         name: {"name": name, "params": params, "unit": unit, "version": "1"}
         for name, (params, unit) in benchmarks.items()
     }
@@ -142,7 +144,7 @@ WALL = "bench_data.M.time_load"
     ],
 )
 def test_times(tmp_path, name, base, target, expected, status):
-    benchmarks = {name: ([], "seconds")}
+    benchmarks: dict[str, tuple[list, str]] = {name: ([], "seconds")}
     got_status, text = run(
         tmp_path,
         benchmarks,
@@ -173,7 +175,7 @@ def test_noise_with_outlier_not_significant(tmp_path):
 
 
 def test_new_failed_and_parameters(tmp_path):
-    benchmarks = {
+    benchmarks: dict[str, tuple[list, str]] = {
         ALLOC: ([["'DTI'", "'DKI'"]], "MB"),
         "bench_memory.M.track_alloc_new": ([], "MB"),
         "bench_memory.M.track_rss_broken_on_main": ([], "MB"),
@@ -207,7 +209,10 @@ def test_new_failed_and_parameters(tmp_path):
 
 def test_not_run(tmp_path):
     """A benchmark missing from the target's results (e.g., ``--bench``) does not fail."""
-    benchmarks = {ALLOC: ([], "MB"), "bench_memory.M.track_alloc_other": ([], "MB")}
+    benchmarks: dict[str, tuple[list, str]] = {
+        ALLOC: ([], "MB"),
+        "bench_memory.M.track_alloc_other": ([], "MB"),
+    }
     status, text = run(tmp_path, benchmarks, {ALLOC: _row([1.0])}, {ALLOC: _row([1.0])})
     assert status == 0
     assert "not run" in text.split("M.track_alloc_other", 1)[1].splitlines()[0]

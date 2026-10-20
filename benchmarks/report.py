@@ -41,49 +41,49 @@ import os
 import platform
 import sys
 from pathlib import Path
+from typing import TypeGuard
 
 import attrs
 
-GATES = {
-    "alloc": {
-        "title": "Allocations",
-        "measure": "peak traced MB",
-        "factor": 1.25,
-        "min_change": 2.0,
-        "floor": 2.0,
-    },
-    "rss": {
-        "title": "Peak RSS",
-        "measure": "MB, median of 3 processes",
-        "factor": 1.5,
-        "min_change": 16.0,
-        "floor": 16.0,
-    },
-    "cpu": {
-        "title": "CPU time",
-        "measure": "seconds",
-        "factor": 1.5,
-        "alpha": 0.01,
-        "min_samples": 6,
-        "min_time": 0.01,
-    },
-    "wall": {
-        "title": "Wall time",
-        "measure": "seconds",
-        "factor": 1.5,
-        "alpha": 0.01,
-        "min_samples": 6,
-        "min_time": 0.01,
-    },
-}
-"""What fails the job, per kind of benchmark.
 
-Memory values are the same on every run, so a small change is a real one.
-Values under ``floor`` are reported as ``floor`` by the benchmarks themselves.
-Times must be both past ``factor`` and significant (one-sided Mann-Whitney U
-test, ``p < alpha``), and are not gated when ``main`` takes under ``min_time``
-seconds: an extra copy in such a call shows in its allocations instead.
-"""
+@attrs.define(frozen=True)
+class Gate:
+    """What fails the job for one kind of benchmark.
+
+    Memory values are the same on every run, so a small change is a real one:
+    they fail past ``factor`` when they also change by ``min_change`` MB or
+    more. Values under ``floor`` are reported as ``floor`` by the benchmarks
+    themselves. Times fail past ``factor`` only if significant (one-sided
+    Mann-Whitney U test, ``p < alpha``, at least ``min_samples`` per commit),
+    and not when ``main`` takes under ``min_time`` seconds: an extra copy in
+    such a call shows in its allocations instead.
+    """
+
+    title: str
+    measure: str
+    factor: float
+    min_change: float | None = None
+    floor: float | None = None
+    alpha: float = 0.01
+    min_samples: int = 6
+    min_time: float = 0.01
+
+    def describe(self) -> str:
+        if self.min_change is not None:
+            return f"fails at {self.factor}x and {self.min_change:g} MB or more"
+        return (
+            f"fails at {self.factor}x if significant (p < {self.alpha}) "
+            f"and main takes {self.min_time * 1e3:g} ms or more"
+        )
+
+
+GATES = {
+    "alloc": Gate("Allocations", "peak traced MB", 1.25, min_change=2.0, floor=2.0),
+    "rss": Gate("Peak RSS", "MB, median of 3 processes", 1.5, min_change=16.0, floor=16.0),
+    "cpu": Gate("CPU time", "seconds", 1.5),
+    "wall": Gate("Wall time", "seconds", 1.5),
+}
+"""The gate of each kind of benchmark."""
 
 KIND_PREFIXES = (
     ("track_alloc_", "alloc"),
@@ -118,13 +118,15 @@ class Row:
 
     @property
     def ratio(self) -> float | None:
-        if _is_value(self.target) and _is_value(self.base) and self.base:
-            return self.target / self.base
+        target, base = self.target, self.base
+        if _is_value(target) and _is_value(base) and base:
+            return target / base
         return None
 
 
-def _is_value(value) -> bool:
-    return value is not None and not (isinstance(value, float) and math.isnan(value))
+def _is_value(value: float | None) -> TypeGuard[float]:
+    """Whether ``value`` is a result: not ``None`` (failed) nor NaN (skipped)."""
+    return value is not None and not math.isnan(value)
 
 
 def kind_of(name: str) -> str | None:
@@ -228,36 +230,37 @@ def judge(row: Row, compare: bool = True) -> None:
             row.note = reason
         return
 
+    target, base = row.target, row.base
+    assert _is_value(target) and _is_value(base)  # ensured by _availability
     gate = GATES[row.kind]
-    factor = gate["factor"]
-    ratio = row.target / row.base if row.base else math.inf
-    if 1 / factor < ratio < factor:
+    ratio = target / base if base else math.inf
+    if 1 / gate.factor < ratio < gate.factor:
         return
-    direction = WORSE if ratio >= factor else BETTER
+    direction = WORSE if ratio >= gate.factor else BETTER
 
-    if "min_change" in gate:
-        if abs(row.target - row.base) >= gate["min_change"]:
+    if gate.min_change is not None:
+        if abs(target - base) >= gate.min_change:
             row.verdict = direction
         return
 
-    if row.base < gate["min_time"]:
+    if base < gate.min_time:
         row.note = "too short to gate"
         return
     target_samples, base_samples = row.target_samples or [], row.base_samples or []
-    if min(len(target_samples), len(base_samples)) < gate["min_samples"]:
+    if min(len(target_samples), len(base_samples)) < gate.min_samples:
         row.note = "too few samples"
         return
     if direction == WORSE:
         p = _one_sided_p(target_samples, base_samples)
     else:
         p = _one_sided_p(base_samples, target_samples)
-    if p < gate["alpha"]:
+    if p < gate.alpha:
         row.verdict = direction
     else:
         row.note = f"not significant (p={p:.2g})"
 
 
-def format_value(value, unit: str, floor: float | None = None) -> str:
+def format_value(value: float | None, unit: str, floor: float | None = None) -> str:
     """Format a benchmark value for a table."""
     if value is None:
         return "failed"
@@ -288,22 +291,11 @@ def _runner() -> str:
     return f"{model}, {os.cpu_count()} CPUs"
 
 
-def _gate_text(kind: str) -> str:
-    gate = GATES[kind]
-    if "min_change" in gate:
-        return f"fails at {gate['factor']}x and {gate['min_change']:g} MB or more"
-    return (
-        f"fails at {gate['factor']}x if significant (p < {gate['alpha']}) "
-        f"and main takes {gate['min_time'] * 1e3:g} ms or more"
-    )
-
-
 def _outcome(rows: list[Row], compare: bool) -> tuple[str, list[Row]]:
     """Return the headline and the rows that fail the job."""
     failing = [r for r in rows if r.verdict in (WORSE, FAILED)]
     if not compare:
-        failed = [r for r in rows if r.verdict == FAILED]
-        return ("FAIL" if failed else "OK", failed)
+        return ("FAIL" if failing else "OK", failing)
     better = sum(r.verdict == BETTER for r in rows)
     worse = sum(r.verdict == WORSE for r in rows)
     failed = sum(r.verdict == FAILED for r in rows)
@@ -314,7 +306,7 @@ def _outcome(rows: list[Row], compare: bool) -> tuple[str, list[Row]]:
 
 
 def _cells(row: Row, compare: bool) -> list[str]:
-    floor = GATES[row.kind].get("floor")
+    floor = GATES[row.kind].floor
     cells = [row.label]
     if compare:
         ratio = row.ratio
@@ -340,7 +332,7 @@ def render_text(rows: list[Row], target: str, base: str | None) -> str:
     compare = base is not None
     headline, _ = _outcome(rows, compare)
     lines = [f"Benchmarks: {headline}"]
-    if compare:
+    if base is not None:
         lines.append(f"main {base[:8]} vs pull request {target[:8]}, measured in one job")
     else:
         lines.append(f"Commit {target[:8]}")
@@ -352,7 +344,7 @@ def render_text(rows: list[Row], target: str, base: str | None) -> str:
             continue
         table = [_header(compare)] + [_cells(r, compare) for r in kind_rows]
         widths = [max(len(row[i]) for row in table) for i in range(len(table[0]))]
-        lines += ["", f"{gate['title']} ({gate['measure']}; {_gate_text(kind)})"]
+        lines += ["", f"{gate.title} ({gate.measure}; {gate.describe()})"]
         for cells in table:
             text = "  ".join(
                 cell.ljust(width) if i == 0 or i == len(cells) - 1 else cell.rjust(width)
@@ -374,7 +366,7 @@ def render_markdown(rows: list[Row], target: str, base: str | None) -> str:
     compare = base is not None
     headline, failing = _outcome(rows, compare)
     lines = [f"## Benchmarks: {headline}", ""]
-    if compare:
+    if base is not None:
         lines.append(
             f"`main` ({base[:8]}) and this pull request merged into it ({target[:8]}), "
             f"measured in one job on {_runner()}."
@@ -386,7 +378,7 @@ def render_markdown(rows: list[Row], target: str, base: str | None) -> str:
         lines += ["", "### Fails the job", ""]
         lines += _md_table(
             ["Kind"] + _header(compare),
-            [[GATES[r.kind]["title"]] + _cells(r, compare) for r in failing],
+            [[GATES[r.kind].title] + _cells(r, compare) for r in failing],
         )
 
     for kind, gate in GATES.items():
@@ -398,11 +390,11 @@ def render_markdown(rows: list[Row], target: str, base: str | None) -> str:
             for v in (WORSE, BETTER)
             if any(r.verdict == v for r in kind_rows)
         )
-        summary = f"{gate['title']}: {len(kind_rows)} benchmarks"
+        summary = f"{gate.title}: {len(kind_rows)} benchmarks"
         if counts:
             summary += f", {counts}"
         lines += ["", f"<details><summary>{summary}</summary>", ""]
-        lines.append(f"{gate['measure'][0].upper()}{gate['measure'][1:]}; {_gate_text(kind)}.")
+        lines.append(f"{gate.measure[0].upper()}{gate.measure[1:]}; {gate.describe()}.")
         lines.append("")
         lines += _md_table(_header(compare), [_cells(r, compare) for r in kind_rows])
         lines += ["", "</details>"]
