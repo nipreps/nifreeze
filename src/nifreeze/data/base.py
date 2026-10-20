@@ -556,11 +556,11 @@ def to_nifti(
                 dtype=dataset.dataobj.dtype,
             )
 
-            if filename is not None and write_hmxfms:
-                # Prepare filename and write out
-                out_root = Path(filename).absolute()
-                out_root = out_root.parent / out_root.name.replace("".join(out_root.suffixes), "")
-                xform.to_filename(out_root.with_suffix(".x5"))
+        if filename is not None and write_hmxfms:
+            # Write the transforms of all the volumes into one X5 file
+            out_root = Path(filename).absolute()
+            out_root = out_root.parent / out_root.name.replace("".join(out_root.suffixes), "")
+            xforms.to_filename(out_root.with_suffix(".x5"))
     else:
         resampled = dataset.dataobj
 
