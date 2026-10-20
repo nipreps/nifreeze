@@ -31,6 +31,7 @@ from typing import Any
 
 import h5py
 import nibabel as nb
+import nitransforms as nt
 import numpy as np
 import pytest
 
@@ -101,6 +102,12 @@ class DummyLinearTransformsMapping:
 
     def __getitem__(self, idx):
         return self._xforms[idx]
+
+    def to_filename(self, path):
+        # Mark the file with the number of transforms written at once
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"transforms-{len(self)}")
 
 
 def dummy_apply(transforms, spatialimage, order=3):
@@ -497,17 +504,29 @@ def test_to_nifti(
     # When motion_affines present and write_hmxfms True and filename provided,
     # x5 files should be written
     if motion_affines_present and write_hmxfms and filename is not None:
-        # The same file is written at every iteration, so earlier transforms are
-        # overwritten and only the last transform remains on disk
+        # One file with the transforms of all the volumes
         found_x5 = list(tmp_path.glob("*.x5"))
         assert len(found_x5) == 1
         x5_path = filename.with_suffix("").with_suffix(".x5")
         assert x5_path.is_file()
         content = x5_path.read_text()
-        assert content == f"transform-{n_frames - 1}"
+        assert content == f"transforms-{n_frames}"
     else:
         found_x5 = list(tmp_path.glob("*.x5"))
         assert len(found_x5) == 0
+
+
+def test_to_nifti_writes_every_transform(tmp_path):
+    """The X5 file holds the transforms of all the volumes."""
+    n_frames = 3
+    motion_affines = np.stack([np.eye(4)] * n_frames)
+    motion_affines[:, :3, 3] = np.arange(3.0 * n_frames).reshape(n_frames, 3)
+    dataset = DummyDataset((n_frames, 6, 6, 4), motion_affines=motion_affines, dtype=np.float32)
+
+    to_nifti(dataset, filename=tmp_path / "data.nii.gz", write_hmxfms=True, order=1)
+
+    xforms = nt.linear.load(tmp_path / "data.x5", fmt="X5")
+    assert np.allclose(xforms.matrix, motion_affines)
 
 
 def test_load_hdf5(random_dataset: BaseDataset):
