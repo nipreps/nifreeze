@@ -242,7 +242,7 @@ known-first-party=["nifreeze"]
 [tool.pytest.ini_options]
 pythonpath = "src/ test/ docs/sphinxext/"
 norecursedirs = [".*", "_*"]
-addopts = "-v --doctest-modules"
+addopts = "-v --doctest-modules -m 'not e2e'"
 doctest_optionflags = "ALLOW_UNICODE NORMALIZE_WHITESPACE ELLIPSIS"
 env = "PYTHONHASHSEED=0"
 markers = [
@@ -255,6 +255,7 @@ markers = [
   "random_uniform_ndim_data: Custom marker for random multi-dimensional data tests",
   "random_uniform_spatial_data: Custom marker for random spatial data tests",
   "memory: Opt-in peak-RSS memory tests (heavier fixtures; run explicitly with -m memory)",
+  "e2e: Opt-in end-to-end tests on simulated motion (need ANTs; run explicitly with -m e2e)",
 ]
 filterwarnings = [
   "ignore::DeprecationWarning",
