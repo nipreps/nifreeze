@@ -181,6 +181,7 @@ class BSplinePETModel(BasePETModel):
         "_t": "B-Spline knot time-coordinates",
         "_order": "B-Spline order",
         "_n_ctrl": "Number of B-Spline control points",
+        "_coefficients": "Cached B-Spline coefficients for a locked fit",
     }
 
     def __init__(
@@ -225,6 +226,8 @@ class BSplinePETModel(BasePETModel):
         # Time-coordinates of the B-Spline knots
         self._t = _build_bspline_knots(self._dataset.midframe, self._n_ctrl, self._order)
 
+        self._coefficients = None
+
     def fit_predict(self, index: int | None = None, **kwargs) -> Union[np.ndarray, None]:
         """Return the corrected volume using B-spline interpolation.
 
@@ -232,18 +235,26 @@ class BSplinePETModel(BasePETModel):
         the prediction for the start time.
         """
 
-        if index is None:
-            raise NotImplementedError(
-                "Fitting all frames at once (index=None) is not yet implemented. "
-                "Use LOVO mode by passing an integer index."
-            )
-
         n_jobs = kwargs.pop("n_jobs", min(cpu_count() or 1, 8))
 
         # Generate a time mask for the frames to fit
         x_mask = np.ones(len(self._dataset), dtype=bool)
+        if self._locked_fit is None:
+            if index is None:
+                self._locked_fit = True
+            else:
+                # First call in LOVO mode: initialize as unlocked
+                self._locked_fit = False
+                x_mask[index] = False
+        elif index is None:
+            return None
+        elif self._locked_fit:
+            # Already fit on all frames; for held-out prediction keep full-fit mask
+            pass
+        else:
+            # Unlocked LOVO mode
+            x_mask[index] = False
 
-        x_mask[index] = False if index is not None else x_mask[index]
         x = self._dataset.midframe[x_mask].tolist()
 
         # A.shape = (T, K - 4); t= n. timepoints, K= n. knots (with padding)
@@ -256,13 +267,18 @@ class BSplinePETModel(BasePETModel):
             else self._dataset.dataobj[self._dataset.brainmask, :]
         )
 
-        X = la.lstsq(
-            A.toarray().astype("float64"),
-            data[:, x_mask].T.astype("float64"),
-            cond=None,
-            lapack_driver="gelsd",
-        )
-        coefficients = X[0].T.astype("float32")
+        if self._coefficients is None:
+            X = la.lstsq(
+                A.toarray().astype("float64"),
+                data[:, x_mask].T.astype("float64"),
+                cond=None,
+                lapack_driver="gelsd",
+            )
+            coefficients = X[0].T.astype("float32")
+            if self._locked_fit:
+                self._coefficients = coefficients
+        else:
+            coefficients = self._coefficients
 
         # Generate an interpolation time mask
         interp_mask = np.zeros(len(self._dataset), dtype=bool)
