@@ -61,6 +61,94 @@ class ClippingValueError(RuntimeError):
     """Raised when clipping cannot compute a valid clipping/scaling."""
 
 
+def robust_window(
+    data: np.ndarray,
+    mask: np.ndarray | None = None,
+    p_min: float | None = None,
+    p_max: float = 99.98,
+    nonnegative: bool = True,
+) -> tuple[float, float]:
+    """
+    Estimate an intensity window that isolated outliers cannot set.
+
+    The percentiles are computed on a median-filtered copy of ``data``. With a
+    ``mask``, the filter runs only on the mask's bounding box (plus the
+    footprint's radius, so the values inside the mask are unchanged), and only
+    the voxels inside the mask are summarized.
+
+    Parameters
+    ----------
+    data : :obj:`~numpy.ndarray`
+        The input n-dimensional data array.
+    mask : :obj:`~numpy.ndarray`, optional
+        Boolean mask of the voxels the window is estimated from.
+    p_min : :obj:`float`, optional
+        The lower percentile. Defaults to 35 without a mask (which flattens the
+        background) and to 1 with one.
+    p_max : :obj:`float`, optional
+        The upper percentile.
+    nonnegative : :obj:`bool`, optional
+        If True, only consider non-negative values when calculating thresholds.
+
+    Returns
+    -------
+    :obj:`tuple` of :obj:`float`
+        The lower and upper bounds of the window.
+
+    """
+    if p_min is None:
+        p_min = 35.0 if mask is None else 1.0
+
+    footprint = ball(3)
+    data = np.asanyarray(data, dtype=np.float32)
+    if mask is None:
+        denoised = median_filter(data, footprint=footprint)
+    else:
+        mask = np.asanyarray(mask, dtype=bool)
+        if mask.any():
+            radius = footprint.shape[0] // 2
+            corners = np.argwhere(mask)
+            bbox = tuple(
+                slice(max(lo - radius, 0), hi + radius + 1)
+                for lo, hi in zip(corners.min(axis=0), corners.max(axis=0), strict=True)
+            )
+            denoised = median_filter(data[bbox], footprint=footprint)[mask[bbox]]
+        else:
+            denoised = data[mask]
+
+    # Select values for percentile computation.
+    # If nonnegative=True, we must have at least one finite >=0 value.
+    sel = denoised[denoised >= 0] if nonnegative else denoised
+    sel = sel[np.isfinite(sel)]
+
+    if sel.size == 0:
+        constraints = "nonnegative constraint and " if nonnegative else ""
+        raise ClippingValueError(
+            CLIPPING_EMPTY_SELECTION_ERROR_MSG.format(
+                constraints=constraints, p_min=p_min, p_max=p_max
+            )
+        )
+
+    a_min = float(np.percentile(sel, p_min))
+    a_max = float(np.percentile(sel, p_max))
+
+    if not np.isfinite(a_min) or not np.isfinite(a_max):
+        raise ClippingValueError(
+            CLIPPING_NONFINITE_THRESHOLDS_ERROR_MSG.format(
+                a_min=a_min, a_max=a_max, p_min=p_min, p_max=p_max, nonnegative=nonnegative
+            )
+        )
+
+    if a_max <= a_min:
+        raise ClippingValueError(
+            CLIPPING_INVALID_THRESHOLDS_ERROR_MSG.format(
+                a_min=a_min, a_max=a_max, p_min=p_min, p_max=p_max, nonnegative=nonnegative
+            )
+        )
+
+    return a_min, a_max
+
+
 def advanced_clip(
     data: np.ndarray,
     p_min: float = 35.0,
@@ -117,37 +205,7 @@ def advanced_clip(
         data = data.astype(np.float32, copy=not inplace)
 
     # Calculate stats on denoised version to avoid outlier bias
-    denoised = median_filter(data, footprint=ball(3))
-
-    # Select values for percentile computation.
-    # If nonnegative=True, we must have at least one finite >=0 value.
-    sel = denoised[denoised >= 0] if nonnegative else denoised
-    sel = sel[np.isfinite(sel)]
-
-    if sel.size == 0:
-        constraints = "nonnegative constraint and " if nonnegative else ""
-        raise ClippingValueError(
-            CLIPPING_EMPTY_SELECTION_ERROR_MSG.format(
-                constraints=constraints, p_min=p_min, p_max=p_max
-            )
-        )
-
-    a_min = float(np.percentile(sel, p_min))
-    a_max = float(np.percentile(sel, p_max))
-
-    if not np.isfinite(a_min) or not np.isfinite(a_max):
-        raise ClippingValueError(
-            CLIPPING_NONFINITE_THRESHOLDS_ERROR_MSG.format(
-                a_min=a_min, a_max=a_max, p_min=p_min, p_max=p_max, nonnegative=nonnegative
-            )
-        )
-
-    if a_max <= a_min:
-        raise ClippingValueError(
-            CLIPPING_INVALID_THRESHOLDS_ERROR_MSG.format(
-                a_min=a_min, a_max=a_max, p_min=p_min, p_max=p_max, nonnegative=nonnegative
-            )
-        )
+    a_min, a_max = robust_window(data, p_min=p_min, p_max=p_max, nonnegative=nonnegative)
 
     # Clip and scale data
     np.clip(data, a_min=a_min, a_max=a_max, out=data)
