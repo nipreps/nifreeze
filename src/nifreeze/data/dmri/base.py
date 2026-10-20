@@ -47,7 +47,7 @@ from nifreeze.data.dmri.utils import (
     find_shelling_scheme,
     format_gradients,
 )
-from nifreeze.data.utils import stream_select_last_axis
+from nifreeze.data.utils import stream_select_volumes
 
 BZERO_SHAPE_MISMATCH_ERROR_MSG = """\
 DWI 'bzero' shape ({bzero_shape}) does not match dataset volumes ({data_shape}). \
@@ -64,6 +64,12 @@ The DWI data contains b0 volumes, but the 'bzero' attribute was set. DWI b0 "
 volumes will be discarded, and the corresponding 'dataobj' and 'gradient' data \
 removed."""
 """DWI b0 and bzero provided warning message."""
+
+VOLUMES_LAST_ERROR_MSG = """\
+DWI 'dataobj' has shape {shape}, with the {n_gradients} volumes on the last axis. \
+Datasets store volumes on the first axis, (N, X, Y, Z): \
+use ``np.moveaxis(data, -1, 0)`` (or nifreeze.data.utils.to_time_first)."""
+"""DWI volumes-last data object error message."""
 
 
 def validate_gradients(
@@ -139,20 +145,26 @@ class DWI(BaseDataset[np.ndarray]):
     """List of transforms to correct for estimated eddy current distortions."""
 
     def __attrs_post_init__(self) -> None:
-        if self.dataobj.shape[-1] != self.gradients.shape[0]:
+        if self.dataobj.shape[0] != self.gradients.shape[0]:
+            if self.dataobj.shape[-1] == self.gradients.shape[0]:
+                raise ValueError(
+                    VOLUMES_LAST_ERROR_MSG.format(
+                        shape=self.dataobj.shape, n_gradients=self.gradients.shape[0]
+                    )
+                )
             raise ValueError(
                 GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR.format(
-                    n_volumes=self.dataobj.shape[-1],
+                    n_volumes=self.dataobj.shape[0],
                     n_gradients=self.gradients.shape[0],
                 )
             )
         # Ensure that if b0 data were provided, it is a 3D array with the same
         # shape as the DWI data object
         if self.bzero is not None:
-            if self.bzero.shape != tuple(self.dataobj.shape[:3]):
+            if self.bzero.shape != self.shape3d:
                 raise ValueError(
                     BZERO_SHAPE_MISMATCH_ERROR_MSG.format(
-                        bzero_shape=self.bzero.shape, data_shape=self.dataobj.shape[:3]
+                        bzero_shape=self.bzero.shape, data_shape=self.shape3d
                     )
                 )
 
@@ -167,30 +179,30 @@ class DWI(BaseDataset[np.ndarray]):
             warn(
                 DWI_B0_MULTIPLE_VOLUMES_WARN_MSG, UserWarning, stacklevel=2
             ) if b0_num > 1 else None
-            bzeros = self.dataobj[..., b0_mask]
-            bzeros = bzeros.squeeze(axis=-1) if bzeros.shape[-1] == 1 else bzeros
+            bzeros = self.dataobj[b0_mask]
+            bzeros = bzeros.squeeze(axis=0) if bzeros.shape[0] == 1 else bzeros
         elif b0_num > 0 and self.bzero is not None:
             warn(DWI_REDUNDANT_B0_WARN_MSG, UserWarning, stacklevel=2)
             bzeros = self.bzero
 
         # Set the bzero attribute to the median if necessary
         if bzeros is not None:
-            self.bzero = bzeros if bzeros.ndim == 3 else np.median(bzeros, axis=-1)
+            self.bzero = bzeros if bzeros.ndim == 3 else np.median(bzeros, axis=0)
 
         if b0_num > 0:
             # Remove b0 volumes from dataobj and gradients. A memory-mapped
             # dataobj is streamed into a disk-backed cache so it stays lazy.
             self.gradients = self.gradients[~b0_mask, :]
             self.dataobj = (
-                stream_select_last_axis(self.dataobj, ~b0_mask)
+                stream_select_volumes(self.dataobj, ~b0_mask)
                 if isinstance(self.dataobj, np.memmap)
-                else self.dataobj[..., ~b0_mask]
+                else self.dataobj[~b0_mask]
             )
 
         if self.gradients.shape[0] < DTI_MIN_ORIENTATIONS:
             raise ValueError(
                 f"DWI datasets must have at least {DTI_MIN_ORIENTATIONS} diffusion-weighted "
-                f"orientations; found {self.dataobj.shape[-1]}."
+                f"orientations; found {self.dataobj.shape[0]}."
             )
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray]:
@@ -206,14 +218,14 @@ class DWI(BaseDataset[np.ndarray]):
         Parameters
         ----------
         idx : :obj:`int` or :obj:`slice` or :obj:`tuple` or :obj:`~numpy.ndarray`
-            Indexer for the last dimension (or possibly other dimensions if extended).
+            Indexer for the volume (first) dimension.
 
         Returns
         -------
         volumes : :obj:`~numpy.ndarray`
             The selected data subset.
             If ``idx`` is a single integer, this will have shape ``(X, Y, Z)``,
-            otherwise it may have shape ``(X, Y, Z, k)``.
+            otherwise it may have shape ``(k, X, Y, Z)``.
         motion_affine : :obj:`~numpy.ndarray` or ``None``
             The corresponding per-volume motion affine(s) or ``None`` if identity transform(s).
         gradient : :obj:`~numpy.ndarray`

@@ -44,8 +44,9 @@ want normalization of b-vectors to modify the b-values), you should do so before
 the :class:`~nifreeze.data.dmri.base.DWI` object.
 
 **Data Representation**.
-The :class:`~nifreeze.data.dmri.base.DWI` class requires a ``dataobj`` that can be an array-like
-object.
+The :class:`~nifreeze.data.dmri.base.DWI` class requires a 4D ``dataobj`` with the volumes on the
+first axis, ``(N, X, Y, Z)``, one volume per row of the gradient table (NIfTI files store volumes
+on the last axis; :func:`~nifreeze.data.dmri.io.from_nii` converts them).
 The final step of the initialization process examines the data object and the gradient table,
 and removes :math:`b=0` volumes from the data **AND** the gradient table.
 If a ``bzero`` parameter is provided, the :attr:`~nifreeze.data.dmri.base.DWI.bzero` attribute

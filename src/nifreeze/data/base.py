@@ -183,6 +183,18 @@ def _cmp(lh: Any, rh: Any) -> bool:
     return lh == rh
 
 
+def _as_c_contiguous(value: Any) -> Any:
+    """Return arrays C-contiguous, so that every volume is one contiguous block.
+
+    Arrays that are already C-contiguous, memory maps included, are returned
+    unchanged. Other arrays, including non-contiguous views of a memory map,
+    are copied into memory.
+    """
+    if isinstance(value, np.ndarray) and not value.flags.c_contiguous:
+        return np.ascontiguousarray(value)
+    return value
+
+
 def validate_dataobj(inst: BaseDataset, attr: attrs.Attribute, value: Any) -> None:
     """Strict validator for data objects.
 
@@ -262,6 +274,10 @@ class BaseDataset(Generic[Unpack[Ts]]):
     for head motion estimation (that is, potentially a brain mask and the head
     motion estimates).
 
+    Volumes are stored on the *first* axis: ``dataobj`` has shape ``(N, X, Y, Z)``
+    for ``N`` volumes, and ``dataset[i]`` selects ``dataobj[i]``. The array is kept
+    C-contiguous, so each volume is a contiguous block in memory and on disk.
+
     The data structure has a direct HDF5 mapping to facilitate memory efficiency.
     For modalities requiring additional metadata such as DWI (which requires the gradient table
     and potentially a b=0 reference), this class may be derived to override certain behaviors
@@ -276,9 +292,10 @@ class BaseDataset(Generic[Unpack[Ts]]):
         # require_same_type=False so a memory-mapped dataobj (np.memmap, loaded
         # lazily by from_filename) compares equal to a plain ndarray of equal values.
         eq=attrs.cmp_using(eq=_cmp, require_same_type=False),
+        converter=_as_c_contiguous,
         validator=validate_dataobj,
     )
-    """A :obj:`~numpy.ndarray` object for the data array."""
+    """A :obj:`~numpy.ndarray` of shape ``(N, X, Y, Z)``: ``N`` volumes on the first axis."""
     affine: np.ndarray = attrs.field(
         default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp), validator=validate_affine
     )
@@ -308,16 +325,16 @@ class BaseDataset(Generic[Unpack[Ts]]):
         """
 
         if self.brainmask is not None:
-            if self.brainmask.shape != tuple(self.dataobj.shape[:3]):
+            if self.brainmask.shape != self.shape3d:
                 raise ValueError(
                     BRAINMASK_SHAPE_MISMATCH_ERROR_MSG.format(
-                        brainmask_shape=self.brainmask.shape, data_shape=self.dataobj.shape[:3]
+                        brainmask_shape=self.brainmask.shape, data_shape=self.shape3d
                     )
                 )
 
     def __len__(self) -> int:
         """Obtain the number of volumes/frames in the dataset."""
-        return self.dataobj.shape[-1]
+        return self.dataobj.shape[0]
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[Unpack[Ts]]:
         """
@@ -346,14 +363,14 @@ class BaseDataset(Generic[Unpack[Ts]]):
         Parameters
         ----------
         idx : :obj:`int` or :obj:`slice` or :obj:`tuple` or :obj:`~numpy.ndarray`
-            Indexer for the last dimension (or possibly other dimensions if extended).
+            Indexer for the volume (first) dimension.
 
         Returns
         -------
         :obj:`~numpy.ndarray`
             The selected data subset.
             If ``idx`` is a single integer, this will have shape ``(X, Y, Z)``,
-            otherwise it may have shape ``(X, Y, Z, k)``.
+            otherwise it may have shape ``(k, X, Y, Z)``.
         affine : :obj:`~numpy.ndarray` or :obj:`None`
             The corresponding per-volume motion affine(s) or :obj:`None` if identity transform(s).
         Unpack[:obj:`~nifreeze.data.base.Ts`]
@@ -370,17 +387,17 @@ class BaseDataset(Generic[Unpack[Ts]]):
         """
 
         affine = self.motion_affines[idx] if self.motion_affines is not None else None
-        return self.dataobj[..., idx], affine, *self._getextra(idx)
+        return self.dataobj[idx, ...], affine, *self._getextra(idx)
 
     @property
-    def shape3d(self):
+    def shape3d(self) -> tuple[int, ...]:
         """Get the shape of the 3D volume."""
-        return self.dataobj.shape[:3]
+        return tuple(self.dataobj.shape[1:])
 
     @property
     def size3d(self):
         """Get the number of voxels in the 3D volume."""
-        return np.prod(self.dataobj.shape[:3])
+        return np.prod(self.shape3d)
 
     @classmethod
     def from_filename(cls, filename: Path | str) -> Self:
@@ -524,7 +541,7 @@ def to_nifti(
         write_hmxfms = False
 
     if dataset.motion_affines is not None:  # resampling is needed
-        reference = ImageGrid(shape=dataset.dataobj.shape[:3], affine=dataset.affine)
+        reference = ImageGrid(shape=dataset.shape3d, affine=dataset.affine)
         resampled = np.empty_like(dataset.dataobj, dtype=dataset.dataobj.dtype)
         xforms = LinearTransformsMapping(dataset.motion_affines, reference=reference)
 
@@ -534,7 +551,7 @@ def to_nifti(
             frame = dataset[i]
             datamoving = nb.Nifti1Image(frame[0], dataset.affine, dataset.datahdr)
             # resample at index
-            resampled[..., i] = np.asanyarray(
+            resampled[i] = np.asanyarray(
                 apply(xform, datamoving, order=order).dataobj,
                 dtype=dataset.dataobj.dtype,
             )
@@ -560,7 +577,8 @@ def to_nifti(
     else:
         hdr = dataset.datahdr.copy()
 
-    nii = nb.Nifti1Image(resampled, dataset.affine, hdr)
+    # NIfTI stores volumes on the last axis
+    nii = nb.Nifti1Image(np.moveaxis(resampled, 0, -1), dataset.affine, hdr)
     if filename is not None:
         nii.to_filename(filename)
 

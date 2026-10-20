@@ -62,6 +62,7 @@ def load(
     import numpy as np
     from nibabel.spatialimages import SpatialImage
 
+    from nifreeze.data.utils import to_time_first
     from nifreeze.utils.ndimage import load_api
 
     filename = Path(filename)
@@ -82,7 +83,9 @@ def load(
         return pet_from_nii(filename, brainmask_file=brainmask_file, **kwargs)
 
     img = load_api(filename, SpatialImage)
-    retval: BaseDataset = BaseDataset(dataobj=np.asanyarray(img.dataobj), affine=img.affine)
+    retval: BaseDataset = BaseDataset(
+        dataobj=to_time_first(np.asanyarray(img.dataobj)), affine=img.affine
+    )
 
     if brainmask_file:
         mask = load_api(brainmask_file, SpatialImage)

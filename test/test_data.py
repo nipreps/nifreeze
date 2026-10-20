@@ -221,7 +221,8 @@ def test_load_base_nifti(
     assert hasattr(retval, "affine")
 
     assert retval.dataobj is not None
-    assert np.allclose(retval.dataobj, dataobj)
+    # NIfTI stores the volumes last; datasets store them first
+    assert np.allclose(retval.dataobj, np.moveaxis(dataobj, -1, 0))
 
     assert retval.affine is not None
     assert np.allclose(retval.affine, affine)

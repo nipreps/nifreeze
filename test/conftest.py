@@ -173,6 +173,15 @@ def _generate_random_uniform_nd_data(request, size, a=0.0, b=1.0):
     return (b - a) * data + a
 
 
+def volumes_first(data: np.ndarray) -> np.ndarray:
+    """Move the volumes of a NIfTI-ordered ``(X, Y, Z, N)`` array to the first axis.
+
+    Datasets store ``(N, X, Y, Z)``; drawing random data in NIfTI order and then
+    moving the axis keeps the drawn values identical to the volumes-last layout.
+    """
+    return np.ascontiguousarray(np.moveaxis(data, -1, 0))
+
+
 def _generate_random_uniform_spatial_data(request, size, a, b):
     data = _generate_random_uniform_nd_data(request, size, a, b)
     affine = np.eye(4, dtype="float32")
@@ -328,6 +337,7 @@ def setup_random_base_data(request):
     base_dataobj, affine = _generate_random_uniform_spatial_data(
         request, (*vol_size, volumes), 0.0, 1.0
     )
+    base_dataobj = volumes_first(base_dataobj)
     brainmask_dataobj = rng.choice([True, False], size=vol_size).astype(bool)
     motion_affines = rng.random((volumes, 4, 4))
     datahdr = None
@@ -378,6 +388,7 @@ def setup_random_dwi_data(request, setup_random_gtab_data):
     dwi_dataobj, affine = _generate_random_uniform_spatial_data(
         request, (*vol_size, volumes), 0.0, 1.0
     )
+    dwi_dataobj = volumes_first(dwi_dataobj)
     brainmask_dataobj = rng.choice([True, False], size=vol_size).astype(bool)
     gradients = np.column_stack((bvecs, bvals)).astype("float32")
 
@@ -417,6 +428,7 @@ def setup_random_pet_data(request):
     pet_dataobj, affine = _generate_random_uniform_spatial_data(
         request, (*vol_size, n_frames), 0.0, 1.0
     )
+    pet_dataobj = volumes_first(pet_dataobj)
     brainmask_dataobj = rng.choice([True, False], size=vol_size).astype(bool)
 
     return (

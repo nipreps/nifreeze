@@ -131,7 +131,7 @@ def _compute_S0(
     Parameters
     ----------
     dwi_dataobj : :obj:`~numpy.ndarray`
-        DWI data.
+        DWI data, ``(N, X, Y, Z)``.
     data_mask : :obj:`~numpy.ndarray`
         The mask to apply on the data.
     bzero : :obj:`~numpy.ndarray`
@@ -150,7 +150,7 @@ def _compute_S0(
     # By default, set S0 to the q-th percentile of the DWI data within mask
     S0 = np.full(
         data_mask.sum(),
-        np.round(np.percentile(dwi_dataobj[data_mask, ...], default_percentile)),
+        np.round(np.percentile(dwi_dataobj[:, data_mask], default_percentile)),
     )
 
     # Modify S0 if b0 is not ignored
@@ -158,6 +158,41 @@ def _compute_S0(
         S0 = bzero[data_mask]
 
     return S0
+
+
+def _masked_volumes(
+    dataobj: np.ndarray, volumes: np.ndarray, voxels: np.ndarray | None = None
+) -> np.ndarray:
+    """Gather volumes at the selected voxels into a voxels-by-volumes array.
+
+    Reads one volume at a time from the ``(N, X, Y, Z)`` data object, so the only
+    allocation is the C-contiguous result, where each voxel's signal is contiguous
+    (the volumes-last layout DIPY and the GP expect). Voxels follow the C order of
+    ``volume[voxels]``.
+
+    Parameters
+    ----------
+    dataobj : :obj:`~numpy.ndarray`
+        The dataset's ``(N, X, Y, Z)`` data object.
+    volumes : :obj:`~numpy.ndarray`
+        Boolean mask of the ``N`` volumes to gather.
+    voxels : :obj:`~numpy.ndarray`, optional
+        Boolean ``(X, Y, Z)`` mask of the voxels to gather (all if :obj:`None`).
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        Array of shape ``(n_voxels, n_volumes)``.
+
+    """
+    rows = np.flatnonzero(volumes)
+    flat = dataobj.reshape(dataobj.shape[0], -1)
+    cols = slice(None) if voxels is None else np.flatnonzero(voxels)
+    n_voxels = flat.shape[1] if voxels is None else int(np.count_nonzero(voxels))
+    out = np.empty((n_voxels, rows.size), dtype=dataobj.dtype)
+    for j, i in enumerate(rows):
+        out[:, j] = flat[i, cols]
+    return out
 
 
 def _append_bzero(dataobj, gtab, bzero=None):
@@ -170,7 +205,9 @@ def _append_bzero(dataobj, gtab, bzero=None):
     Parameters
     ----------
     dataobj : :obj:`~numpy.ndarray`
-        Diffusion-weighted imaging data.
+        Diffusion-weighted imaging data, with volumes on the last axis (as DIPY
+        expects; e.g., the ``(n_voxels, n_volumes)`` output of
+        :func:`_masked_volumes`).
     gtab : :obj:`~dipy.core.gradients.GradientTable`
         Gradient table object containing b-values and b-vectors corresponding
         to the input data.
@@ -248,11 +285,11 @@ class BaseDWIModel(BaseModel):
         if "DiffusionKurtosisModel" in model_str:
             bvals = dataset.gradients[:, -1]
             bvecs = dataset.gradients[:, :-1]
+            # The fit appends the b0 (if any) as one more volume
+            if dataset.bzero is not None:
+                bvals = np.concatenate([bvals, np.asarray([0])])
+                bvecs = np.concatenate([bvecs, np.zeros([1, 3])])
             gtab = gradient_table_from_bvals_bvecs(bvals, bvecs)
-            bzero = dataset.bzero
-            if bzero is not None:
-                bzero = bzero * dataset.brainmask if dataset.brainmask is not None else bzero
-            _, gtab = _append_bzero(dataset.dataobj, gtab, bzero=bzero)
             enough_b = check_multi_b(gtab, 3, non_zero=False)
             if not enough_b:
                 raise ValueError(DWI_DKI_SHELL_ERROR_MSG)
@@ -264,7 +301,7 @@ class BaseDWIModel(BaseModel):
 
         # Compute the data mask (ignores or uses b0 as specified)
         self._data_mask = _compute_data_mask(
-            dataset.dataobj.shape[:3],
+            dataset.shape3d,
             dataset.brainmask,
             dataset.bzero,
             ignore_bzero=ignore_bzero,
@@ -303,9 +340,9 @@ class BaseDWIModel(BaseModel):
             self._locked_fit = True
             self._warn_single_fit_canary()
 
-        data, _, gtab = self._dataset[idxmask]
+        gtab = self._dataset.gradients[idxmask]
         # Select voxels within mask or just unravel 3D if no mask
-        data = data[brainmask, ...] if brainmask is not None else data.reshape(-1, data.shape[-1])
+        data = _masked_volumes(self._dataset.dataobj, idxmask, brainmask)
 
         # Replace the gradient table with a DIPY object
         gtab = gradient_table_from_bvals_bvecs(gtab[:, -1], gtab[:, :-1])
@@ -478,7 +515,7 @@ class AverageDWIModel(ExpectationModel):
                 atol_low=self._atol_low,
                 atol_high=self._atol_high,
             )
-            shelldata = self._dataset.dataobj[..., shellmask]
+            shelldata = self._dataset.dataobj[shellmask]
 
         # Regress out global signal differences
         if self._detrend:
@@ -488,7 +525,7 @@ class AverageDWIModel(ExpectationModel):
         avg_func = np.median if self._stat == "median" else np.mean
 
         # Calculate the average
-        return avg_func(shelldata, axis=-1)
+        return avg_func(shelldata, axis=0)
 
 
 class DTIModel(BaseDWIModel):
@@ -565,10 +602,10 @@ class GPModel(BaseDWIModel):
             self._locked_fit = True
             self._warn_single_fit_canary()
 
-        data, _, gtab = self._dataset[idxmask]
+        gtab = self._dataset.gradients[idxmask]
         # Restrict to the fitted voxels so predictions align with the scatter
         # mask used in ``fit_predict``.
-        train = data[self._data_mask, ...]
+        train = _masked_volumes(self._dataset.dataobj, idxmask, self._data_mask)
         gtab = gradient_table_from_bvals_bvecs(gtab[:, -1], gtab[:, :-1])
 
         module_name, class_name = self._model_class.rsplit(".", 1)

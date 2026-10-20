@@ -88,18 +88,20 @@ def test_legacy_dataobj_conversion(tmp_path, monkeypatch, slab_bytes):
     data = np.random.default_rng(1234).random((7, 6, 5, 4), dtype=np.float32)
     dataobj = open_dataobj_memmap(_write_legacy(tmp_path / "legacy.h5", data))
     assert isinstance(dataobj, np.memmap)
-    npt.assert_array_equal(dataobj, data)
+    assert dataobj.flags.c_contiguous
+    npt.assert_array_equal(dataobj, np.moveaxis(data, -1, 0))
 
 
 def test_cache_removed_with_last_view(tmp_path):
     """A conversion cache lives exactly as long as some array references it."""
     data = np.random.default_rng(1234).random((7, 6, 5, 4), dtype=np.float32)
     dataobj = open_dataobj_memmap(_write_legacy(tmp_path / "legacy.h5", data))
+    assert dataobj.filename is not None
     cache = Path(dataobj.filename)
     assert cache.is_file()
     assert cache.parent.name.startswith("nifreeze-")
 
-    volume = dataobj[..., 1]
+    volume = dataobj[1]
     del dataobj
     gc.collect()
     assert cache.is_file()
@@ -133,7 +135,7 @@ def test_in_memory_b0_removal_writes_no_cache(tmp_path, monkeypatch):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         dwi = DWI(
-            dataobj=rng.random((4, 4, 4, 10), dtype=np.float32),
+            dataobj=rng.random((10, 4, 4, 4), dtype=np.float32),
             affine=np.eye(4),
             gradients=np.column_stack((bvecs, bvals)),
         )
@@ -156,7 +158,7 @@ def test_to_filename_onto_mapped_source(tmp_path):
     ``h5py.File(path, "w")`` truncates in place; reading a truncated mapping
     raises SIGBUS on Linux, so the round trip runs in a child process.
     """
-    data = np.random.default_rng(1234).random((16, 16, 8, 6), dtype=np.float32)
+    data = np.random.default_rng(1234).random((6, 16, 16, 8), dtype=np.float32)
     path = tmp_path / "dataset.h5"
     BaseDataset(dataobj=data, affine=np.eye(4)).to_filename(path)
 
@@ -175,7 +177,7 @@ def test_to_filename_onto_mapped_source(tmp_path):
 
 def test_to_filename_failure_keeps_target(tmp_path, monkeypatch):
     """A failed write leaves the previous file and no temporary file behind."""
-    data = np.random.default_rng(1234).random((4, 4, 4, 3), dtype=np.float32)
+    data = np.random.default_rng(1234).random((3, 4, 4, 4), dtype=np.float32)
     path = tmp_path / "dataset.h5"
     BaseDataset(dataobj=data, affine=np.eye(4)).to_filename(path)
 

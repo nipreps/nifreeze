@@ -227,7 +227,7 @@ class PET(BaseDataset[np.ndarray]):
         instantiation time.
 
         Specifically, the length of the frame_time and uptake attributes must
-        match the last dimension of the data (number of frames).
+        match the first dimension of the data (number of frames).
 
         Computes the values for the private attributes.
         """
@@ -244,7 +244,7 @@ class PET(BaseDataset[np.ndarray]):
                     )
                 )
 
-        n_frames = int(self.dataobj.shape[-1])
+        n_frames = int(self.dataobj.shape[0])
         _check_attr_vol_length_match("midframe", self.midframe, n_frames)
 
         # Ensure that the total duration is larger than last midframe
@@ -269,14 +269,14 @@ class PET(BaseDataset[np.ndarray]):
         Parameters
         ----------
         idx : :obj:`int` or :obj:`slice` or :obj:`tuple` or :obj:`~numpy.ndarray`
-            Indexer for the last dimension (or possibly other dimensions if extended).
+            Indexer for the volume (first) dimension.
 
         Returns
         -------
         volumes : :obj:`~numpy.ndarray`
             The selected data subset.
             If ``idx`` is a single integer, this will have shape ``(X, Y, Z)``,
-            otherwise it may have shape ``(X, Y, Z, k)``.
+            otherwise it may have shape ``(k, X, Y, Z)``.
         motion_affine : :obj:`~numpy.ndarray` or :obj:`None`
             The corresponding per-volume motion affine(s) or :obj:`None` if identity transform(s).
         time : :obj:`~numpy.ndarray`
@@ -288,13 +288,13 @@ class PET(BaseDataset[np.ndarray]):
     def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
         """Set an affine, and update data object and gradients."""
         ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
-        reference = ImageGrid(self.dataobj.shape[:3], self.affine)
+        reference = ImageGrid(self.shape3d, self.affine)
         xform = Affine(matrix=affine, reference=reference)
 
         if not Path(self._filepath).exists():
             self.to_filename(self._filepath)
 
-        # read original PET frame (dataobj is stored volume-major: (N, X, Y, Z))
+        # read original PET frame
         with h5py.File(self._filepath, "r") as in_file:
             root = in_file["/0"]
             dframe = np.asanyarray(root["dataobj"][index])
@@ -302,7 +302,7 @@ class PET(BaseDataset[np.ndarray]):
         dmoving = nb.Nifti1Image(dframe, self.affine, None)
 
         # resample and update orientation at index
-        self.dataobj[..., index] = np.asanyarray(
+        self.dataobj[index] = np.asanyarray(
             apply(xform, dmoving, order=order).dataobj,
             dtype=self.dataobj.dtype,
         )

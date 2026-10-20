@@ -42,7 +42,7 @@ from nifreeze.data.utils import save_dataobj_volume_major
 pytestmark = pytest.mark.memory
 
 # ~140 MB float32 series; a single volume is ~2.4 MB.
-_SHAPE = (96, 96, 64, 60)
+_SHAPE = (60, 96, 96, 64)
 _FULL_MB = float(np.prod(_SHAPE) * 4) / 1024.0 / 1024.0
 
 
@@ -78,7 +78,9 @@ def test_from_filename_legacy_peak_rss(peak_rss, tmp_path):
         out_file.attrs["Format"] = "NFDH5"
         out_file.attrs["Version"] = np.uint16(1)
         root = out_file.create_group("/0")
-        root.create_dataset("dataobj", data=rng.random(_SHAPE, dtype=np.float32))
+        # Legacy files store the volumes last
+        legacy = rng.random((*_SHAPE[1:], _SHAPE[0]), dtype=np.float32)
+        root.create_dataset("dataobj", data=legacy)
         root.create_dataset("affine", data=np.eye(4))
 
     def _load_and_index(p):
@@ -109,8 +111,8 @@ def test_from_filename_roundtrip_values(tmp_path):
 
     ds: BaseDataset[Any] = BaseDataset.from_filename(h5)
     assert ds.dataobj.shape == _SHAPE
-    for i in range(_SHAPE[-1]):
-        np.testing.assert_allclose(ds[i][0], expected[..., i])
+    for i in range(_SHAPE[0]):
+        np.testing.assert_allclose(ds[i][0], expected[i])
 
 
 _B0_INDICES = (0, 20, 40)  # interspersed b=0 volumes
@@ -124,7 +126,7 @@ def _write_dwi_with_b0(path, data):
     gradient table directly.
     """
     rng = np.random.default_rng(0)
-    n = data.shape[-1]
+    n = data.shape[0]
     bvecs = rng.standard_normal((n, 3)).astype(np.float32)
     bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
     bvals = np.full(n, 1000.0, dtype=np.float32)
@@ -150,8 +152,8 @@ def test_dwi_b0_filtered_dataobj_is_memmap(tmp_path):
     h5 = _write_dwi_with_b0(tmp_path / "dwi.h5", expected)
 
     dwi = DWI.from_filename(h5)
-    keep = [i for i in range(_SHAPE[-1]) if i not in _B0_INDICES]
+    keep = [i for i in range(_SHAPE[0]) if i not in _B0_INDICES]
     assert isinstance(dwi.dataobj, np.memmap)  # not retained as an in-RAM copy
-    assert dwi.dataobj.shape[-1] == len(keep)
+    assert dwi.dataobj.shape[0] == len(keep)
     for j in range(len(keep)):
-        np.testing.assert_allclose(dwi[j][0], expected[..., keep[j]])
+        np.testing.assert_allclose(dwi[j][0], expected[keep[j]])

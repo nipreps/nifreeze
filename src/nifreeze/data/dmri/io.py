@@ -32,6 +32,7 @@ from nibabel.spatialimages import SpatialImage
 from nifreeze.data.base import to_nifti as _base_to_nifti
 from nifreeze.data.dmri.base import DWI
 from nifreeze.data.dmri.utils import transform_fsl_bvec
+from nifreeze.data.utils import to_time_first
 from nifreeze.utils.ndimage import get_data, load_api
 
 GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG = """\
@@ -94,7 +95,9 @@ def from_nii(
 
     # 1) Load a NIfTI
     img = load_api(filename, SpatialImage)
-    fulldata = get_data(img)
+    # NIfTI stores volumes last; datasets store them first
+    fulldata = to_time_first(get_data(img))
+    img.uncache()  # drop nibabel's cached copy of the volumes-last array
 
     # 2) Determine the gradients array from either gradients_file or bvec/bval
     if gradients_file:
@@ -205,8 +208,8 @@ def to_nifti(
                 stacklevel=2,
             )
     else:
-        data = np.concatenate((dwi.bzero[..., np.newaxis], dwi.dataobj), axis=-1)  # type: ignore
-        nii = nb.Nifti1Image(data, nii.affine, nii.header)
+        data = np.concatenate((dwi.bzero[np.newaxis], dwi.dataobj), axis=0)  # type: ignore
+        nii = nb.Nifti1Image(np.moveaxis(data, 0, -1), nii.affine, nii.header)
 
         if filename is not None:
             nii.to_filename(filename)

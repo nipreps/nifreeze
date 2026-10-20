@@ -15,6 +15,7 @@ import h5py
 import nibabel as nb
 import nitransforms as nt
 import numpy as np
+import numpy.typing as npt
 
 _NATIVE_BYTEORDER = "<" if sys.byteorder == "little" else ">"
 
@@ -49,24 +50,59 @@ def save_dataobj_volume_major(
     compression: str | None = None,
     compression_opts=None,
 ) -> None:
-    """Write a 4D ``dataobj`` volume-major, streaming one volume at a time.
+    """Write a 4D ``(N, X, Y, Z)`` ``dataobj`` volume-major, one volume at a time.
 
-    The on-disk dataset has shape ``(N, X, Y, Z)`` (volumes first) so that each
-    volume is a contiguous block, which memory-maps with per-volume locality on
-    read (see :func:`open_dataobj_memmap`). Writing proceeds volume-by-volume to
-    avoid materializing a transposed copy of the whole array.
+    Each volume is a contiguous block on disk, which memory-maps with per-volume
+    locality on read (see :func:`open_dataobj_memmap`). Writing volume by volume
+    keeps a memory-mapped ``dataobj`` from being read into memory at once.
     """
-    n = dataobj.shape[-1]
     dset = root.create_dataset(
         "dataobj",
-        shape=(n, *dataobj.shape[:-1]),
+        shape=dataobj.shape,
         dtype=dataobj.dtype,
         compression=compression,
         compression_opts=compression_opts,
     )
     dset.attrs[VOLUME_AXIS_ATTR] = 0
-    for i in range(n):
-        dset[i] = dataobj[..., i]
+    for i in range(dataobj.shape[0]):
+        dset[i] = dataobj[i]
+
+
+def to_time_first(data: np.ndarray, keep: npt.ArrayLike | None = None) -> np.ndarray:
+    """Copy a volumes-last ``(X, Y, Z, N)`` array (NIfTI order) into ``(N, X, Y, Z)``.
+
+    The result is C-contiguous (each volume is one contiguous block) and is filled
+    one volume at a time, so the only copy made is the result itself.
+
+    Parameters
+    ----------
+    data : :obj:`~numpy.ndarray`
+        The 4D array with volumes on the last axis.
+    keep : :obj:`~numpy.ndarray`, optional
+        Boolean mask or integer indices of the volumes to keep (all by default).
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        The selected volumes, stacked on the first axis.
+
+    Examples
+    --------
+    >>> data = np.arange(24).reshape(2, 3, 1, 4)
+    >>> out = to_time_first(data, keep=[True, False, True, True])
+    >>> out.shape, out.flags.c_contiguous
+    ((3, 2, 3, 1), True)
+    >>> bool(np.array_equal(out[1], data[..., 2]))
+    True
+
+    """
+    indices = np.arange(data.shape[-1]) if keep is None else np.asarray(keep)
+    if indices.dtype == bool:
+        indices = np.flatnonzero(indices)
+    out = np.empty((indices.size, *data.shape[:-1]), dtype=data.dtype)
+    for j, i in enumerate(indices):
+        out[j] = data[..., i]
+    return out
 
 
 class _VolumeCache:
@@ -137,17 +173,17 @@ def open_dataobj_memmap(
     key: str = "/0/dataobj",
     mode: Literal["r", "c", "r+"] = "c",
     cache_dir: Path | str | None = None,
-) -> np.ndarray:
+) -> np.memmap:
     """Open a 4D ``dataobj`` as a lazy, per-volume-local :obj:`~numpy.memmap`.
 
-    The returned array always has the in-memory shape ``(X, Y, Z, N)`` so that
-    ``dataobj[..., k]`` selects volume ``k``. Two on-disk layouts are handled:
+    The returned array always has the shape ``(N, X, Y, Z)``, C-contiguous, so
+    that ``dataobj[k]`` is volume ``k`` as one contiguous block. Two on-disk
+    layouts are handled:
 
     - **volume-major** (``VOLUME_AXIS_ATTR == 0``, written by
       :func:`save_dataobj_volume_major`): directly mapped zero-copy when
-      contiguous/uncompressed/native-endian, then transposed to ``(X, Y, Z, N)``
-      — each volume is a contiguous block. Compressed or chunked datasets are
-      decompressed one volume at a time into a temporary cache.
+      contiguous, uncompressed and native-endian. Compressed or chunked datasets
+      are decompressed one volume at a time into a temporary cache.
     - **legacy** ``(X, Y, Z, N)`` (no attribute): converted into a volume-major
       temporary cache in a single sequential pass over the file, reading slabs of
       at most :data:`CONVERSION_SLAB_BYTES`. Re-save the dataset with
@@ -184,30 +220,29 @@ def open_dataobj_memmap(
                         slab = dset[x0 : x0 + step]
                         for i in range(shape[-1]):
                             cache.write((i, x0, 0, 0), slab[..., i])
-            return np.moveaxis(cache.open_memmap(), 0, -1)
+            return cache.open_memmap()
 
     assert offset is not None  # guaranteed by mappable
-    mm = np.memmap(filename, dtype=dtype, mode=mode, offset=offset, shape=shape, order="C")
-    return np.moveaxis(mm, 0, -1)
+    return np.memmap(filename, dtype=dtype, mode=mode, offset=offset, shape=shape, order="C")
 
 
-def stream_select_last_axis(
+def stream_select_volumes(
     src: np.ndarray,
     keep_mask: np.ndarray,
     cache_dir: Path | str | None = None,
     name: str = "dataobj",
-) -> np.ndarray:
-    """Select volumes along the last axis into a disk-backed memmap.
+) -> np.memmap:
+    """Select volumes (first axis) of ``src`` into a disk-backed memmap.
 
-    Copies ``src[..., keep_mask]`` one volume at a time into a volume-major
-    temporary cache, which is deleted when the result is released. Used to drop
-    b=0 volumes from a memory-mapped DWI without materializing it.
+    Copies ``src[keep_mask]`` one volume at a time into a temporary cache, which
+    is deleted when the result is released. Used to drop b=0 volumes from a
+    memory-mapped DWI without materializing it.
     """
     keep = np.flatnonzero(keep_mask)
-    with _VolumeCache((keep.size, *src.shape[:-1]), src.dtype, name, cache_dir) as cache:
+    with _VolumeCache((keep.size, *src.shape[1:]), src.dtype, name, cache_dir) as cache:
         for j, i in enumerate(keep):
-            cache.write((j, 0, 0, 0), src[..., i])
-    return np.moveaxis(cache.open_memmap(), 0, -1)
+            cache.write((j, 0, 0, 0), src[i])
+    return cache.open_memmap()
 
 
 def save_nfdh5_fields(
