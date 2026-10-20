@@ -22,6 +22,9 @@
 #
 
 import gc
+import os
+import subprocess
+import sys
 import tempfile
 import warnings
 from pathlib import Path
@@ -33,6 +36,7 @@ import numpy.testing as npt
 import pytest
 
 from nifreeze.data import utils
+from nifreeze.data.base import BaseDataset
 from nifreeze.data.dmri.base import DWI
 from nifreeze.data.utils import apply_affines, open_dataobj_memmap
 from nifreeze.utils.ndimage import load_api
@@ -136,3 +140,51 @@ def test_in_memory_b0_removal_writes_no_cache(tmp_path, monkeypatch):
     assert len(dwi) == 8
     assert not isinstance(dwi.dataobj, np.memmap)
     assert not list(tmp_path.rglob("*.npy"))
+
+
+_OVERWRITE_SCRIPT = """
+import sys
+from nifreeze.data.base import BaseDataset
+dataset = BaseDataset.from_filename(sys.argv[1])
+dataset.to_filename(sys.argv[1])
+"""
+
+
+def test_to_filename_onto_mapped_source(tmp_path):
+    """Writing a dataset onto the file that backs its memory map keeps the data.
+
+    ``h5py.File(path, "w")`` truncates in place; reading a truncated mapping
+    raises SIGBUS on Linux, so the round trip runs in a child process.
+    """
+    data = np.random.default_rng(1234).random((16, 16, 8, 6), dtype=np.float32)
+    path = tmp_path / "dataset.h5"
+    BaseDataset(dataobj=data, affine=np.eye(4)).to_filename(path)
+
+    env = {**os.environ, "PYTHONPATH": os.pathsep.join(sys.path)}
+    result = subprocess.run(
+        [sys.executable, "-c", _OVERWRITE_SCRIPT, str(path)],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    npt.assert_array_equal(BaseDataset.from_filename(path).dataobj, data)
+    assert [p.name for p in tmp_path.iterdir()] == ["dataset.h5"]
+
+
+def test_to_filename_failure_keeps_target(tmp_path, monkeypatch):
+    """A failed write leaves the previous file and no temporary file behind."""
+    data = np.random.default_rng(1234).random((4, 4, 4, 3), dtype=np.float32)
+    path = tmp_path / "dataset.h5"
+    BaseDataset(dataobj=data, affine=np.eye(4)).to_filename(path)
+
+    def _fail(*args, **kwargs):
+        raise RuntimeError("write failed")
+
+    monkeypatch.setattr("nifreeze.data.base.save_nfdh5_fields", _fail)
+    with pytest.raises(RuntimeError, match="write failed"):
+        BaseDataset(dataobj=data * 2, affine=np.eye(4)).to_filename(path)
+
+    npt.assert_array_equal(BaseDataset.from_filename(path).dataobj, data)
+    assert [p.name for p in tmp_path.iterdir()] == ["dataset.h5"]

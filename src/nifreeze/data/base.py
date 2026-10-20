@@ -38,7 +38,11 @@ from nitransforms.linear import LinearTransformsMapping
 from nitransforms.resampling import apply
 from typing_extensions import Self, TypeVarTuple, Unpack
 
-from nifreeze.data.utils import load_nfdh5_fields, save_nfdh5_fields
+from nifreeze.data.utils import (
+    load_nfdh5_fields,
+    replace_on_success,
+    save_nfdh5_fields,
+)
 
 Ts = TypeVarTuple("Ts")
 
@@ -440,7 +444,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
         if not filename.name.endswith(NFDH5_EXT):
             filename = filename.parent / f"{filename.name}.h5"
 
-        with h5py.File(filename, "w") as out_file:
+        with replace_on_success(filename) as tmp, h5py.File(tmp, "w") as out_file:
             out_file.attrs["Format"] = "NFDH5"  # NiFreeze Data HDF5
             out_file.attrs["Version"] = np.uint16(2)  # v2: volume-major dataobj
             root = out_file.create_group("/0")

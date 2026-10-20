@@ -4,9 +4,11 @@ import os
 import shutil
 import sys
 import weakref
+from contextlib import contextmanager
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Literal
+from typing import Iterator, Literal
+from uuid import uuid4
 
 import attrs
 import h5py
@@ -255,6 +257,25 @@ def load_nfdh5_fields(filename: Path | str, lazy_keys: tuple[str, ...] = ("datao
     for key in present:
         data[key] = open_dataobj_memmap(filename, f"/0/{key}")
     return data
+
+
+@contextmanager
+def replace_on_success(filename: Path | str) -> Iterator[Path]:
+    """Yield a temporary path next to ``filename`` and move it onto ``filename`` on success.
+
+    ``h5py.File(filename, "w")`` truncates the file in place. If that file backs a
+    memory-mapped ``dataobj`` (for example, writing a dataset back to the file
+    it was loaded from), the mapping would lose its data while it is being
+    written out. Renaming a new file over it keeps the old inode, and thus the
+    mapping, valid.
+    """
+    filename = Path(filename)
+    tmp = filename.with_name(f".{filename.name}.{uuid4().hex}.tmp")
+    try:
+        yield tmp
+        os.replace(tmp, filename)
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def apply_affines(nii, em_affines, output_filename=None) -> nb.nifti1.Nifti1Image:
