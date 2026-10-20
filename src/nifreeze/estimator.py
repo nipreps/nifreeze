@@ -216,6 +216,7 @@ class Estimator:
 
         kwargs["num_threads"] = n_threads
         kwargs = self._align_kwargs | kwargs
+        clip = kwargs.pop("clip", "both")
 
         # Calculate effective dataset length for progress bar
         if self._stop_index is not None:
@@ -252,7 +253,7 @@ class Estimator:
                         dataset.affine,
                         i,
                         ptmp_dir,
-                        kwargs.pop("clip", "both"),
+                        clip=clip,
                     )
 
                     pbar.set_description_str(f"{REG_MSG: <16} vol. <{i}>")

@@ -162,6 +162,28 @@ def test_estimator_start_index(request, monkeypatch):
     assert recorded_indices == [3, 4, 5, 6]
 
 
+def test_estimator_clip_reaches_every_volume(request, monkeypatch):
+    """A ``clip`` setting applies to every volume, not only the first."""
+    recorded_clips = []
+
+    dataset = DummyDataset(rng=request.node.rng)
+
+    def fake_prepare(*args, clip=None, **kwargs):
+        recorded_clips.append(args[5] if len(args) > 5 else clip)
+        return None, None, None
+
+    class DummyXForm:
+        matrix = np.eye(4)
+
+    monkeypatch.setattr(nifreeze.estimator, "_prepare_registration_data", fake_prepare)
+    monkeypatch.setattr(nifreeze.estimator, "_run_registration", lambda *a, **k: DummyXForm())
+
+    model = DummyInsiderModel(dataset=dataset)
+    Estimator(model, strategy="linear", clip="none").run(dataset)
+
+    assert recorded_clips == ["none"] * len(dataset)
+
+
 def test_estimator_start_and_end_index(request, monkeypatch):
     """Test that estimator respects both start_index and end_index."""
     recorded_indices = []
