@@ -5,7 +5,13 @@ on:
     branches: ['main', 'maint/*']
   pull_request:
     branches: ['main', 'maint/*']
+  # Record a range of commits, e.g. to fill the dashboard's history
   workflow_dispatch:
+    inputs:
+      commits:
+        description: 'ASV range of commits to record, e.g. "HEAD~20..HEAD" (default: the selected commit)'
+        required: false
+        default: ''
 
 defaults:
   run:
@@ -106,10 +112,19 @@ jobs:
         pip install .[benchmark]
 
     - name: Benchmark
+      env:
+        COMMITS: ${{ inputs.commits }}
       run: |
         asv machine --yes --config "$ASV_CONFIG" --machine "$ASV_MACHINE"
-        asv run --config "$ASV_CONFIG" --machine "$ASV_MACHINE" --show-stderr \
-          "$GITHUB_SHA^!" || echo "::warning::asv run exited with status $?"
+        if [[ -n "$COMMITS" ]]; then
+          # Skip the commits the dashboard already has
+          git restore --source origin/gh-pages --worktree benchmarks/results 2>/dev/null || true
+          asv run --config "$ASV_CONFIG" --machine "$ASV_MACHINE" --show-stderr \
+            --skip-existing-commits "$COMMITS" || echo "::warning::asv run exited with status $?"
+        else
+          asv run --config "$ASV_CONFIG" --machine "$ASV_MACHINE" --show-stderr \
+            "$GITHUB_SHA^!" || echo "::warning::asv run exited with status $?"
+        fi
 
     - name: Upload the results
       if: always()
@@ -123,3 +138,65 @@ jobs:
       run: |
         python benchmarks/report.py --machine "$ASV_MACHINE" --target "$GITHUB_SHA" \
           --summary "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Publish the dashboard
+    needs: record
+    # Publish even when a benchmark failed, so the dashboard shows the gap
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && needs.record.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    # The docs deploy also pushes to gh-pages, but only into other directories:
+    # concurrent pushes are rebased by the loop below
+    concurrency:
+      group: benchmark-dashboard
+      cancel-in-progress: false
+
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .[benchmark]
+
+    - uses: actions/download-artifact@v8
+      with:
+        name: benchmark-results-${{ github.sha }}
+        path: new-results
+
+    - name: Build the dashboard and push it to gh-pages
+      run: |
+        git config --global user.email "nipreps@gmail.com"
+        git config --global user.name "NiPreps Bot"
+        PAGES="$RUNNER_TEMP/gh-pages"
+        git worktree add -B gh-pages "$PAGES" origin/gh-pages
+
+        # The results published so far, plus this run's
+        mkdir -p benchmarks/results
+        if [[ -d "$PAGES/benchmarks/results" ]]; then
+          cp -r "$PAGES/benchmarks/results/." benchmarks/results/
+        fi
+        cp -r new-results/. benchmarks/results/
+
+        # ``asv publish`` empties its output directory, so the raw results are
+        # copied back in afterwards
+        asv publish --config "$ASV_CONFIG" --html-dir "$PAGES/benchmarks"
+        cp -r benchmarks/results "$PAGES/benchmarks/results"
+
+        cd "$PAGES"
+        git add benchmarks
+        git commit -m "benchmarks: publish the results of ${GITHUB_SHA::8}" || exit 0
+        for attempt in 1 2 3; do
+          git push origin gh-pages && break
+          [[ $attempt == 3 ]] && exit 1
+          git pull --rebase origin gh-pages
+        done
