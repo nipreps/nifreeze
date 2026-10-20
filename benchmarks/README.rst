@@ -58,11 +58,12 @@ From the repository's root, compare your branch with ``main``::
     asv machine --yes --config benchmarks/asv.conf.json --machine local
     git rev-parse HEAD main > commits.txt
     asv run --config benchmarks/asv.conf.json --machine local \
-        --interleave-rounds --record-samples HASHFILE:commits.txt
+        --interleave-rounds --record-samples HASHFILE:$PWD/commits.txt
     python benchmarks/report.py --machine local \
         --base $(git rev-parse main) --target $(git rev-parse HEAD)
 
-ASV builds each commit in its own virtual environment.
+ASV builds each commit in its own virtual environment, and reads a relative
+``HASHFILE:`` path from the ``benchmarks/`` directory.
 To check that one benchmark runs against the code you have installed::
 
     asv run --config benchmarks/asv.conf.json --python=same --quick \
