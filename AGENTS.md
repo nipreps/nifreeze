@@ -81,6 +81,8 @@ Details about testing are found in `.github/workflows/test.yml`
 ## Documentation building
 
 Documentation can be built as described in `.github/workflows/docs-build-pr.yml`.
+The prediction gallery pages are not tracked: `python tools/fetch_gallery.py` downloads
+the latest published ones (it needs `gh auth`); without them, the gallery shows placeholders.
 
 ## Linting
 

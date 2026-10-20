@@ -45,6 +45,7 @@ from gallery.manifest import (
 )
 from gallery.registry import (
     GALLERY_MODELS,
+    GALLERY_MODES,
     check_applicability,
     check_mode,
 )
@@ -128,6 +129,19 @@ def test_run_gallery_average_single_shell():
 
     assert _cell(manifest, "average", "lovo").status == STATUS_RAN
     assert _cell(manifest, "average", "single-fit").status == STATUS_RAN
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def test_run_gallery_closed_form_models():
+    """Closed-form LOVO models run in both modes, and their single-fit is not a canary."""
+    spec = synthetic_spec(SINGLE_SHELL, n_directions=14)
+    keys = ["gqi-krr", "gp-loo-spherical"]
+    manifest = run_gallery([spec], model_keys=keys, render=False)
+
+    for key in keys:
+        for mode in GALLERY_MODES:
+            assert _cell(manifest, key, mode).status == STATUS_RAN
+            assert _cell(manifest, key, mode).canary is False
 
 
 @pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
@@ -252,15 +266,15 @@ def test_applicable_matrix():
         assert check_applicability(specs[c["model"]], c["scheme"])[0]
         assert check_mode(specs[c["model"]], c["mode"])[0]
 
-    # DSI (ds004737) supports only average + GQI; GP and DKI never appear there.
+    # DSI (ds004737) supports only average + GQI (either predictor); GP and DKI never appear there.
     dsi_models = {c["model"] for c in cells if c["dataset"] == "ds004737"}
-    assert dsi_models == {"average", "gqi"}
+    assert dsi_models == {"average", "gqi", "gqi-krr"}
 
     # DKI is multi-shell only — never on the single-shell datasets.
     for c in cells:
         if c["model"] == "dki":
             assert c["scheme"] == MULTI_SHELL
-        if c["model"] == "gp-spherical":
+        if c["model"] in ("gp-spherical", "gp-loo-spherical"):
             assert c["scheme"] == SINGLE_SHELL
 
     # Both modes are enumerated for every applicable (dataset, model) pair.
@@ -468,6 +482,159 @@ def test_write_pages_placeholder_for_unpublished(tmp_path):
     # The dataset with no cells is honest about not being published, not empty.
     unpublished = (tmp_path / "ds004737.rst").read_text()
     assert "have not been published yet" in unpublished
+
+
+def test_ensure_pages(tmp_path):
+    """Missing pages get placeholders; fetched pages stay, and unknown ones are reported."""
+    from gallery.pages import ensure_pages
+
+    (tmp_path / "ds000206.rst").write_text("fetched\n")
+    (tmp_path / "dsOld.rst").write_text("from another branch\n")
+
+    assert ensure_pages(tmp_path, ["ds000206", "ds004737"]) == ["dsOld"]
+    assert (tmp_path / "ds000206.rst").read_text() == "fetched\n"
+    assert "have not been published yet" in (tmp_path / "ds004737.rst").read_text()
+
+
+def test_provenance_rst(tmp_path):
+    """The gallery says which run its pages come from, or that none was fetched."""
+    import json
+
+    from gallery.pages import PROVENANCE_FILE, provenance_rst
+
+    assert "placeholder" in provenance_rst(tmp_path)
+
+    record = {
+        "run_id": 7,
+        "url": "https://github.com/nipreps/nifreeze/actions/runs/7",
+        "head_sha": "0123456789abcdef",
+        "created_at": "2026-10-19T21:05:54Z",
+    }
+    (tmp_path / PROVENANCE_FILE).write_text(json.dumps(record))
+    text = provenance_rst(tmp_path)
+    assert "run `7 <https://github.com/nipreps/nifreeze/actions/runs/7>`__" in text
+    assert "``01234567`` (2026-10-19)" in text
+
+
+def _gallery_run(run_id, event, created, sha="a" * 40):
+    return {"databaseId": run_id, "event": event, "headSha": sha, "createdAt": created}
+
+
+def _gallery_pages(*names):
+    """The files of a ``gallery-pages`` artifact embedding one panel per dataset."""
+    files = {}
+    for name in names:
+        files[f"{name}.rst"] = f".. figure:: {name}/panel.png\n"
+        files[f"{name}/panel.png"] = "png"
+    return files
+
+
+class _FakeGH:
+    """Answer ``gh run list/view/download`` from in-memory runs and artifacts."""
+
+    def __init__(self, runs, artifacts):
+        self.runs = runs
+        self.artifacts = artifacts  # run id -> files; missing means expired
+        self.downloads = []
+
+    def __call__(self, args):
+        import json
+        import subprocess
+        from pathlib import Path
+
+        if args[:2] == ["run", "list"]:
+            return json.dumps(self.runs)
+        if args[:2] == ["run", "view"]:
+            return json.dumps(next(r for r in self.runs if r["databaseId"] == int(args[2])))
+        assert args[:2] == ["run", "download"], args
+        run_id = int(args[2])
+        self.downloads.append(run_id)
+        if run_id not in self.artifacts:
+            raise subprocess.CalledProcessError(1, args, stderr="no valid artifacts found")
+        dest = Path(args[args.index("--dir") + 1])
+        for rel, content in self.artifacts[run_id].items():
+            (dest / rel).parent.mkdir(parents=True, exist_ok=True)
+            (dest / rel).write_text(content)
+        return ""
+
+
+@pytest.fixture
+def fetch_gallery(monkeypatch):
+    """``tools/fetch_gallery.py``, registering two datasets (``dsA``, ``dsB``)."""
+    import sys
+    from types import SimpleNamespace
+
+    sys.path.insert(0, "tools")
+    import fetch_gallery as module
+
+    monkeypatch.setattr(
+        module, "DATASETS", [SimpleNamespace(name="dsA"), SimpleNamespace(name="dsB")]
+    )
+    return module
+
+
+def test_fetch_gallery_select_runs(fetch_gallery):
+    """Publishing runs come first, newest first; a matching commit comes before all."""
+    runs = [
+        _gallery_run(1, "push", "2026-10-01T00:00:00Z"),
+        _gallery_run(2, "schedule", "2026-10-19T00:00:00Z"),
+        _gallery_run(3, "workflow_dispatch", "2026-10-10T00:00:00Z", sha="b" * 40),
+    ]
+    assert [r["databaseId"] for r in fetch_gallery.select_runs(runs)] == [3, 1, 2]
+    assert [r["databaseId"] for r in fetch_gallery.select_runs(runs, sha="a" * 40)] == [1, 2, 3]
+
+
+def test_fetch_gallery_falls_back(fetch_gallery, monkeypatch, tmp_path):
+    """Expired and incomplete artifacts are skipped, down to a scheduled run."""
+    import json
+
+    runs = [
+        _gallery_run(1, "push", "2026-10-19T00:00:00Z"),  # expired
+        _gallery_run(2, "workflow_dispatch", "2026-10-18T00:00:00Z"),  # lacks dsB
+        _gallery_run(3, "push", "2026-10-17T00:00:00Z"),  # embeds a missing panel
+        _gallery_run(4, "schedule", "2026-10-12T00:00:00Z"),
+    ]
+    broken = _gallery_pages("dsA", "dsB")
+    del broken["dsB/panel.png"]
+    gh = _FakeGH(runs, {2: _gallery_pages("dsA"), 3: broken, 4: _gallery_pages("dsA", "dsB")})
+    monkeypatch.setattr(fetch_gallery, "_gh", gh)
+
+    dest = tmp_path / "gallery"
+    (dest / "stale").mkdir(parents=True)
+    assert fetch_gallery.main(["--dest", str(dest), "--strict"]) == 0
+
+    assert gh.downloads == [1, 2, 3, 4]
+    assert (dest / "dsB" / "panel.png").is_file()
+    assert not (dest / "stale").exists()
+    provenance = json.loads((dest / fetch_gallery.PROVENANCE_FILE).read_text())
+    assert provenance["run_id"] == 4
+    assert provenance["event"] == "schedule"
+
+
+def test_fetch_gallery_run_id(fetch_gallery, monkeypatch, tmp_path):
+    """``--run-id`` fetches that run only, even when it is not the newest."""
+    runs = [
+        _gallery_run(1, "push", "2026-10-19T00:00:00Z"),
+        _gallery_run(2, "push", "2026-10-18T00:00:00Z"),
+    ]
+    gh = _FakeGH(runs, {1: _gallery_pages("dsA", "dsB"), 2: _gallery_pages("dsA", "dsB")})
+    monkeypatch.setattr(fetch_gallery, "_gh", gh)
+
+    assert fetch_gallery.main(["--dest", str(tmp_path), "--run-id", "2"]) == 0
+    assert gh.downloads == [2]
+
+
+def test_fetch_gallery_strict(fetch_gallery, monkeypatch, tmp_path):
+    """Without valid pages, ``--strict`` fails and the default leaves placeholders to the build."""
+    runs = [_gallery_run(1, "push", "2026-10-19T00:00:00Z")]
+    # A run whose pages are all placeholders (no figure) is not publishable
+    placeholders = {"dsA.rst": "not published\n", "dsB.rst": "not published\n"}
+    monkeypatch.setattr(fetch_gallery, "_gh", _FakeGH(runs, {1: placeholders}))
+
+    dest = tmp_path / "gallery"
+    assert fetch_gallery.main(["--dest", str(dest), "--strict"]) == 1
+    assert fetch_gallery.main(["--dest", str(dest)]) == 0
+    assert not dest.exists()
 
 
 def test_merge_deep_merges_sources():

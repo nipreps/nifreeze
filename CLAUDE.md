@@ -87,6 +87,7 @@ tox -e spellcheck
 
 ### Documentation
 ```bash
+python tools/fetch_gallery.py  # gallery pages (needs `gh auth`); placeholders otherwise
 make -C docs/ html
 ```
 

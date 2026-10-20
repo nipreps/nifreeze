@@ -1,9 +1,19 @@
 name: Prediction gallery
 
+# Push and dispatch runs on main publish: the docs build downloads their
+# ``gallery-pages`` artifact (tools/fetch_gallery.py) and redeploys when they
+# succeed. Scheduled runs are a weekly check, and a fallback once the published
+# artifacts expire.
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/nifreeze/**'
+      - 'docs/sphinxext/gallery/**'
+      - 'tools/gallery_collect.py'
+      - '.github/workflows/gallery.yml'
   schedule:
     - cron: '0 3 * * 1'  # Every Monday at 03:00 UTC
-  # Allow manual triggering (and, on dispatch, opening a refresh PR)
   workflow_dispatch:
 
 defaults:
@@ -166,8 +176,8 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
-  # 4. Merge every fragment into one gallery, combine coverage, execute the
-  #    notebooks in embed mode (no re-fitting), and open the refresh PR.
+  # 4. Merge every fragment into one gallery, combine coverage, and upload the
+  #    rendered pages that the docs build publishes.
   collect:
     needs: [setup, fit]
     # Always assemble whatever the fit stage produced: a failed or timed-out cell
@@ -176,9 +186,6 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -236,12 +243,15 @@ jobs:
             ${{ env.NIFREEZE_GALLERY_OUT }}
             coverage-gallery.xml
           if-no-files-found: warn
+      # The docs build fetches this artifact (tools/fetch_gallery.py); keep it as
+      # long as the repository allows.
       - name: Upload rendered pages
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: gallery-pages
           path: docs/gallery
+          retention-days: 30
       - name: Upload coverage to Codecov
         if: hashFiles('coverage-gallery.xml') != ''
         uses: codecov/codecov-action@v5
@@ -249,21 +259,3 @@ jobs:
           files: coverage-gallery.xml
           flags: gallery
           fail_ci_if_error: false
-      # On manual dispatch, open a PR refreshing the committed gallery pages.
-      # Scheduled runs only publish artifacts (avoids noisy auto-commits, e.g.
-      # from GP run-to-run variation) — a maintainer refreshes deliberately.
-      - name: Open refresh PR
-        if: github.event_name == 'workflow_dispatch' && github.repository == 'nipreps/nifreeze'
-        uses: peter-evans/create-pull-request@v7
-        with:
-          branch: gallery/refresh-pages
-          title: "DOC: Refresh prediction gallery"
-          commit-message: "doc(gallery): refresh rendered pages and panels"
-          body: |
-            Automated refresh of the prediction gallery (`docs/gallery/`), generated
-            by the `gallery` workflow: one reStructuredText page per dataset over the
-            panels rendered by the per-cell fit jobs.
-
-            Check the coverage table on each page for cells reported as errored.
-          add-paths: docs/gallery
-          delete-branch: true
