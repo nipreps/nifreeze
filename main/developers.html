@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="nifreeze.analysis package" href="api/nifreeze.analysis.html"><link rel="prev" title="How to cite" href="citation.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>For developers - nifreeze 26.0.0.dev364 documentation</title>
+        <title>For developers - nifreeze 26.0.0.dev372 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev364 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev372 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev364</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev372</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev364</span>
+  <span class="sidebar-brand-text">26.0.0.dev372</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -222,6 +222,8 @@
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.filtering.html">nifreeze.analysis.filtering module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.measure_agreement.html">nifreeze.analysis.measure_agreement module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.motion.html">nifreeze.analysis.motion module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html">nifreeze.analysis.sensitivity module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.similarity.html">nifreeze.analysis.similarity module</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.cli.html">nifreeze.cli package</a><input aria-label="Toggle navigation of nifreeze.cli package" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -402,6 +404,37 @@ that change them, and lists the errors of every model in its job summary.</p>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.motion.html">nifreeze.analysis.motion module</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.motion.html#nifreeze.analysis.motion.compute_percentage_change"><code class="docutils literal notranslate"><span class="pre">compute_percentage_change()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.motion.html#nifreeze.analysis.motion.identify_spikes"><code class="docutils literal notranslate"><span class="pre">identify_spikes()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html">nifreeze.analysis.sensitivity module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.DEFAULT_GRID_SHIFT"><code class="docutils literal notranslate"><span class="pre">DEFAULT_GRID_SHIFT</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.NO_PERTURBATION"><code class="docutils literal notranslate"><span class="pre">NO_PERTURBATION</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Perturbation"><code class="docutils literal notranslate"><span class="pre">Perturbation</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Perturbation.count"><code class="docutils literal notranslate"><span class="pre">Perturbation.count</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Perturbation.magnitude"><code class="docutils literal notranslate"><span class="pre">Perturbation.magnitude</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Perturbation.motions"><code class="docutils literal notranslate"><span class="pre">Perturbation.motions</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Perturbation.moved"><code class="docutils literal notranslate"><span class="pre">Perturbation.moved</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Perturbation.seed"><code class="docutils literal notranslate"><span class="pre">Perturbation.seed</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.fidelity"><code class="docutils literal notranslate"><span class="pre">fidelity()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.held_out_predictions"><code class="docutils literal notranslate"><span class="pre">held_out_predictions()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.influence"><code class="docutils literal notranslate"><span class="pre">influence()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.mask_centroid"><code class="docutils literal notranslate"><span class="pre">mask_centroid()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.one_at_a_time"><code class="docutils literal notranslate"><span class="pre">one_at_a_time()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.perturb"><code class="docutils literal notranslate"><span class="pre">perturb()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.perturbation_plan"><code class="docutils literal notranslate"><span class="pre">perturbation_plan()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.rigid_motion"><code class="docutils literal notranslate"><span class="pre">rigid_motion()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.sensitivity"><code class="docutils literal notranslate"><span class="pre">sensitivity()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.shift_grid"><code class="docutils literal notranslate"><span class="pre">shift_grid()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.similarity.html">nifreeze.analysis.similarity module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.similarity.html#nifreeze.analysis.similarity.DEFAULT_MI_BINS"><code class="docutils literal notranslate"><span class="pre">DEFAULT_MI_BINS</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.similarity.html#nifreeze.analysis.similarity.METRICS"><code class="docutils literal notranslate"><span class="pre">METRICS</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.similarity.html#nifreeze.analysis.similarity.masked_cc"><code class="docutils literal notranslate"><span class="pre">masked_cc()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.similarity.html#nifreeze.analysis.similarity.mutual_information"><code class="docutils literal notranslate"><span class="pre">mutual_information()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.similarity.html#nifreeze.analysis.similarity.nrmse"><code class="docutils literal notranslate"><span class="pre">nrmse()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -801,6 +834,7 @@ that change them, and lists the errors of every model in its job summary.</p>
 <li class="toctree-l4"><a class="reference internal" href="api/nifreeze.model.lovo.html#nifreeze.model.lovo.ClosedFormLOVOMixin"><code class="docutils literal notranslate"><span class="pre">ClosedFormLOVOMixin</span></code></a><ul>
 <li class="toctree-l5"><a class="reference internal" href="api/nifreeze.model.lovo.html#nifreeze.model.lovo.ClosedFormLOVOMixin.fit_predict"><code class="docutils literal notranslate"><span class="pre">ClosedFormLOVOMixin.fit_predict()</span></code></a></li>
 <li class="toctree-l5"><a class="reference internal" href="api/nifreeze.model.lovo.html#nifreeze.model.lovo.ClosedFormLOVOMixin.single_fit_is_canary"><code class="docutils literal notranslate"><span class="pre">ClosedFormLOVOMixin.single_fit_is_canary</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/nifreeze.model.lovo.html#nifreeze.model.lovo.ClosedFormLOVOMixin.smoother"><code class="docutils literal notranslate"><span class="pre">ClosedFormLOVOMixin.smoother</span></code></a></li>
 <li class="toctree-l5"><a class="reference internal" href="api/nifreeze.model.lovo.html#nifreeze.model.lovo.ClosedFormLOVOMixin.update"><code class="docutils literal notranslate"><span class="pre">ClosedFormLOVOMixin.update()</span></code></a></li>
 </ul>
 </li>
@@ -1044,7 +1078,7 @@ that change them, and lists the errors of every model in its job summary.</p>
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=ab306f1e"></script>
+</div><script src="_static/documentation_options.js?v=a00eab8e"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

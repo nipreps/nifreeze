@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.model.pet module" href="nifreeze.model.pet.html"><link rel="prev" title="nifreeze.model.gqi module" href="nifreeze.model.gqi.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.lovo module - nifreeze 26.0.0.dev364 documentation</title>
+        <title>nifreeze.model.lovo module - nifreeze 26.0.0.dev372 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev364 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev372 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev364</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev372</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev364</span>
+  <span class="sidebar-brand-text">26.0.0.dev372</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -222,6 +222,8 @@
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.filtering.html">nifreeze.analysis.filtering module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.measure_agreement.html">nifreeze.analysis.measure_agreement module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.motion.html">nifreeze.analysis.motion module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.sensitivity.html">nifreeze.analysis.sensitivity module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.similarity.html">nifreeze.analysis.similarity module</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.cli.html">nifreeze.cli package</a><input aria-label="Toggle navigation of nifreeze.cli package" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -371,6 +373,13 @@ while every prediction remains held-out.</p>
 <dt class="sig sig-object py" id="nifreeze.model.lovo.ClosedFormLOVOMixin.single_fit_is_canary">
 <span class="sig-name descname"><span class="pre">single_fit_is_canary</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#nifreeze.model.lovo.ClosedFormLOVOMixin.single_fit_is_canary" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="nifreeze.model.lovo.ClosedFormLOVOMixin.smoother">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">smoother</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a></em><a class="headerlink" href="#nifreeze.model.lovo.ClosedFormLOVOMixin.smoother" title="Link to this definition">¶</a></dt>
+<dd><p>The <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">N)</span></code> smoother for the current gradient table (read-only).</p>
+<p>Row <code class="docutils literal notranslate"><span class="pre">i</span></code> holds the weights that predict volume <code class="docutils literal notranslate"><span class="pre">i</span></code> from the others.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nifreeze.model.lovo.ClosedFormLOVOMixin.update">
@@ -650,6 +659,7 @@ diagonal is zero. With <code class="docutils literal notranslate"><span class="p
 <li><a class="reference internal" href="#nifreeze.model.lovo.ClosedFormLOVOMixin"><code class="docutils literal notranslate"><span class="pre">ClosedFormLOVOMixin</span></code></a><ul>
 <li><a class="reference internal" href="#nifreeze.model.lovo.ClosedFormLOVOMixin.fit_predict"><code class="docutils literal notranslate"><span class="pre">ClosedFormLOVOMixin.fit_predict()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.model.lovo.ClosedFormLOVOMixin.single_fit_is_canary"><code class="docutils literal notranslate"><span class="pre">ClosedFormLOVOMixin.single_fit_is_canary</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.model.lovo.ClosedFormLOVOMixin.smoother"><code class="docutils literal notranslate"><span class="pre">ClosedFormLOVOMixin.smoother</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.model.lovo.ClosedFormLOVOMixin.update"><code class="docutils literal notranslate"><span class="pre">ClosedFormLOVOMixin.update()</span></code></a></li>
 </ul>
 </li>
@@ -676,7 +686,7 @@ diagonal is zero. With <code class="docutils literal notranslate"><span class="p
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=ab306f1e"></script>
+</div><script src="../_static/documentation_options.js?v=a00eab8e"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
