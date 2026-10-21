@@ -1994,3 +1994,59 @@ def test_transform_fsl_bvec(b_ijk, zooms, flips, axis_order, origin, angles):
         f"Expected {rotated_b_ijk}, got {test_b_ijk} for b_ijk={b_ijk}, "
         f"zooms={zooms}, origin={origin}, angles={angles}"
     )
+
+
+def _rotation_about_z(degrees: float, shift: tuple = (0.0, 0.0, 0.0)) -> np.ndarray:
+    angle = np.deg2rad(degrees)
+    matrix = np.eye(4)
+    matrix[:2, :2] = [[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]]
+    matrix[:3, 3] = shift
+    return matrix
+
+
+def _small_dwi(gradients: np.ndarray) -> DWI:
+    rng = np.random.default_rng(1234)
+    return DWI(
+        dataobj=rng.uniform(1.0, 2.0, (len(gradients), 6, 6, 4)).astype("float32"),
+        affine=np.diag([2.0, 2.0, 2.5, 1.0]),
+        gradients=gradients,
+        bzero=np.ones((6, 6, 4), dtype="float32"),
+    )
+
+
+def test_dwi_realign_into_rotates_the_bvector():
+    """The realigned view's b-vector is the original one rotated as at export."""
+    rng = np.random.default_rng(1234)
+    bvecs = rng.normal(size=(DTI_MIN_ORIENTATIONS + 2, 3))
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+    dwi = _small_dwi(np.column_stack([bvecs, np.full(len(bvecs), 1000.0)]))
+    original = np.array(dwi.gradients)
+    view = dwi.realigned()
+
+    matrix = _rotation_about_z(10.0, (1.0, 0.0, 0.0))
+    dwi.set_transform(3, matrix)
+    dwi.realign_into(view, 3)
+
+    expected = transform_fsl_bvec(original[3], matrix, dwi.affine, invert=True)
+    expected /= np.linalg.norm(expected)
+    assert np.allclose(view.gradients[3, :3], expected)
+    assert view.gradients[3, 3] == original[3, 3]
+    assert np.allclose(np.delete(view.gradients, 3, axis=0), np.delete(original, 3, axis=0))
+    assert np.array_equal(dwi.gradients, original)
+
+
+def test_dwi_realign_into_keeps_integer_tables_exact():
+    """An all-integer table (stored as int16) does not truncate a rotated b-vector."""
+    axes = np.vstack([np.eye(3), -np.eye(3), np.eye(3)[:2]])
+    dwi = _small_dwi(np.column_stack([axes, np.full(len(axes), 1000)]))
+    assert np.issubdtype(dwi.gradients.dtype, np.integer)
+    view = dwi.realigned()
+
+    dwi.set_transform(0, _rotation_about_z(10.0))
+    dwi.realign_into(view, 0)
+
+    expected = transform_fsl_bvec(
+        np.array([1.0, 0.0, 0.0]), _rotation_about_z(10.0), dwi.affine, invert=True
+    )
+    assert np.allclose(view.gradients[0, :3], expected / np.linalg.norm(expected))
+    assert np.allclose(view.gradients[1:], dwi.gradients[1:])
