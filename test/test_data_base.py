@@ -405,6 +405,21 @@ def test_realigned_resumes_from_stored_estimates():
     assert np.array_equal(view.dataobj[:2], dataset.dataobj[:2])
 
 
+def test_realign_into_rounds_integer_volumes():
+    """Integer volumes are realigned to the nearest representable values."""
+    blob = _blob_dataset()
+    # Values that overshoot the type's range once resampled with cubic splines
+    dataset = BaseDataset(dataobj=(blob.dataobj * 2.55).astype(np.uint8), affine=blob.affine)
+    view = dataset.realigned()
+
+    dataset.set_transform(1, _translation(1.5))
+    dataset.realign_into(view, 1)
+
+    expected = _resampled(dataset.dataobj[1].astype("float32"), dataset.affine, _translation(1.5))
+    assert view.dataobj.dtype == np.uint8
+    assert np.array_equal(view.dataobj[1], np.clip(np.round(expected), 0, 255))
+
+
 def test_to_filename_and_from_filename(random_dataset: BaseDataset):
     """Test writing a dataset to disk and reading it back from file."""
     with TemporaryDirectory() as tmpdir:
