@@ -361,6 +361,52 @@ def test_estimator_instant_update_pet(monkeypatch, setup_random_pet_data):
     assert not np.allclose(view.dataobj, original)
 
 
+@pytest.mark.parametrize("modality", ["base", "pet"])
+def test_estimator_chain_initializes_from_previous_estimate(request, monkeypatch, modality):
+    """The second estimator of a chain starts each registration at the first one's estimate."""
+    dataobj = request.node.rng.uniform(0.0, 1.0, DATAOBJ_SIZE).astype("float32")
+    brainmask = np.ones(DATAOBJ_SIZE[1:], dtype=bool)
+    dataset: BaseDataset
+    if modality == "pet":
+        dataset = PET(
+            dataobj=dataobj,
+            affine=np.eye(4),
+            brainmask=brainmask,
+            midframe=10.0 * np.arange(DATAOBJ_SIZE[0]) + 5.0,
+            total_duration=10.0 * DATAOBJ_SIZE[0],
+        )
+    else:
+        dataset = BaseDataset(dataobj=dataobj, affine=np.eye(4), brainmask=brainmask)
+    inits: list[np.ndarray | None] = []
+    shifts = iter(range(1, 2 * DATAOBJ_SIZE[0] + 1))
+
+    def fake_prepare(*args, init_affine=None, **kwargs):
+        inits.append(None if init_affine is None else np.array(init_affine))
+        return None, None, None
+
+    class DummyXForm:
+        def __init__(self, shift):
+            self.matrix = np.eye(4)
+            self.matrix[0, 3] = shift
+
+    monkeypatch.setattr(nifreeze.estimator, "_prepare_registration_data", fake_prepare)
+    monkeypatch.setattr(
+        nifreeze.estimator, "_run_registration", lambda *a, **k: DummyXForm(next(shifts))
+    )
+
+    first = Estimator(DummyInsiderModel(dataset=dataset), strategy="linear")
+    Estimator(DummyInsiderModel(dataset=dataset), strategy="linear", prev=first).run(
+        dataset, clip="none"
+    )
+
+    n = len(dataset)
+    # The first pass starts from the identity
+    assert all(init is None for init in inits[:n])
+    # The second pass starts from the transform the first pass estimated for each volume
+    second = [init for init in inits[n:] if init is not None]
+    assert [init[0, 3] for init in second] == list(range(1, n + 1))
+
+
 def test_estimator_clip_degenerate_window(request, monkeypatch):
     """A volume whose window cannot be estimated is registered without clipping."""
     dataset = DummyDataset(rng=request.node.rng)
