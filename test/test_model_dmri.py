@@ -613,6 +613,38 @@ def test_model_keeps_dataset_brainmask(setup_random_dwi_data):
     assert dtimodel._data_mask.sum() < original.sum()
 
 
+@pytest.mark.parametrize("model_name", ("DTIModel", "DKIModel"))
+@ignore_dipy_divide_warning
+def test_null_s0_voxel_behaves_as_unmasked(model_name):
+    """A brain-mask voxel with a null S0 is predicted as if it were outside the mask."""
+    rng = np.random.default_rng(1234)
+    vol_shape = (3, 3, 2)
+    shells = [_sim.create_single_shell_gradient_table(15, b) for b in (1000, 2000, 3000)]
+    bvals = np.concatenate([[0]] + [g[~g.b0s_mask].bvals for g in shells])
+    bvecs = np.vstack([np.zeros((1, 3))] + [g[~g.b0s_mask].bvecs for g in shells])
+    gtab = gradient_table_from_bvals_bvecs(bvals, bvecs)
+    signal = _sim.simulate_one_fiber_multivoxel(
+        gtab, 100, None, int(np.prod(vol_shape)), rng, evals=(0.0015, 0.0003, 0.0003)
+    )
+    gradients = format_gradients(np.column_stack((gtab.bvecs, gtab.bvals)))
+    dataobj = np.moveaxis(signal.reshape(*vol_shape, -1), -1, 0)
+
+    def _predict(brainmask):
+        dataset = DWI(
+            dataobj=dataobj.copy(), affine=np.eye(4), brainmask=brainmask, gradients=gradients
+        )
+        assert dataset.bzero is not None
+        dataset.bzero[0, 0, 0] = 0.0
+        return getattr(model, model_name)(dataset).fit_predict(3)
+
+    unmasked = np.ones(vol_shape, dtype=bool)
+    unmasked[0, 0, 0] = False
+    predicted = _predict(np.ones(vol_shape, dtype=bool))
+
+    assert predicted[0, 0, 0] == 0
+    assert np.allclose(predicted, _predict(unmasked))
+
+
 @pytest.mark.parametrize(
     "single_shell_test_data",
     [
