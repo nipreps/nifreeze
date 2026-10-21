@@ -40,7 +40,7 @@ from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.filtering import ClippingValueError, robust_window
-from nifreeze.model.base import BaseModel, ModelFactory
+from nifreeze.model.base import BaseModel, ModelFactory, TrivialModel
 from nifreeze.registration.ants import (
     _prepare_registration_data,
     _run_registration,
@@ -166,8 +166,9 @@ class Estimator:
             from the original volume, with the estimate (and, for DWI, its rotated
             b-vector). The dataset itself is never modified; registration and
             export keep using the original volumes. It applies to models given by
-            name, except ``"trivial"`` (whose reference never moves), and not to
-            PET datasets.
+            name and to model instances built on this dataset (see
+            :meth:`~nifreeze.model.base.BaseModel.set_dataset`), except the
+            trivial model, whose reference never moves.
         realigned : :obj:`dict`, optional
             Realigned views by dataset, shared by the estimators of a chain.
 
@@ -190,11 +191,12 @@ class Estimator:
 
         # The realigned view the model trains on (one per dataset in a chain)
         view = None
-        if (
-            kwargs.pop("instant_update", True)
-            and isinstance(self._model, str)
-            and self._model.lower() != "trivial"
-            and not isinstance(dataset, PET)
+        if kwargs.pop("instant_update", True) and not (
+            # The trivial model's reference never moves
+            isinstance(self._model, TrivialModel)
+            or (isinstance(self._model, str) and self._model.lower() == "trivial")
+            # A model instance built on another dataset keeps reading it
+            or (isinstance(self._model, BaseModel) and self._model._dataset is not dataset)
         ):
             view = views.get(id(dataset))
             if view is None:
@@ -238,6 +240,8 @@ class Estimator:
             )
         else:
             model = self._model
+            if view is not None:
+                model.set_dataset(view)
 
         # Prepare fit/predict keyword arguments
         fit_pred_kwargs = {

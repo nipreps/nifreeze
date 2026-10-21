@@ -192,6 +192,24 @@ class BaseModel(ABC):
         """
         return None
 
+    def set_dataset(self, dataset) -> None:
+        """
+        Read another version of the same volumes, such as the realigned view.
+
+        The estimator calls this on a model instance built on the dataset it
+        estimates, so that instances train on the realigned view as models given
+        by name do. Cached data are refreshed with :meth:`update`.
+
+        Parameters
+        ----------
+        dataset : :obj:`~nifreeze.data.base.BaseDataset`
+            A dataset with the same volumes, in the same order.
+
+        """
+        self._dataset = dataset
+        for index in range(len(dataset)):
+            self.update(index)
+
     def _warn_single_fit_canary(self) -> None:
         """Warn if single-fit for this model is only a self-consistency canary."""
         if self.single_fit_is_canary:
