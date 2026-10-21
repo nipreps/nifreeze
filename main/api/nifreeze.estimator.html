@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.exceptions module" href="nifreeze.exceptions.html"><link rel="prev" title="nifreeze.data.utils module" href="nifreeze.data.utils.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.estimator module - nifreeze 26.0.0.dev341 documentation</title>
+        <title>nifreeze.estimator module - nifreeze 26.0.0.dev344 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev341 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev344 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev341</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev344</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev341</span>
+  <span class="sidebar-brand-text">26.0.0.dev344</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -363,6 +363,11 @@ refitting per held-out volume. Prediction is no longer unbiased.</p></li>
 <li><p><strong>clip_windows</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a>, optional) – Intensity windows by volume index. A volume’s window is estimated
 from the volume the first time it is registered, and then reused
 for its prediction and by every later estimator of the chain.</p></li>
+<li><p><strong>debug_dir</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>, optional) – Keep the registration working files of each estimator of the chain
+in a folder of <code class="docutils literal notranslate"><span class="pre">debug_dir</span></code> (instead of a temporary directory), with
+an <code class="docutils literal notranslate"><span class="pre">aligned_&lt;index&gt;.nii</span></code> trace per volume: the registered sample
+with its affine corrected by the estimated transform, which a viewer
+shows on top of <code class="docutils literal notranslate"><span class="pre">predicted_&lt;index&gt;.nii</span></code>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -477,7 +482,7 @@ for its prediction and by every later estimator of the chain.</p></li>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=3aa65128"></script>
+</div><script src="../_static/documentation_options.js?v=62afcf96"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

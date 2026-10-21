@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.estimator - nifreeze 26.0.0.dev341 documentation</title>
+        <title>nifreeze.estimator - nifreeze 26.0.0.dev344 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">nifreeze 26.0.0.dev341 documentation</div></a>
+      <a href="../../index.html"><div class="brand">nifreeze 26.0.0.dev344 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev341</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev344</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev341</span>
+  <span class="sidebar-brand-text">26.0.0.dev344</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -342,6 +342,8 @@
 
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">from</span> <span class="nn">concurrent.futures</span> <span class="kn">import</span> <span class="n">Future</span><span class="p">,</span> <span class="n">ThreadPoolExecutor</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">nullcontext</span>
 <span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">cpu_count</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span> <span class="nn">tempfile</span> <span class="kn">import</span> <span class="n">TemporaryDirectory</span>
@@ -360,6 +362,7 @@
 <span class="kn">from</span> <span class="nn">nifreeze.registration.ants</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">_prepare_registration_data</span><span class="p">,</span>
     <span class="n">_run_registration</span><span class="p">,</span>
+    <span class="n">_write_aligned</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">nifreeze.utils</span> <span class="kn">import</span> <span class="n">iterators</span>
 
@@ -479,6 +482,12 @@
 <span class="sd">            Intensity windows by volume index. A volume&#39;s window is estimated</span>
 <span class="sd">            from the volume the first time it is registered, and then reused</span>
 <span class="sd">            for its prediction and by every later estimator of the chain.</span>
+<span class="sd">        debug_dir : :obj:`os.pathlike`, optional</span>
+<span class="sd">            Keep the registration working files of each estimator of the chain</span>
+<span class="sd">            in a folder of ``debug_dir`` (instead of a temporary directory), with</span>
+<span class="sd">            an ``aligned_&lt;index&gt;.nii`` trace per volume: the registered sample</span>
+<span class="sd">            with its affine corrected by the estimated transform, which a viewer</span>
+<span class="sd">            shows on top of ``predicted_&lt;index&gt;.nii``.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -559,13 +568,25 @@
         <span class="n">clipping</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">clip</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;sample&quot;</span><span class="p">,</span> <span class="s2">&quot;predicted&quot;</span><span class="p">,</span> <span class="s2">&quot;both&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span><span class="p">)</span>
         <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;clip_windows&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
+        <span class="n">work_dir</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">debug_dir</span> <span class="o">:=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;debug_dir&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Absolute, because nipype runs ANTs from within the working directory</span>
+            <span class="n">work_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">debug_dir</span><span class="p">)</span><span class="o">.</span><span class="n">absolute</span><span class="p">()</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_debug_name</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+            <span class="n">work_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
         <span class="c1"># Calculate effective dataset length for progress bar</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stop_index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">dataset_length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stop_index</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_index</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">dataset_length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_index</span>
 
-        <span class="k">with</span> <span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp_dir</span><span class="p">:</span>
+        <span class="n">traces</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Future</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">with</span> <span class="p">(</span>
+            <span class="p">(</span>
+                <span class="n">nullcontext</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">work_dir</span><span class="p">))</span> <span class="k">if</span> <span class="n">work_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">TemporaryDirectory</span><span class="p">()</span>
+            <span class="p">)</span> <span class="k">as</span> <span class="n">tmp_dir</span><span class="p">,</span>
+            <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="k">as</span> <span class="n">tracer</span><span class="p">,</span>
+        <span class="p">):</span>
             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Processing in &lt;</span><span class="si">{</span><span class="n">tmp_dir</span><span class="si">}</span><span class="s2">&gt;&quot;</span><span class="p">)</span>
             <span class="n">ptmp_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp_dir</span><span class="p">)</span>
 
@@ -622,10 +643,33 @@
 
                     <span class="c1"># update</span>
                     <span class="n">dataset</span><span class="o">.</span><span class="n">set_transform</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">xform</span><span class="o">.</span><span class="n">matrix</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">work_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="c1"># Debugging trace, written while the next volume is registered</span>
+                        <span class="n">traces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                            <span class="n">tracer</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
+                                <span class="n">_write_aligned</span><span class="p">,</span>
+                                <span class="n">volume_path</span><span class="p">,</span>
+                                <span class="n">xform</span><span class="o">.</span><span class="n">matrix</span><span class="p">,</span>
+                                <span class="n">ptmp_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;aligned_</span><span class="si">{</span><span class="n">i</span><span class="si">:</span><span class="s2">05d</span><span class="si">}</span><span class="s2">.nii&quot;</span><span class="p">,</span>
+                            <span class="p">)</span>
+                        <span class="p">)</span>
                     <span class="n">pbar</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
 
+            <span class="c1"># Surface any error raised while writing a trace</span>
+            <span class="k">for</span> <span class="n">trace</span> <span class="ow">in</span> <span class="n">traces</span><span class="p">:</span>
+                <span class="n">trace</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+
         <span class="k">return</span> <span class="bp">self</span></div>
-</div>
+
+
+    <span class="k">def</span> <span class="nf">_debug_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Name this estimator&#39;s folder of ``debug_dir`` by position in the chain and model.&quot;&quot;&quot;</span>
+        <span class="n">position</span><span class="p">,</span> <span class="n">prev</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prev</span>
+        <span class="k">while</span> <span class="n">prev</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">position</span> <span class="o">+=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">prev</span><span class="p">,</span> <span class="n">Estimator</span><span class="p">)</span>
+            <span class="n">prev</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">prev</span><span class="p">,</span> <span class="s2">&quot;_prev&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="nb">type</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">position</span><span class="si">:</span><span class="s2">02d</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span></div>
 
 </pre></div>
         </article>
@@ -659,7 +703,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=3aa65128"></script>
+</div><script src="../../_static/documentation_options.js?v=62afcf96"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>
