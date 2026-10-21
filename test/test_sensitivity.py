@@ -133,6 +133,16 @@ def test_nrmse_rejects_a_constant_reference():
         nrmse(np.ones(10), np.ones(10))
 
 
+def test_nrmse_rejects_a_non_positive_scale():
+    with pytest.raises(ValueError, match="positive"):
+        nrmse(np.arange(3.0), np.arange(3.0), scale=0.0)
+
+
+def test_metrics_reject_volumes_of_different_shapes():
+    with pytest.raises(ValueError, match="Shapes differ"):
+        masked_cc(np.ones(3), np.ones(4))
+
+
 # Perturbations
 
 
@@ -181,6 +191,26 @@ def test_shift_grid_keeps_the_anatomy_in_place():
     assert world[1] == pytest.approx(world[0], abs=0.02)
     assert np.array_equal(shifted.dataobj[0], shifted.dataobj[-1])
     assert shifted.brainmask.sum() == pytest.approx(dataset.brainmask.sum(), rel=0.05)
+
+
+def test_shift_grid_resamples_the_bzero_like_the_volumes():
+    """The b=0 reference follows the volumes onto the grid; a dataset without a mask keeps none."""
+    dwi = _dwi(np.random.default_rng(1234))
+    bzero = np.asarray(dwi.dataobj[0]).copy()
+    dataset = DWI(
+        dataobj=dwi.dataobj,
+        affine=dwi.affine,
+        brainmask=dwi.brainmask,
+        gradients=dwi.gradients,
+        bzero=bzero,
+    )
+
+    shifted = sens.shift_grid(dataset)
+
+    assert np.array_equal(shifted.bzero, shifted.dataobj[0])
+    assert not np.allclose(shifted.bzero, bzero)
+    unmasked: BaseDataset = BaseDataset(dataobj=dwi.dataobj, affine=dwi.affine)
+    assert sens.shift_grid(unmasked).brainmask is None
 
 
 def test_grid_smooths_moved_and_unmoved_volumes_alike():
@@ -238,6 +268,37 @@ def test_a_volume_motion_never_reaches_its_own_prediction():
     for row in rows:
         assert row["moved"] == (row["index"] == 3)
         assert (row["nrmse"] == 0.0) == row["moved"]
+
+
+def test_models_can_be_named():
+    """A model name goes through the factory and predicts as the model class does."""
+    dataset = _dwi(np.random.default_rng(1234))
+    mask = dataset.brainmask
+
+    by_name = sens.held_out_predictions("mean", dataset, [0, 3], stat="mean")
+    by_class = sens.held_out_predictions(ExpectationModel, dataset, [0, 3], stat="mean")
+
+    for index in (0, 3):
+        others = np.delete(np.asarray(dataset.dataobj), index, axis=0).mean(axis=0)
+        assert np.allclose(by_name[index][mask], others[mask], rtol=1e-5)
+        assert np.array_equal(by_name[index], by_class[index])
+
+
+def test_metrics_cover_the_given_mask_else_the_brain_mask_else_everything():
+    """A prediction wrong only outside the brain is perfect within the brain mask alone."""
+    dataset, bzero = _copies(np.random.default_rng(1234))
+    corrupted = bzero.copy()
+    corrupted[~dataset.brainmask] += 100.0
+    unmasked: BaseDataset = BaseDataset(dataobj=dataset.dataobj, affine=dataset.affine)
+
+    def error(data, **kwargs):
+        return sens.fidelity(TrivialModel, data, [0], predicted=corrupted, **kwargs)[0]["nrmse"]
+
+    everything = np.ones(dataset.shape3d, dtype=bool)
+    assert error(dataset) == 0.0
+    assert error(dataset, mask=everything) > 0.0
+    with pytest.warns(UserWarning, match="No mask provided"):
+        assert error(unmasked) == error(dataset, mask=everything)
 
 
 def _rotvec(motion):
