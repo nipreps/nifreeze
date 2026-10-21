@@ -251,6 +251,63 @@ def test_estimator_debug_dir(request, monkeypatch, tmp_path):
             assert np.allclose(aligned.affine, np.linalg.inv(shift) @ sample.affine)
 
 
+def _smooth_dataset() -> BaseDataset:
+    """Smooth volumes, so that sub-voxel shifts change them."""
+    grid = np.indices(DATAOBJ_SIZE[1:]).astype("float32")
+    volumes = [
+        100.0
+        * np.exp(-((grid[0] - 2 - 0.1 * k) ** 2 + (grid[1] - 2) ** 2 + (grid[2] - 2) ** 2) / 4)
+        for k in range(DATAOBJ_SIZE[0])
+    ]
+    return BaseDataset(
+        dataobj=np.stack(volumes).astype("float32"),
+        affine=np.eye(4),
+        brainmask=np.ones(DATAOBJ_SIZE[1:], dtype=bool),
+    )
+
+
+@pytest.mark.parametrize("instant_update", [True, False])
+def test_estimator_instant_update(monkeypatch, instant_update):
+    """With the instant update, models train on volumes realigned as soon as they are."""
+    dataset = _smooth_dataset()
+    original = np.copy(dataset.dataobj)
+    predictions = []
+    shifts = iter(np.linspace(0.2, 0.8, DATAOBJ_SIZE[0]))
+
+    def fake_prepare(sample, predicted, *args, **kwargs):
+        predictions.append(np.copy(predicted))
+        return None, None, None
+
+    class DummyXForm:
+        def __init__(self, shift):
+            self.matrix = np.eye(4)
+            self.matrix[1, 3] = shift
+
+    monkeypatch.setattr(nifreeze.estimator, "_prepare_registration_data", fake_prepare)
+    monkeypatch.setattr(
+        nifreeze.estimator, "_run_registration", lambda *a, **k: DummyXForm(next(shifts))
+    )
+
+    views: dict = {}
+    Estimator("avg", strategy="linear").run(
+        dataset, clip="none", instant_update=instant_update, realigned=views
+    )
+
+    assert np.array_equal(dataset.dataobj, original)
+    if not instant_update:
+        assert views == {}
+        # Every volume is predicted from the raw volumes
+        assert np.allclose(predictions[-1], np.median(original[:-1], axis=0))
+        return
+
+    (view,) = views.values()
+    # The view holds every volume realigned once, from the original
+    assert np.allclose(view.dataobj, dataset.realigned().dataobj)
+    # The last volume is predicted from all the others, already realigned
+    assert np.allclose(predictions[-1], np.median(view.dataobj[:-1], axis=0))
+    assert not np.allclose(predictions[-1], np.median(original[:-1], axis=0))
+
+
 def test_estimator_clip_degenerate_window(request, monkeypatch):
     """A volume whose window cannot be estimated is registered without clipping."""
     dataset = DummyDataset(rng=request.node.rng)

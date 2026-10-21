@@ -160,6 +160,16 @@ class Estimator:
             an ``aligned_<index>.nii`` trace per volume: the registered sample
             with its affine corrected by the estimated transform, which a viewer
             shows on top of ``predicted_<index>.nii``.
+        instant_update : :obj:`bool`, optional
+            Whether models train on the realigned view of the dataset (default):
+            right after a volume is registered, the model sees it resampled once,
+            from the original volume, with the estimate (and, for DWI, its rotated
+            b-vector). The dataset itself is never modified; registration and
+            export keep using the original volumes. It applies to models given by
+            name, except ``"trivial"`` (whose reference never moves), and not to
+            PET datasets.
+        realigned : :obj:`dict`, optional
+            Realigned views by dataset, shared by the estimators of a chain.
 
         Returns
         -------
@@ -169,6 +179,7 @@ class Estimator:
         """
         # Shared with the previous estimators of the chain
         windows = kwargs.setdefault("clip_windows", {})
+        views = kwargs.setdefault("realigned", {})
         if self._prev is not None:
             result = self._prev.run(dataset, **kwargs)
             if isinstance(self._prev, Filter):
@@ -176,6 +187,18 @@ class Estimator:
 
         n_jobs = kwargs.pop("n_jobs", None) or min(cpu_count() or 1, 8)
         n_threads = kwargs.pop("omp_nthreads", None) or ((cpu_count() or 2) - 1)
+
+        # The realigned view the model trains on (one per dataset in a chain)
+        view = None
+        if (
+            kwargs.pop("instant_update", True)
+            and isinstance(self._model, str)
+            and self._model.lower() != "trivial"
+            and not isinstance(dataset, PET)
+        ):
+            view = views.get(id(dataset))
+            if view is None:
+                view = views[id(dataset)] = dataset.realigned()
 
         num_voxels = dataset.brainmask.sum() if dataset.brainmask is not None else dataset.size3d
         chunk_size = DEFAULT_CHUNK_SIZE * (n_threads or 1)
@@ -210,7 +233,7 @@ class Estimator:
             # Factory creates the appropriate model and pipes arguments
             model = ModelFactory.init(
                 model=self._model,
-                dataset=dataset,
+                dataset=dataset if view is None else view,
                 **self._model_kwargs,
             )
         else:
@@ -239,6 +262,7 @@ class Estimator:
         clip = kwargs.pop("clip", "both")
         clipping = str(clip).lower() in ("sample", "predicted", "both", "true")
         kwargs.pop("clip_windows", None)
+        kwargs.pop("realigned", None)
 
         work_dir = None
         if (debug_dir := kwargs.pop("debug_dir", None)) is not None:
@@ -315,6 +339,10 @@ class Estimator:
 
                     # update
                     dataset.set_transform(i, xform.matrix)
+                    if view is not None:
+                        # Instant update: the next predictions see this volume realigned
+                        dataset.realign_into(view, i)
+                        model.update(i)
                     if work_dir is not None:
                         # Debugging trace, written while the next volume is registered
                         traces.append(

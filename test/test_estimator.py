@@ -42,9 +42,12 @@ class DummyInsiderModel(BaseModel):
 
 class DummyDataset(BaseDataset):
     def __init__(self, rng):
-        self.dataobj = rng.uniform(0.0, 1.0, DATAOBJ_SIZE)  # np.ones(DATAOBJ_SIZE)
-        self.brainmask = rng.choice([True, False], size=self.dataobj.shape[1:]).astype(bool)
-        self.affine = np.eye(4)
+        dataobj = rng.uniform(0.0, 1.0, DATAOBJ_SIZE)  # np.ones(DATAOBJ_SIZE)
+        super().__init__(
+            dataobj=dataobj,
+            affine=np.eye(4),
+            brainmask=rng.choice([True, False], size=dataobj.shape[1:]).astype(bool),
+        )
 
     def __len__(self):
         return self.dataobj.shape[0]
@@ -64,6 +67,7 @@ class DummyDWIDataset(BaseDataset):
         self.brainmask = brainmask_dataobj
         self.bzero = b0_dataobj
         self.gradients = gradients
+        self.motion_affines = None
 
     def __len__(self):
         return self.dataobj.shape[0]
@@ -79,6 +83,7 @@ class DummyPETDataset(BaseDataset):
         self.brainmask = brainmask_dataobj
         self.midframe = midframe
         self.total_duration = total_duration
+        self.motion_affines = None
 
     def __len__(self):
         return self.dataobj.shape[0]
