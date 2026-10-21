@@ -22,8 +22,12 @@
 #
 """Sensitivity of model predictions to motion of their training volumes."""
 
+import attrs
+import nibabel as nb
 import numpy as np
 import pytest
+from nitransforms.linear import Affine
+from nitransforms.resampling import apply
 from scipy.ndimage import center_of_mass, gaussian_filter
 from sklearn.gaussian_process.kernels import WhiteKernel
 
@@ -468,3 +472,176 @@ def test_smoother_is_read_only_and_does_not_lock_the_fit():
     assert np.allclose(np.diag(smoother), 0.0)
     with pytest.raises(ValueError, match="read-only"):
         smoother[0, 1] = 1.0
+
+
+# Eddy-current distortions
+
+
+def _table(rng, n_volumes, bval=1000.0):
+    """Random unit gradients at one b-value."""
+    vectors = rng.normal(size=(n_volumes, 3))
+    vectors /= np.linalg.norm(vectors, axis=1, keepdims=True)
+    return np.column_stack((vectors, np.full(n_volumes, bval)))
+
+
+def _only(distortion, index, coefficients):
+    """The distortion of volume ``index`` replaced by ``coefficients``; others undistorted."""
+    table = np.zeros_like(distortion.coefficients)
+    table[index] = coefficients
+    return attrs.evolve(distortion, coefficients=table)
+
+
+def test_rigid_resampling_matches_nitransforms():
+    dataset, bzero = _copies(np.random.default_rng(1234))
+    motion = sens.rigid_motion(3.0, (1, 2, 0), (0, 1, 1), sens.mask_centroid(dataset))
+    image = nb.Nifti1Image(bzero, dataset.affine)
+
+    moved = sens.perturb(dataset, sens.Perturbation(3.0, None, (0,), (motion,)))
+
+    expected = apply(Affine(np.linalg.inv(motion)), image, reference=image)
+    assert np.allclose(moved.dataobj[0], np.asanyarray(expected.dataobj), atol=1e-2)
+
+
+def test_eddy_distortion_follows_the_gradient():
+    """Opposite gradients give opposite distortions; amplitude grows as √b; b=0 is untouched."""
+    dataset, _ = _copies(np.random.default_rng(1234), n_volumes=5)
+    vector = np.array([0.6, 0.0, 0.8])
+    table = np.array(
+        [[*vector, 1000.0], [*-vector, 1000.0], [*vector, 4000.0], [0, 0, 0, 0], [0, 1, 0, 4000]]
+    )
+
+    distortion = sens.eddy_distortion(dataset, 2.0, axis=1, degree=2, gradients=table)
+
+    coefficients = distortion.coefficients
+    assert np.allclose(coefficients[1], -coefficients[0])
+    assert np.allclose(coefficients[2], 2.0 * coefficients[0])
+    assert not coefficients[3].any()
+    points = nb.affines.apply_affine(dataset.affine, np.argwhere(dataset.brainmask)).T
+    values, _ = distortion.basis(points)
+    assert np.abs(coefficients @ values).max() == pytest.approx(2.0)
+
+
+def test_distortions_refuse_what_they_cannot_honor():
+    """No distortion without diffusion gradients, and no round trip through a distortion."""
+    dataset, _ = _copies(np.random.default_rng(1234), n_volumes=3)
+    with pytest.raises(ValueError, match="diffusion gradient"):
+        sens.eddy_distortion(dataset, 1.0, axis=1, gradients=np.zeros((3, 4)))
+
+    table = _table(np.random.default_rng(0), 3)
+    distortion = sens.eddy_distortion(dataset, 1.0, axis=1, gradients=table)
+    with pytest.raises(ValueError, match="rigid motions only"):
+        sens.perturb(dataset, sens.Perturbation(0.0, None, distortion=distortion), round_trip=True)
+
+
+def test_constant_distortion_is_a_translation_along_phase_encoding():
+    dataset, _ = _copies(np.random.default_rng(1234))
+    template = sens.eddy_distortion(
+        dataset, 1.0, axis=1, gradients=_table(np.random.default_rng(0), 9)
+    )
+    distortion = _only(template, 0, [1.5, 0.0, 0.0, 0.0])
+
+    distorted = sens.perturb(dataset, sens.Perturbation(0.0, None, distortion=distortion))
+
+    # The scanner shows what lies 1.5 mm further along y: the head appears 1.5 mm back
+    shift = np.eye(4)
+    shift[1, 3] = -1.5
+    moved = sens.perturb(dataset, sens.Perturbation(1.5, None, (0,), (shift,)))
+    assert np.allclose(distorted.dataobj[0], moved.dataobj[0], atol=1e-3)
+    assert np.array_equal(distorted.dataobj[1:], dataset.dataobj[1:])
+
+
+def test_distortion_follows_the_motion_in_the_scanner_frame():
+    """The head moves, then the scanner distorts: a constant distortion acts after the motion."""
+    dataset, _ = _copies(np.random.default_rng(1234))
+    template = sens.eddy_distortion(
+        dataset, 1.0, axis=1, gradients=_table(np.random.default_rng(0), 9)
+    )
+    motion = sens.rigid_motion(10.0, (1, 0, 1), (0, 0, 1), sens.mask_centroid(dataset))
+
+    both = sens.perturb(
+        dataset,
+        sens.Perturbation(
+            10.0, None, (0,), (motion,), distortion=_only(template, 0, [1.5, 0, 0, 0])
+        ),
+    )
+
+    shift = np.eye(4)
+    shift[1, 3] = -1.5
+    after = sens.perturb(dataset, sens.Perturbation(10.0, None, (0,), (shift @ motion,)))
+    before = sens.perturb(dataset, sens.Perturbation(10.0, None, (0,), (motion @ shift,)))
+    assert np.allclose(both.dataobj[0], after.dataobj[0], atol=1e-3)
+    assert not np.allclose(both.dataobj[0], before.dataobj[0], atol=1.0)
+
+
+def test_distortion_moves_signal_along_phase_encoding_and_conserves_it():
+    """A shear leaves the profiles across phase encoding intact; a stretch keeps the total."""
+    dataset, bzero = _copies(np.random.default_rng(1234))
+    template = sens.eddy_distortion(
+        dataset, 1.0, axis=1, gradients=_table(np.random.default_rng(0), 9)
+    )
+    shear = _only(template, 0, [0.0, 2.0, 0.0, 0.0])
+    stretch = _only(template, 0, [0.0, 0.0, 2.0, 0.0])
+
+    sheared = sens.perturb(dataset, sens.Perturbation(0.0, None, distortion=shear)).dataobj[0]
+    stretched = sens.perturb(dataset, sens.Perturbation(0.0, None, distortion=stretch)).dataobj[0]
+
+    assert np.allclose(sheared.sum(axis=(1, 2)), bzero.sum(axis=(1, 2)), rtol=1e-3, atol=1.0)
+    assert np.allclose(sheared.sum(axis=(0, 1)), bzero.sum(axis=(0, 1)), rtol=1e-3, atol=1.0)
+    assert not np.allclose(sheared.sum(axis=(0, 2)), bzero.sum(axis=(0, 2)), rtol=1e-2)
+    assert stretched.sum() == pytest.approx(bzero.sum(), rel=1e-3)
+    y = np.arange(bzero.shape[1]) - (bzero.shape[1] - 1) / 2
+
+    def spread(volume):
+        profile = volume.sum(axis=(0, 2))
+        return np.sqrt((profile * y**2).sum() / profile.sum())
+
+    assert spread(stretched) < 0.95 * spread(bzero)
+
+
+@pytest.mark.parametrize("degree", [1, 2])
+def test_inherited_distortion_recovers_a_volume_own_distortion(degree):
+    dataset = _dwi(np.random.default_rng(1234))
+    distortion = sens.eddy_distortion(dataset, 0.5, axis=1, degree=degree)
+    distorted = sens.perturb(dataset, sens.Perturbation(0.0, None, distortion=distortion))
+
+    for index in (0, 11, 23):
+        fitted = sens.inherited_distortion(
+            dataset.dataobj[index],
+            distorted.dataobj[index],
+            distortion,
+            dataset.affine,
+            dataset.brainmask,
+        )
+        own = distortion.coefficients[index]
+        assert np.linalg.norm(fitted - own) < 0.05 * np.linalg.norm(own)
+
+
+@pytest.mark.parametrize("octant", [False, True])
+def test_copies_inherit_the_distortion_of_the_others(octant):
+    """The mean of the others inherits their average distortion; the trivial model, none."""
+    dataset, _ = _copies(np.random.default_rng(1234))
+    n_volumes = len(dataset)
+    table = _table(np.random.default_rng(0), n_volumes)
+    if octant:
+        # Distortions no longer cancel out over the others
+        table[:, :3] = np.abs(table[:, :3])
+    # Small enough that the blur of averaging distortions (second order) is negligible
+    distortion = sens.eddy_distortion(dataset, 0.1, axis=1, gradients=table)
+    perturbation = sens.Perturbation(0.0, None, distortion=distortion)
+
+    rows = sens.sensitivity(ExpectationModel, dataset, [perturbation], stat="mean")
+
+    coefficients = distortion.coefficients
+    total = coefficients.sum(axis=0)
+    inherited = []
+    for row in rows:
+        own = coefficients[row["index"]]
+        expected = (total - own) @ own / ((n_volumes - 1) * (own @ own))
+        assert row["inherited"] == pytest.approx(expected, abs=0.015)
+        assert row["distortion"] == 0.1 and row["nrmse"] > 0.0
+        inherited.append(row["inherited"])
+    assert (np.mean(inherited) > 0.5) == octant
+
+    grid = sens.shift_grid(dataset)
+    rows = sens.sensitivity(TrivialModel, dataset, [perturbation], predicted=grid.dataobj[0])
+    assert all(row["nrmse"] == 0.0 and row["inherited"] == 0.0 for row in rows)
