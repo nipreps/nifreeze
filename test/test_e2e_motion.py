@@ -23,8 +23,10 @@
 """End-to-end motion estimation on DIPY's Sherbrooke dataset with simulated motion.
 
 Every diffusion-weighted volume is moved by a seeded random rigid transform; the
-b=0 stays in place and defines the frame of the ground truth. B-vectors are not
-rotated. The tests are opt-in (``pytest -m e2e``) and need ANTs.
+b=0 stays in place and defines the frame of the ground truth. The b-vector file
+holds the scanner-frame directions, which turn with the head: undoing a volume's
+motion maps its b-vector back to the direction its signal was simulated with.
+The tests are opt-in (``pytest -m e2e``) and need ANTs.
 
 The model gates record the current single-pass accuracy: the models are fit on
 the moving volumes, so their targets mix anatomy at different positions (see
@@ -39,11 +41,13 @@ import nibabel as nb
 import nitransforms as nt
 import numpy as np
 import pytest
+from dipy.io import read_bvals_bvecs
 from nitransforms.resampling import apply
 from scipy.spatial.transform import Rotation
 
 from nifreeze.cli.run import main
 from nifreeze.data import dmri
+from nifreeze.data.dmri.utils import transform_fsl_bvec
 from nifreeze.data.filtering import robust_window
 from nifreeze.registration.ants import _prepare_registration_data, _run_registration
 from nifreeze.registration.utils import displacements_within_mask
@@ -108,10 +112,20 @@ def sherbrooke_motion(tmp_path_factory):
     dwi_path = work / "sherbrooke_motion.nii"
     nb.Nifti1Image(moved, img.affine, img.header).to_filename(dwi_path)
 
+    # The b-vector file holds scanner-frame directions, which turn with the head:
+    # undoing the motion (as the export does) recovers the simulated direction
+    _, bvecs = read_bvals_bvecs(str(bval_fname), str(bvec_fname))
+    scanner_bvecs = np.array(bvecs, dtype=float)
+    for i, matrix in zip(moving, truth, strict=True):
+        rotated = transform_fsl_bvec(bvecs[i], matrix, img.affine)
+        scanner_bvecs[i] = rotated / np.linalg.norm(rotated)
+    bvec_path = work / "sherbrooke_motion.bvec"
+    np.savetxt(bvec_path, scanner_bvecs.T, fmt="%.8f")
+
     return SimpleNamespace(
         dwi_path=dwi_path,
         original_path=dwi_fname,
-        bvec_path=bvec_fname,
+        bvec_path=bvec_path,
         bval_path=bval_fname,
         mask=mask_img,
         mask_path=mask_path,
