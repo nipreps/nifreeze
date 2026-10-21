@@ -32,6 +32,7 @@ import nibabel as nb
 import numpy as np
 import pytest
 from nitransforms.linear import Affine
+from nitransforms.resampling import apply
 
 from nifreeze.data import load as nifreeze_load
 from nifreeze.data.pet.base import (
@@ -577,11 +578,46 @@ def test_pet_set_transform_updates_motion_affines(setup_random_pet_data):
     np.testing.assert_allclose(pet_obj.dataobj[idx], data_before)
     assert pet_obj.motion_affines is not None
     assert len(pet_obj.motion_affines) == len(pet_obj)
-    assert isinstance(pet_obj.motion_affines[idx], Affine)
-    assert np.allclose(pet_obj.motion_affines[idx].matrix, affine)
+    assert np.allclose(pet_obj.motion_affines[idx], affine)
 
     vol, aff, time = pet_obj[idx]
-    assert aff is pet_obj.motion_affines[idx]
+    assert aff is not None
+    assert np.allclose(aff, pet_obj.motion_affines[idx])
+
+
+@pytest.mark.random_pet_data(4, (6, 6, 6), np.asarray([1.0, 2.0, 3.0, 4.0]))
+def test_pet_set_transform_keeps_the_frames(tmp_path, setup_random_pet_data):
+    """``set_transform`` stores the estimate; frames are resampled once, at export."""
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+    pet_obj = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+    original = np.copy(pet_obj.dataobj)
+    shift = np.eye(4)
+    shift[:3, 3] = (1.0, -0.5, 0.25)
+
+    pet_obj.set_transform(2, shift)
+
+    assert np.array_equal(pet_obj.dataobj, original)
+    assert pet_obj.motion_affines is not None
+    assert np.allclose(pet_obj.motion_affines[2], shift)
+    assert np.allclose(pet_obj.motion_affines[[0, 1, 3]], np.eye(4))
+
+    # The estimates can be saved
+    pet_obj.to_filename(tmp_path / "pet.h5")
+    saved = PET.from_filename(tmp_path / "pet.h5").motion_affines
+    assert saved is not None
+    assert np.allclose(saved, pet_obj.motion_affines)
+
+    # Export resamples the original frame once
+    frame = nb.Nifti1Image(original[2], pet_obj.affine)
+    expected = np.asanyarray(apply(Affine(shift), frame, reference=frame, order=3).dataobj)
+    exported = np.asanyarray(pet_obj.to_nifti().dataobj)[..., 2]
+    assert np.allclose(exported, expected.astype(pet_obj.dataobj.dtype))
 
 
 @pytest.mark.random_pet_data(4, (2, 2, 2), np.asarray([1.0, 2.0, 3.0, 4.0]))

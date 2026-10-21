@@ -469,3 +469,31 @@ def test_gqikrr_fixes_gqi_amplitude():
     assert nrmse(krr) < 0.2
     assert krr._krr_lambda in lovo.DEFAULT_KRR_LAMBDA_GRID
     assert nrmse(krr) < 0.5 * nrmse(gqi)
+
+
+@pytest.mark.parametrize(
+    ("name", "kwargs"),
+    [
+        (
+            "GPLOOModel",
+            {"hyperparameters": _hyperparameter_record(_fixed_gp_kernel(), "spherical")},
+        ),
+        ("GQIKRRModel", {"krr_lambda": 0.1}),
+    ],
+)
+def test_closed_form_update_refreshes_a_volume(setup_random_dwi_data, name, kwargs):
+    """After ``update``, a closed-form model predicts like a fresh model of the updated view."""
+    dwi = _random_dwi(setup_random_dwi_data)
+    view = dwi.realigned()
+    closed_form = getattr(model.dmri, name)(view, **kwargs)
+    closed_form.fit_predict(0)  # Builds the signal matrix and the smoother
+
+    shift = np.eye(4)
+    shift[:3, 3] = (1.0, -0.5, 0.25)
+    dwi.set_transform(3, shift)
+    dwi.realign_into(view, 3)
+    closed_form.update(3)
+
+    fresh = getattr(model.dmri, name)(view, **kwargs)
+    for index in (0, len(dwi) // 2):
+        assert np.allclose(closed_form.fit_predict(index), fresh.fit_predict(index))

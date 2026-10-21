@@ -124,10 +124,23 @@ dataset's motion parameter attribute.
 
 .. important::
 
-  The **Update & iterate** procedure follows a strict design principle:
-  resampling is intentionally excluded from the update step; including it
-  would alter the data distribution, making it impossible to attribute
-  observed improvements solely to the predictive model.
+  The **Update & iterate** procedure treats registration and modeling
+  differently:
+
+  - **Registration never sees resampled data.** Each volume is registered in
+    its original form. The current estimate (found by an earlier estimator of
+    the chain, or stored with the dataset) only initializes the registration,
+    so that it starts closer to the target.
+  - **Models train on the realigned view** (the *instant update*). As soon as a
+    volume is registered, the models see it resampled from the original with
+    its estimate and, for DWI, with its b-vector rotated accordingly. The
+    predictions of the remaining volumes, and those of later estimators,
+    improve as the motion is corrected.
+
+  A realigned volume is never resampled again: a new estimate replaces it,
+  resampled from the original. ``--no-instant-update``
+  (``Estimator.run(instant_update=False)``) trains the models on the original
+  volumes only.
 
 Corrected datasets and associated metadata are produced in standardized
 formats for downstream analysis.
@@ -258,8 +271,8 @@ Usage
 The *NiFreeze* command-line interface supports specifying multiple models, which are applied in a cascade fashion. Users
 can indicate which model should be used to address a specific problem, such as head motion or eddy current correction.
 
-The transformations computed at each level are stored in an HDF5 file and are used to initialize the immediately next
-level of the registration process.
+The transformations estimated at each level initialize the registration of the next level, whose models train on
+the data realigned with them.
 
 Refer to the :ref:`usage` document for a self-contained usage example.
 

@@ -70,6 +70,7 @@ def main(argv: list[str] | None = None) -> None:
         omp_nthreads=args.nthreads,
         n_jobs=args.n_jobs,
         debug_dir=args.debug_dir,
+        instant_update=args.instant_update,
         seed=args.seed,
     )
 

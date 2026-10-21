@@ -25,6 +25,7 @@
 from __future__ import annotations
 
 from collections import namedtuple
+from copy import copy
 from pathlib import Path
 from tempfile import mkdtemp
 from typing import Any, Generic
@@ -34,7 +35,7 @@ import attrs
 import h5py
 import nibabel as nb
 import numpy as np
-from nitransforms.linear import LinearTransformsMapping
+from nitransforms.linear import Affine, LinearTransformsMapping
 from nitransforms.resampling import apply
 from typing_extensions import Self, TypeVarTuple, Unpack
 
@@ -42,6 +43,7 @@ from nifreeze.data.utils import (
     load_nfhdf5_fields,
     replace_on_success,
     save_nfhdf5_fields,
+    stream_select_volumes,
 )
 
 Ts = TypeVarTuple("Ts")
@@ -438,6 +440,70 @@ class BaseDataset(Generic[Unpack[Ts]]):
             self.motion_affines = np.repeat(np.eye(4)[None, ...], len(self), axis=0)
 
         self.motion_affines[index] = affine
+
+    def realigned(self, order: int = 3) -> Self:
+        """
+        Create the realigned view of the dataset, which models train on.
+
+        The view is a shallow copy whose volumes are a disk-backed copy of this
+        dataset's volumes. Volumes with a motion estimate are moved into the
+        reference frame (see :meth:`realign_into`). This dataset is not modified.
+
+        Parameters
+        ----------
+        order : :obj:`int`, optional
+            The interpolation order used to resample the volumes.
+
+        Returns
+        -------
+        :obj:`~nifreeze.data.base.BaseDataset`
+            The realigned view.
+
+        """
+        view = copy(self)
+        view.dataobj = stream_select_volumes(
+            self.dataobj, np.ones(len(self), dtype=bool), name="realigned"
+        )
+        # The view's volumes are realigned already
+        view.motion_affines = None
+        if self.motion_affines is not None:
+            for index in range(len(self)):
+                self.realign_into(view, index, order=order)
+        return view
+
+    def realign_into(self, view: Self, index: int, order: int = 3) -> None:
+        """
+        Write volume ``index`` into a realigned view, moved by its current estimate.
+
+        The original volume is resampled once with the estimate in
+        ``motion_affines`` (the same mapping as :func:`to_nifti`). A new estimate
+        replaces the realigned volume: the realigned volume is never resampled
+        again. Volumes without a motion estimate are copied as they are.
+
+        Parameters
+        ----------
+        view : :obj:`~nifreeze.data.base.BaseDataset`
+            The realigned view (see :meth:`realigned`).
+        index : :obj:`int`
+            The volume to realign.
+        order : :obj:`int`, optional
+            The interpolation order used to resample the volume.
+
+        """
+        volume = np.asanyarray(self.dataobj[index])
+        matrix = None if self.motion_affines is None else self.motion_affines[index]
+        if matrix is None or np.allclose(matrix, np.eye(4)):
+            view.dataobj[index] = volume
+            return
+
+        image = nb.Nifti1Image(volume, self.affine, self.datahdr)
+        resampled = np.asanyarray(
+            apply(Affine(matrix), image, reference=image, order=order).dataobj
+        )
+        if np.issubdtype(view.dataobj.dtype, np.integer):
+            info = np.iinfo(view.dataobj.dtype)
+            resampled = np.clip(np.round(resampled), info.min, info.max)
+        view.dataobj[index] = resampled
 
     def to_filename(
         self, filename: Path | str, compression: str | None = None, compression_opts: Any = None

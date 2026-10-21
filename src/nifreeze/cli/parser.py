@@ -174,6 +174,16 @@ def _build_parser() -> ArgumentParser:
             "which a viewer shows on top of its target 'predicted_<index>.nii'."
         ),
     )
+    parser.add_argument(
+        "--no-instant-update",
+        action="store_false",
+        dest="instant_update",
+        help=(
+            "Train the models on the original volumes only. By default, as soon as a "
+            "volume is registered, the models see it realigned (resampled once from the "
+            "original, with its rotated b-vector) when predicting the remaining volumes."
+        ),
+    )
 
     g_dmri = parser.add_argument_group("Options for dMRI inputs")
     g_dmri.add_argument(

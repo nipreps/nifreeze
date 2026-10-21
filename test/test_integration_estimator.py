@@ -32,9 +32,11 @@ import nifreeze.estimator
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.dmri.utils import DEFAULT_LOWB_THRESHOLD
 from nifreeze.data.filtering import ClippingValueError
+from nifreeze.data.pet import PET
 from nifreeze.data.pet.utils import compute_uptake_statistic
 from nifreeze.estimator import Estimator
-from nifreeze.model.base import BaseModel
+from nifreeze.model.base import BaseModel, ExpectationModel
+from nifreeze.model.pet import BSplinePETModel
 from nifreeze.utils import iterators
 from nifreeze.utils.ndimage import load_api
 
@@ -52,9 +54,12 @@ class DummyInsiderModel(BaseModel):
 
 class DummyDataset(BaseDataset):
     def __init__(self, rng):
-        self.dataobj = rng.uniform(0.0, 1.0, DATAOBJ_SIZE)  # np.ones(DATAOBJ_SIZE)
-        self.brainmask = rng.choice([True, False], size=self.dataobj.shape[1:]).astype(bool)
-        self.affine = np.eye(4)
+        dataobj = rng.uniform(0.0, 1.0, DATAOBJ_SIZE)  # np.ones(DATAOBJ_SIZE)
+        super().__init__(
+            dataobj=dataobj,
+            affine=np.eye(4),
+            brainmask=rng.choice([True, False], size=dataobj.shape[1:]).astype(bool),
+        )
 
     def __len__(self):
         return self.dataobj.shape[0]
@@ -69,9 +74,7 @@ class DummyDataset(BaseDataset):
 
 class DummyDWIDataset(BaseDataset):
     def __init__(self, dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients):
-        self.dataobj = dwi_dataobj
-        self.affine = affine
-        self.brainmask = brainmask_dataobj
+        super().__init__(dataobj=dwi_dataobj, affine=affine, brainmask=brainmask_dataobj)
         self.bzero = b0_dataobj
         self.gradients = gradients
 
@@ -84,9 +87,7 @@ class DummyDWIDataset(BaseDataset):
 
 class DummyPETDataset(BaseDataset):
     def __init__(self, pet_dataobj, affine, brainmask_dataobj, midframe, total_duration):
-        self.dataobj = pet_dataobj
-        self.affine = affine
-        self.brainmask = brainmask_dataobj
+        super().__init__(dataobj=pet_dataobj, affine=affine, brainmask=brainmask_dataobj)
         self.midframe = midframe
         self.total_duration = total_duration
 
@@ -249,6 +250,115 @@ def test_estimator_debug_dir(request, monkeypatch, tmp_path):
             sample = load_api(pass_dir / f"sample_{i:05d}.nii", nb.Nifti1Image)
             aligned = load_api(pass_dir / f"aligned_{i:05d}.nii", nb.Nifti1Image)
             assert np.allclose(aligned.affine, np.linalg.inv(shift) @ sample.affine)
+
+
+def _smooth_dataset() -> BaseDataset:
+    """Smooth volumes, so that sub-voxel shifts change them."""
+    grid = np.indices(DATAOBJ_SIZE[1:]).astype("float32")
+    volumes = [
+        100.0
+        * np.exp(-((grid[0] - 2 - 0.1 * k) ** 2 + (grid[1] - 2) ** 2 + (grid[2] - 2) ** 2) / 4)
+        for k in range(DATAOBJ_SIZE[0])
+    ]
+    return BaseDataset(
+        dataobj=np.stack(volumes).astype("float32"),
+        affine=np.eye(4),
+        brainmask=np.ones(DATAOBJ_SIZE[1:], dtype=bool),
+    )
+
+
+def _shifting_registration(monkeypatch, n_volumes: int) -> list:
+    """Make each registration return a growing shift; collect the predictions."""
+    predictions: list = []
+    shifts = iter(np.linspace(0.2, 0.8, n_volumes))
+
+    def fake_prepare(sample, predicted, *args, **kwargs):
+        predictions.append(np.copy(predicted))
+        return None, None, None
+
+    class DummyXForm:
+        def __init__(self, shift):
+            self.matrix = np.eye(4)
+            self.matrix[1, 3] = shift
+
+    monkeypatch.setattr(nifreeze.estimator, "_prepare_registration_data", fake_prepare)
+    monkeypatch.setattr(
+        nifreeze.estimator, "_run_registration", lambda *a, **k: DummyXForm(next(shifts))
+    )
+    return predictions
+
+
+@pytest.mark.parametrize("given", ["name", "instance"])
+@pytest.mark.parametrize("instant_update", [True, False])
+def test_estimator_instant_update(monkeypatch, instant_update, given):
+    """With the instant update, models train on volumes realigned as soon as they are."""
+    dataset = _smooth_dataset()
+    original = np.copy(dataset.dataobj)
+    predictions = _shifting_registration(monkeypatch, len(dataset))
+    model = "avg" if given == "name" else ExpectationModel(dataset)
+
+    views: dict = {}
+    Estimator(model, strategy="linear").run(
+        dataset, clip="none", instant_update=instant_update, realigned=views
+    )
+
+    assert np.array_equal(dataset.dataobj, original)
+    if not instant_update:
+        assert views == {}
+        # Every volume is predicted from the raw volumes
+        assert np.allclose(predictions[-1], np.median(original[:-1], axis=0))
+        return
+
+    (view,) = views.values()
+    # The view holds every volume realigned once, from the original
+    assert np.allclose(view.dataobj, dataset.realigned().dataobj)
+    # The last volume is predicted from all the others, already realigned
+    assert np.allclose(predictions[-1], np.median(view.dataobj[:-1], axis=0))
+    assert not np.allclose(predictions[-1], np.median(original[:-1], axis=0))
+    if given == "instance":
+        # The instance now reads the realigned view
+        assert isinstance(model, ExpectationModel)
+        assert model._dataset is view
+
+
+def test_estimator_instance_of_another_dataset(monkeypatch):
+    """A model instance built on another dataset keeps reading it."""
+    dataset = _smooth_dataset()
+    other = _smooth_dataset()
+    predictions = _shifting_registration(monkeypatch, len(dataset))
+    model = ExpectationModel(other)
+
+    views: dict = {}
+    Estimator(model, strategy="linear").run(dataset, clip="none", realigned=views)
+
+    assert views == {}
+    assert model._dataset is other
+    assert np.allclose(predictions[-1], np.median(other.dataobj[:-1], axis=0))
+
+
+@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
+def test_estimator_instant_update_pet(monkeypatch, setup_random_pet_data):
+    """PET models train on realigned frames, while the frames themselves stay original."""
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+    dataset = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+    original = np.copy(dataset.dataobj)
+    _shifting_registration(monkeypatch, len(dataset))
+    model = BSplinePETModel(dataset=dataset)
+
+    views: dict = {}
+    Estimator(model, strategy="linear").run(dataset, clip="none", realigned=views)
+
+    (view,) = views.values()
+    assert model._dataset is view
+    assert np.array_equal(dataset.dataobj, original)
+    assert np.allclose(view.dataobj, dataset.realigned().dataobj)
+    assert not np.allclose(view.dataobj, original)
 
 
 def test_estimator_clip_degenerate_window(request, monkeypatch):

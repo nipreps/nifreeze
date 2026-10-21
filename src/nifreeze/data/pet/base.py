@@ -24,16 +24,12 @@
 
 from __future__ import annotations
 
-from collections import namedtuple
 from pathlib import Path
 from typing import Any
 
 import attrs
 import h5py
-import nibabel as nb
 import numpy as np
-from nitransforms.linear import Affine
-from nitransforms.resampling import apply
 from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr, _has_ndim
@@ -284,34 +280,6 @@ class PET(BaseDataset[np.ndarray]):
 
         """
         return super().__getitem__(idx)
-
-    def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
-        """Set an affine, and update data object and gradients."""
-        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
-        reference = ImageGrid(self.shape3d, self.affine)
-        xform = Affine(matrix=affine, reference=reference)
-
-        if not Path(self._filepath).exists():
-            self.to_filename(self._filepath)
-
-        # read original PET frame
-        with h5py.File(self._filepath, "r") as in_file:
-            root = in_file["/0"]
-            dframe = np.asanyarray(root["dataobj"][index])
-
-        dmoving = nb.Nifti1Image(dframe, self.affine, None)
-
-        # resample and update orientation at index
-        self.dataobj[index] = np.asanyarray(
-            apply(xform, dmoving, order=order).dataobj,
-            dtype=self.dataobj.dtype,
-        )
-
-        # update transform
-        if self.motion_affines is None:
-            self.motion_affines = np.asarray([None] * len(self))
-
-        self.motion_affines[index] = xform
 
     def to_filename(
         self, filename: Path | str, compression: str | None = None, compression_opts: Any = None
