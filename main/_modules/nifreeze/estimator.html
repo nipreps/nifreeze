@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.estimator - nifreeze 26.0.0.dev352 documentation</title>
+        <title>nifreeze.estimator - nifreeze 26.0.0.dev355 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">nifreeze 26.0.0.dev352 documentation</div></a>
+      <a href="../../index.html"><div class="brand">nifreeze 26.0.0.dev355 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev352</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev355</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev352</span>
+  <span class="sidebar-brand-text">26.0.0.dev355</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -645,6 +645,14 @@
                             <span class="n">windows</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
                     <span class="n">window</span> <span class="o">=</span> <span class="n">windows</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
 
+                    <span class="c1"># Start from the current estimate (left by a previous estimator of the</span>
+                    <span class="c1"># chain, or stored in the dataset)</span>
+                    <span class="n">init_affine</span> <span class="o">=</span> <span class="kc">None</span>
+                    <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="n">motion_affines</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">current</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">motion_affines</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">current</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">)):</span>
+                            <span class="n">init_affine</span> <span class="o">=</span> <span class="n">current</span>
+
                     <span class="c1"># prepare data for running ANTs</span>
                     <span class="n">predicted_path</span><span class="p">,</span> <span class="n">volume_path</span><span class="p">,</span> <span class="n">init_path</span> <span class="o">=</span> <span class="n">_prepare_registration_data</span><span class="p">(</span>
                         <span class="n">volume</span><span class="p">,</span>
@@ -654,6 +662,7 @@
                         <span class="n">ptmp_dir</span><span class="p">,</span>
                         <span class="n">clip</span><span class="o">=</span><span class="n">clip</span> <span class="k">if</span> <span class="n">window</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;none&quot;</span><span class="p">,</span>
                         <span class="n">window</span><span class="o">=</span><span class="n">window</span><span class="p">,</span>
+                        <span class="n">init_affine</span><span class="o">=</span><span class="n">init_affine</span><span class="p">,</span>
                     <span class="p">)</span>
 
                     <span class="n">pbar</span><span class="o">.</span><span class="n">set_description_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">REG_MSG</span><span class="si">:</span><span class="s2"> &lt;16</span><span class="si">}</span><span class="s2"> vol. &lt;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&gt;&quot;</span><span class="p">)</span>
@@ -735,7 +744,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=69910b06"></script>
+</div><script src="../../_static/documentation_options.js?v=a2189bcb"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>
