@@ -27,12 +27,16 @@ Two questions are asked of a model, on an aligned dataset:
 
 - :func:`fidelity`: how well does it predict each held-out volume?
 - :func:`sensitivity`: how far do its predictions drift from those on the aligned
-  dataset when some volumes move by known rigid motions (a *perturbation*)?
+  dataset when some volumes move by known rigid motions, or are distorted as by
+  eddy currents (a *perturbation*)?
 
 A fresh model is built on each perturbed copy. A held-out prediction never uses
 its own volume, so every volume can be evaluated, the moved ones included: a
-moved volume's prediction sees the motion of the others only. Registration, the
-estimator and its intensity window are not involved.
+moved volume's prediction sees the motion of the others only. Eddy-current
+distortions follow the diffusion gradient, so a prediction may still resemble
+its volume's own distortion through volumes with similar gradients:
+:func:`inherited_distortion` measures how much. Registration, the estimator and
+its intensity window are not involved.
 
 """
 
@@ -48,14 +52,84 @@ import numpy as np
 from nitransforms.linear import Affine
 from nitransforms.resampling import apply
 from numpy.typing import ArrayLike
+from scipy.ndimage import map_coordinates
 from scipy.spatial.transform import Rotation
 
 from nifreeze.analysis.similarity import METRICS, nrmse
 
 
 @attrs.define(frozen=True)
+class Distortion:
+    r"""
+    Displacements along the phase-encoding axis, polynomial in space, one per volume.
+
+    Volume ``i`` shows at each point what lies :math:`d_i` mm further along the
+    phase-encoding axis, with its intensity scaled by the Jacobian
+    :math:`1 + \partial d_i / \partial x_{PE}` so that no signal is created or lost.
+    :math:`d_i` is a polynomial of the voxel-axis coordinates, centered on the
+    mask and divided by its half-extent along each axis.
+    """
+
+    magnitude: float
+    """Largest displacement (mm) of any voxel of the mask, over all volumes."""
+    axis: int
+    """Voxel axis of phase encoding."""
+    seed: int | None
+    """Seed that drew the map from gradients to coefficients."""
+    degree: int
+    """Degree of the polynomial."""
+    center: np.ndarray = attrs.field(eq=False)
+    """World coordinates of the origin of the polynomial."""
+    radius: np.ndarray = attrs.field(eq=False)
+    """Half-extent (mm) of the mask along each voxel axis."""
+    frame: np.ndarray = attrs.field(eq=False)
+    """Direction cosines of the voxel axes, as columns."""
+    coefficients: np.ndarray = attrs.field(eq=False)
+    """Displacement (mm) carried by each term, of shape ``(n_volumes, n_terms)``."""
+
+    @property
+    def direction(self) -> np.ndarray:
+        """World direction of the phase-encoding axis."""
+        return self.frame[:, self.axis]
+
+    def basis(self, points: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Evaluate each term, and its derivative along the phase-encoding axis.
+
+        Parameters
+        ----------
+        points : :obj:`~numpy.ndarray`
+            World coordinates, of shape ``(3, n_points)``.
+
+        Returns
+        -------
+        :obj:`tuple` of :obj:`~numpy.ndarray`
+            The terms and their derivatives (per mm), each of shape
+            ``(n_terms, n_points)``.
+
+        """
+        local = self.frame.T @ (points - self.center[:, np.newaxis])
+        normalized = local / self.radius[:, np.newaxis]
+        values, derivatives = [], []
+        for exponents in _monomials(self.degree):
+            values.append(np.prod(normalized ** exponents[:, np.newaxis], axis=0))
+            power = exponents[self.axis]
+            if power == 0:
+                derivatives.append(np.zeros(points.shape[1]))
+                continue
+            lowered = exponents.copy()
+            lowered[self.axis] -= 1
+            derivatives.append(
+                power
+                * np.prod(normalized ** lowered[:, np.newaxis], axis=0)
+                / self.radius[self.axis]
+            )
+        return np.array(values), np.array(derivatives)
+
+
+@attrs.define(frozen=True)
 class Perturbation:
-    """Rigid motions applied to some volumes of a dataset."""
+    """Rigid motions of some volumes of a dataset, and optionally a distortion of all."""
 
     magnitude: float
     """Rotation (degrees) and translation (mm) of every moved volume."""
@@ -65,6 +139,8 @@ class Perturbation:
     """Indices of the moved volumes."""
     motions: tuple[np.ndarray, ...] = attrs.field(default=(), eq=False)
     """Head motion of each moved volume, as a ``(4, 4)`` matrix in world coordinates."""
+    distortion: Distortion | None = None
+    """Distortion of every volume, applied after its motion, in the scanner's frame."""
 
     @property
     def count(self) -> int:
@@ -260,6 +336,75 @@ def one_at_a_time(
     ]
 
 
+def eddy_distortion(
+    dataset: Any,
+    magnitude: float,
+    axis: int,
+    degree: int = 1,
+    seed: int = 0,
+    gradients: ArrayLike | None = None,
+    mask: np.ndarray | None = None,
+) -> Distortion:
+    r"""
+    Draw distortions that follow the diffusion gradients, as eddy currents do.
+
+    The fields that a diffusion gradient leaves behind scale with its amplitude
+    and change sign with its direction. Each volume's coefficients are therefore
+    one fixed random linear map of its gradient vector, scaled by
+    :math:`\sqrt{b / b_{max}}` (the gradient amplitude, at fixed timing). b=0
+    volumes are not distorted, and antipodal gradients get opposite distortions.
+
+    Parameters
+    ----------
+    dataset : :obj:`~nifreeze.data.base.BaseDataset`
+        The aligned dataset.
+    magnitude : :obj:`float`
+        Largest displacement (mm) of any voxel of the mask, over all volumes.
+    axis : :obj:`int`
+        Voxel axis of phase encoding.
+    degree : :obj:`int`, optional
+        Degree of the polynomial (1: translation, scaling and shears).
+    seed : :obj:`int`, optional
+        Seed for the linear map.
+    gradients : :obj:`~numpy.typing.ArrayLike`, optional
+        Gradient table, ``(n_volumes, 4)`` with the b-value last; the dataset's
+        if :obj:`None`.
+    mask : :obj:`~numpy.ndarray`, optional
+        Voxels over which the polynomial is normalized and ``magnitude`` reached.
+
+    Returns
+    -------
+    :obj:`Distortion`
+        The distortions.
+
+    """
+    table = np.asarray(dataset.gradients if gradients is None else gradients, dtype=float)
+    vectors, bvals = table[:, :3], np.clip(table[:, 3], 0.0, None)
+    norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+    unit = np.divide(vectors, norms, out=np.zeros_like(vectors), where=norms > 0)
+    peak = bvals.max()
+    amplitude = unit * np.sqrt(bvals / peak)[:, np.newaxis] if peak > 0 else 0.0 * unit
+    if not amplitude.any():
+        raise ValueError("No volume has a diffusion gradient.")
+
+    mask = _resolve_mask(dataset, mask)
+    affine = np.asarray(dataset.affine, dtype=float)
+    frame = affine[:3, :3] / np.linalg.norm(affine[:3, :3], axis=0)
+    points = nb.affines.apply_affine(affine, np.argwhere(mask)).T
+    center = points.mean(axis=1)
+    radius = np.abs(frame.T @ (points - center[:, np.newaxis])).max(axis=1)
+
+    n_terms = len(_monomials(degree))
+    linear_map = np.random.default_rng(seed).normal(size=(3, n_terms))
+    distortion = Distortion(
+        float(magnitude), axis, seed, degree, center, radius, frame, amplitude @ linear_map
+    )
+    values, _ = distortion.basis(points)
+    largest = max(np.abs(row @ values).max() for row in distortion.coefficients)
+    distortion.coefficients[:] *= magnitude / largest
+    return distortion
+
+
 def shift_grid(dataset: Any, shift: float | ArrayLike = DEFAULT_GRID_SHIFT, order: int = 3) -> Any:
     """
     Resample a whole dataset onto a grid offset by a fraction of a voxel.
@@ -316,23 +461,24 @@ def perturb(
     grid: Any = None,
 ) -> Any:
     """
-    Copy a dataset with some of its volumes moved.
+    Copy a dataset with some of its volumes moved or distorted.
 
-    Each moved volume is resampled once from the aligned original. Everything
-    else (gradients, b=0 reference, mask) is left as it was, as a model would
-    see it when the motion goes uncorrected.
+    Each moved or distorted volume is resampled once from the aligned original,
+    through its motion and then its distortion. Everything else (gradients, b=0
+    reference, mask) is left as it was, as a model would see it when the motion
+    and the distortion go uncorrected.
 
     Parameters
     ----------
     dataset : :obj:`~nifreeze.data.base.BaseDataset`
         The aligned dataset.
     perturbation : :obj:`Perturbation`
-        The volumes to move and their motions.
+        The volumes to move, their motions, and the distortion.
     order : :obj:`int`, optional
         Interpolation order.
     round_trip : :obj:`bool`, optional
         Move each volume and move it back, which leaves it in place but
-        interpolated twice.
+        interpolated twice (rigid motions only).
     grid : :obj:`~nifreeze.data.base.BaseDataset`, optional
         The dataset on a shifted grid (see :func:`shift_grid`). Moved volumes are
         then resampled from the original onto that grid, through their motion,
@@ -344,25 +490,66 @@ def perturb(
         A copy of the dataset (or of ``grid``) with ``float32`` volumes.
 
     """
+    distortion = perturbation.distortion
     if round_trip and grid is not None:
         raise ValueError("A round trip cannot be combined with a shifted grid.")
+    if round_trip and distortion is not None:
+        raise ValueError("A round trip is defined for rigid motions only.")
     source = dataset if grid is None else grid
-    reference = nb.Nifti1Image(np.zeros(dataset.shape3d, dtype=np.uint8), source.affine)
+    motions = dict(zip(perturbation.moved, perturbation.motions, strict=True))
+    displaced = set(motions)
+    if distortion is not None:
+        displaced |= {int(i) for i in np.flatnonzero(distortion.coefficients.any(axis=1))}
 
     dataobj = np.array(source.dataobj, dtype=np.float32)
-    for index, motion in zip(perturbation.moved, perturbation.motions, strict=True):
-        image = nb.Nifti1Image(
-            np.asarray(dataset.dataobj[index], dtype=np.float32), dataset.affine
-        )
-        # The moved head shows, at each position, what was at motion⁻¹(position)
-        steps = (np.linalg.inv(motion), motion) if round_trip else (np.linalg.inv(motion),)
-        for step in steps:
-            image = apply(Affine(step), image, reference=reference, order=order)
-        dataobj[index] = np.asanyarray(image.dataobj)
+    if round_trip:
+        reference = nb.Nifti1Image(np.zeros(dataset.shape3d, dtype=np.uint8), source.affine)
+        for index, motion in motions.items():
+            image = nb.Nifti1Image(
+                np.asarray(dataset.dataobj[index], dtype=np.float32), dataset.affine
+            )
+            for step in (np.linalg.inv(motion), motion):
+                image = apply(Affine(step), image, reference=reference, order=order)
+            dataobj[index] = np.asanyarray(image.dataobj)
+    else:
+        for index in sorted(displaced):
+            dataobj[index] = _displace(
+                dataset, index, source.affine, motions.get(index), distortion, order
+            )
 
     moved = copy(source)
     moved.dataobj = dataobj
     return moved
+
+
+def _displace(
+    dataset: Any,
+    index: int,
+    affine: np.ndarray,
+    motion: np.ndarray | None,
+    distortion: Distortion | None,
+    order: int,
+) -> np.ndarray:
+    """Resample one aligned volume onto a grid, through its motion and distortion."""
+    shape = dataset.shape3d
+    ijk = np.indices(shape, dtype=float).reshape(3, -1)
+    points = affine[:3, :3] @ ijk + affine[:3, 3:]
+    jacobian: float | np.ndarray = 1.0
+    if distortion is not None:
+        values, derivatives = distortion.basis(points)
+        coefficients = distortion.coefficients[index]
+        # The scanner shows at each point what lies further along phase encoding
+        points = points + np.outer(distortion.direction, coefficients @ values)
+        jacobian = 1.0 + coefficients @ derivatives
+    if motion is not None:
+        # The moved head shows, at each position, what was at motion⁻¹(position)
+        inverse = np.linalg.inv(motion)
+        points = inverse[:3, :3] @ points + inverse[:3, 3:]
+    to_voxels = np.linalg.inv(dataset.affine)
+    coordinates = to_voxels[:3, :3] @ points + to_voxels[:3, 3:]
+    volume = np.asarray(dataset.dataobj[index], dtype=np.float32)
+    resampled = map_coordinates(volume, coordinates, order=order)  # type: ignore[call-overload]
+    return (resampled * jacobian).reshape(shape).astype(np.float32)
 
 
 def held_out_predictions(
@@ -502,7 +689,11 @@ def sensitivity(
     -------
     :obj:`list` of :obj:`dict`
         One row per perturbation and evaluated volume, with the ``nrmse``, each
-        further metric, and whether that volume was itself ``moved``.
+        further metric, whether that volume was itself ``moved``, the magnitude
+        of the ``distortion`` (0 without one) and the share of the volume's own
+        distortion that its prediction ``inherited`` (the projection of the
+        coefficients fitted by :func:`inherited_distortion` onto the volume's
+        own; NaN without a distortion, or for an undistorted volume).
 
     """
     metrics = {} if metrics is None else metrics
@@ -518,7 +709,15 @@ def sensitivity(
     for perturbation in plan:
         moved = perturb(dataset, perturbation, order=order, grid=grid)
         predicted = held_out_predictions(model, moved, reference, **model_kwargs)
+        distortion = perturbation.distortion
         for index, prediction in predicted.items():
+            inherited = float("nan")
+            if distortion is not None and distortion.coefficients[index].any():
+                own = distortion.coefficients[index]
+                fitted = inherited_distortion(
+                    reference[index], prediction, distortion, aligned.affine, mask
+                )
+                inherited = float(fitted @ own / (own @ own))
             rows.append(
                 {
                     "magnitude": perturbation.magnitude,
@@ -526,7 +725,9 @@ def sensitivity(
                     "seed": perturbation.seed,
                     "index": index,
                     "moved": index in perturbation.moved,
+                    "distortion": 0.0 if distortion is None else distortion.magnitude,
                     "nrmse": nrmse(prediction, reference[index], mask, scale=scale[index]),
+                    "inherited": inherited,
                     **{
                         name: metric(prediction, reference[index], mask)
                         for name, metric in metrics.items()
@@ -534,6 +735,59 @@ def sensitivity(
                 }
             )
     return rows
+
+
+def inherited_distortion(
+    aligned: np.ndarray,
+    perturbed: np.ndarray,
+    distortion: Distortion,
+    affine: np.ndarray,
+    mask: np.ndarray,
+) -> np.ndarray:
+    r"""
+    Distortion coefficients that best explain how a prediction changed.
+
+    To first order, displacing an image :math:`p` by :math:`d` along the
+    phase-encoding axis (with its Jacobian) changes it by
+    :math:`\partial_{PE} p \, d + p \, \partial_{PE} d`, which is linear in the
+    coefficients of :math:`d`. Least squares over the mask give the coefficients
+    of the distortion that the change resembles; whatever the distortion cannot
+    explain (noise, rigid motion) stays in the residual.
+
+    Parameters
+    ----------
+    aligned : :obj:`~numpy.ndarray`
+        The prediction on the aligned dataset.
+    perturbed : :obj:`~numpy.ndarray`
+        The prediction on the perturbed dataset.
+    distortion : :obj:`Distortion`
+        The distortion, whose terms are fitted.
+    affine : :obj:`~numpy.ndarray`
+        Grid of the predictions.
+    mask : :obj:`~numpy.ndarray`
+        Voxels fitted.
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        The fitted coefficients, comparable to a row of
+        :attr:`Distortion.coefficients`.
+
+    """
+    aligned = np.asarray(aligned, dtype=float)
+    mask = np.asarray(mask, dtype=bool)
+    ijk = np.argwhere(mask).T.astype(float)
+    # Derivative of the cubic spline that resampling interpolates with
+    step = np.zeros((3, 1))
+    step[distortion.axis] = 1e-2
+    ahead, behind = (map_coordinates(aligned, ijk + s, order=3) for s in (step, -step))
+    spacing = np.linalg.norm(np.asarray(affine)[:3, distortion.axis])
+    slope = (ahead - behind) / (2e-2 * spacing)
+    points = nb.affines.apply_affine(affine, ijk.T).T
+    values, derivatives = distortion.basis(points)
+    design = (values * slope + derivatives * aligned[mask]).T
+    change = (np.asarray(perturbed, dtype=float) - aligned)[mask]
+    return np.linalg.lstsq(design, change, rcond=None)[0]
 
 
 def influence(model: Any) -> np.ndarray:
@@ -556,6 +810,18 @@ def influence(model: Any) -> np.ndarray:
 
     """
     return np.linalg.norm(model.smoother, axis=0)
+
+
+def _monomials(degree: int) -> list[np.ndarray]:
+    """Exponents of the monomials of three variables up to ``degree``, by degree."""
+    return [
+        np.array(exponents)
+        for total in range(degree + 1)
+        for exponents in sorted(
+            ((i, j, total - i - j) for i in range(total + 1) for j in range(total + 1 - i)),
+            reverse=True,
+        )
+    ]
 
 
 def _resolve_mask(dataset: Any, mask: np.ndarray | None) -> np.ndarray:
