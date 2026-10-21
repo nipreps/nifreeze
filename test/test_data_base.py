@@ -409,7 +409,9 @@ def test_realign_into_rounds_integer_volumes():
     """Integer volumes are realigned to the nearest representable values."""
     blob = _blob_dataset()
     # Values that overshoot the type's range once resampled with cubic splines
-    dataset = BaseDataset(dataobj=(blob.dataobj * 2.55).astype(np.uint8), affine=blob.affine)
+    dataset: BaseDataset = BaseDataset(
+        dataobj=(blob.dataobj * 2.55).astype(np.uint8), affine=blob.affine
+    )
     view = dataset.realigned()
 
     dataset.set_transform(1, _translation(1.5))
