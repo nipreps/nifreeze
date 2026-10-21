@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.analysis.similarity module" href="nifreeze.analysis.similarity.html"><link rel="prev" title="nifreeze.analysis.motion module" href="nifreeze.analysis.motion.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.analysis.sensitivity module - nifreeze 26.0.0.dev372 documentation</title>
+        <title>nifreeze.analysis.sensitivity module - nifreeze 26.0.0.dev374 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev372 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev374 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev372</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev374</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev372</span>
+  <span class="sidebar-brand-text">26.0.0.dev374</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -331,34 +331,129 @@
 <ul class="simple">
 <li><p><a class="reference internal" href="#nifreeze.analysis.sensitivity.fidelity" title="nifreeze.analysis.sensitivity.fidelity"><code class="xref py py-func docutils literal notranslate"><span class="pre">fidelity()</span></code></a>: how well does it predict each held-out volume?</p></li>
 <li><p><a class="reference internal" href="#nifreeze.analysis.sensitivity.sensitivity" title="nifreeze.analysis.sensitivity.sensitivity"><code class="xref py py-func docutils literal notranslate"><span class="pre">sensitivity()</span></code></a>: how far do its predictions drift from those on the aligned
-dataset when some volumes move by known rigid motions (a <em>perturbation</em>)?</p></li>
+dataset when some volumes move by known rigid motions, or are distorted as by
+eddy currents (a <em>perturbation</em>)?</p></li>
 </ul>
 <p>A fresh model is built on each perturbed copy. A held-out prediction never uses
 its own volume, so every volume can be evaluated, the moved ones included: a
-moved volume’s prediction sees the motion of the others only. Registration, the
-estimator and its intensity window are not involved.</p>
+moved volume’s prediction sees the motion of the others only. Eddy-current
+distortions follow the diffusion gradient, so a prediction may still resemble
+its volume’s own distortion through volumes with similar gradients:
+<a class="reference internal" href="#nifreeze.analysis.sensitivity.inherited_distortion" title="nifreeze.analysis.sensitivity.inherited_distortion"><code class="xref py py-func docutils literal notranslate"><span class="pre">inherited_distortion()</span></code></a> measures how much. Registration, the estimator and
+its intensity window are not involved.</p>
 <dl class="py data">
 <dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.DEFAULT_GRID_SHIFT">
 <span class="sig-prename descclassname"><span class="pre">nifreeze.analysis.sensitivity.</span></span><span class="sig-name descname"><span class="pre">DEFAULT_GRID_SHIFT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.25</span></em><a class="headerlink" href="#nifreeze.analysis.sensitivity.DEFAULT_GRID_SHIFT" title="Link to this definition">¶</a></dt>
 <dd><p>Offset (voxels, along each axis) of the grid all volumes are resampled onto.</p>
 </dd></dl>
 
+<dl class="py class">
+<dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.Distortion">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.analysis.sensitivity.</span></span><span class="sig-name descname"><span class="pre">Distortion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">magnitude</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int</span> <span class="pre">|</span> <span class="pre">None'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">degree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coefficients</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/analysis/sensitivity.html#Distortion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.analysis.sensitivity.Distortion" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Displacements along the phase-encoding axis, polynomial in space, one per volume.</p>
+<p>Volume <code class="docutils literal notranslate"><span class="pre">i</span></code> shows at each point what lies <span class="math notranslate nohighlight">\(d_i\)</span> mm further along the
+phase-encoding axis, with its intensity scaled by the Jacobian
+<span class="math notranslate nohighlight">\(1 + \partial d_i / \partial x_{PE}\)</span> so that no signal is created or lost.
+<span class="math notranslate nohighlight">\(d_i\)</span> is a polynomial of the voxel-axis coordinates, centered on the
+mask and divided by its half-extent along each axis.</p>
+<p>Method generated by attrs for class Distortion.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.Distortion.axis">
+<span class="sig-name descname"><span class="pre">axis</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></em><a class="headerlink" href="#nifreeze.analysis.sensitivity.Distortion.axis" title="Link to this definition">¶</a></dt>
+<dd><p>Voxel axis of phase encoding.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.Distortion.basis">
+<span class="sig-name descname"><span class="pre">basis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/analysis/sensitivity.html#Distortion.basis"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.analysis.sensitivity.Distortion.basis" title="Link to this definition">¶</a></dt>
+<dd><p>Evaluate each term, and its derivative along the phase-encoding axis.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>points</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – World coordinates, of shape <code class="docutils literal notranslate"><span class="pre">(3,</span> <span class="pre">n_points)</span></code>.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The terms and their derivatives (per mm), each of shape
+<code class="docutils literal notranslate"><span class="pre">(n_terms,</span> <span class="pre">n_points)</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tuple</span></code></a> of <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.Distortion.center">
+<span class="sig-name descname"><span class="pre">center</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a></em><a class="headerlink" href="#nifreeze.analysis.sensitivity.Distortion.center" title="Link to this definition">¶</a></dt>
+<dd><p>World coordinates of the origin of the polynomial.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.Distortion.coefficients">
+<span class="sig-name descname"><span class="pre">coefficients</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a></em><a class="headerlink" href="#nifreeze.analysis.sensitivity.Distortion.coefficients" title="Link to this definition">¶</a></dt>
+<dd><p>Displacement (mm) carried by each term, of shape <code class="docutils literal notranslate"><span class="pre">(n_volumes,</span> <span class="pre">n_terms)</span></code>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.Distortion.degree">
+<span class="sig-name descname"><span class="pre">degree</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></em><a class="headerlink" href="#nifreeze.analysis.sensitivity.Distortion.degree" title="Link to this definition">¶</a></dt>
+<dd><p>Degree of the polynomial.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.Distortion.direction">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">direction</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a></em><a class="headerlink" href="#nifreeze.analysis.sensitivity.Distortion.direction" title="Link to this definition">¶</a></dt>
+<dd><p>World direction of the phase-encoding axis.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.Distortion.frame">
+<span class="sig-name descname"><span class="pre">frame</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a></em><a class="headerlink" href="#nifreeze.analysis.sensitivity.Distortion.frame" title="Link to this definition">¶</a></dt>
+<dd><p>Direction cosines of the voxel axes, as columns.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.Distortion.magnitude">
+<span class="sig-name descname"><span class="pre">magnitude</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></em><a class="headerlink" href="#nifreeze.analysis.sensitivity.Distortion.magnitude" title="Link to this definition">¶</a></dt>
+<dd><p>Largest displacement (mm) of any voxel of the mask, over all volumes.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.Distortion.radius">
+<span class="sig-name descname"><span class="pre">radius</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a></em><a class="headerlink" href="#nifreeze.analysis.sensitivity.Distortion.radius" title="Link to this definition">¶</a></dt>
+<dd><p>Half-extent (mm) of the mask along each voxel axis.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.Distortion.seed">
+<span class="sig-name descname"><span class="pre">seed</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#nifreeze.analysis.sensitivity.Distortion.seed" title="Link to this definition">¶</a></dt>
+<dd><p>Seed that drew the map from gradients to coefficients.</p>
+</dd></dl>
+
+</dd></dl>
+
 <dl class="py data">
 <dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.NO_PERTURBATION">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.analysis.sensitivity.</span></span><span class="sig-name descname"><span class="pre">NO_PERTURBATION</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Perturbation(magnitude=0.0,</span> <span class="pre">seed=None,</span> <span class="pre">moved=(),</span> <span class="pre">motions=())</span></em><a class="headerlink" href="#nifreeze.analysis.sensitivity.NO_PERTURBATION" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nifreeze.analysis.sensitivity.</span></span><span class="sig-name descname"><span class="pre">NO_PERTURBATION</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Perturbation(magnitude=0.0,</span> <span class="pre">seed=None,</span> <span class="pre">moved=(),</span> <span class="pre">motions=(),</span> <span class="pre">distortion=None)</span></em><a class="headerlink" href="#nifreeze.analysis.sensitivity.NO_PERTURBATION" title="Link to this definition">¶</a></dt>
 <dd><p>The aligned dataset.</p>
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.Perturbation">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.analysis.sensitivity.</span></span><span class="sig-name descname"><span class="pre">Perturbation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">magnitude</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int</span> <span class="pre">|</span> <span class="pre">None'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">moved</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'tuple[int,</span> <span class="pre">...]'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">motions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'tuple[np.ndarray,</span> <span class="pre">...]'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/analysis/sensitivity.html#Perturbation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.analysis.sensitivity.Perturbation" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.analysis.sensitivity.</span></span><span class="sig-name descname"><span class="pre">Perturbation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">magnitude</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int</span> <span class="pre">|</span> <span class="pre">None'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">moved</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'tuple[int,</span> <span class="pre">...]'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">motions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'tuple[np.ndarray,</span> <span class="pre">...]'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distortion</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'Distortion</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/analysis/sensitivity.html#Perturbation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.analysis.sensitivity.Perturbation" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
-<p>Rigid motions applied to some volumes of a dataset.</p>
+<p>Rigid motions of some volumes of a dataset, and optionally a distortion of all.</p>
 <p>Method generated by attrs for class Perturbation.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.Perturbation.count">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">count</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></em><a class="headerlink" href="#nifreeze.analysis.sensitivity.Perturbation.count" title="Link to this definition">¶</a></dt>
 <dd><p>Number of moved volumes.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.Perturbation.distortion">
+<span class="sig-name descname"><span class="pre">distortion</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion" title="nifreeze.analysis.sensitivity.Distortion"><span class="pre">Distortion</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#nifreeze.analysis.sensitivity.Perturbation.distortion" title="Link to this definition">¶</a></dt>
+<dd><p>Distortion of every volume, applied after its motion, in the scanner’s frame.</p>
 </dd></dl>
 
 <dl class="py attribute">
@@ -385,6 +480,37 @@ estimator and its intensity window are not involved.</p>
 <dd><p>Seed that drew the moved volumes and their motions.</p>
 </dd></dl>
 
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.eddy_distortion">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.analysis.sensitivity.</span></span><span class="sig-name descname"><span class="pre">eddy_distortion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">magnitude</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">degree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gradients</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Buffer" title="(in Python v3.15)"><span class="pre">Buffer</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v2.5)"><span class="pre">dtype</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><span class="pre">_SupportsArray</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v2.5)"><span class="pre">dtype</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#complex" title="(in Python v3.15)"><span class="pre">complex</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#bytes" title="(in Python v3.15)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">_NestedSequence</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#complex" title="(in Python v3.15)"><span class="pre">complex</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#bytes" title="(in Python v3.15)"><span class="pre">bytes</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion" title="nifreeze.analysis.sensitivity.Distortion"><span class="pre">Distortion</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/analysis/sensitivity.html#eddy_distortion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.analysis.sensitivity.eddy_distortion" title="Link to this definition">¶</a></dt>
+<dd><p>Draw distortions that follow the diffusion gradients, as eddy currents do.</p>
+<p>The fields that a diffusion gradient leaves behind scale with its amplitude
+and change sign with its direction. Each volume’s coefficients are therefore
+one fixed random linear map of its gradient vector, scaled by
+<span class="math notranslate nohighlight">\(\sqrt{b / b_{max}}\)</span> (the gradient amplitude, at fixed timing). b=0
+volumes are not distorted, and antipodal gradients get opposite distortions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> (<a class="reference internal" href="nifreeze.data.base.html#nifreeze.data.base.BaseDataset" title="nifreeze.data.base.BaseDataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BaseDataset</span></code></a>) – The aligned dataset.</p></li>
+<li><p><strong>magnitude</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>) – Largest displacement (mm) of any voxel of the mask, over all volumes.</p></li>
+<li><p><strong>axis</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>) – Voxel axis of phase encoding.</p></li>
+<li><p><strong>degree</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Degree of the polynomial (1: translation, scaling and shears).</p></li>
+<li><p><strong>seed</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Seed for the linear map.</p></li>
+<li><p><strong>gradients</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/typing.html#numpy.typing.ArrayLike" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ArrayLike</span></code></a>, optional) – Gradient table, <code class="docutils literal notranslate"><span class="pre">(n_volumes,</span> <span class="pre">4)</span></code> with the b-value last; the dataset’s
+if <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>.</p></li>
+<li><p><strong>mask</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>, optional) – Voxels over which the polynomial is normalized and <code class="docutils literal notranslate"><span class="pre">magnitude</span></code> reached.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The distortions.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion" title="nifreeze.analysis.sensitivity.Distortion"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Distortion</span></code></a></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -456,6 +582,36 @@ changes every prediction by <span class="math notranslate nohighlight">\(\mathbf
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.inherited_distortion">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.analysis.sensitivity.</span></span><span class="sig-name descname"><span class="pre">inherited_distortion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">aligned</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">perturbed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">distortion</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion" title="nifreeze.analysis.sensitivity.Distortion"><span class="pre">Distortion</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">affine</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/analysis/sensitivity.html#inherited_distortion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.analysis.sensitivity.inherited_distortion" title="Link to this definition">¶</a></dt>
+<dd><p>Distortion coefficients that best explain how a prediction changed.</p>
+<p>To first order, displacing an image <span class="math notranslate nohighlight">\(p\)</span> by <span class="math notranslate nohighlight">\(d\)</span> along the
+phase-encoding axis (with its Jacobian) changes it by
+<span class="math notranslate nohighlight">\(\partial_{PE} p \, d + p \, \partial_{PE} d\)</span>, which is linear in the
+coefficients of <span class="math notranslate nohighlight">\(d\)</span>. Least squares over the mask give the coefficients
+of the distortion that the change resembles; whatever the distortion cannot
+explain (noise, rigid motion) stays in the residual.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>aligned</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – The prediction on the aligned dataset.</p></li>
+<li><p><strong>perturbed</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – The prediction on the perturbed dataset.</p></li>
+<li><p><strong>distortion</strong> (<a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion" title="nifreeze.analysis.sensitivity.Distortion"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Distortion</span></code></a>) – The distortion, whose terms are fitted.</p></li>
+<li><p><strong>affine</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – Grid of the predictions.</p></li>
+<li><p><strong>mask</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – Voxels fitted.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The fitted coefficients, comparable to a row of
+<a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion.coefficients" title="nifreeze.analysis.sensitivity.Distortion.coefficients"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Distortion.coefficients</span></code></a>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.mask_centroid">
 <span class="sig-prename descclassname"><span class="pre">nifreeze.analysis.sensitivity.</span></span><span class="sig-name descname"><span class="pre">mask_centroid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/analysis/sensitivity.html#mask_centroid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.analysis.sensitivity.mask_centroid" title="Link to this definition">¶</a></dt>
 <dd><p>World coordinates of the centroid of a mask (the brain mask by default).</p>
@@ -500,18 +656,19 @@ changes every prediction by <span class="math notranslate nohighlight">\(\mathbf
 <dl class="py function">
 <dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.perturb">
 <span class="sig-prename descclassname"><span class="pre">nifreeze.analysis.sensitivity.</span></span><span class="sig-name descname"><span class="pre">perturb</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">perturbation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#nifreeze.analysis.sensitivity.Perturbation" title="nifreeze.analysis.sensitivity.Perturbation"><span class="pre">Perturbation</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">round_trip</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/analysis/sensitivity.html#perturb"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.analysis.sensitivity.perturb" title="Link to this definition">¶</a></dt>
-<dd><p>Copy a dataset with some of its volumes moved.</p>
-<p>Each moved volume is resampled once from the aligned original. Everything
-else (gradients, b=0 reference, mask) is left as it was, as a model would
-see it when the motion goes uncorrected.</p>
+<dd><p>Copy a dataset with some of its volumes moved or distorted.</p>
+<p>Each moved or distorted volume is resampled once from the aligned original,
+through its motion and then its distortion. Everything else (gradients, b=0
+reference, mask) is left as it was, as a model would see it when the motion
+and the distortion go uncorrected.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dataset</strong> (<a class="reference internal" href="nifreeze.data.base.html#nifreeze.data.base.BaseDataset" title="nifreeze.data.base.BaseDataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BaseDataset</span></code></a>) – The aligned dataset.</p></li>
-<li><p><strong>perturbation</strong> (<a class="reference internal" href="#nifreeze.analysis.sensitivity.Perturbation" title="nifreeze.analysis.sensitivity.Perturbation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Perturbation</span></code></a>) – The volumes to move and their motions.</p></li>
+<li><p><strong>perturbation</strong> (<a class="reference internal" href="#nifreeze.analysis.sensitivity.Perturbation" title="nifreeze.analysis.sensitivity.Perturbation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Perturbation</span></code></a>) – The volumes to move, their motions, and the distortion.</p></li>
 <li><p><strong>order</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Interpolation order.</p></li>
 <li><p><strong>round_trip</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a>, optional) – Move each volume and move it back, which leaves it in place but
-interpolated twice.</p></li>
+interpolated twice (rigid motions only).</p></li>
 <li><p><strong>grid</strong> (<a class="reference internal" href="nifreeze.data.base.html#nifreeze.data.base.BaseDataset" title="nifreeze.data.base.BaseDataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BaseDataset</span></code></a>, optional) – The dataset on a shifted grid (see <a class="reference internal" href="#nifreeze.analysis.sensitivity.shift_grid" title="nifreeze.analysis.sensitivity.shift_grid"><code class="xref py py-func docutils literal notranslate"><span class="pre">shift_grid()</span></code></a>). Moved volumes are
 then resampled from the original onto that grid, through their motion,
 and everything else is taken from <code class="docutils literal notranslate"><span class="pre">grid</span></code>.</p></li>
@@ -631,7 +788,11 @@ moved volumes, which then come out smoother than the others.</p></li>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>One row per perturbation and evaluated volume, with the <code class="docutils literal notranslate"><span class="pre">nrmse</span></code>, each
-further metric, and whether that volume was itself <code class="docutils literal notranslate"><span class="pre">moved</span></code>.</p>
+further metric, whether that volume was itself <code class="docutils literal notranslate"><span class="pre">moved</span></code>, the magnitude
+of the <code class="docutils literal notranslate"><span class="pre">distortion</span></code> (0 without one) and the share of the volume’s own
+distortion that its prediction <code class="docutils literal notranslate"><span class="pre">inherited</span></code> (the projection of the
+coefficients fitted by <a class="reference internal" href="#nifreeze.analysis.sensitivity.inherited_distortion" title="nifreeze.analysis.sensitivity.inherited_distortion"><code class="xref py py-func docutils literal notranslate"><span class="pre">inherited_distortion()</span></code></a> onto the volume’s
+own; NaN without a distortion, or for an undistorted volume).</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a> of <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></p>
@@ -727,18 +888,34 @@ the b=0 reference, if any, are resampled too.</p>
             <ul>
 <li><a class="reference internal" href="#">nifreeze.analysis.sensitivity module</a><ul>
 <li><a class="reference internal" href="#nifreeze.analysis.sensitivity.DEFAULT_GRID_SHIFT"><code class="docutils literal notranslate"><span class="pre">DEFAULT_GRID_SHIFT</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion"><code class="docutils literal notranslate"><span class="pre">Distortion</span></code></a><ul>
+<li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion.axis"><code class="docutils literal notranslate"><span class="pre">Distortion.axis</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion.basis"><code class="docutils literal notranslate"><span class="pre">Distortion.basis()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion.center"><code class="docutils literal notranslate"><span class="pre">Distortion.center</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion.coefficients"><code class="docutils literal notranslate"><span class="pre">Distortion.coefficients</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion.degree"><code class="docutils literal notranslate"><span class="pre">Distortion.degree</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion.direction"><code class="docutils literal notranslate"><span class="pre">Distortion.direction</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion.frame"><code class="docutils literal notranslate"><span class="pre">Distortion.frame</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion.magnitude"><code class="docutils literal notranslate"><span class="pre">Distortion.magnitude</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion.radius"><code class="docutils literal notranslate"><span class="pre">Distortion.radius</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion.seed"><code class="docutils literal notranslate"><span class="pre">Distortion.seed</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#nifreeze.analysis.sensitivity.NO_PERTURBATION"><code class="docutils literal notranslate"><span class="pre">NO_PERTURBATION</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Perturbation"><code class="docutils literal notranslate"><span class="pre">Perturbation</span></code></a><ul>
 <li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Perturbation.count"><code class="docutils literal notranslate"><span class="pre">Perturbation.count</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Perturbation.distortion"><code class="docutils literal notranslate"><span class="pre">Perturbation.distortion</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Perturbation.magnitude"><code class="docutils literal notranslate"><span class="pre">Perturbation.magnitude</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Perturbation.motions"><code class="docutils literal notranslate"><span class="pre">Perturbation.motions</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Perturbation.moved"><code class="docutils literal notranslate"><span class="pre">Perturbation.moved</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.analysis.sensitivity.Perturbation.seed"><code class="docutils literal notranslate"><span class="pre">Perturbation.seed</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#nifreeze.analysis.sensitivity.eddy_distortion"><code class="docutils literal notranslate"><span class="pre">eddy_distortion()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.analysis.sensitivity.fidelity"><code class="docutils literal notranslate"><span class="pre">fidelity()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.analysis.sensitivity.held_out_predictions"><code class="docutils literal notranslate"><span class="pre">held_out_predictions()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.analysis.sensitivity.influence"><code class="docutils literal notranslate"><span class="pre">influence()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.analysis.sensitivity.inherited_distortion"><code class="docutils literal notranslate"><span class="pre">inherited_distortion()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.analysis.sensitivity.mask_centroid"><code class="docutils literal notranslate"><span class="pre">mask_centroid()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.analysis.sensitivity.one_at_a_time"><code class="docutils literal notranslate"><span class="pre">one_at_a_time()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.analysis.sensitivity.perturb"><code class="docutils literal notranslate"><span class="pre">perturb()</span></code></a></li>
@@ -757,7 +934,7 @@ the b=0 reference, if any, are resampled too.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=a00eab8e"></script>
+</div><script src="../_static/documentation_options.js?v=cfffbf5a"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
