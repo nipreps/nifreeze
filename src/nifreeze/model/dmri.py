@@ -331,7 +331,6 @@ class BaseDWIModel(BaseModel):
         if self._locked_fit is not None:
             return len(self._models)
 
-        brainmask = self._dataset.brainmask
         idxmask = np.ones(len(self._dataset), dtype=bool)
 
         if index is not None:
@@ -341,8 +340,8 @@ class BaseDWIModel(BaseModel):
             self._warn_single_fit_canary()
 
         gtab = self._dataset.gradients[idxmask]
-        # Select voxels within mask or just unravel 3D if no mask
-        data = _masked_volumes(self._dataset.dataobj, idxmask, brainmask)
+        # Select the voxels of the data mask, which S0 and the predictions also use
+        data = _masked_volumes(self._dataset.dataobj, idxmask, self._data_mask)
 
         # Replace the gradient table with a DIPY object
         gtab = gradient_table_from_bvals_bvecs(gtab[:, -1], gtab[:, :-1])
@@ -356,11 +355,7 @@ class BaseDWIModel(BaseModel):
         if is_dki:
             bzero = self._dataset.bzero
             if bzero is not None:
-                bzero = (
-                    bzero[brainmask, ...]
-                    if brainmask is not None
-                    else bzero.reshape(data.shape[0])
-                )
+                bzero = bzero[self._data_mask, ...]
             data, gtab = _append_bzero(data, gtab, bzero=bzero)
 
         n_jobs = n_jobs or 1

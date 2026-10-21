@@ -1,0 +1,82 @@
+name: End-to-end tests
+
+on:
+  schedule:
+    - cron: '0 3 * * 1' # At 03:00 UTC every Monday
+  # Allow job to be triggered manually from GitHub interface
+  workflow_dispatch:
+  pull_request:
+    branches: ['main', 'maint/*']
+    paths:
+      - '.github/workflows/e2e.yml'
+      - 'test/test_e2e_motion.py'
+      - 'tools/e2e_summary.py'
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+
+env:
+  FORCE_COLOR: true
+  DIPY_HOME: /home/runner/nifreeze-e2e/dipy
+  TEST_OUTPUT_DIR: /home/runner/nifreeze-e2e/output
+  ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS: 4
+  ANTSPATH: /usr/share/miniconda/bin/
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sherbrooke:
+    name: Sherbrooke with simulated motion
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Set up Python 3.12
+        id: setup-python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v7
+      - name: Install ANTs
+        run: |
+          # Override libiconv pre-installed from anaconda channel
+          # See https://github.com/conda-forge/libitk-feedstock/issues/98
+          conda install -c conda-forge ants=2.4 libitk=5.3 libiconv
+      - name: Install nifreeze
+        run: uv pip install --python "${{ steps.setup-python.outputs.python-path }}" ".[test]"
+      - uses: actions/cache@v5
+        with:
+          path: ${{ env.DIPY_HOME }}
+          key: dipy-sherbrooke-3shell-v1
+      - name: Fetch the Sherbrooke dataset
+        run: |
+          "${{ steps.setup-python.outputs.python-path }}" -c \
+            "from dipy.data import fetch_sherbrooke_3shell; fetch_sherbrooke_3shell()"
+      - name: Run the end-to-end tests
+        run: |
+          # ANTSPATH also holds conda's python: call the job's interpreter explicitly
+          export PATH=$ANTSPATH:$PATH
+          mkdir -p "${TEST_OUTPUT_DIR}"
+          "${{ steps.setup-python.outputs.python-path }}" -m pytest -m e2e -p no:cacheprovider \
+            test/test_e2e_motion.py
+      - name: Write the job summary
+        if: ${{ always() }}
+        run: |
+          "${{ steps.setup-python.outputs.python-path }}" tools/e2e_summary.py \
+            "${TEST_OUTPUT_DIR}/e2e" >> "${GITHUB_STEP_SUMMARY}"
+      - name: Upload the results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-results
+          path: ${{ env.TEST_OUTPUT_DIR }}/e2e
+          if-no-files-found: warn
