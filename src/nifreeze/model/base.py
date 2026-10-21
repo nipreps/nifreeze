@@ -176,6 +176,22 @@ class BaseModel(ABC):
         """
         return None
 
+    def update(self, index: int) -> None:
+        """
+        Refresh what the model holds about volume ``index`` after the dataset changed it.
+
+        The estimator calls this after writing a realigned volume (and b-vector)
+        into the dataset the model was built on. Models that read the dataset on
+        every fit need nothing; models that cache the data override this.
+
+        Parameters
+        ----------
+        index : :obj:`int`
+            The volume that changed.
+
+        """
+        return None
+
     def _warn_single_fit_canary(self) -> None:
         """Warn if single-fit for this model is only a self-consistency canary."""
         if self.single_fit_is_canary:
