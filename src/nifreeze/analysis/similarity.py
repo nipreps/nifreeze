@@ -128,7 +128,12 @@ def mutual_information(
     return float((joint[nonzero] * np.log(ratio)).sum())
 
 
-def nrmse(predicted: np.ndarray, reference: np.ndarray, mask: np.ndarray | None = None) -> float:
+def nrmse(
+    predicted: np.ndarray,
+    reference: np.ndarray,
+    mask: np.ndarray | None = None,
+    scale: float | None = None,
+) -> float:
     """
     Root-mean-square error, normalized by the standard deviation of the reference.
 
@@ -140,6 +145,9 @@ def nrmse(predicted: np.ndarray, reference: np.ndarray, mask: np.ndarray | None 
         The actual volume.
     mask : :obj:`~numpy.ndarray`, optional
         Boolean mask of the voxels compared (all if :obj:`None`).
+    scale : :obj:`float`, optional
+        Denominator replacing the reference's standard deviation, so that errors
+        measured against different references share one scale.
 
     Returns
     -------
@@ -154,17 +162,19 @@ def nrmse(predicted: np.ndarray, reference: np.ndarray, mask: np.ndarray | None 
     0.0
     >>> round(nrmse(np.full(10, x.mean()), x), 6)
     1.0
+    >>> float(nrmse(x + 1, x, scale=2.0))
+    0.5
 
     """
     a, b = _masked_pair(predicted, reference, mask)
-    spread = b.std()
-    if spread == 0:
-        raise ValueError("The reference is constant within the mask.")
-    return float(np.sqrt(np.mean((a - b) ** 2)) / spread)
+    if scale is None:
+        scale = b.std()
+        if scale == 0:
+            raise ValueError("The reference is constant within the mask.")
+    elif scale <= 0:
+        raise ValueError(f"The scale must be positive, got {scale}.")
+    return float(np.sqrt(np.mean((a - b) ** 2)) / scale)
 
 
 METRICS = {"cc": masked_cc, "mi": mutual_information, "nrmse": nrmse}
 """Similarity metrics by name."""
-
-HIGHER_IS_BETTER = {"cc": True, "mi": True, "nrmse": False}
-"""Whether a larger value of each metric means a better prediction."""

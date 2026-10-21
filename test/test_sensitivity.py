@@ -209,12 +209,12 @@ def test_grid_smooths_moved_and_unmoved_volumes_alike():
         sens.perturb(dataset, plan[0], round_trip=True, grid=sens.shift_grid(dataset))
 
 
-def test_plan_never_moves_evaluated_volumes_and_pairs_its_cells():
-    evaluate = [0, 5]
-    plan = sens.perturbation_plan(12, evaluate, magnitudes=(0.5, 2.0), counts=(1, 3), seeds=3)
+def test_plan_never_moves_fixed_volumes_and_pairs_its_cells():
+    fixed = [0, 5]
+    plan = sens.perturbation_plan(12, magnitudes=(0.5, 2.0), counts=(1, 3), seeds=3, fixed=fixed)
 
     assert len(plan) == 3 * 2 * 2
-    assert not any(set(evaluate) & set(p.moved) for p in plan)
+    assert not any(set(fixed) & set(p.moved) for p in plan)
     for seed in range(3):
         cells = [p for p in plan if p.seed == seed]
         small, large = (p for p in cells if p.magnitude == 0.5)
@@ -224,15 +224,20 @@ def test_plan_never_moves_evaluated_volumes_and_pairs_its_cells():
         assert np.allclose(4 * _rotvec(weak.motions[0]), _rotvec(strong.motions[0]))
 
     with pytest.raises(ValueError, match="Cannot move"):
-        sens.perturbation_plan(12, evaluate, magnitudes=(1.0,), counts=(11,))
+        sens.perturbation_plan(12, magnitudes=(1.0,), counts=(11,), fixed=fixed)
 
 
-def test_sensitivity_rejects_moving_an_evaluated_volume():
-    dataset, bzero = _copies(np.random.default_rng(1234))
-    plan = sens.one_at_a_time([1], magnitude=1.0)
+def test_a_volume_motion_never_reaches_its_own_prediction():
+    """Moving only volume j changes every prediction but that of volume j."""
+    dataset, _ = _copies(np.random.default_rng(1234))
+    plan = sens.one_at_a_time([3], 2.0, center=sens.mask_centroid(dataset))
 
-    with pytest.raises(ValueError, match="moved by the plan"):
-        sens.sensitivity(TrivialModel, dataset, plan, evaluate=[1], predicted=bzero)
+    rows = sens.sensitivity(ExpectationModel, dataset, plan, stat="mean")
+
+    assert len(rows) == len(dataset)
+    for row in rows:
+        assert row["moved"] == (row["index"] == 3)
+        assert (row["nrmse"] == 0.0) == row["moved"]
 
 
 def _rotvec(motion):
@@ -247,27 +252,27 @@ def _rotvec(motion):
 def test_trivial_on_copies_is_perfect_under_any_plan():
     """The trivial model predicts the b=0 its training copies came from, wherever they move."""
     dataset, bzero = _copies(np.random.default_rng(1234))
-    evaluate = [0, 4]
     plan = sens.perturbation_plan(
         len(dataset),
-        evaluate,
         magnitudes=(0.5, 2.0),
         counts=(1, 4),
         seeds=2,
         center=sens.mask_centroid(dataset),
     )
-
-    # Every volume, the held-out ones included, is compared on the shifted grid
+    # Every volume is compared on the shifted grid
     grid = sens.shift_grid(dataset)
-    rows = sens.sensitivity(TrivialModel, dataset, plan, evaluate, predicted=grid.dataobj[0])
 
-    assert len(rows) == (len(plan) + 1) * len(evaluate)
+    aligned = sens.fidelity(TrivialModel, grid, predicted=grid.dataobj[0])
+    rows = sens.sensitivity(TrivialModel, dataset, plan, predicted=grid.dataobj[0])
+
     entropy = mutual_information(grid.dataobj[0], grid.dataobj[0], grid.brainmask)
-    for row in rows:
+    assert len(aligned) == len(dataset)
+    for row in aligned:
         assert row["cc"] == pytest.approx(1.0)
         assert row["nrmse"] == 0.0
         assert row["mi"] == pytest.approx(entropy)
-        assert row["cc_loss"] == row["mi_loss"] == row["nrmse_loss"] == 0.0
+    assert len(rows) == len(plan) * len(dataset)
+    assert all(row["nrmse"] == 0.0 for row in rows)
 
     # The control can fail: a 1 mm motion of the held-out volume is visible
     motion = sens.rigid_motion(1.0, (0, 0, 1), (1, 0, 0), sens.mask_centroid(dataset))
@@ -278,19 +283,20 @@ def test_trivial_on_copies_is_perfect_under_any_plan():
 
 def test_mean_of_copies_matches_its_closed_form():
     """The mean of copies has a closed form; the median ignores a moved minority."""
-    dataset, bzero = _copies(np.random.default_rng(1234))
+    dataset, _ = _copies(np.random.default_rng(1234))
     n_volumes, evaluate = len(dataset), [0]
     plan = sens.perturbation_plan(
         n_volumes,
-        evaluate,
         magnitudes=(1.0,),
         counts=(1, 3, 6),
         seeds=2,
         center=sens.mask_centroid(dataset),
+        fixed=evaluate,
     )
 
     grid = sens.shift_grid(dataset)
-    for perturbation in plan:
+    rows = sens.sensitivity(ExpectationModel, dataset, plan, evaluate, stat="mean")
+    for perturbation, row in zip(plan, rows, strict=True):
         moved = sens.perturb(dataset, perturbation, grid=grid)
         expected = (
             (n_volumes - 1 - perturbation.count) * grid.dataobj[0]
@@ -298,13 +304,39 @@ def test_mean_of_copies_matches_its_closed_form():
         ) / (n_volumes - 1)
         predicted = sens.held_out_predictions(ExpectationModel, moved, evaluate, stat="mean")
         assert np.allclose(predicted[0], expected, rtol=1e-5, atol=1e-3)
+        assert row["nrmse"] == pytest.approx(
+            nrmse(expected, grid.dataobj[0], grid.brainmask), rel=1e-4
+        )
 
     rows = sens.sensitivity(ExpectationModel, dataset, plan, evaluate, stat="median")
     for row in rows:
         if row["count"] < (n_volumes - 1) / 2:
-            assert row["cc_loss"] == row["nrmse_loss"] == 0.0
+            assert row["nrmse"] == 0.0
         else:
-            assert row["cc_loss"] > 0.0
+            assert row["nrmse"] > 0.0
+
+
+def test_change_is_normalized_by_the_actual_volume():
+    """The NRMSE divides the change by the actual volume's spread, not the prediction's."""
+    dataset = _dwi(np.random.default_rng(1234))
+    evaluate = [0, 5]
+    plan = sens.perturbation_plan(
+        len(dataset), magnitudes=(2.0,), counts=(8,), seeds=1, center=sens.mask_centroid(dataset)
+    )
+
+    rows = sens.sensitivity(ExpectationModel, dataset, plan, evaluate, stat="mean")
+
+    grid = sens.shift_grid(dataset)
+    mask = grid.brainmask
+    aligned = sens.held_out_predictions(ExpectationModel, grid, evaluate, stat="mean")
+    moved = sens.perturb(dataset, plan[0], grid=grid)
+    perturbed = sens.held_out_predictions(ExpectationModel, moved, evaluate, stat="mean")
+    for row in rows:
+        index = row["index"]
+        change = np.sqrt(np.mean((perturbed[index] - aligned[index])[mask] ** 2))
+        assert row["nrmse"] == pytest.approx(change / grid.dataobj[index][mask].std(), rel=1e-6)
+        # The mean of the others is smoother than any actual volume
+        assert row["nrmse"] < nrmse(perturbed[index], aligned[index], mask)
 
 
 @pytest.mark.parametrize(
@@ -320,11 +352,11 @@ def test_linear_smoother_change_is_exact(model, kwargs):
     evaluate = [0, 7, 15]
     perturbation = sens.perturbation_plan(
         len(dataset),
-        evaluate,
         magnitudes=(2.0,),
         counts=(4,),
         seeds=1,
         center=sens.mask_centroid(dataset),
+        fixed=evaluate,
     )[0]
     moved = sens.perturb(dataset, perturbation)
 

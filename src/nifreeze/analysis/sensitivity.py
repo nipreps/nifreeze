@@ -23,13 +23,16 @@
 """
 Sensitivity of model predictions to motion of their training volumes.
 
-Starting from an aligned dataset, a *perturbation* moves some volumes by known
-rigid motions. A fresh model is built on the perturbed copy, and its prediction
-of each held-out volume is compared with that volume, which never moves. How
-fast the similarity drops with the magnitude and the number of moved volumes
-measures how much a model's predictions suffer when its training data are
-misaligned. Registration, the estimator and its intensity window are not
-involved.
+Two questions are asked of a model, on an aligned dataset:
+
+- :func:`fidelity`: how well does it predict each held-out volume?
+- :func:`sensitivity`: how far do its predictions drift from those on the aligned
+  dataset when some volumes move by known rigid motions (a *perturbation*)?
+
+A fresh model is built on each perturbed copy. A held-out prediction never uses
+its own volume, so every volume can be evaluated, the moved ones included: a
+moved volume's prediction sees the motion of the others only. Registration, the
+estimator and its intensity window are not involved.
 
 """
 
@@ -47,7 +50,7 @@ from nitransforms.resampling import apply
 from numpy.typing import ArrayLike
 from scipy.spatial.transform import Rotation
 
-from nifreeze.analysis.similarity import HIGHER_IS_BETTER, METRICS
+from nifreeze.analysis.similarity import METRICS, nrmse
 
 
 @attrs.define(frozen=True)
@@ -147,18 +150,18 @@ def mask_centroid(dataset: Any, mask: np.ndarray | None = None) -> np.ndarray:
 
 def perturbation_plan(
     n_volumes: int,
-    evaluate: Iterable[int],
     magnitudes: Sequence[float],
     counts: Sequence[int],
     seeds: int | Sequence[int] = 5,
     center: ArrayLike = (0.0, 0.0, 0.0),
+    fixed: Iterable[int] = (),
 ) -> list[Perturbation]:
     """
     Draw the perturbations of a sensitivity experiment.
 
-    Evaluated volumes are never moved. For each seed, the moved volumes are the
-    first ``count`` of a random ordering of the other volumes, each with a random
-    rotation axis and translation direction. Volumes moved with a smaller count
+    For each seed, the moved volumes are the first ``count`` of a random ordering
+    of the volumes not listed in ``fixed``, each with a random rotation axis and
+    translation direction. Volumes moved with a smaller count
     are thus also moved with a larger one, and they follow the same axis and
     direction at every magnitude, so the curves over magnitude and count are
     paired.
@@ -167,8 +170,6 @@ def perturbation_plan(
     ----------
     n_volumes : :obj:`int`
         Number of volumes in the dataset.
-    evaluate : :obj:`~collections.abc.Iterable`
-        Volumes whose predictions are evaluated.
     magnitudes : :obj:`~collections.abc.Sequence`
         Motion magnitudes (degrees and mm, see :func:`rigid_motion`).
     counts : :obj:`~collections.abc.Sequence`
@@ -178,6 +179,8 @@ def perturbation_plan(
     center : :obj:`~numpy.typing.ArrayLike`, optional
         World coordinates of a point on every rotation axis (see
         :func:`mask_centroid`).
+    fixed : :obj:`~collections.abc.Iterable`, optional
+        Volumes that never move.
 
     Returns
     -------
@@ -186,21 +189,18 @@ def perturbation_plan(
 
     Examples
     --------
-    >>> plan = perturbation_plan(10, [0, 1], magnitudes=[0.5, 1.0], counts=[1, 3], seeds=2)
+    >>> plan = perturbation_plan(10, magnitudes=[0.5, 1.0], counts=[1, 3], seeds=2, fixed=[0])
     >>> len(plan)
     8
-    >>> any({0, 1} & set(p.moved) for p in plan)
+    >>> any(0 in p.moved for p in plan)
     False
     >>> set(plan[0].moved) <= set(plan[2].moved)
     True
 
     """
-    evaluated = set(evaluate)
-    candidates = np.array(sorted(set(range(n_volumes)) - evaluated), dtype=int)
+    candidates = np.array(sorted(set(range(n_volumes)) - set(fixed)), dtype=int)
     if max(counts) > len(candidates):
-        raise ValueError(
-            f"Cannot move {max(counts)} volumes: only {len(candidates)} are not evaluated."
-        )
+        raise ValueError(f"Cannot move {max(counts)} volumes: only {len(candidates)} may move.")
     seeds = range(seeds) if isinstance(seeds, int) else seeds
 
     plan = []
@@ -368,7 +368,7 @@ def perturb(
 def held_out_predictions(
     model: str | Callable[..., Any],
     dataset: Any,
-    evaluate: Iterable[int],
+    evaluate: Iterable[int] | None = None,
     **model_kwargs: Any,
 ) -> dict[int, np.ndarray]:
     """
@@ -381,8 +381,8 @@ def held_out_predictions(
         building a model from a dataset (such as a model class).
     dataset : :obj:`~nifreeze.data.base.BaseDataset`
         The dataset the model is built on.
-    evaluate : :obj:`~collections.abc.Iterable`
-        Volumes to predict.
+    evaluate : :obj:`~collections.abc.Iterable`, optional
+        Volumes to predict (all if :obj:`None`).
     **model_kwargs
         Arguments for the model.
 
@@ -398,26 +398,78 @@ def held_out_predictions(
         instance = ModelFactory.init(model, dataset=dataset, **model_kwargs)
     else:
         instance = model(dataset, **model_kwargs)
-    return {index: np.asarray(instance.fit_predict(index)) for index in evaluate}
+    evaluate = range(len(dataset)) if evaluate is None else evaluate
+    return {int(index): np.asarray(instance.fit_predict(index)) for index in evaluate}
+
+
+def fidelity(
+    model: str | Callable[..., Any],
+    dataset: Any,
+    evaluate: Iterable[int] | None = None,
+    mask: np.ndarray | None = None,
+    metrics: Mapping[str, Callable[..., float]] = METRICS,
+    **model_kwargs: Any,
+) -> list[dict[str, Any]]:
+    """
+    Compare each held-out prediction with its volume, on an aligned dataset.
+
+    Parameters
+    ----------
+    model : :obj:`str` or :obj:`~collections.abc.Callable`
+        The model (see :func:`held_out_predictions`).
+    dataset : :obj:`~nifreeze.data.base.BaseDataset`
+        The aligned dataset.
+    evaluate : :obj:`~collections.abc.Iterable`, optional
+        Volumes to predict (all if :obj:`None`).
+    mask : :obj:`~numpy.ndarray`, optional
+        Voxels compared; the dataset's brain mask, or the whole volume, if :obj:`None`.
+    metrics : :obj:`~collections.abc.Mapping`, optional
+        Similarity metrics by name, with the signature of
+        :func:`~nifreeze.analysis.similarity.masked_cc`.
+    **model_kwargs
+        Arguments for the model.
+
+    Returns
+    -------
+    :obj:`list` of :obj:`dict`
+        One row per evaluated volume, with each metric.
+
+    """
+    mask = _resolve_mask(dataset, mask)
+    predicted = held_out_predictions(model, dataset, evaluate, **model_kwargs)
+    return [
+        {
+            "index": index,
+            **{
+                name: metric(prediction, np.asarray(dataset.dataobj[index], dtype=float), mask)
+                for name, metric in metrics.items()
+            },
+        }
+        for index, prediction in predicted.items()
+    ]
 
 
 def sensitivity(
     model: str | Callable[..., Any],
     dataset: Any,
     plan: Iterable[Perturbation],
-    evaluate: Iterable[int],
+    evaluate: Iterable[int] | None = None,
     mask: np.ndarray | None = None,
-    metrics: Mapping[str, Callable[..., float]] = METRICS,
+    metrics: Mapping[str, Callable[..., float]] | None = None,
     order: int = 3,
     grid_shift: float | ArrayLike | None = DEFAULT_GRID_SHIFT,
     **model_kwargs: Any,
 ) -> list[dict[str, Any]]:
     """
-    Measure how the predictions of held-out volumes degrade under a plan.
+    Measure how far held-out predictions drift from the aligned ones under a plan.
 
-    By default, the whole dataset is first resampled onto a shifted grid (see
-    :func:`shift_grid`), so that every volume, the evaluated ones included, is
-    interpolated once and moved volumes differ from the others only by their
+    Each prediction on a perturbed copy is compared with the prediction of the
+    same volume on the aligned dataset. The change is reported as an NRMSE
+    divided by the standard deviation of the actual volume, not by that of the
+    aligned prediction: a smooth prediction would otherwise inflate its own
+    error, and models could not be compared. By default, the whole dataset is first
+    resampled onto a shifted grid (see :func:`shift_grid`), so that every volume
+    is interpolated once and moved volumes differ from the others only by their
     displacement.
 
     Parameters
@@ -428,15 +480,16 @@ def sensitivity(
         The aligned dataset.
     plan : :obj:`~collections.abc.Iterable` of :obj:`Perturbation`
         The perturbations (see :func:`perturbation_plan`).
-    evaluate : :obj:`~collections.abc.Iterable`
-        Volumes whose predictions are evaluated; none of them may be moved.
+    evaluate : :obj:`~collections.abc.Iterable`, optional
+        Volumes to predict (all if :obj:`None`), moved or not.
     mask : :obj:`~numpy.ndarray`, optional
         Voxels compared, on the grid of the compared volumes (the shifted grid,
         unless ``grid_shift`` is :obj:`None`); the brain mask on that grid, or
         the whole volume, if :obj:`None`.
     metrics : :obj:`~collections.abc.Mapping`, optional
-        Similarity metrics by name, with the signature of
-        :func:`~nifreeze.analysis.similarity.masked_cc`.
+        Further metrics by name, with the signature of
+        :func:`~nifreeze.analysis.similarity.masked_cc`, called as
+        ``metric(perturbed, aligned, mask)``.
     order : :obj:`int`, optional
         Interpolation order.
     grid_shift : :obj:`float` or :obj:`~numpy.typing.ArrayLike`, optional
@@ -448,51 +501,38 @@ def sensitivity(
     Returns
     -------
     :obj:`list` of :obj:`dict`
-        One row per perturbation and evaluated volume, the aligned dataset
-        first (``magnitude`` 0, ``count`` 0). Each metric comes with its
-        ``<name>_loss``, the change from the aligned dataset's prediction
-        (positive when the prediction got worse).
+        One row per perturbation and evaluated volume, with the ``nrmse``, each
+        further metric, and whether that volume was itself ``moved``.
 
     """
-    evaluate = [int(index) for index in evaluate]
-    plan = list(plan)
-    for perturbation in plan:
-        if clashing := sorted(set(evaluate) & set(perturbation.moved)):
-            raise ValueError(f"Evaluated volumes {clashing} are moved by the plan.")
-
+    metrics = {} if metrics is None else metrics
     grid = None if grid_shift is None else shift_grid(dataset, grid_shift, order=order)
     aligned = dataset if grid is None else grid
     mask = _resolve_mask(aligned, mask)
-    targets = {index: np.asarray(aligned.dataobj[index], dtype=float) for index in evaluate}
+    reference = held_out_predictions(model, aligned, evaluate, **model_kwargs)
+    scale = {
+        index: np.asarray(aligned.dataobj[index], dtype=float)[mask].std() for index in reference
+    }
 
-    def _scores(perturbation: Perturbation) -> dict[int, dict[str, float]]:
-        moved = perturb(dataset, perturbation, order=order, grid=grid)
-        predicted = held_out_predictions(model, moved, evaluate, **model_kwargs)
-        return {
-            index: {
-                name: metric(predicted[index], targets[index], mask)
-                for name, metric in metrics.items()
-            }
-            for index in evaluate
-        }
-
-    baseline = _scores(NO_PERTURBATION)
     rows = []
-    for perturbation in [NO_PERTURBATION, *plan]:
-        scores = baseline if perturbation is NO_PERTURBATION else _scores(perturbation)
-        for index in evaluate:
-            row: dict[str, Any] = {
-                "magnitude": perturbation.magnitude,
-                "count": perturbation.count,
-                "seed": perturbation.seed,
-                "index": index,
-                "moved": perturbation.moved,
-            }
-            for name, value in scores[index].items():
-                change = value - baseline[index][name]
-                row[name] = value
-                row[f"{name}_loss"] = -change if HIGHER_IS_BETTER.get(name, True) else change
-            rows.append(row)
+    for perturbation in plan:
+        moved = perturb(dataset, perturbation, order=order, grid=grid)
+        predicted = held_out_predictions(model, moved, reference, **model_kwargs)
+        for index, prediction in predicted.items():
+            rows.append(
+                {
+                    "magnitude": perturbation.magnitude,
+                    "count": perturbation.count,
+                    "seed": perturbation.seed,
+                    "index": index,
+                    "moved": index in perturbation.moved,
+                    "nrmse": nrmse(prediction, reference[index], mask, scale=scale[index]),
+                    **{
+                        name: metric(prediction, reference[index], mask)
+                        for name, metric in metrics.items()
+                    },
+                }
+            )
     return rows
 
 
