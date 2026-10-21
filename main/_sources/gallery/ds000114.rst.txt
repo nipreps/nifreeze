@@ -43,14 +43,14 @@ Coverage
      - single-shell
      - dti
      - lovo
-     - ✗
-     - could not broadcast input array from shape (136031,) into shape (136146,)
+     - ✓
+     - 
    * - ds000114
      - single-shell
      - dti
      - single-fit
-     - ✗
-     - could not broadcast input array from shape (136031,) into shape (136146,)
+     - ✓
+     - 
    * - ds000114
      - single-shell
      - gp-loo-spherical
@@ -79,14 +79,14 @@ Coverage
      - single-shell
      - gqi
      - lovo
-     - ✗
-     - shape mismatch: value array of shape (136146,) could not be broadcast to indexing result of shape (136031,)
+     - ✓
+     - 
    * - ds000114
      - single-shell
      - gqi
      - single-fit
-     - ✗
-     - shape mismatch: value array of shape (136146,) could not be broadcast to indexing result of shape (136031,)
+     - ✓
+     - 
    * - ds000114
      - single-shell
      - gqi-krr
@@ -117,6 +117,24 @@ average · single-fit
 
 .. figure:: ds000114/average_single-fit_042.png
    :alt: average single-fit ds000114
+
+dti · lovo
+----------
+
+.. figure:: ds000114/dti_lovo_021.png
+   :alt: dti lovo ds000114
+
+.. figure:: ds000114/dti_lovo_042.png
+   :alt: dti lovo ds000114
+
+dti · single-fit
+----------------
+
+.. figure:: ds000114/dti_single-fit_021.png
+   :alt: dti single-fit ds000114
+
+.. figure:: ds000114/dti_single-fit_042.png
+   :alt: dti single-fit ds000114
 
 gp-loo-spherical · lovo
 -----------------------
@@ -159,6 +177,24 @@ gp-spherical · single-fit (canary)
 
 .. figure:: ds000114/gp-spherical_single-fit_covariance.png
    :alt: gp-spherical single-fit ds000114
+
+gqi · lovo
+----------
+
+.. figure:: ds000114/gqi_lovo_021.png
+   :alt: gqi lovo ds000114
+
+.. figure:: ds000114/gqi_lovo_042.png
+   :alt: gqi lovo ds000114
+
+gqi · single-fit (canary)
+-------------------------
+
+.. figure:: ds000114/gqi_single-fit_021.png
+   :alt: gqi single-fit ds000114
+
+.. figure:: ds000114/gqi_single-fit_042.png
+   :alt: gqi single-fit ds000114
 
 gqi-krr · lovo
 --------------

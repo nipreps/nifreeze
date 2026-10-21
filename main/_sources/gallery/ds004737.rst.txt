@@ -43,14 +43,14 @@ Coverage
      - DSI
      - gqi
      - lovo
-     - ✗
-     - shape mismatch: value array of shape (288207,) could not be broadcast to indexing result of shape (288198,)
+     - ✓
+     - 
    * - ds004737
      - DSI
      - gqi
      - single-fit
-     - ✗
-     - shape mismatch: value array of shape (288207,) could not be broadcast to indexing result of shape (288198,)
+     - ✓
+     - 
    * - ds004737
      - DSI
      - gqi-krr
@@ -81,6 +81,24 @@ average · single-fit
 
 .. figure:: ds004737/average_single-fit_063.png
    :alt: average single-fit ds004737
+
+gqi · lovo
+----------
+
+.. figure:: ds004737/gqi_lovo_031.png
+   :alt: gqi lovo ds004737
+
+.. figure:: ds004737/gqi_lovo_063.png
+   :alt: gqi lovo ds004737
+
+gqi · single-fit (canary)
+-------------------------
+
+.. figure:: ds004737/gqi_single-fit_031.png
+   :alt: gqi single-fit ds004737
+
+.. figure:: ds004737/gqi_single-fit_063.png
+   :alt: gqi single-fit ds004737
 
 gqi-krr · lovo
 --------------
