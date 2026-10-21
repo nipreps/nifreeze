@@ -61,6 +61,12 @@ PARAMETERS_DOUBLE_LIST = {"shrink_factors", "smoothing_sigmas", "transform_param
 REGISTRATION_MALFORMED_SETTINGS_ERROR_MSG = "Malformed settings file (levels: {levels})"
 """Registration malformed settings error message."""
 
+REGISTRATION_INIT_WITHOUT_COLLAPSE_ERROR_MSG = (
+    "An initial transform requires 'collapse_output_transforms': otherwise the first "
+    "output transform is the initialization, not the estimate."
+)
+"""Initial transform without collapsed outputs error message."""
+
 WINDOW_LEVELS = 4095
 """Highest code of the 12-bit encoding of floating-point registration inputs."""
 
@@ -474,6 +480,10 @@ def generate_command(
 
     # Set initializing affine if provided
     if init_affine is not None:
+        # The output is read back as the absolute estimate, which holds only
+        # when ANTs collapses the initialization into the estimated transform
+        if not settings.get("collapse_output_transforms", False):
+            raise ValueError(REGISTRATION_INIT_WITHOUT_COLLAPSE_ERROR_MSG)
         settings["initial_moving_transform"] = str(init_affine)
 
     # Generate command line with nipype and return

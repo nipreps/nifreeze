@@ -47,6 +47,7 @@ from nifreeze.data.dmri.utils import (
     GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR,
     find_shelling_scheme,
     format_gradients,
+    transform_fsl_bvec,
 )
 from nifreeze.data.utils import stream_select_volumes
 
@@ -233,6 +234,29 @@ class DWI(BaseDataset[np.ndarray]):
 
     def _getextra(self, idx: int | slice | tuple | np.ndarray) -> tuple[np.ndarray]:
         return (self.gradients[idx, ...],)
+
+    def realign_into(self, view: Self, index: int, order: int = 3) -> None:
+        """
+        Write volume ``index`` and its b-vector into a realigned view.
+
+        Besides the volume (see :meth:`BaseDataset.realign_into
+        <nifreeze.data.base.BaseDataset.realign_into>`), the original b-vector is
+        rotated by the estimate, as at export, and normalized. The view's whole
+        gradient table is reassigned, so an integer table is never truncated.
+
+        """
+        super().realign_into(view, index, order=order)
+
+        bvec = np.asarray(self.gradients[index, :3], dtype=float)
+        matrix = None if self.motion_affines is None else self.motion_affines[index]
+        if matrix is not None and not np.allclose(matrix, np.eye(4)):
+            bvec = transform_fsl_bvec(bvec, matrix, self.affine, invert=True)
+            bvec /= np.linalg.norm(bvec)
+
+        table = np.array(view.gradients, dtype=float)
+        if not np.allclose(table[index, :3], bvec):
+            table[index, :3] = bvec
+            view.gradients = table
 
     # For the sake of the docstring
     def __getitem__(

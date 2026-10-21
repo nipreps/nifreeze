@@ -40,7 +40,7 @@ from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.filtering import ClippingValueError, robust_window
-from nifreeze.model.base import BaseModel, ModelFactory
+from nifreeze.model.base import BaseModel, ModelFactory, TrivialModel
 from nifreeze.registration.ants import (
     _prepare_registration_data,
     _run_registration,
@@ -160,6 +160,17 @@ class Estimator:
             an ``aligned_<index>.nii`` trace per volume: the registered sample
             with its affine corrected by the estimated transform, which a viewer
             shows on top of ``predicted_<index>.nii``.
+        instant_update : :obj:`bool`, optional
+            Whether models train on the realigned view of the dataset (default):
+            right after a volume is registered, the model sees it resampled once,
+            from the original volume, with the estimate (and, for DWI, its rotated
+            b-vector). The dataset itself is never modified; registration and
+            export keep using the original volumes. It applies to models given by
+            name and to model instances built on this dataset (see
+            :meth:`~nifreeze.model.base.BaseModel.set_dataset`), except the
+            trivial model, whose reference never moves.
+        realigned : :obj:`dict`, optional
+            Realigned views by dataset, shared by the estimators of a chain.
 
         Returns
         -------
@@ -169,6 +180,7 @@ class Estimator:
         """
         # Shared with the previous estimators of the chain
         windows = kwargs.setdefault("clip_windows", {})
+        views = kwargs.setdefault("realigned", {})
         if self._prev is not None:
             result = self._prev.run(dataset, **kwargs)
             if isinstance(self._prev, Filter):
@@ -176,6 +188,19 @@ class Estimator:
 
         n_jobs = kwargs.pop("n_jobs", None) or min(cpu_count() or 1, 8)
         n_threads = kwargs.pop("omp_nthreads", None) or ((cpu_count() or 2) - 1)
+
+        # The realigned view the model trains on (one per dataset in a chain)
+        view = None
+        if kwargs.pop("instant_update", True) and not (
+            # The trivial model's reference never moves
+            isinstance(self._model, TrivialModel)
+            or (isinstance(self._model, str) and self._model.lower() == "trivial")
+            # A model instance built on another dataset keeps reading it
+            or (isinstance(self._model, BaseModel) and self._model._dataset is not dataset)
+        ):
+            view = views.get(id(dataset))
+            if view is None:
+                view = views[id(dataset)] = dataset.realigned()
 
         num_voxels = dataset.brainmask.sum() if dataset.brainmask is not None else dataset.size3d
         chunk_size = DEFAULT_CHUNK_SIZE * (n_threads or 1)
@@ -210,11 +235,13 @@ class Estimator:
             # Factory creates the appropriate model and pipes arguments
             model = ModelFactory.init(
                 model=self._model,
-                dataset=dataset,
+                dataset=dataset if view is None else view,
                 **self._model_kwargs,
             )
         else:
             model = self._model
+            if view is not None:
+                model.set_dataset(view)
 
         # Prepare fit/predict keyword arguments
         fit_pred_kwargs = {
@@ -239,6 +266,7 @@ class Estimator:
         clip = kwargs.pop("clip", "both")
         clipping = str(clip).lower() in ("sample", "predicted", "both", "true")
         kwargs.pop("clip_windows", None)
+        kwargs.pop("realigned", None)
 
         work_dir = None
         if (debug_dir := kwargs.pop("debug_dir", None)) is not None:
@@ -289,6 +317,14 @@ class Estimator:
                             windows[i] = None
                     window = windows.get(i)
 
+                    # Start from the current estimate (left by a previous estimator of the
+                    # chain, or stored in the dataset)
+                    init_affine = None
+                    if dataset.motion_affines is not None:
+                        current = np.asarray(dataset.motion_affines[i], dtype=float)
+                        if not np.allclose(current, np.eye(4)):
+                            init_affine = current
+
                     # prepare data for running ANTs
                     predicted_path, volume_path, init_path = _prepare_registration_data(
                         volume,
@@ -298,6 +334,7 @@ class Estimator:
                         ptmp_dir,
                         clip=clip if window is not None else "none",
                         window=window,
+                        init_affine=init_affine,
                     )
 
                     pbar.set_description_str(f"{REG_MSG: <16} vol. <{i}>")
@@ -315,6 +352,10 @@ class Estimator:
 
                     # update
                     dataset.set_transform(i, xform.matrix)
+                    if view is not None:
+                        # Instant update: the next predictions see this volume realigned
+                        dataset.realign_into(view, i)
+                        model.update(i)
                     if work_dir is not None:
                         # Debugging trace, written while the next volume is registered
                         traces.append(

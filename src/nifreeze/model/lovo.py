@@ -427,6 +427,14 @@ class ClosedFormLOVOMixin:
             self._signals = masked_signal_matrix(self._dataset, self._data_mask)
         return self._signals
 
+    def update(self, index: int) -> None:
+        """Replace row ``index`` of the cached signals with the dataset's volume.
+
+        The smoother is rebuilt at the next fit if the gradient table changed.
+        """
+        if self._signals is not None:
+            self._signals[index] = np.asarray(self._dataset.dataobj[index])[self._data_mask]
+
     def _hyperparameter_signals(self) -> np.ndarray:
         """Return a seeded random subsample of voxels, shape ``(N, nvox_prefit)``."""
         signals = self._lovo_signals()

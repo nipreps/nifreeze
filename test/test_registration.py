@@ -44,6 +44,7 @@ from nitransforms.resampling import apply
 from nifreeze.data.filtering import robust_window
 from nifreeze.registration import ants
 from nifreeze.registration.ants import (
+    REGISTRATION_INIT_WITHOUT_COLLAPSE_ERROR_MSG,
     REGISTRATION_MALFORMED_SETTINGS_ERROR_MSG,
     _massage_mask_path,
     _prepare_registration_data,
@@ -426,6 +427,36 @@ def test_generate_command_override_nested_list_parameters(
     # Assert the resulting Registration.inputs reflect the expected overrides
     assert reg.inputs.shrink_factors[:] == expected_shrink
     assert reg.inputs.metric[:] == expected_metric
+
+
+def test_generate_command_init_requires_collapse(
+    tmp_path, monkeypatch, random_nifti_file, json_file
+):
+    """An initial transform is only read back correctly if ANTs collapses the output."""
+    fixed = random_nifti_file(tmp_path / "fixed.nii.gz")
+    moving = random_nifti_file(tmp_path / "moving.nii.gz")
+    settings_file = json_file(
+        {
+            "shrink_factors": [[2]],
+            "metric": ["Mattes"],
+            "collapse_output_transforms": False,
+            "dimension": 3,
+            "interpolation": "Linear",
+            "output_transform_prefix": "transform",
+            "write_composite_transform": False,
+        },
+        tmp_path / "settings.json",
+    )
+    monkeypatch.setattr(ants, "_get_ants_settings", lambda settings="": Path(settings_file))
+    init_path = tmp_path / "init.mat"
+    init_path.write_text("ITK transform placeholder")
+
+    # Without an initial transform, these settings are accepted
+    generate_command(fixed_path=fixed, moving_path=moving, default="unused")
+    with pytest.raises(ValueError, match=re.escape(REGISTRATION_INIT_WITHOUT_COLLAPSE_ERROR_MSG)):
+        generate_command(
+            fixed_path=fixed, moving_path=moving, default="unused", init_affine=init_path
+        )
 
 
 @pytest.mark.parametrize(
