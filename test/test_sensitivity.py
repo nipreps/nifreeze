@@ -164,6 +164,51 @@ def test_round_trip_leaves_the_volume_in_place():
     assert nrmse(back.dataobj[0], bzero, mask) < 0.1 * nrmse(moved.dataobj[0], bzero, mask)
 
 
+def test_shift_grid_keeps_the_anatomy_in_place():
+    """Only the sampling grid moves: the head's center of mass stays put in world coordinates."""
+    dataset, bzero = _copies(np.random.default_rng(1234))
+
+    shifted = sens.shift_grid(dataset, 0.25)
+
+    assert np.allclose(shifted.affine[:3, 3] - dataset.affine[:3, 3], 0.25 * ZOOMS)
+    world = [
+        np.asarray(center_of_mass(volume)) * ZOOMS + origin
+        for volume, origin in (
+            (bzero, dataset.affine[:3, 3]),
+            (shifted.dataobj[0], shifted.affine[:3, 3]),
+        )
+    ]
+    assert world[1] == pytest.approx(world[0], abs=0.02)
+    assert np.array_equal(shifted.dataobj[0], shifted.dataobj[-1])
+    assert shifted.brainmask.sum() == pytest.approx(dataset.brainmask.sum(), rel=0.05)
+
+
+def test_grid_smooths_moved_and_unmoved_volumes_alike():
+    """On the shifted grid, moved and unmoved volumes keep the same noise variance."""
+    rng = np.random.default_rng(1234)
+    shape = (40, 40, 32)
+    dataset: BaseDataset = BaseDataset(
+        dataobj=rng.normal(size=(4, *shape)).astype(np.float32),
+        affine=np.diag([ZOOMS, ZOOMS, ZOOMS, 1.0]),
+        brainmask=np.ones(shape, dtype=bool),
+    )
+    plan = sens.one_at_a_time([1, 2, 3], 2.0, center=sens.mask_centroid(dataset))
+    inner = (slice(None), *(slice(8, -8),) * 3)
+
+    def variances(grid):
+        moved = [sens.perturb(dataset, p, grid=grid).dataobj[inner] for p in plan]
+        unmoved = moved[0][0].var()
+        return unmoved, np.mean([m[p.moved[0]].var() for m, p in zip(moved, plan, strict=True)])
+
+    unmoved, moved = variances(None)
+    assert unmoved / moved > 1.3  # Without the grid, resampling smooths only the moved ones
+    unmoved, moved = variances(sens.shift_grid(dataset))
+    assert unmoved / moved == pytest.approx(1.0, abs=0.08)
+
+    with pytest.raises(ValueError, match="round trip"):
+        sens.perturb(dataset, plan[0], round_trip=True, grid=sens.shift_grid(dataset))
+
+
 def test_plan_never_moves_evaluated_volumes_and_pairs_its_cells():
     evaluate = [0, 5]
     plan = sens.perturbation_plan(12, evaluate, magnitudes=(0.5, 2.0), counts=(1, 3), seeds=3)
@@ -212,10 +257,12 @@ def test_trivial_on_copies_is_perfect_under_any_plan():
         center=sens.mask_centroid(dataset),
     )
 
-    rows = sens.sensitivity(TrivialModel, dataset, plan, evaluate, predicted=bzero)
+    # Every volume, the held-out ones included, is compared on the shifted grid
+    grid = sens.shift_grid(dataset)
+    rows = sens.sensitivity(TrivialModel, dataset, plan, evaluate, predicted=grid.dataobj[0])
 
     assert len(rows) == (len(plan) + 1) * len(evaluate)
-    entropy = mutual_information(bzero, bzero, dataset.brainmask)
+    entropy = mutual_information(grid.dataobj[0], grid.dataobj[0], grid.brainmask)
     for row in rows:
         assert row["cc"] == pytest.approx(1.0)
         assert row["nrmse"] == 0.0
@@ -242,10 +289,11 @@ def test_mean_of_copies_matches_its_closed_form():
         center=sens.mask_centroid(dataset),
     )
 
+    grid = sens.shift_grid(dataset)
     for perturbation in plan:
-        moved = sens.perturb(dataset, perturbation)
+        moved = sens.perturb(dataset, perturbation, grid=grid)
         expected = (
-            (n_volumes - 1 - perturbation.count) * bzero
+            (n_volumes - 1 - perturbation.count) * grid.dataobj[0]
             + moved.dataobj[list(perturbation.moved)].sum(axis=0)
         ) / (n_volumes - 1)
         predicted = sens.held_out_predictions(ExpectationModel, moved, evaluate, stat="mean")

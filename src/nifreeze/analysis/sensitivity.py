@@ -72,6 +72,9 @@ class Perturbation:
 NO_PERTURBATION = Perturbation(magnitude=0.0, seed=None)
 """The aligned dataset."""
 
+DEFAULT_GRID_SHIFT = 0.25
+"""Offset (voxels, along each axis) of the grid all volumes are resampled onto."""
+
 
 def rigid_motion(
     magnitude: float,
@@ -257,8 +260,60 @@ def one_at_a_time(
     ]
 
 
+def shift_grid(dataset: Any, shift: float | ArrayLike = DEFAULT_GRID_SHIFT, order: int = 3) -> Any:
+    """
+    Resample a whole dataset onto a grid offset by a fraction of a voxel.
+
+    Resampling smooths noise, which real motion does not. On the shifted grid
+    every volume goes through one interpolation, moved or not (see
+    :func:`perturb`), so moved and unmoved volumes are smoothed alike. Only the
+    sampling grid moves: the anatomy stays in place. A quarter of a voxel along
+    the diagonal smooths white noise as much as resampling through a rigid
+    motion of 0.5 to 4 degrees and millimeters (within about 3%), whereas half a
+    voxel smooths noticeably more.
+
+    Parameters
+    ----------
+    dataset : :obj:`~nifreeze.data.base.BaseDataset`
+        The aligned dataset.
+    shift : :obj:`float` or :obj:`~numpy.typing.ArrayLike`, optional
+        Offset of the grid, in voxels, along each axis.
+    order : :obj:`int`, optional
+        Interpolation order.
+
+    Returns
+    -------
+    :obj:`~nifreeze.data.base.BaseDataset`
+        A copy with ``float32`` volumes on the shifted grid. The brain mask and
+        the b=0 reference, if any, are resampled too.
+
+    """
+    offset = np.broadcast_to(np.asarray(shift, dtype=float), (3,))
+    affine = np.array(dataset.affine, dtype=float)
+    affine[:3, 3] += affine[:3, :3] @ offset
+    reference = nb.Nifti1Image(np.zeros(dataset.shape3d, dtype=np.uint8), affine)
+
+    def _resample(volume: np.ndarray, interpolation: int) -> np.ndarray:
+        image = nb.Nifti1Image(np.asarray(volume, dtype=np.float32), dataset.affine)
+        resampled = apply(Affine(np.eye(4)), image, reference=reference, order=interpolation)
+        return np.asanyarray(resampled.dataobj)
+
+    shifted = copy(dataset)
+    shifted.dataobj = np.stack([_resample(volume, order) for volume in dataset.dataobj])
+    shifted.affine = affine
+    if getattr(dataset, "brainmask", None) is not None:
+        shifted.brainmask = _resample(dataset.brainmask, 1) > 0.5
+    if getattr(dataset, "bzero", None) is not None:
+        shifted.bzero = _resample(dataset.bzero, order)
+    return shifted
+
+
 def perturb(
-    dataset: Any, perturbation: Perturbation, order: int = 3, round_trip: bool = False
+    dataset: Any,
+    perturbation: Perturbation,
+    order: int = 3,
+    round_trip: bool = False,
+    grid: Any = None,
 ) -> Any:
     """
     Copy a dataset with some of its volumes moved.
@@ -277,24 +332,35 @@ def perturb(
         Interpolation order.
     round_trip : :obj:`bool`, optional
         Move each volume and move it back, which leaves it in place but
-        interpolated twice: the loss that resampling alone causes.
+        interpolated twice.
+    grid : :obj:`~nifreeze.data.base.BaseDataset`, optional
+        The dataset on a shifted grid (see :func:`shift_grid`). Moved volumes are
+        then resampled from the original onto that grid, through their motion,
+        and everything else is taken from ``grid``.
 
     Returns
     -------
     :obj:`~nifreeze.data.base.BaseDataset`
-        A copy of the dataset with ``float32`` volumes.
+        A copy of the dataset (or of ``grid``) with ``float32`` volumes.
 
     """
-    dataobj = np.array(dataset.dataobj, dtype=np.float32)
+    if round_trip and grid is not None:
+        raise ValueError("A round trip cannot be combined with a shifted grid.")
+    source = dataset if grid is None else grid
+    reference = nb.Nifti1Image(np.zeros(dataset.shape3d, dtype=np.uint8), source.affine)
+
+    dataobj = np.array(source.dataobj, dtype=np.float32)
     for index, motion in zip(perturbation.moved, perturbation.motions, strict=True):
-        image = nb.Nifti1Image(dataobj[index], dataset.affine)
+        image = nb.Nifti1Image(
+            np.asarray(dataset.dataobj[index], dtype=np.float32), dataset.affine
+        )
         # The moved head shows, at each position, what was at motion⁻¹(position)
         steps = (np.linalg.inv(motion), motion) if round_trip else (np.linalg.inv(motion),)
         for step in steps:
-            image = apply(Affine(step), image, reference=image, order=order)
+            image = apply(Affine(step), image, reference=reference, order=order)
         dataobj[index] = np.asanyarray(image.dataobj)
 
-    moved = copy(dataset)
+    moved = copy(source)
     moved.dataobj = dataobj
     return moved
 
@@ -343,11 +409,16 @@ def sensitivity(
     mask: np.ndarray | None = None,
     metrics: Mapping[str, Callable[..., float]] = METRICS,
     order: int = 3,
-    round_trip: bool = False,
+    grid_shift: float | ArrayLike | None = DEFAULT_GRID_SHIFT,
     **model_kwargs: Any,
 ) -> list[dict[str, Any]]:
     """
     Measure how the predictions of held-out volumes degrade under a plan.
+
+    By default, the whole dataset is first resampled onto a shifted grid (see
+    :func:`shift_grid`), so that every volume, the evaluated ones included, is
+    interpolated once and moved volumes differ from the others only by their
+    displacement.
 
     Parameters
     ----------
@@ -360,14 +431,17 @@ def sensitivity(
     evaluate : :obj:`~collections.abc.Iterable`
         Volumes whose predictions are evaluated; none of them may be moved.
     mask : :obj:`~numpy.ndarray`, optional
-        Voxels compared; the dataset's brain mask, or the whole volume, if :obj:`None`.
+        Voxels compared, on the grid of the compared volumes (the shifted grid,
+        unless ``grid_shift`` is :obj:`None`); the brain mask on that grid, or
+        the whole volume, if :obj:`None`.
     metrics : :obj:`~collections.abc.Mapping`, optional
         Similarity metrics by name, with the signature of
         :func:`~nifreeze.analysis.similarity.masked_cc`.
     order : :obj:`int`, optional
-        Interpolation order of the moved volumes.
-    round_trip : :obj:`bool`, optional
-        Move the volumes back after moving them (see :func:`perturb`).
+        Interpolation order.
+    grid_shift : :obj:`float` or :obj:`~numpy.typing.ArrayLike`, optional
+        Offset of the shifted grid, in voxels; :obj:`None` resamples only the
+        moved volumes, which then come out smoother than the others.
     **model_kwargs
         Arguments for the model.
 
@@ -386,11 +460,13 @@ def sensitivity(
         if clashing := sorted(set(evaluate) & set(perturbation.moved)):
             raise ValueError(f"Evaluated volumes {clashing} are moved by the plan.")
 
-    mask = _resolve_mask(dataset, mask)
-    targets = {index: np.asarray(dataset.dataobj[index], dtype=float) for index in evaluate}
+    grid = None if grid_shift is None else shift_grid(dataset, grid_shift, order=order)
+    aligned = dataset if grid is None else grid
+    mask = _resolve_mask(aligned, mask)
+    targets = {index: np.asarray(aligned.dataobj[index], dtype=float) for index in evaluate}
 
     def _scores(perturbation: Perturbation) -> dict[int, dict[str, float]]:
-        moved = perturb(dataset, perturbation, order=order, round_trip=round_trip)
+        moved = perturb(dataset, perturbation, order=order, grid=grid)
         predicted = held_out_predictions(model, moved, evaluate, **model_kwargs)
         return {
             index: {
