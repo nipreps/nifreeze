@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Model implementation" href="models.html"><link rel="prev" title="Installation" href="installation.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>Design Principles - nifreeze 26.0.0.dev344 documentation</title>
+        <title>Design Principles - nifreeze 26.0.0.dev352 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev344 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev352 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev344</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev352</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev344</span>
+  <span class="sidebar-brand-text">26.0.0.dev352</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -433,10 +433,23 @@ and predicted volumes, storing the result at the corresponding index in the
 dataset’s motion parameter attribute.</p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
-<p>The <strong>Update &amp; iterate</strong> procedure follows a strict design principle:
-resampling is intentionally excluded from the update step; including it
-would alter the data distribution, making it impossible to attribute
-observed improvements solely to the predictive model.</p>
+<p>The <strong>Update &amp; iterate</strong> procedure treats registration and modeling
+differently:</p>
+<ul class="simple">
+<li><p><strong>Registration never sees resampled data.</strong> Each volume is registered in
+its original form. The current estimate (found by an earlier estimator of
+the chain, or stored with the dataset) only initializes the registration,
+so that it starts closer to the target.</p></li>
+<li><p><strong>Models train on the realigned view</strong> (the <em>instant update</em>). As soon as a
+volume is registered, the models see it resampled from the original with
+its estimate and, for DWI, with its b-vector rotated accordingly. The
+predictions of the remaining volumes, and those of later estimators,
+improve as the motion is corrected.</p></li>
+</ul>
+<p>A realigned volume is never resampled again: a new estimate replaces it,
+resampled from the original. <code class="docutils literal notranslate"><span class="pre">--no-instant-update</span></code>
+(<code class="docutils literal notranslate"><span class="pre">Estimator.run(instant_update=False)</span></code>) trains the models on the original
+volumes only.</p>
 </div>
 <p>Corrected datasets and associated metadata are produced in standardized
 formats for downstream analysis.</p>
@@ -553,8 +566,8 @@ for speed during development or debugging.</p>
 <h2>Usage<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
 <p>The <em>NiFreeze</em> command-line interface supports specifying multiple models, which are applied in a cascade fashion. Users
 can indicate which model should be used to address a specific problem, such as head motion or eddy current correction.</p>
-<p>The transformations computed at each level are stored in an HDF5 file and are used to initialize the immediately next
-level of the registration process.</p>
+<p>The transformations estimated at each level initialize the registration of the next level, whose models train on
+the data realigned with them.</p>
 <p>Refer to the <a class="reference external" href="https://www.nipreps.org/smriprep/usage.html#usage" title="(in smriprep v0.20.1.dev12)"><span>Usage</span></a> document for a self-contained usage example.</p>
 </section>
 </section>
@@ -679,7 +692,7 @@ contributor acknowledgements.</p>
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=62afcf96"></script>
+</div><script src="_static/documentation_options.js?v=69910b06"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

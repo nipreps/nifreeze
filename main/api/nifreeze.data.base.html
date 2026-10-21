@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.data.filtering module" href="nifreeze.data.filtering.html"><link rel="prev" title="nifreeze.data.pet.utils module" href="nifreeze.data.pet.utils.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.data.base module - nifreeze 26.0.0.dev344 documentation</title>
+        <title>nifreeze.data.base module - nifreeze 26.0.0.dev352 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev344 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev352 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev344</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev352</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev344</span>
+  <span class="sidebar-brand-text">26.0.0.dev352</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -437,6 +437,45 @@ specification).</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="nifreeze.data.base.BaseDataset.realign_into">
+<span class="sig-name descname"><span class="pre">realign_into</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">view</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Self" title="(in Python v3.15)"><span class="pre">Self</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/base.html#BaseDataset.realign_into"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.base.BaseDataset.realign_into" title="Link to this definition">¶</a></dt>
+<dd><p>Write volume <code class="docutils literal notranslate"><span class="pre">index</span></code> into a realigned view, moved by its current estimate.</p>
+<p>The original volume is resampled once with the estimate in
+<code class="docutils literal notranslate"><span class="pre">motion_affines</span></code> (the same mapping as <a class="reference internal" href="#nifreeze.data.base.to_nifti" title="nifreeze.data.base.to_nifti"><code class="xref py py-func docutils literal notranslate"><span class="pre">to_nifti()</span></code></a>). A new estimate
+replaces the realigned volume: the realigned volume is never resampled
+again. Volumes without a motion estimate are copied as they are.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>view</strong> (<a class="reference internal" href="#nifreeze.data.base.BaseDataset" title="nifreeze.data.base.BaseDataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BaseDataset</span></code></a>) – The realigned view (see <a class="reference internal" href="#nifreeze.data.base.BaseDataset.realigned" title="nifreeze.data.base.BaseDataset.realigned"><code class="xref py py-meth docutils literal notranslate"><span class="pre">realigned()</span></code></a>).</p></li>
+<li><p><strong>index</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>) – The volume to realign.</p></li>
+<li><p><strong>order</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – The interpolation order used to resample the volume.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nifreeze.data.base.BaseDataset.realigned">
+<span class="sig-name descname"><span class="pre">realigned</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Self" title="(in Python v3.15)"><span class="pre">Self</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/base.html#BaseDataset.realigned"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.base.BaseDataset.realigned" title="Link to this definition">¶</a></dt>
+<dd><p>Create the realigned view of the dataset, which models train on.</p>
+<p>The view is a shallow copy whose volumes are a disk-backed copy of this
+dataset’s volumes. Volumes with a motion estimate are moved into the
+reference frame (see <a class="reference internal" href="#nifreeze.data.base.BaseDataset.realign_into" title="nifreeze.data.base.BaseDataset.realign_into"><code class="xref py py-meth docutils literal notranslate"><span class="pre">realign_into()</span></code></a>). This dataset is not modified.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>order</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – The interpolation order used to resample the volumes.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The realigned view.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#nifreeze.data.base.BaseDataset" title="nifreeze.data.base.BaseDataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BaseDataset</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="nifreeze.data.base.BaseDataset.set_transform">
 <span class="sig-name descname"><span class="pre">set_transform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">affine</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/data/base.html#BaseDataset.set_transform"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.data.base.BaseDataset.set_transform" title="Link to this definition">¶</a></dt>
 <dd><p>Set an affine transform for a particular index and update the data object.</p>
@@ -680,6 +719,8 @@ dimensions (<code class="docutils literal notranslate"><span class="pre">ndim</s
 <li><a class="reference internal" href="#nifreeze.data.base.BaseDataset.from_filename"><code class="docutils literal notranslate"><span class="pre">BaseDataset.from_filename()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.base.BaseDataset.get_filename"><code class="docutils literal notranslate"><span class="pre">BaseDataset.get_filename()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.base.BaseDataset.motion_affines"><code class="docutils literal notranslate"><span class="pre">BaseDataset.motion_affines</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.base.BaseDataset.realign_into"><code class="docutils literal notranslate"><span class="pre">BaseDataset.realign_into()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.data.base.BaseDataset.realigned"><code class="docutils literal notranslate"><span class="pre">BaseDataset.realigned()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.base.BaseDataset.set_transform"><code class="docutils literal notranslate"><span class="pre">BaseDataset.set_transform()</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.base.BaseDataset.shape3d"><code class="docutils literal notranslate"><span class="pre">BaseDataset.shape3d</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.data.base.BaseDataset.size3d"><code class="docutils literal notranslate"><span class="pre">BaseDataset.size3d</span></code></a></li>
@@ -709,7 +750,7 @@ dimensions (<code class="docutils literal notranslate"><span class="pre">ndim</s
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=62afcf96"></script>
+</div><script src="../_static/documentation_options.js?v=69910b06"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

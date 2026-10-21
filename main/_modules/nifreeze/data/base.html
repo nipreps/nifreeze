@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.data.base - nifreeze 26.0.0.dev344 documentation</title>
+        <title>nifreeze.data.base - nifreeze 26.0.0.dev352 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev344 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev352 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev344</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev352</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev344</span>
+  <span class="sidebar-brand-text">26.0.0.dev352</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -343,6 +343,7 @@
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span> <span class="nn">tempfile</span> <span class="kn">import</span> <span class="n">mkdtemp</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Generic</span>
@@ -352,7 +353,7 @@
 <span class="kn">import</span> <span class="nn">h5py</span>
 <span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nb</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">nitransforms.linear</span> <span class="kn">import</span> <span class="n">LinearTransformsMapping</span>
+<span class="kn">from</span> <span class="nn">nitransforms.linear</span> <span class="kn">import</span> <span class="n">Affine</span><span class="p">,</span> <span class="n">LinearTransformsMapping</span>
 <span class="kn">from</span> <span class="nn">nitransforms.resampling</span> <span class="kn">import</span> <span class="n">apply</span>
 <span class="kn">from</span> <span class="nn">typing_extensions</span> <span class="kn">import</span> <span class="n">Self</span><span class="p">,</span> <span class="n">TypeVarTuple</span><span class="p">,</span> <span class="n">Unpack</span>
 
@@ -360,6 +361,7 @@
     <span class="n">load_nfhdf5_fields</span><span class="p">,</span>
     <span class="n">replace_on_success</span><span class="p">,</span>
     <span class="n">save_nfhdf5_fields</span><span class="p">,</span>
+    <span class="n">stream_select_volumes</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="n">Ts</span> <span class="o">=</span> <span class="n">TypeVarTuple</span><span class="p">(</span><span class="s2">&quot;Ts&quot;</span><span class="p">)</span>
@@ -777,6 +779,76 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">motion_affines</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">affine</span></div>
 
 
+<div class="viewcode-block" id="BaseDataset.realigned">
+<a class="viewcode-back" href="../../../api/nifreeze.data.base.html#nifreeze.data.base.BaseDataset.realigned">[docs]</a>
+    <span class="k">def</span> <span class="nf">realigned</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create the realigned view of the dataset, which models train on.</span>
+
+<span class="sd">        The view is a shallow copy whose volumes are a disk-backed copy of this</span>
+<span class="sd">        dataset&#39;s volumes. Volumes with a motion estimate are moved into the</span>
+<span class="sd">        reference frame (see :meth:`realign_into`). This dataset is not modified.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        order : :obj:`int`, optional</span>
+<span class="sd">            The interpolation order used to resample the volumes.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :obj:`~nifreeze.data.base.BaseDataset`</span>
+<span class="sd">            The realigned view.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">view</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">view</span><span class="o">.</span><span class="n">dataobj</span> <span class="o">=</span> <span class="n">stream_select_volumes</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;realigned&quot;</span>
+        <span class="p">)</span>
+        <span class="c1"># The view&#39;s volumes are realigned already</span>
+        <span class="n">view</span><span class="o">.</span><span class="n">motion_affines</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">motion_affines</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">realign_into</span><span class="p">(</span><span class="n">view</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">view</span></div>
+
+
+<div class="viewcode-block" id="BaseDataset.realign_into">
+<a class="viewcode-back" href="../../../api/nifreeze.data.base.html#nifreeze.data.base.BaseDataset.realign_into">[docs]</a>
+    <span class="k">def</span> <span class="nf">realign_into</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">view</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write volume ``index`` into a realigned view, moved by its current estimate.</span>
+
+<span class="sd">        The original volume is resampled once with the estimate in</span>
+<span class="sd">        ``motion_affines`` (the same mapping as :func:`to_nifti`). A new estimate</span>
+<span class="sd">        replaces the realigned volume: the realigned volume is never resampled</span>
+<span class="sd">        again. Volumes without a motion estimate are copied as they are.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        view : :obj:`~nifreeze.data.base.BaseDataset`</span>
+<span class="sd">            The realigned view (see :meth:`realigned`).</span>
+<span class="sd">        index : :obj:`int`</span>
+<span class="sd">            The volume to realign.</span>
+<span class="sd">        order : :obj:`int`, optional</span>
+<span class="sd">            The interpolation order used to resample the volume.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">volume</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataobj</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
+        <span class="n">matrix</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">motion_affines</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">motion_affines</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">matrix</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">)):</span>
+            <span class="n">view</span><span class="o">.</span><span class="n">dataobj</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">volume</span>
+            <span class="k">return</span>
+
+        <span class="n">image</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">volume</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">datahdr</span><span class="p">)</span>
+        <span class="n">resampled</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span>
+            <span class="n">apply</span><span class="p">(</span><span class="n">Affine</span><span class="p">(</span><span class="n">matrix</span><span class="p">),</span> <span class="n">image</span><span class="p">,</span> <span class="n">reference</span><span class="o">=</span><span class="n">image</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span><span class="o">.</span><span class="n">dataobj</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">view</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">):</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="n">view</span><span class="o">.</span><span class="n">dataobj</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">resampled</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">resampled</span><span class="p">),</span> <span class="n">info</span><span class="o">.</span><span class="n">min</span><span class="p">,</span> <span class="n">info</span><span class="o">.</span><span class="n">max</span><span class="p">)</span>
+        <span class="n">view</span><span class="o">.</span><span class="n">dataobj</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">resampled</span></div>
+
+
 <div class="viewcode-block" id="BaseDataset.to_filename">
 <a class="viewcode-back" href="../../../api/nifreeze.data.base.html#nifreeze.data.base.BaseDataset.to_filename">[docs]</a>
     <span class="k">def</span> <span class="nf">to_filename</span><span class="p">(</span>
@@ -963,7 +1035,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=62afcf96"></script>
+</div><script src="../../../_static/documentation_options.js?v=69910b06"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
