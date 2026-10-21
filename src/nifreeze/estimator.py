@@ -24,6 +24,8 @@
 
 from __future__ import annotations
 
+from concurrent.futures import Future, ThreadPoolExecutor
+from contextlib import nullcontext
 from os import cpu_count
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -42,6 +44,7 @@ from nifreeze.model.base import BaseModel, ModelFactory
 from nifreeze.registration.ants import (
     _prepare_registration_data,
     _run_registration,
+    _write_aligned,
 )
 from nifreeze.utils import iterators
 
@@ -151,6 +154,12 @@ class Estimator:
             Intensity windows by volume index. A volume's window is estimated
             from the volume the first time it is registered, and then reused
             for its prediction and by every later estimator of the chain.
+        debug_dir : :obj:`os.pathlike`, optional
+            Keep the registration working files of each estimator of the chain
+            in a folder of ``debug_dir`` (instead of a temporary directory), with
+            an ``aligned_<index>.nii`` trace per volume: the registered sample
+            with its affine corrected by the estimated transform, which a viewer
+            shows on top of ``predicted_<index>.nii``.
 
         Returns
         -------
@@ -231,13 +240,25 @@ class Estimator:
         clipping = str(clip).lower() in ("sample", "predicted", "both", "true")
         kwargs.pop("clip_windows", None)
 
+        work_dir = None
+        if (debug_dir := kwargs.pop("debug_dir", None)) is not None:
+            # Absolute, because nipype runs ANTs from within the working directory
+            work_dir = Path(debug_dir).absolute() / self._debug_name(model)
+            work_dir.mkdir(parents=True, exist_ok=True)
+
         # Calculate effective dataset length for progress bar
         if self._stop_index is not None:
             dataset_length = self._stop_index - self._start_index
         else:
             dataset_length = len(dataset) - self._start_index
 
-        with TemporaryDirectory() as tmp_dir:
+        traces: list[Future] = []
+        with (
+            (
+                nullcontext(str(work_dir)) if work_dir is not None else TemporaryDirectory()
+            ) as tmp_dir,
+            ThreadPoolExecutor(max_workers=1) as tracer,
+        ):
             print(f"Processing in <{tmp_dir}>")
             ptmp_dir = Path(tmp_dir)
 
@@ -294,6 +315,29 @@ class Estimator:
 
                     # update
                     dataset.set_transform(i, xform.matrix)
+                    if work_dir is not None:
+                        # Debugging trace, written while the next volume is registered
+                        traces.append(
+                            tracer.submit(
+                                _write_aligned,
+                                volume_path,
+                                xform.matrix,
+                                ptmp_dir / f"aligned_{i:05d}.nii",
+                            )
+                        )
                     pbar.update()
 
+            # Surface any error raised while writing a trace
+            for trace in traces:
+                trace.result()
+
         return self
+
+    def _debug_name(self, model: BaseModel) -> str:
+        """Name this estimator's folder of ``debug_dir`` by position in the chain and model."""
+        position, prev = 0, self._prev
+        while prev is not None:
+            position += isinstance(prev, Estimator)
+            prev = getattr(prev, "_prev", None)
+        name = self._model if isinstance(self._model, str) else type(model).__name__
+        return f"{position:02d}-{name.lower()}"

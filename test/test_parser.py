@@ -255,6 +255,18 @@ def test_parser_closed_form_lovo_options(tmp_path):
     assert model_kwargs["nvox_prefit"] == 500
 
 
+def test_parser_debug_dir(tmp_path):
+    """``--debug-dir`` is off by default and parsed as a path."""
+    input_file = tmp_path / "dwi.h5"
+    input_file.touch()
+
+    args, *_ = parse_args([str(input_file)])
+    assert args.debug_dir is None
+
+    args, *_ = parse_args([str(input_file), "--debug-dir", str(tmp_path / "debug")])
+    assert args.debug_dir == tmp_path / "debug"
+
+
 @pytest.mark.parametrize(
     "models",
     [

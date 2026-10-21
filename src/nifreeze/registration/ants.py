@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from collections import namedtuple
 from importlib.resources import files
+from io import BytesIO
 from json import loads
 from pathlib import Path
 from warnings import warn
@@ -112,6 +113,33 @@ def _to_nifti(
     nii.header.set_sform(affine, code=1)
     nii.header.set_qform(affine, code=1)
     nii.to_filename(filename)
+
+
+def _write_aligned(moving_path: str | Path, matrix: np.ndarray, out_path: str | Path) -> None:
+    """
+    Write the moving image aligned to the fixed image, without resampling.
+
+    The voxel data are copied byte for byte, and the affine is premultiplied by
+    the inverse of the estimated transform, so that a viewer displays the image
+    on top of the fixed one.
+
+    Parameters
+    ----------
+    moving_path : :obj:`os.pathlike`
+        The moving image, an uncompressed NIfTI-1 file.
+    matrix : :obj:`~numpy.ndarray`
+        The estimated transform (fixed-to-moving, in world coordinates).
+    out_path : :obj:`os.pathlike`
+        The output (uncompressed NIfTI-1) file path.
+
+    """
+    raw = Path(moving_path).read_bytes()
+    # Parse the header from the file itself: a loaded image's header has its scaling reset
+    header = nb.Nifti1Header.from_fileobj(BytesIO(raw))
+    aligned = np.linalg.inv(matrix) @ header.get_best_affine()
+    header.set_sform(aligned, code=1)
+    header.set_qform(aligned, code=1)
+    Path(out_path).write_bytes(header.binaryblock + raw[header.sizeof_hdr :])
 
 
 def _prepare_registration_data(

@@ -69,6 +69,7 @@ def main(argv: list[str] | None = None) -> None:
         align_kwargs=args.align_config,
         omp_nthreads=args.nthreads,
         n_jobs=args.n_jobs,
+        debug_dir=args.debug_dir,
         seed=args.seed,
     )
 
