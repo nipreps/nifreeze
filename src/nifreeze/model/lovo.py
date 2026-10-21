@@ -427,6 +427,18 @@ class ClosedFormLOVOMixin:
             self._signals = masked_signal_matrix(self._dataset, self._data_mask)
         return self._signals
 
+    @property
+    def smoother(self) -> np.ndarray:
+        """The ``(N, N)`` smoother for the current gradient table (read-only).
+
+        Row ``i`` holds the weights that predict volume ``i`` from the others.
+        """
+        self._fit(0)  # The index never enters the fit; any index avoids locking it
+        assert self._smoother is not None
+        smoother = self._smoother.view()
+        smoother.flags.writeable = False
+        return smoother
+
     def update(self, index: int) -> None:
         """Replace row ``index`` of the cached signals with the dataset's volume.
 
