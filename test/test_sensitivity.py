@@ -645,3 +645,27 @@ def test_copies_inherit_the_distortion_of_the_others(octant):
     grid = sens.shift_grid(dataset)
     rows = sens.sensitivity(TrivialModel, dataset, [perturbation], predicted=grid.dataobj[0])
     assert all(row["nrmse"] == 0.0 and row["inherited"] == 0.0 for row in rows)
+
+
+def test_inheritance_is_measured_on_top_of_the_motion():
+    """A motion shared by all copies leaves their inherited share at its closed form."""
+    dataset, _ = _copies(np.random.default_rng(1234))
+    n_volumes = len(dataset)
+    distortion = sens.eddy_distortion(
+        dataset, 0.1, axis=1, gradients=_table(np.random.default_rng(0), n_volumes)
+    )
+    # Moves along phase encoding too, which the distortion's constant term alone would absorb
+    motion = sens.rigid_motion(2.0, (1, 0, 1), (0, 1, 1), sens.mask_centroid(dataset))
+    everyone = tuple(range(n_volumes))
+    perturbation = sens.Perturbation(
+        2.0, None, everyone, (motion,) * n_volumes, distortion=distortion
+    )
+
+    rows = sens.sensitivity(ExpectationModel, dataset, [perturbation], stat="mean")
+
+    coefficients = distortion.coefficients
+    total = coefficients.sum(axis=0)
+    for row in rows:
+        own = coefficients[row["index"]]
+        expected = (total - own) @ own / ((n_volumes - 1) * (own @ own))
+        assert row["inherited"] == pytest.approx(expected, abs=0.015)
