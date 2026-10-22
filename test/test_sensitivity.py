@@ -20,7 +20,7 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""Sensitivity of model predictions to motion of their training volumes."""
+"""Sensitivity of model predictions to motion of their training volumes, and its test helpers."""
 
 import attrs
 import nibabel as nb
@@ -39,6 +39,7 @@ from nifreeze.model import lovo
 from nifreeze.model.base import ExpectationModel, TrivialModel
 from nifreeze.model.dmri import GPLOOModel, GQIKRRModel
 from nifreeze.model.gpr import SphericalKriging
+from nifreeze.testing import perturbations as pert
 from nifreeze.testing import simulations as _sim
 
 ZOOMS = 2.0
@@ -85,6 +86,11 @@ def _dwi(rng, n_directions=30):
         brainmask=mask,
         gradients=np.column_stack((gtab.bvecs, gtab.bvals))[~gtab.b0s_mask].astype(np.float32),
     )
+
+
+def _cells(dataset, plan):
+    """Each perturbation of a plan, with the copy of ``dataset`` it makes."""
+    return [(perturbation, pert.perturb(dataset, perturbation)) for perturbation in plan]
 
 
 def _gploo_record():
@@ -147,7 +153,7 @@ def test_metrics_reject_volumes_of_different_shapes():
         masked_cc(np.ones(3), np.ones(4))
 
 
-# Perturbations
+# Perturbation helpers (nifreeze.testing.perturbations)
 
 
 def test_perturb_moves_the_head_and_nothing_else():
@@ -157,7 +163,7 @@ def test_perturb_moves_the_head_and_nothing_else():
     shift[0, 3] = 3.0
     original = np.array(dataset.dataobj)
 
-    moved = sens.perturb(dataset, sens.Perturbation(3.0, None, (2,), (shift,)))
+    moved = pert.perturb(dataset, sens.Perturbation(3.0, None, (2,), (shift,)))
 
     displacement = np.subtract(center_of_mass(moved.dataobj[2]), center_of_mass(bzero)) * ZOOMS
     assert displacement == pytest.approx([3.0, 0.0, 0.0], abs=0.05)
@@ -166,86 +172,9 @@ def test_perturb_moves_the_head_and_nothing_else():
     assert np.array_equal(dataset.dataobj, original)
 
 
-def test_round_trip_leaves_the_volume_in_place():
-    dataset, bzero = _copies(np.random.default_rng(1234))
-    motion = sens.rigid_motion(2.0, (1, 1, 0), (0, 1, 1), sens.mask_centroid(dataset))
-    perturbation = sens.Perturbation(2.0, None, (0,), (motion,))
-
-    moved = sens.perturb(dataset, perturbation)
-    back = sens.perturb(dataset, perturbation, round_trip=True)
-
-    mask = dataset.brainmask
-    assert nrmse(back.dataobj[0], bzero, mask) < 0.1 * nrmse(moved.dataobj[0], bzero, mask)
-
-
-def test_shift_grid_keeps_the_anatomy_in_place():
-    """Only the sampling grid moves: the head's center of mass stays put in world coordinates."""
-    dataset, bzero = _copies(np.random.default_rng(1234))
-
-    shifted = sens.shift_grid(dataset, 0.25)
-
-    assert np.allclose(shifted.affine[:3, 3] - dataset.affine[:3, 3], 0.25 * ZOOMS)
-    world = [
-        np.asarray(center_of_mass(volume)) * ZOOMS + origin
-        for volume, origin in (
-            (bzero, dataset.affine[:3, 3]),
-            (shifted.dataobj[0], shifted.affine[:3, 3]),
-        )
-    ]
-    assert world[1] == pytest.approx(world[0], abs=0.02)
-    assert np.array_equal(shifted.dataobj[0], shifted.dataobj[-1])
-    assert shifted.brainmask.sum() == pytest.approx(dataset.brainmask.sum(), rel=0.05)
-
-
-def test_shift_grid_resamples_the_bzero_like_the_volumes():
-    """The b=0 reference follows the volumes onto the grid; a dataset without a mask keeps none."""
-    dwi = _dwi(np.random.default_rng(1234))
-    bzero = np.asarray(dwi.dataobj[0]).copy()
-    dataset = DWI(
-        dataobj=dwi.dataobj,
-        affine=dwi.affine,
-        brainmask=dwi.brainmask,
-        gradients=dwi.gradients,
-        bzero=bzero,
-    )
-
-    shifted = sens.shift_grid(dataset)
-
-    assert np.array_equal(shifted.bzero, shifted.dataobj[0])
-    assert not np.allclose(shifted.bzero, bzero)
-    unmasked: BaseDataset = BaseDataset(dataobj=dwi.dataobj, affine=dwi.affine)
-    assert sens.shift_grid(unmasked).brainmask is None
-
-
-def test_grid_smooths_moved_and_unmoved_volumes_alike():
-    """On the shifted grid, moved and unmoved volumes keep the same noise variance."""
-    rng = np.random.default_rng(1234)
-    shape = (40, 40, 32)
-    dataset: BaseDataset = BaseDataset(
-        dataobj=rng.normal(size=(4, *shape)).astype(np.float32),
-        affine=np.diag([ZOOMS, ZOOMS, ZOOMS, 1.0]),
-        brainmask=np.ones(shape, dtype=bool),
-    )
-    plan = sens.one_at_a_time([1, 2, 3], 2.0, center=sens.mask_centroid(dataset))
-    inner = (slice(None), *(slice(8, -8),) * 3)
-
-    def variances(grid):
-        moved = [sens.perturb(dataset, p, grid=grid).dataobj[inner] for p in plan]
-        unmoved = moved[0][0].var()
-        return unmoved, np.mean([m[p.moved[0]].var() for m, p in zip(moved, plan, strict=True)])
-
-    unmoved, moved = variances(None)
-    assert unmoved / moved > 1.3  # Without the grid, resampling smooths only the moved ones
-    unmoved, moved = variances(sens.shift_grid(dataset))
-    assert unmoved / moved == pytest.approx(1.0, abs=0.08)
-
-    with pytest.raises(ValueError, match="round trip"):
-        sens.perturb(dataset, plan[0], round_trip=True, grid=sens.shift_grid(dataset))
-
-
 def test_plan_never_moves_fixed_volumes_and_pairs_its_cells():
     fixed = [0, 5]
-    plan = sens.perturbation_plan(12, magnitudes=(0.5, 2.0), counts=(1, 3), seeds=3, fixed=fixed)
+    plan = pert.perturbation_plan(12, magnitudes=(0.5, 2.0), counts=(1, 3), seeds=3, fixed=fixed)
 
     assert len(plan) == 3 * 2 * 2
     assert not any(set(fixed) & set(p.moved) for p in plan)
@@ -258,15 +187,15 @@ def test_plan_never_moves_fixed_volumes_and_pairs_its_cells():
         assert np.allclose(4 * _rotvec(weak.motions[0]), _rotvec(strong.motions[0]))
 
     with pytest.raises(ValueError, match="Cannot move"):
-        sens.perturbation_plan(12, magnitudes=(1.0,), counts=(11,), fixed=fixed)
+        pert.perturbation_plan(12, magnitudes=(1.0,), counts=(11,), fixed=fixed)
 
 
 def test_a_volume_motion_never_reaches_its_own_prediction():
     """Moving only volume j changes every prediction but that of volume j."""
     dataset, _ = _copies(np.random.default_rng(1234))
-    plan = sens.one_at_a_time([3], 2.0, center=sens.mask_centroid(dataset))
+    plan = pert.one_at_a_time([3], 2.0, center=pert.mask_centroid(dataset))
 
-    rows = sens.sensitivity(ExpectationModel, dataset, plan, stat="mean")
+    rows = sens.sensitivity(ExpectationModel, dataset, _cells(dataset, plan), stat="mean")
 
     assert len(rows) == len(dataset)
     for row in rows:
@@ -317,20 +246,17 @@ def _rotvec(motion):
 def test_trivial_on_copies_is_perfect_under_any_plan():
     """The trivial model predicts the b=0 its training copies came from, wherever they move."""
     dataset, bzero = _copies(np.random.default_rng(1234))
-    plan = sens.perturbation_plan(
+    plan = pert.perturbation_plan(
         len(dataset),
         magnitudes=(0.5, 2.0),
         counts=(1, 4),
         seeds=2,
-        center=sens.mask_centroid(dataset),
+        center=pert.mask_centroid(dataset),
     )
-    # Every volume is compared on the shifted grid
-    grid = sens.shift_grid(dataset)
+    aligned = sens.fidelity(TrivialModel, dataset, predicted=bzero)
+    rows = sens.sensitivity(TrivialModel, dataset, _cells(dataset, plan), predicted=bzero)
 
-    aligned = sens.fidelity(TrivialModel, grid, predicted=grid.dataobj[0])
-    rows = sens.sensitivity(TrivialModel, dataset, plan, predicted=grid.dataobj[0])
-
-    entropy = mutual_information(grid.dataobj[0], grid.dataobj[0], grid.brainmask)
+    entropy = mutual_information(bzero, bzero, dataset.brainmask)
     assert len(aligned) == len(dataset)
     for row in aligned:
         assert row["cc"] == pytest.approx(1.0)
@@ -340,8 +266,8 @@ def test_trivial_on_copies_is_perfect_under_any_plan():
     assert all(row["nrmse"] == 0.0 for row in rows)
 
     # The control can fail: a 1 mm motion of the held-out volume is visible
-    motion = sens.rigid_motion(1.0, (0, 0, 1), (1, 0, 0), sens.mask_centroid(dataset))
-    moved = sens.perturb(dataset, sens.Perturbation(1.0, None, (0,), (motion,)))
+    motion = pert.rigid_motion(1.0, (0, 0, 1), (1, 0, 0), pert.mask_centroid(dataset))
+    moved = pert.perturb(dataset, sens.Perturbation(1.0, None, (0,), (motion,)))
     assert masked_cc(bzero, moved.dataobj[0], dataset.brainmask) < 0.99
     assert nrmse(bzero, moved.dataobj[0], dataset.brainmask) > 0.1
 
@@ -350,30 +276,29 @@ def test_mean_of_copies_matches_its_closed_form():
     """The mean of copies has a closed form; the median ignores a moved minority."""
     dataset, _ = _copies(np.random.default_rng(1234))
     n_volumes, evaluate = len(dataset), [0]
-    plan = sens.perturbation_plan(
+    plan = pert.perturbation_plan(
         n_volumes,
         magnitudes=(1.0,),
         counts=(1, 3, 6),
         seeds=2,
-        center=sens.mask_centroid(dataset),
+        center=pert.mask_centroid(dataset),
         fixed=evaluate,
     )
 
-    grid = sens.shift_grid(dataset)
-    rows = sens.sensitivity(ExpectationModel, dataset, plan, evaluate, stat="mean")
-    for perturbation, row in zip(plan, rows, strict=True):
-        moved = sens.perturb(dataset, perturbation, grid=grid)
+    cells = _cells(dataset, plan)
+    rows = sens.sensitivity(ExpectationModel, dataset, cells, evaluate, stat="mean")
+    for (perturbation, moved), row in zip(cells, rows, strict=True):
         expected = (
-            (n_volumes - 1 - perturbation.count) * grid.dataobj[0]
+            (n_volumes - 1 - perturbation.count) * dataset.dataobj[0]
             + moved.dataobj[list(perturbation.moved)].sum(axis=0)
         ) / (n_volumes - 1)
         predicted = sens.held_out_predictions(ExpectationModel, moved, evaluate, stat="mean")
         assert np.allclose(predicted[0], expected, rtol=1e-5, atol=1e-3)
         assert row["nrmse"] == pytest.approx(
-            nrmse(expected, grid.dataobj[0], grid.brainmask), rel=1e-4
+            nrmse(expected, dataset.dataobj[0], dataset.brainmask), rel=1e-4
         )
 
-    rows = sens.sensitivity(ExpectationModel, dataset, plan, evaluate, stat="median")
+    rows = sens.sensitivity(ExpectationModel, dataset, cells, evaluate, stat="median")
     for row in rows:
         if row["count"] < (n_volumes - 1) / 2:
             assert row["nrmse"] == 0.0
@@ -385,21 +310,20 @@ def test_change_is_normalized_by_the_actual_volume():
     """The NRMSE divides the change by the actual volume's spread, not the prediction's."""
     dataset = _dwi(np.random.default_rng(1234))
     evaluate = [0, 5]
-    plan = sens.perturbation_plan(
-        len(dataset), magnitudes=(2.0,), counts=(8,), seeds=1, center=sens.mask_centroid(dataset)
+    plan = pert.perturbation_plan(
+        len(dataset), magnitudes=(2.0,), counts=(8,), seeds=1, center=pert.mask_centroid(dataset)
     )
 
-    rows = sens.sensitivity(ExpectationModel, dataset, plan, evaluate, stat="mean")
+    cells = _cells(dataset, plan)
+    rows = sens.sensitivity(ExpectationModel, dataset, cells, evaluate, stat="mean")
 
-    grid = sens.shift_grid(dataset)
-    mask = grid.brainmask
-    aligned = sens.held_out_predictions(ExpectationModel, grid, evaluate, stat="mean")
-    moved = sens.perturb(dataset, plan[0], grid=grid)
-    perturbed = sens.held_out_predictions(ExpectationModel, moved, evaluate, stat="mean")
+    mask = dataset.brainmask
+    aligned = sens.held_out_predictions(ExpectationModel, dataset, evaluate, stat="mean")
+    perturbed = sens.held_out_predictions(ExpectationModel, cells[0][1], evaluate, stat="mean")
     for row in rows:
         index = row["index"]
         change = np.sqrt(np.mean((perturbed[index] - aligned[index])[mask] ** 2))
-        assert row["nrmse"] == pytest.approx(change / grid.dataobj[index][mask].std(), rel=1e-6)
+        assert row["nrmse"] == pytest.approx(change / dataset.dataobj[index][mask].std(), rel=1e-6)
         # The mean of the others is smoother than any actual volume
         assert row["nrmse"] < nrmse(perturbed[index], aligned[index], mask)
 
@@ -415,18 +339,18 @@ def test_linear_smoother_change_is_exact(model, kwargs):
     """Moving training volumes changes each prediction by ``S @ ΔY``."""
     dataset = _dwi(np.random.default_rng(1234))
     evaluate = [0, 7, 15]
-    perturbation = sens.perturbation_plan(
+    perturbation = pert.perturbation_plan(
         len(dataset),
         magnitudes=(2.0,),
         counts=(4,),
         seeds=1,
-        center=sens.mask_centroid(dataset),
+        center=pert.mask_centroid(dataset),
         fixed=evaluate,
     )[0]
-    moved = sens.perturb(dataset, perturbation)
+    moved = pert.perturb(dataset, perturbation)
 
     before = sens.held_out_predictions(
-        model, sens.perturb(dataset, sens.NO_PERTURBATION), evaluate, **kwargs
+        model, pert.perturb(dataset, sens.NO_PERTURBATION), evaluate, **kwargs
     )
     after = sens.held_out_predictions(model, moved, evaluate, **kwargs)
 
@@ -453,8 +377,8 @@ def test_influence_is_the_norm_of_the_smoother_column():
     j = int(np.argmax(weights))
     evaluate = [i for i in range(len(dataset)) if i != j]
 
-    perturbation = sens.one_at_a_time([j], 2.0, center=sens.mask_centroid(dataset))[0]
-    moved = sens.perturb(dataset, perturbation)
+    perturbation = pert.one_at_a_time([j], 2.0, center=pert.mask_centroid(dataset))[0]
+    moved = pert.perturb(dataset, perturbation)
     before = sens.held_out_predictions(GPLOOModel, dataset, evaluate, hyperparameters=record)
     after = sens.held_out_predictions(GPLOOModel, moved, evaluate, hyperparameters=record)
 
@@ -493,10 +417,10 @@ def _only(distortion, index, coefficients):
 
 def test_rigid_resampling_matches_nitransforms():
     dataset, bzero = _copies(np.random.default_rng(1234))
-    motion = sens.rigid_motion(3.0, (1, 2, 0), (0, 1, 1), sens.mask_centroid(dataset))
+    motion = pert.rigid_motion(3.0, (1, 2, 0), (0, 1, 1), pert.mask_centroid(dataset))
     image = nb.Nifti1Image(bzero, dataset.affine)
 
-    moved = sens.perturb(dataset, sens.Perturbation(3.0, None, (0,), (motion,)))
+    moved = pert.perturb(dataset, sens.Perturbation(3.0, None, (0,), (motion,)))
 
     expected = apply(Affine(np.linalg.inv(motion)), image, reference=image)
     assert np.allclose(moved.dataobj[0], np.asanyarray(expected.dataobj), atol=1e-2)
@@ -510,7 +434,7 @@ def test_eddy_distortion_follows_the_gradient():
         [[*vector, 1000.0], [*-vector, 1000.0], [*vector, 4000.0], [0, 0, 0, 0], [0, 1, 0, 4000]]
     )
 
-    distortion = sens.eddy_distortion(dataset, 2.0, axis=1, degree=2, gradients=table)
+    distortion = pert.eddy_distortion(dataset, 2.0, axis=1, degree=2, gradients=table)
 
     coefficients = distortion.coefficients
     assert np.allclose(coefficients[1], -coefficients[0])
@@ -521,31 +445,25 @@ def test_eddy_distortion_follows_the_gradient():
     assert np.abs(coefficients @ values).max() == pytest.approx(2.0)
 
 
-def test_distortions_refuse_what_they_cannot_honor():
-    """No distortion without diffusion gradients, and no round trip through a distortion."""
+def test_distortions_need_diffusion_gradients():
     dataset, _ = _copies(np.random.default_rng(1234), n_volumes=3)
     with pytest.raises(ValueError, match="diffusion gradient"):
-        sens.eddy_distortion(dataset, 1.0, axis=1, gradients=np.zeros((3, 4)))
-
-    table = _table(np.random.default_rng(0), 3)
-    distortion = sens.eddy_distortion(dataset, 1.0, axis=1, gradients=table)
-    with pytest.raises(ValueError, match="rigid motions only"):
-        sens.perturb(dataset, sens.Perturbation(0.0, None, distortion=distortion), round_trip=True)
+        pert.eddy_distortion(dataset, 1.0, axis=1, gradients=np.zeros((3, 4)))
 
 
 def test_constant_distortion_is_a_translation_along_phase_encoding():
     dataset, _ = _copies(np.random.default_rng(1234))
-    template = sens.eddy_distortion(
+    template = pert.eddy_distortion(
         dataset, 1.0, axis=1, gradients=_table(np.random.default_rng(0), 9)
     )
     distortion = _only(template, 0, [1.5, 0.0, 0.0, 0.0])
 
-    distorted = sens.perturb(dataset, sens.Perturbation(0.0, None, distortion=distortion))
+    distorted = pert.perturb(dataset, sens.Perturbation(0.0, None, distortion=distortion))
 
     # The scanner shows what lies 1.5 mm further along y: the head appears 1.5 mm back
     shift = np.eye(4)
     shift[1, 3] = -1.5
-    moved = sens.perturb(dataset, sens.Perturbation(1.5, None, (0,), (shift,)))
+    moved = pert.perturb(dataset, sens.Perturbation(1.5, None, (0,), (shift,)))
     assert np.allclose(distorted.dataobj[0], moved.dataobj[0], atol=1e-3)
     assert np.array_equal(distorted.dataobj[1:], dataset.dataobj[1:])
 
@@ -553,12 +471,12 @@ def test_constant_distortion_is_a_translation_along_phase_encoding():
 def test_distortion_follows_the_motion_in_the_scanner_frame():
     """The head moves, then the scanner distorts: a constant distortion acts after the motion."""
     dataset, _ = _copies(np.random.default_rng(1234))
-    template = sens.eddy_distortion(
+    template = pert.eddy_distortion(
         dataset, 1.0, axis=1, gradients=_table(np.random.default_rng(0), 9)
     )
-    motion = sens.rigid_motion(10.0, (1, 0, 1), (0, 0, 1), sens.mask_centroid(dataset))
+    motion = pert.rigid_motion(10.0, (1, 0, 1), (0, 0, 1), pert.mask_centroid(dataset))
 
-    both = sens.perturb(
+    both = pert.perturb(
         dataset,
         sens.Perturbation(
             10.0, None, (0,), (motion,), distortion=_only(template, 0, [1.5, 0, 0, 0])
@@ -567,8 +485,8 @@ def test_distortion_follows_the_motion_in_the_scanner_frame():
 
     shift = np.eye(4)
     shift[1, 3] = -1.5
-    after = sens.perturb(dataset, sens.Perturbation(10.0, None, (0,), (shift @ motion,)))
-    before = sens.perturb(dataset, sens.Perturbation(10.0, None, (0,), (motion @ shift,)))
+    after = pert.perturb(dataset, sens.Perturbation(10.0, None, (0,), (shift @ motion,)))
+    before = pert.perturb(dataset, sens.Perturbation(10.0, None, (0,), (motion @ shift,)))
     assert np.allclose(both.dataobj[0], after.dataobj[0], atol=1e-3)
     assert not np.allclose(both.dataobj[0], before.dataobj[0], atol=1.0)
 
@@ -576,14 +494,14 @@ def test_distortion_follows_the_motion_in_the_scanner_frame():
 def test_distortion_moves_signal_along_phase_encoding_and_conserves_it():
     """A shear leaves the profiles across phase encoding intact; a stretch keeps the total."""
     dataset, bzero = _copies(np.random.default_rng(1234))
-    template = sens.eddy_distortion(
+    template = pert.eddy_distortion(
         dataset, 1.0, axis=1, gradients=_table(np.random.default_rng(0), 9)
     )
     shear = _only(template, 0, [0.0, 2.0, 0.0, 0.0])
     stretch = _only(template, 0, [0.0, 0.0, 2.0, 0.0])
 
-    sheared = sens.perturb(dataset, sens.Perturbation(0.0, None, distortion=shear)).dataobj[0]
-    stretched = sens.perturb(dataset, sens.Perturbation(0.0, None, distortion=stretch)).dataobj[0]
+    sheared = pert.perturb(dataset, sens.Perturbation(0.0, None, distortion=shear)).dataobj[0]
+    stretched = pert.perturb(dataset, sens.Perturbation(0.0, None, distortion=stretch)).dataobj[0]
 
     assert np.allclose(sheared.sum(axis=(1, 2)), bzero.sum(axis=(1, 2)), rtol=1e-3, atol=1.0)
     assert np.allclose(sheared.sum(axis=(0, 1)), bzero.sum(axis=(0, 1)), rtol=1e-3, atol=1.0)
@@ -601,8 +519,8 @@ def test_distortion_moves_signal_along_phase_encoding_and_conserves_it():
 @pytest.mark.parametrize("degree", [1, 2])
 def test_inherited_distortion_recovers_a_volume_own_distortion(degree):
     dataset = _dwi(np.random.default_rng(1234))
-    distortion = sens.eddy_distortion(dataset, 0.5, axis=1, degree=degree)
-    distorted = sens.perturb(dataset, sens.Perturbation(0.0, None, distortion=distortion))
+    distortion = pert.eddy_distortion(dataset, 0.5, axis=1, degree=degree)
+    distorted = pert.perturb(dataset, sens.Perturbation(0.0, None, distortion=distortion))
 
     for index in (0, 11, 23):
         fitted = sens.inherited_distortion(
@@ -626,10 +544,10 @@ def test_copies_inherit_the_distortion_of_the_others(octant):
         # Distortions no longer cancel out over the others
         table[:, :3] = np.abs(table[:, :3])
     # Small enough that the blur of averaging distortions (second order) is negligible
-    distortion = sens.eddy_distortion(dataset, 0.1, axis=1, gradients=table)
-    perturbation = sens.Perturbation(0.0, None, distortion=distortion)
+    distortion = pert.eddy_distortion(dataset, 0.1, axis=1, gradients=table)
+    cells = _cells(dataset, [sens.Perturbation(0.0, None, distortion=distortion)])
 
-    rows = sens.sensitivity(ExpectationModel, dataset, [perturbation], stat="mean")
+    rows = sens.sensitivity(ExpectationModel, dataset, cells, stat="mean")
 
     coefficients = distortion.coefficients
     total = coefficients.sum(axis=0)
@@ -642,8 +560,7 @@ def test_copies_inherit_the_distortion_of_the_others(octant):
         inherited.append(row["inherited"])
     assert (np.mean(inherited) > 0.5) == octant
 
-    grid = sens.shift_grid(dataset)
-    rows = sens.sensitivity(TrivialModel, dataset, [perturbation], predicted=grid.dataobj[0])
+    rows = sens.sensitivity(TrivialModel, dataset, cells, predicted=dataset.dataobj[0])
     assert all(row["nrmse"] == 0.0 and row["inherited"] == 0.0 for row in rows)
 
 
@@ -651,17 +568,17 @@ def test_inheritance_is_measured_on_top_of_the_motion():
     """A motion shared by all copies leaves their inherited share at its closed form."""
     dataset, _ = _copies(np.random.default_rng(1234))
     n_volumes = len(dataset)
-    distortion = sens.eddy_distortion(
+    distortion = pert.eddy_distortion(
         dataset, 0.1, axis=1, gradients=_table(np.random.default_rng(0), n_volumes)
     )
     # Moves along phase encoding too, which the distortion's constant term alone would absorb
-    motion = sens.rigid_motion(2.0, (1, 0, 1), (0, 1, 1), sens.mask_centroid(dataset))
+    motion = pert.rigid_motion(2.0, (1, 0, 1), (0, 1, 1), pert.mask_centroid(dataset))
     everyone = tuple(range(n_volumes))
-    perturbation = sens.Perturbation(
-        2.0, None, everyone, (motion,) * n_volumes, distortion=distortion
-    )
+    still = sens.Perturbation(2.0, None, everyone, (motion,) * n_volumes)
+    both = attrs.evolve(still, distortion=distortion)
 
-    rows = sens.sensitivity(ExpectationModel, dataset, [perturbation], stat="mean")
+    rows = sens.sensitivity(ExpectationModel, dataset, _cells(dataset, [still, both]), stat="mean")
+    rows = [row for row in rows if row["distortion"]]
 
     coefficients = distortion.coefficients
     total = coefficients.sum(axis=0)
@@ -669,3 +586,27 @@ def test_inheritance_is_measured_on_top_of_the_motion():
         own = coefficients[row["index"]]
         expected = (total - own) @ own / ((n_volumes - 1) * (own @ own))
         assert row["inherited"] == pytest.approx(expected, abs=0.015)
+
+
+def test_a_distortion_on_top_of_motions_needs_the_motions_alone():
+    """The inherited share of a moved and distorted copy is measured against the moved one."""
+    dataset, _ = _copies(np.random.default_rng(1234))
+    distortion = pert.eddy_distortion(
+        dataset, 0.1, axis=1, gradients=_table(np.random.default_rng(0), len(dataset))
+    )
+    still = pert.one_at_a_time([2], 1.0, center=pert.mask_centroid(dataset))[0]
+    both = attrs.evolve(still, distortion=distortion)
+    built = []
+
+    def model(data, **kwargs):
+        built.append(data)
+        return ExpectationModel(data, **kwargs)
+
+    with pytest.raises(ValueError, match="motions alone"):
+        sens.sensitivity(model, dataset, _cells(dataset, [both]), stat="mean")
+
+    built.clear()
+    rows = sens.sensitivity(model, dataset, _cells(dataset, [both, still]), stat="mean")
+    # The reference, the moved copy (once, for its own rows and the share) and the distorted one
+    assert len(built) == 3
+    assert len(rows) == 2 * len(dataset)
