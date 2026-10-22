@@ -1,0 +1,152 @@
+# Acquisition protocols reproduced by the synthetic reference dataset (#548).
+#
+# Each table is protocols/<name>.b: one "x y z b" row per volume, unit vectors in
+# world (RAS) coordinates as prescribed, b in s/mm². fetch_protocols.py rebuilds
+# them from the sources below (`--check` compares). Matrices list the readout,
+# phase-encoding and slice axes; phase_encoding names the world axis of the
+# phase-encoding direction. SNR is the mean white-matter b=0 signal over the
+# standard deviation of the noise in each real or imaginary channel.
+
+[hcpya]
+title = "Human Connectome Project, Young Adult (WU-Minn)"
+gradients = "protocols/hcpya.b"
+sha256 = "26926178ca3b7cbc42d550276ab0aeb68735ee62612cdc93b0e5f088fdc4b9b7"
+shells = { "0" = 18, "1000" = 90, "2000" = 90, "3000" = 90 }
+sphere = "whole"
+source = "https://wiki.humanconnectome.org/docs/assets/HCP_Diffusion_Vectors.txt"
+source_sha256 = { dvs = "add9095939d67a8f1e49b521c804079986cc38de399f7a5bb0ff448e3667777c" }
+source_frame = "Siemens device coordinates (LPS, head first supine); the three runs in acquisition order"
+license = "No license stated (copyright Human Connectome Project); bundled with attribution"
+citation = "Sotiropoulos SN et al. (2013) NeuroImage 80:125. doi:10.1016/j.neuroimage.2013.05.057"
+retrieved = 2026-10-22
+scanner = "Siemens Skyra Connectom, 3 T"
+voxel_mm = [1.25, 1.25, 1.25]
+matrix = [168, 144, 111]
+phase_encoding = "LR"
+echo_time = 0.0895
+echo_spacing = 0.00078
+total_readout_time = 0.1115
+snr_b0 = 9.0
+snr_source = "Extrapolated: 37 at 2 mm with multiband 3 on the same scanner (Sotiropoulos et al. 2013, Fig. 1, corpus callosum), scaled by voxel volume to 1.25 mm"
+rationale = """The densest and most cited multi-shell protocol: three balanced shells up to b=3000 \
+with 90 directions each, at the finest resolution of the set (1.25 mm)."""
+
+[hbn]
+title = "Healthy Brain Network (Child Mind Institute), CBIC site"
+gradients = "protocols/hbn.b"
+sha256 = "c9628a61b7431decf4507ccd5129b3994d82b47d304a24dfccbcbdea2aa44c23"
+shells = { "0" = 1, "1000" = 64, "2000" = 64 }
+sphere = "whole"
+source = "https://fcp-indi.s3.amazonaws.com/data/Projects/HBN/MRI/Site-CBIC/sub-NDARAA396TWZ/dwi/sub-NDARAA396TWZ_acq-64dir_dwi"
+source_sha256 = { bvec = "a748b1572d0b3a6c13b47e90ec9d344690021592e7753a01cfa6db5d154726c9", bval = "c3bae603b3da5f04e9b762ad4cca08127c28fcbc33da4e56a51803407464c662" }
+source_frame = "FSL b-vectors in the voxel frame of the subject's image (LAS)"
+license = "CC BY 4.0 (imaging data of the HBN release)"
+citation = "Alexander LM et al. (2017) Sci Data 4:170181. doi:10.1038/sdata.2017.181"
+retrieved = 2026-10-22
+scanner = "Siemens Prisma fit, 3 T"
+voxel_mm = [1.8, 1.8, 1.8]
+matrix = [104, 104, 72]
+phase_encoding = "AP"
+echo_time = 0.1002
+echo_spacing = 0.00039
+total_readout_time = 0.0402
+snr_b0 = 10.9
+snr_source = "Measured by measure_snr.py on sub-NDARAA396TWZ (local PCA)"
+rationale = """A two-shell pediatric cohort of thousands of children: 64 directions per shell up to \
+b=2000 at 1.8 mm, one b=0, the same directions in both shells."""
+
+[abcd]
+title = "Adolescent Brain Cognitive Development study, Siemens sites"
+gradients = "protocols/abcd.b"
+sha256 = "c35033fe0380f98824f4a0d09a46c4d4f62f805bd00ece6624f1f6dff5ab5c80"
+shells = { "0" = 7, "500" = 6, "1000" = 15, "2000" = 15, "3000" = 60 }
+sphere = "whole"
+source = "https://github.com/DCAN-Labs/abcd-dicom2bids/tree/aee6ca8e5d473dab86cd142681acb6752a7945c6/src/ABCD_Release_2.0_Diffusion_Tables"
+source_sha256 = { bvec = "f2b9997966996971d6e2325da6ac9ad554fe1c56eaa8756ec5072b76b8279a70", bval = "6d7b129ccd9b331e661f265e3528b1921fceeefcfd631e085a9560e52c2f4454" }
+source_frame = "FSL b-vectors, taken in the voxel frame of an LAS grid (no image is published with them)"
+license = "BSD-3-Clause (repository); the tables were supplied by the NIMH Data Archive; bundled with attribution"
+citation = "Casey BJ et al. (2018) Dev Cogn Neurosci 32:43. doi:10.1016/j.dcn.2018.03.001; Hagler DJ et al. (2019) NeuroImage 202:116091. doi:10.1016/j.neuroimage.2019.116091"
+retrieved = 2026-10-22
+scanner = "Siemens Prisma, 3 T"
+voxel_mm = [1.7, 1.7, 1.7]
+matrix = [140, 140, 81]
+phase_encoding = "AP"
+echo_time = 0.088
+echo_spacing = 0.00069
+total_readout_time = nan
+snr_b0 = 13.4
+snr_source = "Extrapolated from HBN (10.9): voxel volume (1.7/1.8)^3, echo time 88 instead of 100 ms (white-matter T2 70 ms), no in-plane acceleration instead of GRAPPA 2 (sqrt 2), partial Fourier 6/8 (sqrt 0.75)"
+rationale = """The largest adolescent cohort: four unbalanced shells (6, 15, 15 and 60 directions \
+from b=500 to 3000), so the inner shells are sparse."""
+
+[sherbrooke]
+title = "Sherbrooke 3-shell (DIPY's sherbrooke_3shell)"
+gradients = "protocols/sherbrooke.b"
+sha256 = "81fab779b7b9b19d2b5f245402198ff5f41ee88375ff8dc3bb58ac24b5640c09"
+shells = { "0" = 1, "1000" = 64, "2000" = 64, "3500" = 64 }
+sphere = "whole"
+source = "https://hdl.handle.net/1773/38475"
+source_sha256 = { bvec = "a5861583c04e9e3782ee6e7f737479520cfea576635f14eefbd4eaf1e441a20b", bval = "b0614efa30ca8f5fdd1c29e88fc7caa652c9759f3942a3619c83e9c69f024877" }
+source_frame = "Voxel frame of an image whose axes are those of RAS, as DIPY reads it"
+license = "CC0 1.0"
+citation = "Garyfallidis E et al. (2014) Front Neuroinform 8. doi:10.3389/fninf.2014.00008"
+retrieved = 2026-10-22
+scanner = "Siemens Magnetom, 1.5 T"
+voxel_mm = [2.0, 2.0, 2.0]
+matrix = [128, 128, 60]
+phase_encoding = "AP"
+echo_time = nan
+echo_spacing = nan
+total_readout_time = nan
+snr_b0 = 8.9
+snr_source = "Measured by measure_snr.py (local PCA); likely low, since the real eddy currents of these data add to the noise estimate"
+rationale = """Continuity with the sensitivity runs so far, the highest b of the set (3500) and \
+the only 1.5 T scanner; phase encoding AP as measured from its eddy currents (#548)."""
+
+[stanford]
+title = "Stanford HARDI (DIPY's stanford_hardi)"
+gradients = "protocols/stanford.b"
+sha256 = "d5fe62fcc07b2e9ce2a6794c2363f83f0f5abe256855ab6c96d708b31cead088"
+shells = { "0" = 10, "2000" = 150 }
+sphere = "whole"
+source = "https://purl.stanford.edu/yx282xq2090"
+source_sha256 = { bvec = "42dd0ed0b39824bac888be7f3d68e9dd4c6a85f1c8bfa26a050653c618111723", bval = "aa9399094599ddd516603ad81272892bdda85c2d9bee5314086efce8db231e4d" }
+source_frame = "Voxel frame of the released image (resampled to an AC-PC aligned RAS grid)"
+license = "ODC Public Domain Dedication and License (PDDL) 1.0"
+citation = "Rokem A et al. (2015) PLoS ONE 10:e0123272. doi:10.1371/journal.pone.0123272"
+retrieved = 2026-10-22
+scanner = "GE Discovery MR750, 3 T"
+voxel_mm = [2.0, 2.0, 2.0]
+matrix = [81, 106, 76]
+phase_encoding = "AP"
+echo_time = 0.0936
+echo_spacing = nan
+total_readout_time = nan
+snr_b0 = 18.5
+snr_source = "Measured by measure_snr.py (local PCA); differences of the b=0 volumes give 17.9"
+rationale = """High angular resolution on one shell: 150 directions at b=2000, ten b=0 volumes, \
+and the only GE scanner of the set."""
+
+[aomic]
+title = "Amsterdam Open MRI Collection, PIOP2 (clinical single shell)"
+gradients = "protocols/aomic.b"
+sha256 = "8ea293832f3613f04d76b8eca12e006481f2f64c9fd484cdeed91419d7d4b63f"
+shells = { "0" = 1, "1000" = 32 }
+sphere = "half"
+source = "https://openneuro.org/datasets/ds002790"
+source_sha256 = { bvec = "c7375a0ae48744b661cab5f3c96572e6dc2b3ea4db441aa3803d607ba3fcfff2", bval = "1eee0f2e03a6e1c661d4fb60b44c55328866434abc07b0779eb1c8e69dd40f7c" }
+source_frame = "FSL b-vectors in the voxel frame of the subject's image (LAS)"
+license = "CC0 1.0"
+citation = "Snoek L et al. (2021) Sci Data 8:85. doi:10.1038/s41597-021-00870-6"
+retrieved = 2026-10-22
+scanner = "Philips, 3 T"
+voxel_mm = [2.0, 2.0, 2.0]
+matrix = [112, 112, 60]
+phase_encoding = "AP"
+echo_time = 0.0875
+echo_spacing = nan
+total_readout_time = 0.0436
+snr_b0 = 19.4
+snr_source = "Measured by measure_snr.py on sub-0001 (local PCA)"
+rationale = """The minimal clinical acquisition many sites still run: 32 directions at b=1000 on \
+half the sphere, where eddy-current distortions no longer cancel over the directions."""
