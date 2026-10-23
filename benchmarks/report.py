@@ -56,19 +56,31 @@ class Gate:
     themselves. Times fail past ``factor`` only if significant (one-sided
     Mann-Whitney U test, ``p < alpha``, at least ``min_samples`` per commit),
     and not when ``main`` takes under ``min_time`` seconds: an extra copy in
-    such a call shows in its allocations instead.
+    such a call shows in its allocations instead. Quality values are also the
+    same on every run, but they are dimensionless and can be zero or negative,
+    so they have no ``factor``: they fail when they change by ``min_change`` or
+    more in the worse direction, which ``higher_is_worse`` gives.
     """
 
     title: str
     measure: str
-    factor: float
+    factor: float | None
     min_change: float | None = None
     floor: float | None = None
     alpha: float = 0.01
     min_samples: int = 6
     min_time: float = 0.01
+    higher_is_worse: bool = True
+
+    @property
+    def absolute(self) -> bool:
+        """Whether values are judged by their change rather than by their ratio."""
+        return self.factor is None
 
     def describe(self) -> str:
+        if self.absolute:
+            change = "rises" if self.higher_is_worse else "falls"
+            return f"fails when it {change} by {self.min_change:g} or more"
         if self.min_change is not None:
             return f"fails at {self.factor}x and {self.min_change:g} MB or more"
         return (
@@ -82,10 +94,23 @@ GATES = {
     "rss": Gate("Peak RSS", "MB, median of 3 processes", 1.5, min_change=16.0, floor=16.0),
     "cpu": Gate("CPU time", "seconds", 1.5),
     "wall": Gate("Wall time", "seconds", 1.5),
+    "drift": Gate(
+        "Prediction drift", "NRMSE against the aligned prediction", None, min_change=0.01
+    ),
+    "share": Gate("Inherited share", "share of a volume's own distortion", None, min_change=0.02),
+    "ratio": Gate(
+        "Compounding",
+        "combined drift over the quadrature sum of the separate drifts",
+        None,
+        min_change=0.05,
+    ),
 }
 """The gate of each kind of benchmark."""
 
 KIND_PREFIXES = (
+    ("track_quality_drift_", "drift"),
+    ("track_quality_share_", "share"),
+    ("track_quality_ratio_", "ratio"),
     ("track_alloc_", "alloc"),
     ("track_rss_", "rss"),
     ("time_cpu_", "cpu"),
@@ -121,6 +146,13 @@ class Row:
         target, base = self.target, self.base
         if _is_value(target) and _is_value(base) and base:
             return target / base
+        return None
+
+    @property
+    def change(self) -> float | None:
+        target, base = self.target, self.base
+        if _is_value(target) and _is_value(base):
+            return target - base
         return None
 
 
@@ -233,6 +265,15 @@ def judge(row: Row, compare: bool = True) -> None:
     target, base = row.target, row.base
     assert _is_value(target) and _is_value(base)  # ensured by _availability
     gate = GATES[row.kind]
+    if gate.absolute:
+        _judge_change(row, gate, target - base)
+    else:
+        _judge_ratio(row, gate, target, base)
+
+
+def _judge_ratio(row: Row, gate: Gate, target: float, base: float) -> None:
+    """Set ``row.verdict`` and ``row.note`` by the ratio of a time or memory value."""
+    assert gate.factor is not None
     ratio = target / base if base else math.inf
     if 1 / gate.factor < ratio < gate.factor:
         return
@@ -260,12 +301,25 @@ def judge(row: Row, compare: bool = True) -> None:
         row.note = f"not significant (p={p:.2g})"
 
 
-def format_value(value: float | None, unit: str, floor: float | None = None) -> str:
+def _judge_change(row: Row, gate: Gate, change: float) -> None:
+    """Set ``row.verdict`` by the absolute ``change`` of a quality value."""
+    assert gate.min_change is not None
+    worse = change if gate.higher_is_worse else -change
+    # A change of exactly ``min_change`` fails, despite its rounding in floating point
+    if abs(worse) >= gate.min_change or math.isclose(abs(worse), gate.min_change):
+        row.verdict = WORSE if worse > 0 else BETTER
+
+
+def format_value(
+    value: float | None, unit: str, floor: float | None = None, decimals: int | None = None
+) -> str:
     """Format a benchmark value for a table."""
     if value is None:
         return "failed"
     if not _is_value(value):
         return "n/a"
+    if decimals is not None:
+        return f"{value:.{decimals}f}"
     if floor is not None and value <= floor:
         return f"<{floor:g} {unit}"
     if unit == "seconds":
@@ -306,25 +360,36 @@ def _outcome(rows: list[Row], compare: bool) -> tuple[str, list[Row]]:
 
 
 def _cells(row: Row, compare: bool) -> list[str]:
-    floor = GATES[row.kind].floor
+    gate = GATES[row.kind]
+    if gate.absolute:
+        values = [format_value(v, "", decimals=3) for v in (row.base, row.target)]
+        change = row.change
+        delta = f"{change:+.3f}" if change is not None else ""
+    else:
+        values = [format_value(v, row.unit, gate.floor) for v in (row.base, row.target)]
+        ratio = row.ratio
+        delta = f"{ratio:.2f}x" if ratio is not None else ""
     cells = [row.label]
     if compare:
-        ratio = row.ratio
-        cells += [
-            format_value(row.base, row.unit, floor),
-            format_value(row.target, row.unit, floor),
-            f"{ratio:.2f}x" if ratio is not None else "",
-        ]
+        cells += [*values, delta]
     else:
-        cells.append(format_value(row.target, row.unit, floor))
+        cells.append(values[1])
     cells.append(" ".join(filter(None, (row.verdict, row.note))))
     return cells
 
 
-def _header(compare: bool) -> list[str]:
+def _header(compare: bool, change: str = "Ratio") -> list[str]:
     if compare:
-        return ["Benchmark", "main", "PR", "Ratio", "Verdict"]
+        return ["Benchmark", "main", "PR", change, "Verdict"]
     return ["Benchmark", "Value", ""]
+
+
+def _change_header(gates: list[Gate]) -> str:
+    """Name the change column: a ratio, an absolute change (Δ), or both."""
+    kinds = {gate.absolute for gate in gates}
+    if kinds == {True}:
+        return "Δ"
+    return "Ratio" if kinds == {False} else "Change"
 
 
 def render_text(rows: list[Row], target: str, base: str | None) -> str:
@@ -342,7 +407,8 @@ def render_text(rows: list[Row], target: str, base: str | None) -> str:
         kind_rows = [r for r in rows if r.kind == kind]
         if not kind_rows:
             continue
-        table = [_header(compare)] + [_cells(r, compare) for r in kind_rows]
+        table = [_header(compare, _change_header([gate]))]
+        table += [_cells(r, compare) for r in kind_rows]
         widths = [max(len(row[i]) for row in table) for i in range(len(table[0]))]
         lines += ["", f"{gate.title} ({gate.measure}; {gate.describe()})"]
         for cells in table:
@@ -377,7 +443,7 @@ def render_markdown(rows: list[Row], target: str, base: str | None) -> str:
     if failing:
         lines += ["", "### Fails the job", ""]
         lines += _md_table(
-            ["Kind"] + _header(compare),
+            ["Kind"] + _header(compare, _change_header([GATES[r.kind] for r in failing])),
             [[GATES[r.kind].title] + _cells(r, compare) for r in failing],
         )
 
@@ -396,7 +462,9 @@ def render_markdown(rows: list[Row], target: str, base: str | None) -> str:
         lines += ["", f"<details><summary>{summary}</summary>", ""]
         lines.append(f"{gate.measure[0].upper()}{gate.measure[1:]}; {gate.describe()}.")
         lines.append("")
-        lines += _md_table(_header(compare), [_cells(r, compare) for r in kind_rows])
+        lines += _md_table(
+            _header(compare, _change_header([gate])), [_cells(r, compare) for r in kind_rows]
+        )
         lines += ["", "</details>"]
     return "\n".join(lines) + "\n"
 

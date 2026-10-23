@@ -13,20 +13,24 @@ What is measured
 The kind of each benchmark is given by its name, and each kind has its own
 threshold for a regression (see ``GATES`` in ``report.py``):
 
-=================  ================================================  ====================================
-Name prefix        Measure                                           A pull request fails when
-=================  ================================================  ====================================
-``track_alloc_``   Peak memory Python allocates during the call      1.25 times ``main`` and 2 MB more
-                   (``tracemalloc``), the same on every run
-``track_rss_``     Peak RSS increase of forked processes running     1.5 times ``main`` and 16 MB more
-                   the call (median of three); also counts memory
-                   maps and the buffers of C libraries
-``time_cpu_``      CPU seconds, joblib's workers included            1.5 times ``main``, significant
-                                                                     (one-sided Mann-Whitney U,
-                                                                     *p* < 0.01), and ``main`` takes
-                                                                     10 ms or more
-``time_``          Wall time                                         as for CPU time
-=================  ================================================  ====================================
+===================  ================================================  ====================================
+Name prefix          Measure                                           A pull request fails when
+===================  ================================================  ====================================
+``track_alloc_``     Peak memory Python allocates during the call      1.25 times ``main`` and 2 MB more
+                     (``tracemalloc``), the same on every run
+``track_rss_``       Peak RSS increase of forked processes running     1.5 times ``main`` and 16 MB more
+                     the call (median of three); also counts memory
+                     maps and the buffers of C libraries
+``time_cpu_``        CPU seconds, joblib's workers included            1.5 times ``main``, significant
+                                                                       (one-sided Mann-Whitney U,
+                                                                       *p* < 0.01), and ``main`` takes
+                                                                       10 ms or more
+``time_``            Wall time                                         as for CPU time
+``track_quality_``   Dimensionless, deterministic measures of model    it rises by 0.01 (``drift_``),
+                     quality: prediction drift (``drift_``),           0.02 (``share_``) or 0.05
+                     inherited share (``share_``), compounding         (``ratio_``) or more, whatever
+                     ratio (``ratio_``); lower is better               ``main``'s value
+===================  ================================================  ====================================
 
 - ``bench_data.py``: wall time of loading and writing DWI and PET data.
 - ``bench_memory.py``: allocations of the same operations on 40 MB series and of
