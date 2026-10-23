@@ -185,16 +185,25 @@ SHARE = "bench_quality.M.track_quality_share_gploo"
     ("name", "base", "target", "expected", "status"),
     [
         (DRIFT, 0.100, 0.115, "worse", 1),
-        (DRIFT, 0.100, 0.110, "worse", 1),  # exactly at the gate
+        (DRIFT, 0.100, 0.110, "worse", 1),  # a change of exactly min_change fails
         (DRIFT, 0.100, 0.105, "", 0),
         (DRIFT, 0.300, 0.200, "better", 0),
-        (DRIFT, 0.0, 0.020, "worse", 1),  # no ratio from a zero base
-        (SHARE, -0.050, -0.030, "worse", 1),  # negative values rise too
+        (DRIFT, 0.0, 0.020, "worse", 1),  # a zero base, where a ratio is undefined
+        (SHARE, -0.050, -0.030, "worse", 1),  # negative values: a rise of 0.02
         (SHARE, 0.120, 0.105, "", 0),
     ],
 )
 def test_quality_gates_on_absolute_change(tmp_path, name, base, target, expected, status):
-    """Deterministic quality values fail when they change by ``min_change``, whatever the base."""
+    """
+    Check the verdict on a quality benchmark, which comes from its absolute change.
+
+    A quality gate (``factor=None``) compares the change ``PR - main`` with its
+    ``min_change`` (0.01 for the drift, 0.02 for the inherited share) instead of
+    taking a ratio, which would be undefined for a zero base and misleading for
+    negative values. A rise of at least ``min_change`` is "worse" and fails the
+    job, a fall of at least ``min_change`` is "better", and a smaller change gets
+    no verdict. The report prints both values and the change with three decimals.
+    """
     got_status, text = run(
         tmp_path, {name: ([], "unitless")}, {name: _row([base])}, {name: _row([target])}
     )
@@ -206,7 +215,14 @@ def test_quality_gates_on_absolute_change(tmp_path, name, base, target, expected
 
 
 def test_quality_direction(tmp_path, monkeypatch):
-    """When higher is better, a fall fails the job and a rise does not."""
+    """
+    Check that ``judge`` takes the direction of a regression from the gate.
+
+    The quality gates in ``GATES`` all have ``higher_is_worse=True``. This test
+    sets it to ``False`` on the drift gate, as for a metric where higher is better
+    (such as a correlation). A drop from 0.5 to 0.4 must then be reported as worse
+    and fail the job, and a rise from 0.4 to 0.5 as better.
+    """
     monkeypatch.setitem(
         report.GATES, "drift", report.attrs.evolve(report.GATES["drift"], higher_is_worse=False)
     )
@@ -220,7 +236,16 @@ def test_quality_direction(tmp_path, monkeypatch):
 
 
 def test_quality_report(tmp_path):
-    """Quality kinds report their change, and skipped or new values as for any benchmark."""
+    """
+    Check how quality benchmarks appear in the plain-text and Markdown reports.
+
+    Each quality kind gets its own table, whose title states its gate and whose
+    change column (Δ) holds ``PR - main``; ratio kinds keep their "Ratio" column.
+    A quality value that is NaN on the pull request is reported as skipped, and
+    one missing on ``main`` as new, as for any other benchmark. In the Markdown
+    summary, one table lists the failing benchmarks of every kind, so its change
+    column is named "Change" and holds ratios and differences alike.
+    """
     benchmarks: dict[str, tuple[list, str]] = {
         DRIFT: ([], "unitless"),
         SHARE: ([], "unitless"),
