@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.analysis.similarity module" href="nifreeze.analysis.similarity.html"><link rel="prev" title="nifreeze.analysis.motion module" href="nifreeze.analysis.motion.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.analysis.sensitivity module - nifreeze 26.0.0.dev374 documentation</title>
+        <title>nifreeze.analysis.sensitivity module - nifreeze 26.0.0.dev376 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev374 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev376 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev374</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev376</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev374</span>
+  <span class="sidebar-brand-text">26.0.0.dev376</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -590,12 +590,14 @@ phase-encoding axis (with its Jacobian) changes it by
 <span class="math notranslate nohighlight">\(\partial_{PE} p \, d + p \, \partial_{PE} d\)</span>, which is linear in the
 coefficients of <span class="math notranslate nohighlight">\(d\)</span>. Least squares over the mask give the coefficients
 of the distortion that the change resembles; whatever the distortion cannot
-explain (noise, rigid motion) stays in the residual.</p>
+explain (noise) stays in the residual. A rigid motion does not: a
+translation along phase encoding is the distortion’s constant term, so
+<code class="docutils literal notranslate"><span class="pre">aligned</span></code> must carry the same motions as <code class="docutils literal notranslate"><span class="pre">perturbed</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>aligned</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – The prediction on the aligned dataset.</p></li>
-<li><p><strong>perturbed</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – The prediction on the perturbed dataset.</p></li>
+<li><p><strong>aligned</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – The prediction without the distortion.</p></li>
+<li><p><strong>perturbed</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – The prediction with the distortion.</p></li>
 <li><p><strong>distortion</strong> (<a class="reference internal" href="#nifreeze.analysis.sensitivity.Distortion" title="nifreeze.analysis.sensitivity.Distortion"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Distortion</span></code></a>) – The distortion, whose terms are fitted.</p></li>
 <li><p><strong>affine</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – Grid of the predictions.</p></li>
 <li><p><strong>mask</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – Voxels fitted.</p></li>
@@ -792,7 +794,10 @@ further metric, whether that volume was itself <code class="docutils literal not
 of the <code class="docutils literal notranslate"><span class="pre">distortion</span></code> (0 without one) and the share of the volume’s own
 distortion that its prediction <code class="docutils literal notranslate"><span class="pre">inherited</span></code> (the projection of the
 coefficients fitted by <a class="reference internal" href="#nifreeze.analysis.sensitivity.inherited_distortion" title="nifreeze.analysis.sensitivity.inherited_distortion"><code class="xref py py-func docutils literal notranslate"><span class="pre">inherited_distortion()</span></code></a> onto the volume’s
-own; NaN without a distortion, or for an undistorted volume).</p>
+own; NaN without a distortion, or for an undistorted volume). With
+motions too, the share is fitted to the change from the prediction with
+the same motions and no distortion, since a motion alone also projects
+onto the distortion’s terms.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a> of <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></p>
@@ -934,7 +939,7 @@ the b=0 reference, if any, are resampled too.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=cfffbf5a"></script>
+</div><script src="../_static/documentation_options.js?v=5c7fb129"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
