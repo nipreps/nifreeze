@@ -188,6 +188,7 @@ module = [
   "pandas",
   "attrs",
   "psutil",
+  "trxscan.*",
 ]
 ignore_missing_imports = true
 
