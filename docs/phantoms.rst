@@ -133,5 +133,56 @@ perturbed copy of it.
 repeated runs are identical and that a subset of the gradient table reproduces
 the same volumes of the full run, which the perturbed copies rely on.
 
+Perturbed copies
+----------------
+::
+
+    uv run tools/phantoms/phantom.py cells --protocol sherbrooke --out <dataset>
+
+simulates the perturbations of the reference, each with its exact ground truth.
+Only diffusion-weighted volumes are perturbed.
+
+Rigid motion
+    For each seed and magnitude m (0.5, 1, 2 and 4 by default), every volume
+    gets a rotation of m degrees about a random axis through the brain's
+    centroid and a translation of m mm in a random direction, drawn by
+    :func:`~nifreeze.analysis.sensitivity.perturbation_plan`.
+    Each moved volume is simulated again from the phantom moved in the scanner,
+    on the reference's grid, so the anatomy turns relative to the gradients as in
+    a real scan.
+Eddy currents
+    For each magnitude e (0.5, 1, 2 and 4 mm by default), every volume is
+    simulated with TRXScan's linear eddy-current model, without decay over the
+    readout, at the strength that displaces some voxel of the brain by e mm.
+    The displacement of each volume is known in closed form: a
+    :class:`~nifreeze.analysis.sensitivity.Distortion` along phase encoding,
+    with one term per voxel axis (TRXScan applies the b-vector's world
+    components to the grid axes as given).
+Both
+    Every moved volume is also simulated with each eddy-current magnitude.
+
+Only the changed volumes are written, noise-free, under
+``<dataset>/derivatives/perturbations/sub-60501/dwi``, one file per set:
+``desc-e<e>`` (every diffusion-weighted volume, with eddy currents),
+``desc-m<m>s<seed>`` (the moved volumes) and ``desc-m<m>s<seed>e<e>`` (the moved
+volumes with eddy currents), where ``0.5`` is written ``0p5``.
+The moved volumes come in the order of the plan, so a copy with K moved volumes
+takes the first K of them; the copy that moves one volume alone takes just that
+one.
+Each file has a sidecar with the index of each of its volumes in the reference
+(``SourceVolumes``), the motion matrices in world coordinates (``Motion``,
+mapping head positions before the motion to positions after it), and the
+eddy-current strength and coefficients (``Eddy``).
+A copy is assembled from the reference: the eddy-current volumes of magnitude e
+replace their counterparts, then the first K moved volumes replace theirs.
+
+``verify`` also checks that the closed-form displacement reproduces TRXScan's
+eddy-current images (within 10⁻⁴), and that a moved volume's center of mass moves
+as its matrix says (within a fifth of a voxel).
+A moved volume takes about 45 s at 2 mm (about 60 s at 1.25 mm): the moved
+phantom is gridded once, then simulated without and with each of the four
+eddy-current magnitudes. The default grid of one protocol thus takes from about
+2 hours (AOMIC-PIOP2) to 17 hours (HCP-YA).
+
 TRXScan's signal is a sum of Gaussian compartments, as the tensor and kurtosis
 models assume, so these models may fit the synthetic data better than real ones.

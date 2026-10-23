@@ -38,6 +38,7 @@ The only code that imports TRXScan, pinned to one commit above (its motion fixes
 are not released yet). Run it with ``uv run``, which builds that environment::
 
     uv run tools/phantoms/phantom.py reference --protocol sherbrooke --out <dataset>
+    uv run tools/phantoms/phantom.py cells --protocol sherbrooke --out <dataset>
     uv run tools/phantoms/phantom.py verify --protocol sherbrooke
 
 ``reference`` simulates the phantom under one protocol of ``protocols.toml``,
@@ -45,9 +46,18 @@ clean: no motion, eddy currents, susceptibility distortion, readout relaxation
 or noise; T2 contrast comes from per-tissue S0 at the protocol's echo time. It
 writes the noise-free magnitude, one noisy realization at the protocol's SNR,
 the brain mask, the gradients, the truth maps and a JSON sidecar, under
-``<dataset>/sub-60501/dwi``. ``verify`` checks, at a coarse resolution, what the
-perturbed datasets rely on: repeated runs are identical, and a subset of the
-gradient table reproduces the same volumes of the full run.
+``<dataset>/sub-60501/dwi``.
+
+``cells`` simulates the perturbed copies of that reference: diffusion-weighted
+volumes moved by rigid motions (re-simulated from the moved phantom), distorted
+by eddy currents (TRXScan's linear model, whose displacement is known in closed
+form), or both. It writes only the changed volumes, with their ground truth,
+under ``<dataset>/derivatives/perturbations/sub-60501/dwi``.
+
+``verify`` checks, at a coarse resolution, what the perturbed copies rely on:
+repeated runs are identical, a subset of the gradient table reproduces the same
+volumes of the full run, the closed-form displacement reproduces TRXScan's
+eddy-current images, and a moved volume moves as its matrix says.
 """
 
 import argparse
@@ -55,6 +65,7 @@ import json
 import math
 import sys
 import tomllib
+from functools import cache
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any
@@ -64,6 +75,7 @@ import numpy as np
 import trxscan as ts
 from dipy.core.gradients import gradient_table
 
+from nifreeze.analysis.sensitivity import perturbation_plan
 from nifreeze.testing.phantoms import add_noise, noise_sigma
 
 HERE = Path(__file__).parent
@@ -71,10 +83,16 @@ CATALOG = tomllib.loads((HERE / "protocols.toml").read_text())
 TRXSCAN_COMMIT = "680fc4f4559c5dd9fa759c2031f07f83384da2df"
 SUBJECT = "60501"
 """TRXScan's phantom: an adult (NIBS sub-60501) with ACT+SIFT2 streamlines, CC0."""
+PHANTOM_SEED = 0
+"""Seed of the streamlines kept from the phantom's million, the same for every dataset."""
 ASSUMED_ECHO_TIME = 0.09
 """Echo time (s) for the T2 contrast of a protocol whose echo time is not documented."""
 ROUNDOFF = 1e-4
 """Magnitudes below this (a millionth of TRXScan's signal scale) are FFT round-off."""
+EDDY_TAU_MS = 1e12
+"""Decay time of the eddy currents: none during the readout, so they only displace."""
+CLEAN = ts.Artifacts(distortion=False, relaxation=False)
+"""No susceptibility distortion and no T2 weighting along the readout."""
 
 
 def acquisition(name: str, voxel: float | None = None) -> Any:
@@ -125,14 +143,14 @@ def gradients(name: str, volumes: list[int] | None = None) -> tuple[np.ndarray, 
     return table, gradient_table(table[:, 3], bvecs=table[:, :3], b0_threshold=50)
 
 
-def phantom(streamlines: int, seed: int) -> Any:
-    return ts.Phantom.load(f"sub-{SUBJECT}").subsample(streamlines, seed=seed)
+@cache
+def phantom(streamlines: int) -> Any:
+    return ts.Phantom.load(f"sub-{SUBJECT}").subsample(streamlines, seed=PHANTOM_SEED)
 
 
 def simulate(
     name: str,
     streamlines: int = 400_000,
-    seed: int = 0,
     voxel: float | None = None,
     volumes: list[int] | None = None,
     chunk: int | None = 8,
@@ -141,16 +159,13 @@ def simulate(
     """Simulate the clean reference of one protocol."""
     protocol = acquisition(name, voxel)
     table, gtab = gradients(name, volumes)
-    source = phantom(streamlines, seed)
+    source = phantom(streamlines)
     grid = source.grid(protocol)
-    clean = ts.Artifacts(distortion=False, relaxation=False)
     simulation = grid.simulate(
-        gtab, protocol, clean, kspace=False, clean_b0=False, chunk=chunk, truth_peaks=truth
+        gtab, protocol, CLEAN, kspace=False, clean_b0=False, chunk=chunk, truth_peaks=truth
     )
     affine = simulation.magnitude.affine
-    dwi = np.asarray(simulation.magnitude.dataobj, dtype=np.float32)
-    # Zero the reconstruction's round-off outside the head, so that the files compress
-    dwi[dwi < ROUNDOFF] = 0.0
+    dwi = _magnitudes(simulation)
     return {
         "protocol": protocol,
         "table": table,
@@ -164,10 +179,61 @@ def simulate(
     }
 
 
-def write_reference(name: str, out: Path, streamlines: int, seed: int, chunk: int) -> Path:
+def _magnitudes(simulation: Any) -> np.ndarray:
+    """The simulated magnitudes, with the reconstruction's round-off outside the head zeroed
+    (so that the files compress)."""
+    dwi = np.asarray(simulation.magnitude.dataobj, dtype=np.float32)
+    dwi[dwi < ROUNDOFF] = 0.0
+    return dwi
+
+
+def _label(value: float) -> str:
+    """A magnitude as a BIDS label: 0.5 is ``0p5``."""
+    return f"{value:g}".replace(".", "p")
+
+
+def eddy_terms(grid: Any, protocol: Any, table: np.ndarray) -> dict[str, Any]:
+    """The closed-form displacement of TRXScan's linear eddy currents, per unit strength.
+
+    With no decay over the readout, TRXScan shifts the signal of volume ``v``
+    along the phase-encoding axis (j) by ``-TRT · strength · g_v · c`` voxels,
+    where ``g_v`` is the prescribed b-vector times the b-value (its world
+    components, applied to the grid axes as given) and ``c`` is the voxel's
+    position relative to voxel ``(nx/2, ny/2, nz/2)``. As a
+    :class:`~nifreeze.analysis.sensitivity.Distortion` (which pulls, in mm, with
+    one term per voxel axis scaled by the voxel size), the coefficients of volume
+    ``v`` are ``TRT · strength · voxel_j · (0, g_x, g_y, g_z)``.
+    """
+    affine = np.asarray(grid.affine, dtype=float)
+    shape = np.asarray(grid.dims)
+    voxels = np.linalg.norm(affine[:3, :3], axis=0)
+    readout = protocol.sidecar(int(shape[1]))["TotalReadoutTime"]
+    drive = table[:, :3] * table[:, 3:4]
+    unit = readout * voxels[1] * np.column_stack((np.zeros(len(table)), drive))
+    mask = np.asarray(grid.image("mask").dataobj) > 0.5
+    offsets = np.argwhere(mask) - shape / 2
+    return {
+        "readout": readout,
+        "center": affine[:3, :3] @ (shape / 2) + affine[:3, 3],
+        "radius": voxels,
+        "frame": affine[:3, :3] / voxels,
+        "unit": unit,
+        # Largest displacement (mm) in the brain, over all volumes, at unit strength
+        "reach": float(np.abs(unit[:, 1:] @ offsets.T).max()),
+    }
+
+
+def write_reference(
+    name: str,
+    out: Path,
+    streamlines: int = 400_000,
+    seed: int = 0,
+    voxel: float | None = None,
+    chunk: int | None = 8,
+) -> Path:
     """Write the clean and noisy datasets of one protocol, with their truth."""
     entry = CATALOG[name]
-    result = simulate(name, streamlines, seed, chunk=chunk)
+    result = simulate(name, streamlines, voxel=voxel, chunk=chunk)
     dwi, affine, table = result["dwi"], result["affine"], result["table"]
     bzero = dwi[..., table[:, 3] < 50].mean(axis=-1)
     white = result["white_matter"] & result["mask"]
@@ -207,20 +273,150 @@ def write_reference(name: str, out: Path, streamlines: int, seed: int, chunk: in
             "Keying": "numpy default_rng([seed, volume index])",
             "WhiteMatterVoxels": int(white.sum()),
         },
-        "Phantom": {"Subject": SUBJECT, "Streamlines": streamlines, "SubsampleSeed": seed},
-        "GeneratedBy": {
-            "Name": "nifreeze tools/phantoms/phantom.py",
-            "NiFreezeVersion": version("nifreeze"),
-            "TRXScanVersion": version("trxscan"),
-            "TRXScanCommit": TRXSCAN_COMMIT,
-        },
+        "GeneratedBy": _provenance(streamlines),
     }
     Path(f"{stem}_dwi.json").write_text(json.dumps(sidecar, indent=2) + "\n")
     return folder
 
 
+def write_cells(
+    name: str,
+    out: Path,
+    magnitudes: list[float],
+    eddies: list[float],
+    seeds: list[int],
+    count: int | None = None,
+    streamlines: int = 400_000,
+    voxel: float | None = None,
+    chunk: int | None = 8,
+) -> Path:
+    """Write the perturbed copies of one protocol's reference, with their ground truth.
+
+    Only diffusion-weighted volumes are perturbed. For each seed and motion
+    magnitude, the first ``count`` volumes of the plan's ordering (all of them by
+    default) are re-simulated from the moved phantom, in the order of the plan, so
+    that the copy with K moved volumes takes the first K of them. For each
+    eddy-current magnitude, every diffusion-weighted volume is simulated with the
+    eddy currents, and so is every moved volume.
+    """
+    entry = CATALOG[name]
+    protocol = acquisition(name, voxel)
+    table, gtab = gradients(name)
+    source = phantom(streamlines)
+    grid = source.grid(protocol)
+    weighted = np.flatnonzero(table[:, 3] >= 50)
+    largest = int(np.argmax(table[:, 3]))
+    terms = eddy_terms(grid, protocol, table)
+    strengths = {e: e / terms["reach"] for e in eddies}
+    mask = np.asarray(grid.image("mask").dataobj) > 0.5
+    affine = np.asarray(grid.affine, dtype=float)
+    center = affine[:3, :3] @ np.argwhere(mask).mean(axis=0) + affine[:3, 3]
+
+    folder = out / "derivatives" / "perturbations" / f"sub-{SUBJECT}" / "dwi"
+    folder.mkdir(parents=True, exist_ok=True)
+    reference = f"sub-{SUBJECT}/dwi/sub-{SUBJECT}_acq-{name}_rec-clean_dwi.nii.gz"
+
+    def eddy(e: float, volumes: np.ndarray) -> dict[str, Any]:
+        return {
+            "Magnitude": e,
+            "Strength": strengths[e],
+            "TauMs": EDDY_TAU_MS,
+            "TotalReadoutTime": terms["readout"],
+            "Distortion": {
+                "Axis": 1,
+                "Degree": 1,
+                "Center": terms["center"].tolist(),
+                "Radius": terms["radius"].tolist(),
+                "Frame": terms["frame"].tolist(),
+                "Coefficients": (strengths[e] * terms["unit"][volumes]).tolist(),
+            },
+        }
+
+    def write(
+        desc: str, data: list[np.ndarray], volumes: np.ndarray, sidecar: dict[str, Any]
+    ) -> None:
+        stem = folder / f"sub-{SUBJECT}_acq-{name}_desc-{desc}_dwi"
+        nb.Nifti1Image(np.stack(data, axis=-1), affine).to_filename(f"{stem}.nii.gz")
+        sidecar = {
+            "Protocol": name,
+            "ProtocolSha256": entry["sha256"],
+            "Reference": reference,
+            "SourceVolumes": [int(v) for v in volumes],
+            **sidecar,
+            "GeneratedBy": _provenance(streamlines),
+        }
+        Path(f"{stem}.json").write_text(json.dumps(sidecar, indent=2) + "\n")
+
+    for e in eddies:
+        artifacts = CLEAN.replace(eddy=strengths[e], eddy_tau_ms=EDDY_TAU_MS)
+        simulation = grid.simulate(
+            gtab, protocol, artifacts, kspace=False, clean_b0=False, chunk=chunk
+        )
+        distorted = _magnitudes(simulation)
+        write(
+            f"e{_label(e)}",
+            [distorted[..., v] for v in weighted],
+            weighted,
+            {"Kind": "eddy", "Motion": None, "Eddy": eddy(e, weighted)},
+        )
+
+    plan = perturbation_plan(
+        len(weighted),
+        magnitudes,
+        (len(weighted) if count is None else count,),
+        seeds=seeds,
+        center=center,
+    )
+    for perturbation in plan:
+        moved = weighted[list(perturbation.moved)]
+        motion = {
+            "Magnitude": perturbation.magnitude,
+            "Seed": perturbation.seed,
+            "Center": center.tolist(),
+            "Matrices": [np.asarray(m).tolist() for m in perturbation.motions],
+        }
+        still: list[np.ndarray] = []
+        distorted_moved: dict[float, list[np.ndarray]] = {e: [] for e in eddies}
+        for volume, matrix in zip(moved, perturbation.motions, strict=True):
+            # The head moves in the scanner: the phantom is moved, then gridded as the reference
+            moved_grid = source.moved(np.asarray(matrix)).grid(protocol, like=grid)
+            # The table's largest b-value comes along, as in the reference's simulation
+            subset = gradients(name, [int(volume), largest])[1]
+            for magnitude in [None, *eddies]:
+                artifacts = CLEAN
+                if magnitude is not None:
+                    artifacts = CLEAN.replace(eddy=strengths[magnitude], eddy_tau_ms=EDDY_TAU_MS)
+                simulation = moved_grid.simulate(
+                    subset, protocol, artifacts, kspace=False, clean_b0=False, chunk=chunk
+                )
+                image = _magnitudes(simulation)[..., 0]
+                (still if magnitude is None else distorted_moved[magnitude]).append(image)
+        label = f"m{_label(perturbation.magnitude)}s{perturbation.seed}"
+        write(label, still, moved, {"Kind": "motion", "Motion": motion, "Eddy": None})
+        for e in eddies:
+            write(
+                f"{label}e{_label(e)}",
+                distorted_moved[e],
+                moved,
+                {"Kind": "motion+eddy", "Motion": motion, "Eddy": eddy(e, moved)},
+            )
+    return folder
+
+
+def _provenance(streamlines: int) -> dict[str, Any]:
+    return {
+        "Name": "nifreeze tools/phantoms/phantom.py",
+        "NiFreezeVersion": version("nifreeze"),
+        "TRXScanVersion": version("trxscan"),
+        "TRXScanCommit": TRXSCAN_COMMIT,
+        "Phantom": f"sub-{SUBJECT}",
+        "Streamlines": streamlines,
+        "StreamlineSeed": PHANTOM_SEED,
+    }
+
+
 def verify(name: str, voxel: float = 4.0, streamlines: int = 50_000) -> list[str]:
-    """Check, at a coarse resolution, what the perturbed datasets rely on."""
+    """Check, at a coarse resolution, what the perturbed copies rely on."""
     table = np.loadtxt(HERE / CATALOG[name]["gradients"])
     # A few volumes of each shell, the largest b included
     picks = sorted(
@@ -236,7 +432,75 @@ def verify(name: str, voxel: float = 4.0, streamlines: int = 50_000) -> list[str
         failures.append("repeated runs differ")
     if not np.array_equal(alone, first[..., positions]):
         failures.append("a subset of the gradient table does not reproduce the full run")
+    failures += _verify_eddy(name, voxel, streamlines, picks)
+    failures += _verify_motion(name, voxel, streamlines, picks)
     return failures
+
+
+def _verify_eddy(name: str, voxel: float, streamlines: int, picks: list[int]) -> list[str]:
+    """The closed-form displacement reproduces TRXScan's eddy-current images.
+
+    Each phase-encoding column of the clean volume is displaced as TRXScan's
+    k-space model does: the signal at ``y`` accrues the phase of its eddy-current
+    field ``strength · g · c`` at the time each line is acquired.
+    """
+    protocol = acquisition(name, voxel)
+    table, gtab = gradients(name, picks)
+    grid = phantom(streamlines).grid(protocol)
+    terms = eddy_terms(grid, protocol, table)
+    strength = 2.0 / terms["reach"]
+    clean = _magnitudes(grid.simulate(gtab, protocol, CLEAN, kspace=False, clean_b0=False))
+    artifacts = CLEAN.replace(eddy=strength, eddy_tau_ms=EDDY_TAU_MS)
+    eddy = _magnitudes(grid.simulate(gtab, protocol, artifacts, kspace=False, clean_b0=False))
+    nx, ny, nz = clean.shape[:3]
+    times = np.asarray(protocol.readout(nx, ny).t_ms) / 1000.0
+    lines = -(np.arange(ny) - ny // 2)
+    forward = np.exp(-2j * np.pi * np.outer(lines, np.arange(ny)) / ny)
+    inverse = np.exp(2j * np.pi * np.outer(np.arange(ny), lines) / ny) / ny
+    worst = 0.0
+    for v in np.flatnonzero(table[:, 3] >= 50):
+        drive = strength * table[v, :3] * table[v, 3]
+        expected = np.empty((nx, ny, nz))
+        for i in range(nx):
+            for k in range(nz):
+                field = drive @ np.stack(
+                    np.broadcast_arrays(i - nx / 2, np.arange(ny) - ny / 2, k - nz / 2)
+                )
+                kspace = (forward * np.exp(2j * np.pi * np.outer(times, field))) @ clean[
+                    i, :, k, v
+                ]
+                expected[i, :, k] = np.abs(inverse @ kspace)
+        worst = max(worst, float(np.abs(expected - eddy[..., v]).max() / eddy[..., v].max()))
+    return [] if worst < 1e-4 else [f"eddy currents differ from their closed form ({worst:.2g})"]
+
+
+def _verify_motion(name: str, voxel: float, streamlines: int, picks: list[int]) -> list[str]:
+    """A moved volume's center of mass moves as its matrix says, within a fifth of a voxel."""
+    protocol = acquisition(name, voxel)
+    volume = [i for i in picks if gradients(name)[0][i, 3] >= 50][0]
+    gtab = gradients(name, [volume])[1]
+    source = phantom(streamlines)
+    grid = source.grid(protocol)
+    affine = np.asarray(grid.affine, dtype=float)
+
+    def center_of_mass(image: np.ndarray) -> np.ndarray:
+        ijk = np.argwhere(image > 0)
+        return affine[:3, :3] @ np.average(ijk, axis=0, weights=image[image > 0]) + affine[:3, 3]
+
+    still = _magnitudes(grid.simulate(gtab, protocol, CLEAN, kspace=False, clean_b0=False))
+    origin = center_of_mass(still[..., 0])
+    plan = perturbation_plan(1, (3.0,), (1,), seeds=(0,), center=origin)
+    matrix = np.asarray(plan[0].motions[0])
+    moved_grid = source.moved(matrix).grid(protocol, like=grid)
+    moved = _magnitudes(moved_grid.simulate(gtab, protocol, CLEAN, kspace=False, clean_b0=False))
+    error = np.linalg.norm(
+        center_of_mass(moved[..., 0]) - (matrix[:3, :3] @ origin + matrix[:3, 3])
+    )
+    return [] if error < 0.2 * voxel else [f"a moved volume is {error:.2f} mm off its motion"]
+
+
+def _floats(text: str) -> list[float]:
+    return [float(value) for value in text.split(",")]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -246,14 +510,41 @@ def main(argv: list[str] | None = None) -> int:
     reference.add_argument("--protocol", required=True, choices=sorted(CATALOG))
     reference.add_argument("--out", type=Path, required=True, help="dataset root")
     reference.add_argument("--streamlines", type=int, default=400_000)
-    reference.add_argument("--seed", type=int, default=0)
+    reference.add_argument("--seed", type=int, default=0, help="seed of the noise")
+    reference.add_argument("--voxel", type=float, help="isotropic voxel size (mm), same FOV")
     reference.add_argument("--chunk", type=int, default=8, help="slices per simulated slab")
-    check = commands.add_parser("verify", help="check determinism and subsets")
+    cells = commands.add_parser("cells", help="simulate the perturbed copies")
+    cells.add_argument("--protocol", required=True, choices=sorted(CATALOG))
+    cells.add_argument("--out", type=Path, required=True, help="dataset root")
+    cells.add_argument("--magnitudes", type=_floats, default=[0.5, 1.0, 2.0, 4.0])
+    cells.add_argument("--eddies", type=_floats, default=[0.5, 1.0, 2.0, 4.0])
+    cells.add_argument("--seeds", type=lambda text: [int(v) for v in text.split(",")], default=[0])
+    cells.add_argument("--count", type=int, help="moved volumes (all by default)")
+    cells.add_argument("--streamlines", type=int, default=400_000)
+    cells.add_argument("--voxel", type=float, help="isotropic voxel size (mm), same FOV")
+    cells.add_argument("--chunk", type=int, default=8, help="slices per simulated slab")
+    check = commands.add_parser("verify", help="check what the perturbed copies rely on")
     check.add_argument("--protocol", default="sherbrooke", choices=sorted(CATALOG))
     args = parser.parse_args(argv)
 
     if args.command == "reference":
-        folder = write_reference(args.protocol, args.out, args.streamlines, args.seed, args.chunk)
+        folder = write_reference(
+            args.protocol, args.out, args.streamlines, args.seed, args.voxel, args.chunk
+        )
+        print(f"wrote {folder}")
+        return 0
+    if args.command == "cells":
+        folder = write_cells(
+            args.protocol,
+            args.out,
+            args.magnitudes,
+            args.eddies,
+            args.seeds,
+            args.count,
+            args.streamlines,
+            args.voxel,
+            args.chunk,
+        )
         print(f"wrote {folder}")
         return 0
     failures = verify(args.protocol)
