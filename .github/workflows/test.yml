@@ -102,7 +102,7 @@ jobs:
             datalad clone ${TEST_DATA_REPO} ${TEST_DATA_HOME}
           fi
           cd ${TEST_DATA_HOME}
-          datalad update --merge .
+          datalad update --how merge
           datalad get -J4 ${TEST_DATA_PATHS}
       - name: Install DIPY and fetch stanford_hardi dataset
         if: steps.test-head.outputs.SHA != '' && steps.test-data.outputs.cache-hit != 'true'
