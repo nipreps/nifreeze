@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="What’s new?" href="changes.html"><link rel="prev" title="nifreeze.viz.signals module" href="api/nifreeze.viz.signals.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>Synthetic reference data - nifreeze 26.0.0.dev387 documentation</title>
+        <title>Synthetic reference data - nifreeze 26.0.0.dev395 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev387 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev395 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev387</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev395</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev387</span>
+  <span class="sidebar-brand-text">26.0.0.dev395</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -525,6 +525,27 @@ eddy-current magnitudes. The default grid of one protocol thus takes from about
 <p>TRXScan’s signal is a sum of Gaussian compartments, as the tensor and kurtosis
 models assume, so these models may fit the synthetic data better than real ones.</p>
 </section>
+<section id="the-dataset-of-continuous-integration">
+<h2>The dataset of continuous integration<a class="headerlink" href="#the-dataset-of-continuous-integration" title="Link to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">uv</span> <span class="n">run</span> <span class="n">tools</span><span class="o">/</span><span class="n">phantoms</span><span class="o">/</span><span class="n">phantom</span><span class="o">.</span><span class="n">py</span> <span class="n">fixture</span> <span class="o">--</span><span class="n">out</span> <span class="o">&lt;</span><span class="n">dataset</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>simulates a dataset small enough for every pull request (about 21 MB, under two
+minutes on a laptop): the Sherbrooke protocol at 4 mm with 50,000 streamlines,
+keeping its b=0 volume and 8 directions of each shell, spread over the sphere.
+It writes the reference and three perturbed copies, with the layout above:
+rigid motion of every diffusion-weighted volume at 1° and 1 mm (whose first
+quarter is a copy too), eddy currents of 2 voxels, and both.
+The volumes keep their order in the protocol; the sidecars list them
+(<code class="docutils literal notranslate"><span class="pre">ProtocolVolumes</span></code>), and the gradient file holds only their rows.</p>
+<p>In GitHub Actions, the composite action <code class="docutils literal notranslate"><span class="pre">.github/actions/phantom-fixtures</span></code>
+restores this dataset from the cache, or simulates it when the generator, its
+environment, the protocol or the NiFreeze code it calls have changed, and points
+the <code class="docutils literal notranslate"><span class="pre">NIFREEZE_PHANTOMS</span></code> environment variable to it.
+The generator’s environment is locked in <code class="docutils literal notranslate"><span class="pre">tools/phantoms/phantom.py.lock</span></code>
+(<code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">lock</span> <span class="pre">--script</span> <span class="pre">tools/phantoms/phantom.py</span></code>), so that a dataset simulated
+again comes from the same versions of every package.</p>
+</section>
 <section id="example-the-healthy-brain-network-protocol">
 <h2>Example: the Healthy Brain Network protocol<a class="headerlink" href="#example-the-healthy-brain-network-protocol" title="Link to this heading">¶</a></h2>
 <p>The figures below show the HBN protocol (1.8 mm, two shells of 64 directions),
@@ -635,6 +656,7 @@ contrast also changes as the fibers turn relative to the gradient.</span><a clas
 <li><a class="reference internal" href="#acquisition-protocols">Acquisition protocols</a></li>
 <li><a class="reference internal" href="#generating-the-reference-datasets">Generating the reference datasets</a></li>
 <li><a class="reference internal" href="#perturbed-copies">Perturbed copies</a></li>
+<li><a class="reference internal" href="#the-dataset-of-continuous-integration">The dataset of continuous integration</a></li>
 <li><a class="reference internal" href="#example-the-healthy-brain-network-protocol">Example: the Healthy Brain Network protocol</a></li>
 </ul>
 </li>
@@ -647,7 +669,7 @@ contrast also changes as the fibers turn relative to the gradient.</span><a clas
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=8d858c0f"></script>
+</div><script src="_static/documentation_options.js?v=7aca5238"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

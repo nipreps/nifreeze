@@ -193,6 +193,29 @@ eddy-current magnitudes. The default grid of one protocol thus takes from about
 TRXScan's signal is a sum of Gaussian compartments, as the tensor and kurtosis
 models assume, so these models may fit the synthetic data better than real ones.
 
+The dataset of continuous integration
+-------------------------------------
+::
+
+    uv run tools/phantoms/phantom.py fixture --out <dataset>
+
+simulates a dataset small enough for every pull request (about 21 MB, under two
+minutes on a laptop): the Sherbrooke protocol at 4 mm with 50,000 streamlines,
+keeping its b=0 volume and 8 directions of each shell, spread over the sphere.
+It writes the reference and three perturbed copies, with the layout above:
+rigid motion of every diffusion-weighted volume at 1° and 1 mm (whose first
+quarter is a copy too), eddy currents of 2 voxels, and both.
+The volumes keep their order in the protocol; the sidecars list them
+(``ProtocolVolumes``), and the gradient file holds only their rows.
+
+In GitHub Actions, the composite action ``.github/actions/phantom-fixtures``
+restores this dataset from the cache, or simulates it when the generator, its
+environment, the protocol or the NiFreeze code it calls have changed, and points
+the ``NIFREEZE_PHANTOMS`` environment variable to it.
+The generator's environment is locked in ``tools/phantoms/phantom.py.lock``
+(``uv lock --script tools/phantoms/phantom.py``), so that a dataset simulated
+again comes from the same versions of every package.
+
 Example: the Healthy Brain Network protocol
 -------------------------------------------
 The figures below show the HBN protocol (1.8 mm, two shells of 64 directions),
