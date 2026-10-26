@@ -20,5 +20,6 @@ Contents
     running
     citation
     developers
+    phantoms
     changes
     bibliography
