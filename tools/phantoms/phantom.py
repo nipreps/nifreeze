@@ -81,7 +81,7 @@ import numpy as np
 import trxscan as ts
 from dipy.core.gradients import gradient_table
 
-from nifreeze.analysis.sensitivity import perturbation_plan
+from nifreeze.testing.perturbations import perturbation_plan
 from nifreeze.testing.phantoms import add_noise, noise_sigma
 
 HERE = Path(__file__).parent
