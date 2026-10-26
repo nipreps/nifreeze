@@ -297,7 +297,10 @@ def write_cells(
     default) are re-simulated from the moved phantom, in the order of the plan, so
     that the copy with K moved volumes takes the first K of them. For each
     eddy-current magnitude, every diffusion-weighted volume is simulated with the
-    eddy currents, and so is every moved volume.
+    eddy currents, and so is every moved volume. An eddy-current magnitude is the
+    largest displacement of any brain voxel over all volumes, in voxels along phase
+    encoding; TRXScan's single strength then distorts each volume in proportion
+    to its b-value.
     """
     entry = CATALOG[name]
     protocol = acquisition(name, voxel)
@@ -307,7 +310,8 @@ def write_cells(
     weighted = np.flatnonzero(table[:, 3] >= 50)
     largest = int(np.argmax(table[:, 3]))
     terms = eddy_terms(grid, protocol, table)
-    strengths = {e: e / terms["reach"] for e in eddies}
+    # Magnitudes are in voxels along phase encoding, so they mean the same at any resolution
+    strengths = {e: e * terms["radius"][1] / terms["reach"] for e in eddies}
     mask = np.asarray(grid.image("mask").dataobj) > 0.5
     affine = np.asarray(grid.affine, dtype=float)
     center = affine[:3, :3] @ np.argwhere(mask).mean(axis=0) + affine[:3, 3]
@@ -319,6 +323,7 @@ def write_cells(
     def eddy(e: float, volumes: np.ndarray) -> dict[str, Any]:
         return {
             "Magnitude": e,
+            "MagnitudeMm": e * float(terms["radius"][1]),
             "Strength": strengths[e],
             "TauMs": EDDY_TAU_MS,
             "TotalReadoutTime": terms["readout"],
@@ -517,7 +522,12 @@ def main(argv: list[str] | None = None) -> int:
     cells.add_argument("--protocol", required=True, choices=sorted(CATALOG))
     cells.add_argument("--out", type=Path, required=True, help="dataset root")
     cells.add_argument("--magnitudes", type=_floats, default=[0.5, 1.0, 2.0, 4.0])
-    cells.add_argument("--eddies", type=_floats, default=[0.5, 1.0, 2.0, 4.0])
+    cells.add_argument(
+        "--eddies",
+        type=_floats,
+        default=[2.0, 4.0, 8.0],
+        help="largest eddy-current displacements, in voxels along phase encoding",
+    )
     cells.add_argument("--seeds", type=lambda text: [int(v) for v in text.split(",")], default=[0])
     cells.add_argument("--count", type=int, help="moved volumes (all by default)")
     cells.add_argument("--streamlines", type=int, default=400_000)

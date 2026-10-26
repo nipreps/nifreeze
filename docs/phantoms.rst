@@ -151,9 +151,14 @@ Rigid motion
     on the reference's grid, so the anatomy turns relative to the gradients as in
     a real scan.
 Eddy currents
-    For each magnitude e (0.5, 1, 2 and 4 mm by default), every volume is
+    For each magnitude e (2, 4 and 8 voxels by default), every volume is
     simulated with TRXScan's linear eddy-current model, without decay over the
-    readout, at the strength that displaces some voxel of the brain by e mm.
+    readout, at the strength that displaces some voxel of the brain by e voxels
+    along phase encoding.
+    TRXScan applies one strength to every volume, so each volume is distorted in
+    proportion to its b-value and its most distorted voxels lie at the edges of
+    the brain; at the weakest magnitude, the typical volume moves some voxel by
+    about one voxel.
     The displacement of each volume is known in closed form: a
     :class:`~nifreeze.analysis.sensitivity.Distortion` along phase encoding,
     with one term per voxel axis (TRXScan applies the b-vector's world
@@ -163,7 +168,7 @@ Both
 
 Only the changed volumes are written, noise-free, under
 ``<dataset>/derivatives/perturbations/sub-60501/dwi``, one file per set:
-``desc-e<e>`` (every diffusion-weighted volume, with eddy currents),
+``desc-e<e>`` (every diffusion-weighted volume, with eddy currents of e voxels),
 ``desc-m<m>s<seed>`` (the moved volumes) and ``desc-m<m>s<seed>e<e>`` (the moved
 volumes with eddy currents), where ``0.5`` is written ``0p5``.
 The moved volumes come in the order of the plan, so a copy with K moved volumes
@@ -179,10 +184,10 @@ replace their counterparts, then the first K moved volumes replace theirs.
 ``verify`` also checks that the closed-form displacement reproduces TRXScan's
 eddy-current images (within 10⁻⁴), and that a moved volume's center of mass moves
 as its matrix says (within a fifth of a voxel).
-A moved volume takes about 45 s at 2 mm (about 60 s at 1.25 mm): the moved
-phantom is gridded once, then simulated without and with each of the four
+A moved volume takes about 35 s at 2 mm (about 50 s at 1.25 mm): the moved
+phantom is gridded once, then simulated without and with each of the three
 eddy-current magnitudes. The default grid of one protocol thus takes from about
-2 hours (AOMIC-PIOP2) to 17 hours (HCP-YA).
+1.5 hours (AOMIC-PIOP2) to 14 hours (HCP-YA).
 
 TRXScan's signal is a sum of Gaussian compartments, as the tensor and kurtosis
 models assume, so these models may fit the synthetic data better than real ones.
