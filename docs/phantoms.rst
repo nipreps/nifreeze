@@ -177,7 +177,8 @@ one.
 Each file has a sidecar with the index of each of its volumes in the reference
 (``SourceVolumes``), the motion matrices in world coordinates (``Motion``,
 mapping head positions before the motion to positions after it), and the
-eddy-current strength and coefficients (``Eddy``).
+eddy-current strength, coefficients and the acquisition time of each
+phase-encoding line (``Eddy``).
 A copy is assembled from the reference: the eddy-current volumes of magnitude e
 replace their counterparts, then the first K moved volumes replace theirs.
 
