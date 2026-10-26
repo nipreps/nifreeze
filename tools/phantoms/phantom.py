@@ -254,18 +254,22 @@ def eddy_terms(grid: Any, protocol: Any, table: np.ndarray) -> dict[str, Any]:
     position relative to voxel ``(nx/2, ny/2, nz/2)``. As a
     :class:`~nifreeze.analysis.sensitivity.Distortion` (which pulls, in mm, with
     one term per voxel axis scaled by the voxel size), the coefficients of volume
-    ``v`` are ``TRT · strength · voxel_j · (0, g_x, g_y, g_z)``.
+    ``v`` are ``TRT · strength · voxel_j · (0, g_x, g_y, g_z)``. The image itself
+    is formed line by line: the ``n``-th phase-encoding line, ``ky = ny/2 - n``, is
+    acquired at ``times[n]`` (s, from the echo), when the field has added its phase.
     """
     affine = np.asarray(grid.affine, dtype=float)
     shape = np.asarray(grid.dims)
     voxels = np.linalg.norm(affine[:3, :3], axis=0)
     readout = protocol.sidecar(int(shape[1]))["TotalReadoutTime"]
+    times = np.asarray(protocol.readout(int(shape[0]), int(shape[1])).t_ms) / 1000.0
     drive = table[:, :3] * table[:, 3:4]
     unit = readout * voxels[1] * np.column_stack((np.zeros(len(table)), drive))
     mask = np.asarray(grid.image("mask").dataobj) > 0.5
     offsets = np.argwhere(mask) - shape / 2
     return {
         "readout": readout,
+        "times": times,
         "center": affine[:3, :3] @ (shape / 2) + affine[:3, 3],
         "radius": voxels,
         "frame": affine[:3, :3] / voxels,
@@ -384,6 +388,8 @@ def write_cells(
             "Strength": strengths[e],
             "TauMs": EDDY_TAU_MS,
             "TotalReadoutTime": terms["readout"],
+            # Gradient ticks make the lines' spacing alternate slightly
+            "ReadoutTimes": terms["times"].tolist(),
             "Distortion": {
                 "Axis": 1,
                 "Degree": 1,
@@ -526,7 +532,7 @@ def _verify_eddy(name: str, voxel: float, streamlines: int, picks: list[int]) ->
     artifacts = CLEAN.replace(eddy=strength, eddy_tau_ms=EDDY_TAU_MS)
     eddy = _magnitudes(grid.simulate(gtab, protocol, artifacts, kspace=False, clean_b0=False))
     nx, ny, nz = clean.shape[:3]
-    times = np.asarray(protocol.readout(nx, ny).t_ms) / 1000.0
+    times = terms["times"]
     lines = -(np.arange(ny) - ny // 2)
     forward = np.exp(-2j * np.pi * np.outer(lines, np.arange(ny)) / ny)
     inverse = np.exp(2j * np.pi * np.outer(np.arange(ny), lines) / ny) / ny
