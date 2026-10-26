@@ -129,9 +129,10 @@ The noise of each volume is drawn from a generator keyed on a seed and the
 volume's index (:func:`nifreeze.testing.phantoms.add_noise`), so the analysis can
 add the same noise to any stored noise-free volume, in the reference or in a
 perturbed copy of it.
-``uv run tools/phantoms/phantom.py verify`` checks, at a coarse resolution, that
-repeated runs are identical and that a subset of the gradient table reproduces
-the same volumes of the full run, which the perturbed copies rely on.
+``uv run tools/phantoms/phantom.py verify`` checks, at a coarse resolution and
+for every protocol, that repeated runs are identical and that a subset of the
+gradient table reproduces the same volumes of the full run, which the perturbed
+copies rely on.
 
 Perturbed copies
 ----------------

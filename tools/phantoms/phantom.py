@@ -231,6 +231,15 @@ def simulate(
     }
 
 
+def grid_moved(source: Any, matrix: np.ndarray, protocol: Any, grid: Any) -> Any:
+    """The phantom moved by ``matrix`` in the scanner, gridded exactly as ``grid``.
+
+    ``grid`` already carries the protocol's oblique rotation, which TRXScan would
+    apply again to the affine of ``like=``.
+    """
+    return source.moved(matrix).grid(protocol.replace(oblique_deg=None), like=grid)
+
+
 def _magnitudes(simulation: Any) -> np.ndarray:
     """The simulated magnitudes, with the reconstruction's round-off outside the head zeroed
     (so that the files compress)."""
@@ -251,11 +260,12 @@ def eddy_terms(grid: Any, protocol: Any, table: np.ndarray) -> dict[str, Any]:
     along the phase-encoding axis (j) by ``-TRT · strength · g_v · c`` voxels,
     where ``g_v`` is the prescribed b-vector times the b-value (its world
     components, applied to the grid axes as given) and ``c`` is the voxel's
-    position relative to voxel ``(nx/2, ny/2, nz/2)``. As a
+    position relative to voxel ``(nx // 2, ny // 2, nz // 2)``, the integer halves
+    as TRXScan's k-space indexing takes them. As a
     :class:`~nifreeze.analysis.sensitivity.Distortion` (which pulls, in mm, with
     one term per voxel axis scaled by the voxel size), the coefficients of volume
     ``v`` are ``TRT · strength · voxel_j · (0, g_x, g_y, g_z)``. The image itself
-    is formed line by line: the ``n``-th phase-encoding line, ``ky = ny/2 - n``, is
+    is formed line by line: the ``n``-th phase-encoding line, ``ky = ny // 2 - n``, is
     acquired at ``times[n]`` (s, from the echo), when the field has added its phase.
     """
     affine = np.asarray(grid.affine, dtype=float)
@@ -266,11 +276,12 @@ def eddy_terms(grid: Any, protocol: Any, table: np.ndarray) -> dict[str, Any]:
     drive = table[:, :3] * table[:, 3:4]
     unit = readout * voxels[1] * np.column_stack((np.zeros(len(table)), drive))
     mask = np.asarray(grid.image("mask").dataobj) > 0.5
-    offsets = np.argwhere(mask) - shape / 2
+    middle = shape // 2
+    offsets = np.argwhere(mask) - middle
     return {
         "readout": readout,
         "times": times,
-        "center": affine[:3, :3] @ (shape / 2) + affine[:3, 3],
+        "center": affine[:3, :3] @ middle + affine[:3, 3],
         "radius": voxels,
         "frame": affine[:3, :3] / voxels,
         "unit": unit,
@@ -448,7 +459,7 @@ def write_cells(
         distorted_moved: dict[float, list[np.ndarray]] = {e: [] for e in eddies}
         for volume, matrix in zip(moved, perturbation.motions, strict=True):
             # The head moves in the scanner: the phantom is moved, then gridded as the reference
-            moved_grid = source.moved(np.asarray(matrix)).grid(protocol, like=grid)
+            moved_grid = grid_moved(source, np.asarray(matrix), protocol, grid)
             # The table's largest b-value comes along, as in the reference's simulation
             subset = _dipy(table[[volume, largest]])
             for magnitude in [None, *eddies]:
@@ -543,7 +554,7 @@ def _verify_eddy(name: str, voxel: float, streamlines: int, picks: list[int]) ->
         for i in range(nx):
             for k in range(nz):
                 field = drive @ np.stack(
-                    np.broadcast_arrays(i - nx / 2, np.arange(ny) - ny / 2, k - nz / 2)
+                    np.broadcast_arrays(i - nx // 2, np.arange(ny) - ny // 2, k - nz // 2)
                 )
                 kspace = (forward * np.exp(2j * np.pi * np.outer(times, field))) @ clean[
                     i, :, k, v
@@ -570,7 +581,7 @@ def _verify_motion(name: str, voxel: float, streamlines: int, picks: list[int]) 
     origin = center_of_mass(still[..., 0])
     plan = perturbation_plan(1, (3.0,), (1,), seeds=(0,), center=origin)
     matrix = np.asarray(plan[0].motions[0])
-    moved_grid = source.moved(matrix).grid(protocol, like=grid)
+    moved_grid = grid_moved(source, matrix, protocol, grid)
     moved = _magnitudes(moved_grid.simulate(gtab, protocol, CLEAN, kspace=False, clean_b0=False))
     error = np.linalg.norm(
         center_of_mass(moved[..., 0]) - (matrix[:3, :3] @ origin + matrix[:3, 3])
@@ -608,7 +619,7 @@ def main(argv: list[str] | None = None) -> int:
     cells.add_argument("--voxel", type=float, help="isotropic voxel size (mm), same FOV")
     cells.add_argument("--chunk", type=int, default=8, help="slices per simulated slab")
     check = commands.add_parser("verify", help="check what the perturbed copies rely on")
-    check.add_argument("--protocol", default="sherbrooke", choices=sorted(CATALOG))
+    check.add_argument("--protocol", choices=sorted(CATALOG), help="one protocol (all by default)")
     fixture = commands.add_parser("fixture", help="simulate the small dataset of CI")
     fixture.add_argument("--out", type=Path, required=True, help="dataset root")
     args = parser.parse_args(argv)
@@ -636,7 +647,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "fixture":
         print(f"wrote {write_fixture(args.out)}")
         return 0
-    failures = verify(args.protocol)
+    names = sorted(CATALOG) if args.protocol is None else [args.protocol]
+    failures = [f"{name}: {failure}" for name in names for failure in verify(name)]
     for failure in failures:
         print(f"FAIL: {failure}")
     print("OK" if not failures else f"{len(failures)} check(s) failed")
