@@ -81,9 +81,10 @@ jobs:
         with:
           path: ${{ env.TEST_DATA_HOME }}
           key: ${{ steps.test-head.outputs.KEY }}
-          # Not the caches before v3, from recursive fetches
+          # The v2 caches come from recursive fetches, but predate the subdatasets
           restore-keys: |
             data-v3-
+            data-v2-
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
         if: steps.test-head.outputs.SHA != '' && steps.test-data.outputs.cache-hit != 'true'
@@ -147,6 +148,7 @@ jobs:
           # Latest cached test data when GIN could not be reached
           restore-keys: |
             data-v3-
+            data-v2-
       - name: Install TeX Live
         run: |
           sudo apt-get update
