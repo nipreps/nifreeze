@@ -24,8 +24,9 @@ env:
   ANTSPATH: /usr/share/miniconda/bin/
   NIFREEZE_WERRORS: 1
   TEST_DATA_REPO: https://gin.g-node.org/nipreps-data/tests-nifreeze
-  # The files of TEST_DATA_REPO that the tests read: fetching it whole would also bring
-  # its subdatasets (the phantoms of #548), larger than the cache
+  # The files of TEST_DATA_REPO that the tests read. They are git blobs, which any clone
+  # brings, but a recursive fetch would also bring its subdatasets (the phantoms of #548),
+  # larger than the cache
   TEST_DATA_PATHS: >-
     dwi.h5
     dmri_data/motion_test_data/dwi_motion.h5
@@ -80,7 +81,7 @@ jobs:
         with:
           path: ${{ env.TEST_DATA_HOME }}
           key: ${{ steps.test-head.outputs.KEY }}
-          # Not the caches before v3, which hold the whole dataset
+          # Not the caches before v3, from recursive fetches
           restore-keys: |
             data-v3-
       - name: Install the latest version of uv
