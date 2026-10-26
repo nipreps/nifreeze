@@ -24,6 +24,7 @@
 
 import importlib.util
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -102,7 +103,9 @@ def verdict_of(text, label):
     """Return the last column of the row of ``label`` in the plain-text report."""
     for line in text.splitlines():
         if line.strip().startswith(label + " ") or line.strip() == label:
-            return line.split("x  ", 1)[1].strip() if "x  " in line else ""
+            # Columns are padded with two spaces or more: label, main, PR, change, verdict
+            cells = re.split(r" {2,}", line.strip())
+            return cells[4] if len(cells) > 4 else ""
     raise AssertionError(f"{label} not in report:\n{text}")
 
 
@@ -172,6 +175,103 @@ def test_noise_with_outlier_not_significant(tmp_path):
     )
     assert status == 0
     assert verdict_of(text, "M.time_cpu_fit").startswith("not significant")
+
+
+DRIFT = "bench_quality.M.track_quality_drift_gploo"
+SHARE = "bench_quality.M.track_quality_share_gploo"
+
+
+@pytest.mark.parametrize(
+    ("name", "base", "target", "expected", "status"),
+    [
+        (DRIFT, 0.100, 0.115, "worse", 1),
+        (DRIFT, 0.100, 0.110, "worse", 1),  # a change of exactly min_change fails
+        (DRIFT, 0.100, 0.105, "", 0),
+        (DRIFT, 0.300, 0.200, "better", 0),
+        (DRIFT, 0.0, 0.020, "worse", 1),  # a zero base, where a ratio is undefined
+        (SHARE, -0.050, -0.030, "worse", 1),  # negative values: a rise of 0.02
+        (SHARE, 0.120, 0.105, "", 0),
+    ],
+)
+def test_quality_gates_on_absolute_change(tmp_path, name, base, target, expected, status):
+    """
+    Check the verdict on a quality benchmark, which comes from its absolute change.
+
+    A quality gate (``factor=None``) compares the change ``PR - main`` with its
+    ``min_change`` (0.01 for the drift, 0.02 for the inherited share) instead of
+    taking a ratio, which would be undefined for a zero base and misleading for
+    negative values. A rise of at least ``min_change`` is "worse" and fails the
+    job, a fall of at least ``min_change`` is "better", and a smaller change gets
+    no verdict. The report prints both values and the change with three decimals.
+    """
+    got_status, text = run(
+        tmp_path, {name: ([], "unitless")}, {name: _row([base])}, {name: _row([target])}
+    )
+    label = name.split(".", 1)[1]
+    assert got_status == status
+    assert verdict_of(text, label) == expected
+    assert f"{target - base:+.3f}" in text
+    assert f"{base:.3f}" in text and f"{target:.3f}" in text
+
+
+def test_quality_direction(tmp_path, monkeypatch):
+    """
+    Check that ``judge`` takes the direction of a regression from the gate.
+
+    The quality gates in ``GATES`` all have ``higher_is_worse=True``. This test
+    sets it to ``False`` on the drift gate, as for a metric where higher is better
+    (such as a correlation). A drop from 0.5 to 0.4 must then be reported as worse
+    and fail the job, and a rise from 0.4 to 0.5 as better.
+    """
+    monkeypatch.setitem(
+        report.GATES, "drift", report.attrs.evolve(report.GATES["drift"], higher_is_worse=False)
+    )
+    benchmarks: dict[str, tuple[list, str]] = {DRIFT: ([], "unitless")}
+    fall, rise = tmp_path / "fall", tmp_path / "rise"
+    status, text = run(fall, benchmarks, {DRIFT: _row([0.5])}, {DRIFT: _row([0.4])})
+    assert status == 1 and verdict_of(text, "M.track_quality_drift_gploo") == "worse"
+    assert "fails when it falls by 0.01 or more" in text
+    status, text = run(rise, benchmarks, {DRIFT: _row([0.4])}, {DRIFT: _row([0.5])})
+    assert status == 0 and verdict_of(text, "M.track_quality_drift_gploo") == "better"
+
+
+def test_quality_report(tmp_path):
+    """
+    Check how quality benchmarks appear in the plain-text and Markdown reports.
+
+    Each quality kind gets its own table, whose title states its gate and whose
+    change column (Δ) holds ``PR - main``; ratio kinds keep their "Ratio" column.
+    A quality value that is NaN on the pull request is reported as skipped, and
+    one missing on ``main`` as new, as for any other benchmark. In the Markdown
+    summary, one table lists the failing benchmarks of every kind, so its change
+    column is named "Change" and holds ratios and differences alike.
+    """
+    benchmarks: dict[str, tuple[list, str]] = {
+        DRIFT: ([], "unitless"),
+        SHARE: ([], "unitless"),
+        "bench_quality.M.track_quality_ratio_gploo": ([], "unitless"),
+        ALLOC: ([], "MB"),
+    }
+    base = {DRIFT: _row([0.100]), SHARE: _row([0.100]), ALLOC: _row([10.0])}
+    target = {
+        ALLOC: _row([13.0]),
+        DRIFT: _row([0.200]),
+        SHARE: _row([float("nan")]),
+        "bench_quality.M.track_quality_ratio_gploo": _row([0.950]),
+    }
+    status, text = run(tmp_path, benchmarks, base, target)
+    assert status == 1
+    assert "Prediction drift (" in text and "fails when it rises by 0.01 or more" in text
+    assert "skipped" in text.split("M.track_quality_share_gploo", 1)[1].splitlines()[0]
+    assert "new" in text.split("M.track_quality_ratio_gploo", 1)[1].splitlines()[0]
+    assert re.search(r"main +PR +Δ +Verdict", text)
+    assert re.search(r"main +PR +Ratio +Verdict", text)
+    summary = (tmp_path / "summary.md").read_text()
+    # One table lists the failures of every kind, ratios and changes alike
+    assert "| Kind | Benchmark | main | PR | Change | Verdict |" in summary
+    assert "| Allocations | M.track_alloc_load | 10.00 MB | 13.00 MB | 1.30x | worse |" in summary
+    row = "| Prediction drift | M.track_quality_drift_gploo | 0.100 | 0.200 | +0.100 | worse |"
+    assert row in summary
 
 
 def test_new_failed_and_parameters(tmp_path):
