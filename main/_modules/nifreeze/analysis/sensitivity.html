@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.analysis.sensitivity - nifreeze 26.0.0.dev400 documentation</title>
+        <title>nifreeze.analysis.sensitivity - nifreeze 26.0.0.dev405 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev400 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev405 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev400</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev405</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev400</span>
+  <span class="sidebar-brand-text">26.0.0.dev405</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -221,6 +221,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.analysis.filtering.html">nifreeze.analysis.filtering module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.analysis.measure_agreement.html">nifreeze.analysis.measure_agreement module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.analysis.motion.html">nifreeze.analysis.motion module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.analysis.phantoms.html">nifreeze.analysis.phantoms module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.analysis.sensitivity.html">nifreeze.analysis.sensitivity module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.analysis.similarity.html">nifreeze.analysis.similarity module</a></li>
 </ul>
@@ -354,7 +355,8 @@
 <span class="sd">  eddy currents (a *perturbation*)?</span>
 
 <span class="sd">The perturbed copies are given, each with its ground truth (a</span>
-<span class="sd">:class:`Perturbation`): a simulator produces realistic ones, and</span>
+<span class="sd">:class:`Perturbation`): a simulator produces realistic ones</span>
+<span class="sd">(:mod:`nifreeze.analysis.phantoms` reads them), and</span>
 <span class="sd">:mod:`nifreeze.testing.perturbations` resamples a dataset for tests. A fresh</span>
 <span class="sd">model is built on each copy. A held-out prediction never uses its own volume, so</span>
 <span class="sd">every volume can be evaluated, the moved ones included: a moved volume&#39;s</span>
@@ -368,11 +370,10 @@
 
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span>
+<span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
 
 <span class="kn">import</span> <span class="nn">attrs</span>
-<span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nb</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">scipy.ndimage</span> <span class="kn">import</span> <span class="n">map_coordinates</span>
 
@@ -387,10 +388,17 @@
 <span class="sd">    Displacements along the phase-encoding axis, polynomial in space, one per volume.</span>
 
 <span class="sd">    Volume ``i`` shows at each point what lies :math:`d_i` mm further along the</span>
-<span class="sd">    phase-encoding axis, with its intensity scaled by the Jacobian</span>
+<span class="sd">    phase-encoding axis. :math:`d_i` is a polynomial of the voxel-axis</span>
+<span class="sd">    coordinates, centered on ``center`` and divided by ``radius`` along each axis.</span>
+
+<span class="sd">    Without ``readout``, a distorted volume is resampled at the displaced points,</span>
+<span class="sd">    with its intensity scaled by the Jacobian</span>
 <span class="sd">    :math:`1 + \partial d_i / \partial x_{PE}` so that no signal is created or lost.</span>
-<span class="sd">    :math:`d_i` is a polynomial of the voxel-axis coordinates, centered on</span>
-<span class="sd">    ``center`` and divided by ``radius`` along each axis.</span>
+<span class="sd">    With it, the volume is formed as an EPI readout forms it, which is how TRXScan</span>
+<span class="sd">    simulates eddy currents: the displacement is that of an off-resonance field</span>
+<span class="sd">    :math:`f_i = d_i / (T \, \delta)` (Hz), with :math:`T` the total readout time</span>
+<span class="sd">    and :math:`\delta` the voxel size along phase encoding, and each</span>
+<span class="sd">    phase-encoding line accrues the field&#39;s phase at the time it is acquired.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">magnitude</span><span class="p">:</span> <span class="nb">float</span>
@@ -409,6 +417,57 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Direction cosines of the voxel axes, as columns.&quot;&quot;&quot;</span>
     <span class="n">coefficients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Displacement (mm) carried by each term, of shape ``(n_volumes, n_terms)``.&quot;&quot;&quot;</span>
+    <span class="n">readout</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eq</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Acquisition time (s, from the echo) of each phase-encoding line: the ``n``-th</span>
+<span class="sd">    of ``N`` lines has the spatial frequency ``N // 2 - n``. :obj:`None` to resample.&quot;&quot;&quot;</span>
+    <span class="n">readout_time</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Total readout time (s), which turns displacements into fields.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Distortion.from_sidecar">
+<a class="viewcode-back" href="../../../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Distortion.from_sidecar">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_sidecar</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">eddy</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">indices</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">n_volumes</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Distortion</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The eddy currents of a perturbed copy, from its sidecar.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        eddy : :obj:`~collections.abc.Mapping`</span>
+<span class="sd">            The ``Eddy`` entry of the sidecar written by ``tools/phantoms/phantom.py``.</span>
+<span class="sd">        indices : :obj:`~collections.abc.Sequence`</span>
+<span class="sd">            The dataset&#39;s index of each volume whose coefficients the sidecar lists.</span>
+<span class="sd">        n_volumes : :obj:`int`</span>
+<span class="sd">            Number of volumes of the dataset; the others are not distorted.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :obj:`Distortion`</span>
+<span class="sd">            The distortion, formed as an EPI readout forms it.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">terms</span> <span class="o">=</span> <span class="n">eddy</span><span class="p">[</span><span class="s2">&quot;Distortion&quot;</span><span class="p">]</span>
+        <span class="n">listed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">terms</span><span class="p">[</span><span class="s2">&quot;Coefficients&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">listed</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;The sidecar lists </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">listed</span><span class="p">)</span><span class="si">}</span><span class="s2"> volumes, but </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span><span class="si">}</span><span class="s2"> indices were given.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">coefficients</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_volumes</span><span class="p">,</span> <span class="n">listed</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="n">coefficients</span><span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">indices</span><span class="p">)]</span> <span class="o">=</span> <span class="n">listed</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">magnitude</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">eddy</span><span class="p">[</span><span class="s2">&quot;MagnitudeMm&quot;</span><span class="p">]),</span>
+            <span class="n">axis</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">terms</span><span class="p">[</span><span class="s2">&quot;Axis&quot;</span><span class="p">]),</span>
+            <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">degree</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">terms</span><span class="p">[</span><span class="s2">&quot;Degree&quot;</span><span class="p">]),</span>
+            <span class="n">center</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">terms</span><span class="p">[</span><span class="s2">&quot;Center&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+            <span class="n">radius</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">terms</span><span class="p">[</span><span class="s2">&quot;Radius&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+            <span class="n">frame</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">terms</span><span class="p">[</span><span class="s2">&quot;Frame&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+            <span class="n">coefficients</span><span class="o">=</span><span class="n">coefficients</span><span class="p">,</span>
+            <span class="n">readout</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">eddy</span><span class="p">[</span><span class="s2">&quot;ReadoutTimes&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+            <span class="n">readout_time</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">eddy</span><span class="p">[</span><span class="s2">&quot;TotalReadoutTime&quot;</span><span class="p">]),</span>
+        <span class="p">)</span></div>
+
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">direction</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
@@ -450,7 +509,157 @@
                 <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">radius</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">]</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">values</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">derivatives</span><span class="p">)</span></div>
-</div>
+
+
+<div class="viewcode-block" id="Distortion.distort">
+<a class="viewcode-back" href="../../../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Distortion.distort">[docs]</a>
+    <span class="k">def</span> <span class="nf">distort</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">volume</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">coefficients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Distort a volume by the displacement that some coefficients give.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        volume : :obj:`~numpy.ndarray`</span>
+<span class="sd">            The undistorted volume.</span>
+<span class="sd">        affine : :obj:`~numpy.ndarray`</span>
+<span class="sd">            Its grid, whose voxel axis :attr:`axis` is the phase-encoding axis.</span>
+<span class="sd">        coefficients : :obj:`~numpy.ndarray`</span>
+<span class="sd">            The displacement (mm) carried by each term, as a row of</span>
+<span class="sd">            :attr:`coefficients`.</span>
+<span class="sd">        order : :obj:`int`, optional</span>
+<span class="sd">            Interpolation order, when the volume is resampled.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :obj:`~numpy.ndarray`</span>
+<span class="sd">            The distorted volume, on the same grid.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_distort</span><span class="p">(</span><span class="n">volume</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">,</span> <span class="n">order</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_distort</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">volume</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">coefficients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+        <span class="n">slopes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The distorted volume and, with ``slopes``, its derivative along each coefficient.&quot;&quot;&quot;</span>
+        <span class="n">volume</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">volume</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">coefficients</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">coefficients</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">affine</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">affine</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">coefficients</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">slopes</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">volume</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="kc">None</span>
+        <span class="n">ijk</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span><span class="n">volume</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">values</span><span class="p">,</span> <span class="n">derivatives</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="n">affine</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">@</span> <span class="n">ijk</span> <span class="o">+</span> <span class="n">affine</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">:])</span>
+        <span class="n">displacement</span> <span class="o">=</span> <span class="n">coefficients</span> <span class="o">@</span> <span class="n">values</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">readout</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">distorted</span><span class="p">,</span> <span class="n">slope</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resample</span><span class="p">(</span>
+                <span class="n">volume</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="n">ijk</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">derivatives</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">,</span> <span class="n">displacement</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">slopes</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">distorted</span><span class="p">,</span> <span class="n">slope</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_readout</span><span class="p">(</span><span class="n">volume</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">displacement</span><span class="p">,</span> <span class="n">slopes</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">coefficients</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="c1"># No distortion at all: exactly the volume, without interpolation error</span>
+            <span class="n">distorted</span> <span class="o">=</span> <span class="n">volume</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">distorted</span><span class="p">,</span> <span class="n">slope</span>
+
+    <span class="k">def</span> <span class="nf">_resample</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">volume</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">ijk</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">derivatives</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">coefficients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">displacement</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">order</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">slopes</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resample at the displaced points, scaled by the Jacobian.&quot;&quot;&quot;</span>
+        <span class="n">steps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">affine</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">])</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">direction</span>
+        <span class="n">coordinates</span> <span class="o">=</span> <span class="n">ijk</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">steps</span><span class="p">,</span> <span class="n">displacement</span><span class="p">)</span>
+        <span class="n">resampled</span> <span class="o">=</span> <span class="n">map_coordinates</span><span class="p">(</span><span class="n">volume</span><span class="p">,</span> <span class="n">coordinates</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span>  <span class="c1"># type: ignore[call-overload]</span>
+        <span class="n">jacobian</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">coefficients</span> <span class="o">@</span> <span class="n">derivatives</span>
+        <span class="n">distorted</span> <span class="o">=</span> <span class="p">(</span><span class="n">resampled</span> <span class="o">*</span> <span class="n">jacobian</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">volume</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">slopes</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">distorted</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="c1"># Derivative of the interpolant along phase encoding (per mm), over 0.02 mm</span>
+        <span class="n">ahead</span><span class="p">,</span> <span class="n">behind</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">map_coordinates</span><span class="p">(</span>  <span class="c1"># type: ignore[call-overload]</span>
+                <span class="n">volume</span><span class="p">,</span> <span class="n">coordinates</span> <span class="o">+</span> <span class="n">side</span> <span class="o">*</span> <span class="mf">1e-2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">steps</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">side</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">gradient</span> <span class="o">=</span> <span class="p">(</span><span class="n">ahead</span> <span class="o">-</span> <span class="n">behind</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2e-2</span>
+        <span class="n">slope</span> <span class="o">=</span> <span class="n">gradient</span> <span class="o">*</span> <span class="n">jacobian</span> <span class="o">*</span> <span class="n">values</span> <span class="o">+</span> <span class="n">resampled</span> <span class="o">*</span> <span class="n">derivatives</span>
+        <span class="k">return</span> <span class="n">distorted</span><span class="p">,</span> <span class="n">slope</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="n">volume</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_readout</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">volume</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">displacement</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">slopes</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Form the volume as an EPI readout does, line by line of k-space.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">readout</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">readout_time</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;An EPI readout needs its line times and total readout time.&quot;</span><span class="p">)</span>
+        <span class="n">n_lines</span> <span class="o">=</span> <span class="n">volume</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">readout</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_lines</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The readout has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">readout</span><span class="p">)</span><span class="si">}</span><span class="s2"> lines, the grid </span><span class="si">{</span><span class="n">n_lines</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="n">hertz</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">readout_time</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">affine</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">]))</span>
+
+        <span class="k">def</span> <span class="nf">columns</span><span class="p">(</span><span class="n">image</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;The image as columns along phase encoding, ``(..., n_lines)``.&quot;&quot;&quot;</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">moveaxis</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">volume</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_lines</span><span class="p">)</span>
+
+        <span class="n">signal</span><span class="p">,</span> <span class="n">field</span> <span class="o">=</span> <span class="n">columns</span><span class="p">(</span><span class="n">volume</span><span class="p">),</span> <span class="n">columns</span><span class="p">(</span><span class="n">displacement</span> <span class="o">*</span> <span class="n">hertz</span><span class="p">)</span>
+        <span class="c1"># Each term times the signal: how a coefficient&#39;s field reaches each line</span>
+        <span class="n">terms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">signal</span><span class="p">]</span> <span class="o">+</span> <span class="p">([</span><span class="n">columns</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">*</span> <span class="n">signal</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">]</span> <span class="k">if</span> <span class="n">slopes</span> <span class="k">else</span> <span class="p">[]),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">frequencies</span> <span class="o">=</span> <span class="n">n_lines</span> <span class="o">//</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_lines</span><span class="p">)</span>
+        <span class="n">forward</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="n">j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">frequencies</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_lines</span><span class="p">))</span> <span class="o">/</span> <span class="n">n_lines</span><span class="p">)</span>
+        <span class="n">inverse</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mi">2</span><span class="n">j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_lines</span><span class="p">),</span> <span class="n">frequencies</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_lines</span><span class="p">)</span>
+        <span class="n">inverse</span> <span class="o">/=</span> <span class="n">n_lines</span>
+        <span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">readout</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">rate</span> <span class="o">=</span> <span class="mi">2</span><span class="n">j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">times</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">*</span> <span class="n">hertz</span>
+
+        <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">signal</span><span class="p">),</span> <span class="n">n_lines</span><span class="p">))</span>
+        <span class="n">slope</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">),</span> <span class="o">*</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span> <span class="k">if</span> <span class="n">slopes</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="c1"># Columns without signal stay empty; the others go in batches of bounded memory</span>
+        <span class="n">active</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">batch</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="o">**</span><span class="mi">22</span> <span class="o">//</span> <span class="n">n_lines</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">active</span><span class="p">),</span> <span class="n">batch</span><span class="p">):</span>
+            <span class="n">rows</span> <span class="o">=</span> <span class="n">active</span><span class="p">[</span><span class="n">start</span> <span class="p">:</span> <span class="n">start</span> <span class="o">+</span> <span class="n">batch</span><span class="p">]</span>
+            <span class="n">encoding</span> <span class="o">=</span> <span class="n">forward</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mi">2</span><span class="n">j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">times</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">*</span> <span class="n">field</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:])</span>
+            <span class="n">kspace</span> <span class="o">=</span> <span class="n">encoding</span> <span class="o">@</span> <span class="n">terms</span><span class="p">[</span><span class="n">rows</span><span class="p">]</span>
+            <span class="n">formed</span> <span class="o">=</span> <span class="n">kspace</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">@</span> <span class="n">inverse</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">magnitude</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">formed</span><span class="p">)</span>
+            <span class="n">image</span><span class="p">[</span><span class="n">rows</span><span class="p">]</span> <span class="o">=</span> <span class="n">magnitude</span>
+            <span class="k">if</span> <span class="n">slope</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">changes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">moveaxis</span><span class="p">(</span><span class="n">inverse</span> <span class="o">@</span> <span class="p">(</span><span class="n">rate</span> <span class="o">*</span> <span class="n">kspace</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">:]),</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="c1"># The magnitude changes with the part of the change in phase with the signal</span>
+                <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">invalid</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">divide</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">):</span>
+                    <span class="n">unit</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">magnitude</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">formed</span><span class="p">)</span> <span class="o">/</span> <span class="n">magnitude</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+                <span class="n">slope</span><span class="p">[:,</span> <span class="n">rows</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">unit</span> <span class="o">*</span> <span class="n">changes</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">back</span><span class="p">(</span><span class="n">flat</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+            <span class="n">shape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">moveaxis</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">volume</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">moveaxis</span><span class="p">(</span><span class="n">flat</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="p">)</span>
+
+        <span class="n">distorted</span> <span class="o">=</span> <span class="n">back</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">slope</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">distorted</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">distorted</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">back</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">slope</span><span class="p">])</span></div>
 
 
 
@@ -605,10 +814,11 @@
 <span class="sd">    reference : :obj:`~nifreeze.data.base.BaseDataset`</span>
 <span class="sd">        The aligned dataset.</span>
 <span class="sd">    cells : :obj:`~collections.abc.Iterable`</span>
-<span class="sd">        Pairs of a :class:`Perturbation` and the perturbed copy of ``reference``.</span>
-<span class="sd">        A copy with both motions and a distortion needs the copy with the same</span>
-<span class="sd">        motions alone among the cells: its inherited share is measured on top of</span>
-<span class="sd">        them.</span>
+<span class="sd">        Pairs of a :class:`Perturbation` and the perturbed copy of ``reference``,</span>
+<span class="sd">        or a function without arguments that loads it (each copy is then held in</span>
+<span class="sd">        memory only while it is analyzed). A copy with both motions and a</span>
+<span class="sd">        distortion needs the copy with the same motions alone among the cells: its</span>
+<span class="sd">        inherited share is measured on top of them.</span>
 <span class="sd">    evaluate : :obj:`~collections.abc.Iterable`, optional</span>
 <span class="sd">        Volumes to predict (all if :obj:`None`), moved or not.</span>
 <span class="sd">    mask : :obj:`~numpy.ndarray`, optional</span>
@@ -624,9 +834,10 @@
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    :obj:`list` of :obj:`dict`</span>
-<span class="sd">        One row per cell and evaluated volume, with the ``nrmse``, each further</span>
-<span class="sd">        metric, whether that volume was itself ``moved``, the magnitude of the</span>
-<span class="sd">        ``distortion`` (0 without one) and the share of the volume&#39;s own</span>
+<span class="sd">        One row per cell and evaluated volume, with the volume&#39;s ``shell`` (its</span>
+<span class="sd">        b-value to the nearest 100 s/mm², NaN without gradients), the ``nrmse``,</span>
+<span class="sd">        each further metric, whether that volume was itself ``moved``, the</span>
+<span class="sd">        magnitude of the ``distortion`` (0 without one) and the share of the volume&#39;s own</span>
 <span class="sd">        distortion that its prediction ``inherited`` (the projection of the</span>
 <span class="sd">        coefficients fitted by :func:`inherited_distortion` onto the volume&#39;s</span>
 <span class="sd">        own; NaN without a distortion, or for an undistorted volume). With</span>
@@ -642,6 +853,11 @@
     <span class="n">scale</span> <span class="o">=</span> <span class="p">{</span>
         <span class="n">index</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">reference</span><span class="o">.</span><span class="n">dataobj</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)[</span><span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">()</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">aligned</span>
     <span class="p">}</span>
+    <span class="n">gradients</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">reference</span><span class="p">,</span> <span class="s2">&quot;gradients&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">shells</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">index</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">gradients</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">gradients</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="mi">2</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">aligned</span>
+    <span class="p">}</span>
 
     <span class="n">still</span> <span class="o">=</span> <span class="p">{</span><span class="n">_motions_of</span><span class="p">(</span><span class="n">p</span><span class="p">):</span> <span class="n">data</span> <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">cells</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">distortion</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">p</span><span class="o">.</span><span class="n">motions</span><span class="p">}</span>
     <span class="n">needed</span> <span class="o">=</span> <span class="p">{</span><span class="n">_motions_of</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">cells</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">distortion</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">p</span><span class="o">.</span><span class="n">motions</span><span class="p">}</span>
@@ -656,6 +872,8 @@
         <span class="n">key</span> <span class="o">=</span> <span class="n">_motions_of</span><span class="p">(</span><span class="n">perturbation</span><span class="p">)</span> <span class="k">if</span> <span class="n">perturbation</span><span class="o">.</span><span class="n">distortion</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">kept</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">kept</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">perturbed</span><span class="p">):</span>
+            <span class="n">perturbed</span> <span class="o">=</span> <span class="n">perturbed</span><span class="p">()</span>
         <span class="n">predicted</span> <span class="o">=</span> <span class="n">held_out_predictions</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">perturbed</span><span class="p">,</span> <span class="n">aligned</span><span class="p">,</span> <span class="o">**</span><span class="n">model_kwargs</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">needed</span><span class="p">:</span>
             <span class="n">kept</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">predicted</span>
@@ -683,6 +901,7 @@
                     <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="n">perturbation</span><span class="o">.</span><span class="n">count</span><span class="p">,</span>
                     <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="n">perturbation</span><span class="o">.</span><span class="n">seed</span><span class="p">,</span>
                     <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="n">index</span><span class="p">,</span>
+                    <span class="s2">&quot;shell&quot;</span><span class="p">:</span> <span class="n">shells</span><span class="p">[</span><span class="n">index</span><span class="p">],</span>
                     <span class="s2">&quot;moved&quot;</span><span class="p">:</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">perturbation</span><span class="o">.</span><span class="n">moved</span><span class="p">,</span>
                     <span class="s2">&quot;distortion&quot;</span><span class="p">:</span> <span class="mf">0.0</span> <span class="k">if</span> <span class="n">distortion</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">distortion</span><span class="o">.</span><span class="n">magnitude</span><span class="p">,</span>
                     <span class="s2">&quot;nrmse&quot;</span><span class="p">:</span> <span class="n">nrmse</span><span class="p">(</span><span class="n">prediction</span><span class="p">,</span> <span class="n">aligned</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">mask</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">[</span><span class="n">index</span><span class="p">]),</span>
@@ -705,18 +924,17 @@
     <span class="n">distortion</span><span class="p">:</span> <span class="n">Distortion</span><span class="p">,</span>
     <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Distortion coefficients that best explain how a prediction changed.</span>
 
-<span class="sd">    To first order, displacing an image :math:`p` by :math:`d` along the</span>
-<span class="sd">    phase-encoding axis (with its Jacobian) changes it by</span>
-<span class="sd">    :math:`\partial_{PE} p \, d + p \, \partial_{PE} d`, which is linear in the</span>
-<span class="sd">    coefficients of :math:`d`. Least squares over the mask give the coefficients</span>
-<span class="sd">    of the distortion that the change resembles; whatever the distortion cannot</span>
-<span class="sd">    explain (noise) stays in the residual. A rigid motion does not: a</span>
-<span class="sd">    translation along phase encoding is the distortion&#39;s constant term, so</span>
-<span class="sd">    ``aligned`` must carry the same motions as ``perturbed``.</span>
+<span class="sd">    Gauss-Newton iterations, from no distortion, find the coefficients whose</span>
+<span class="sd">    distortion of ``aligned`` (:meth:`Distortion.distort`) comes closest to</span>
+<span class="sd">    ``perturbed`` in least squares over the mask. Whatever the distortion cannot</span>
+<span class="sd">    explain (noise) stays in the residual. A rigid motion does not: a translation</span>
+<span class="sd">    along phase encoding is the distortion&#39;s constant term, so ``aligned`` must</span>
+<span class="sd">    carry the same motions as ``perturbed``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -730,6 +948,9 @@
 <span class="sd">        Grid of the predictions.</span>
 <span class="sd">    mask : :obj:`~numpy.ndarray`</span>
 <span class="sd">        Voxels fitted.</span>
+<span class="sd">    iterations : :obj:`int`, optional</span>
+<span class="sd">        Most Gauss-Newton steps; they stop once a step changes no coefficient by</span>
+<span class="sd">        more than 10⁻⁵ mm.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -740,18 +961,16 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">aligned</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">aligned</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
-    <span class="n">ijk</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
-    <span class="c1"># Derivative of the cubic spline that resampling interpolates with</span>
-    <span class="n">step</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
-    <span class="n">step</span><span class="p">[</span><span class="n">distortion</span><span class="o">.</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-2</span>
-    <span class="n">ahead</span><span class="p">,</span> <span class="n">behind</span> <span class="o">=</span> <span class="p">(</span><span class="n">map_coordinates</span><span class="p">(</span><span class="n">aligned</span><span class="p">,</span> <span class="n">ijk</span> <span class="o">+</span> <span class="n">s</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="o">-</span><span class="n">step</span><span class="p">))</span>
-    <span class="n">spacing</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">affine</span><span class="p">)[:</span><span class="mi">3</span><span class="p">,</span> <span class="n">distortion</span><span class="o">.</span><span class="n">axis</span><span class="p">])</span>
-    <span class="n">slope</span> <span class="o">=</span> <span class="p">(</span><span class="n">ahead</span> <span class="o">-</span> <span class="n">behind</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2e-2</span> <span class="o">*</span> <span class="n">spacing</span><span class="p">)</span>
-    <span class="n">points</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">affines</span><span class="o">.</span><span class="n">apply_affine</span><span class="p">(</span><span class="n">affine</span><span class="p">,</span> <span class="n">ijk</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
-    <span class="n">values</span><span class="p">,</span> <span class="n">derivatives</span> <span class="o">=</span> <span class="n">distortion</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
-    <span class="n">design</span> <span class="o">=</span> <span class="p">(</span><span class="n">values</span> <span class="o">*</span> <span class="n">slope</span> <span class="o">+</span> <span class="n">derivatives</span> <span class="o">*</span> <span class="n">aligned</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
-    <span class="n">change</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">perturbed</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">-</span> <span class="n">aligned</span><span class="p">)[</span><span class="n">mask</span><span class="p">]</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lstsq</span><span class="p">(</span><span class="n">design</span><span class="p">,</span> <span class="n">change</span><span class="p">,</span> <span class="n">rcond</span><span class="o">=</span><span class="kc">None</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">perturbed</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)[</span><span class="n">mask</span><span class="p">]</span>
+    <span class="n">coefficients</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">distortion</span><span class="o">.</span><span class="n">coefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">iterations</span><span class="p">):</span>
+        <span class="n">current</span><span class="p">,</span> <span class="n">slopes</span> <span class="o">=</span> <span class="n">distortion</span><span class="o">.</span><span class="n">_distort</span><span class="p">(</span><span class="n">aligned</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">,</span> <span class="n">slopes</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">slopes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lstsq</span><span class="p">(</span><span class="n">slopes</span><span class="p">[:,</span> <span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">target</span> <span class="o">-</span> <span class="n">current</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">rcond</span><span class="o">=</span><span class="kc">None</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">coefficients</span> <span class="o">=</span> <span class="n">coefficients</span> <span class="o">+</span> <span class="n">step</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">step</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mf">1e-5</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="k">return</span> <span class="n">coefficients</span></div>
 
 
 
@@ -835,7 +1054,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=58cb63ae"></script>
+</div><script src="../../../_static/documentation_options.js?v=00c2fd10"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

@@ -193,6 +193,32 @@ eddy-current magnitudes. The default grid of one protocol thus takes from about
 TRXScan's signal is a sum of Gaussian compartments, as the tensor and kurtosis
 models assume, so these models may fit the synthetic data better than real ones.
 
+Analyzing a phantom
+-------------------
+:func:`~nifreeze.analysis.phantoms.load_phantom` reads one protocol of a phantom
+dataset as :func:`~nifreeze.analysis.sensitivity.sensitivity` takes it::
+
+    from nifreeze.analysis.phantoms import load_phantom
+    from nifreeze.analysis.sensitivity import sensitivity
+
+    reference, cells = load_phantom("<dataset>", "sherbrooke", noise=0, counts=[6, 24])
+    rows = sensitivity("gqi", reference, cells)
+
+The reference keeps its diffusion-weighted volumes, numbered from 0 (its b=0
+volumes are averaged into ``bzero``), and every volume gets the noise of the
+given seed on load.
+Each copy is loaded only when it is analyzed: the reference, with the copy's
+changed volumes spliced in.
+``counts`` turns each set of moved volumes into the copies that move its first K.
+
+The eddy currents of a copy come with their closed form
+(:meth:`~nifreeze.analysis.sensitivity.Distortion.from_sidecar`), including the
+time at which each phase-encoding line is acquired. The analysis can thus form a
+distorted volume as TRXScan's readout does, within 10⁻⁵ of TRXScan's images.
+The share of a volume's own distortion that its prediction inherits is fitted
+through that same model, by Gauss-Newton, which recovers the coefficients of a
+TRXScan volume from its undistorted counterpart within 10⁻⁶.
+
 The dataset of continuous integration
 -------------------------------------
 ::

@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.testing.phantoms module" href="nifreeze.testing.phantoms.html"><link rel="prev" title="nifreeze.testing package" href="nifreeze.testing.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.testing.perturbations module - nifreeze 26.0.0.dev400 documentation</title>
+        <title>nifreeze.testing.perturbations module - nifreeze 26.0.0.dev405 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev400 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev405 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev400</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev405</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev400</span>
+  <span class="sidebar-brand-text">26.0.0.dev405</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -222,6 +222,7 @@
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.filtering.html">nifreeze.analysis.filtering module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.measure_agreement.html">nifreeze.analysis.measure_agreement module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.motion.html">nifreeze.analysis.motion module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.phantoms.html">nifreeze.analysis.phantoms module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.sensitivity.html">nifreeze.analysis.sensitivity module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.similarity.html">nifreeze.analysis.similarity module</a></li>
 </ul>
@@ -414,7 +415,9 @@ if <a class="reference external" href="https://docs.python.org/3/builtins/consta
 <span class="sig-prename descclassname"><span class="pre">nifreeze.testing.perturbations.</span></span><span class="sig-name descname"><span class="pre">perturb</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">perturbation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Perturbation" title="nifreeze.analysis.sensitivity.Perturbation"><span class="pre">Perturbation</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/testing/perturbations.html#perturb"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.testing.perturbations.perturb" title="Link to this definition">¶</a></dt>
 <dd><p>Copy a dataset with some of its volumes moved or distorted.</p>
 <p>Each moved or distorted volume is resampled once from the aligned original,
-through its motion and then its distortion. Everything else (gradients, b=0
+through its motion and then its distortion. A distortion with an EPI readout
+(<a class="reference internal" href="nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Distortion.readout" title="nifreeze.analysis.sensitivity.Distortion.readout"><code class="xref py py-attr docutils literal notranslate"><span class="pre">readout</span></code></a>) instead forms the
+moved volume as that readout would. Everything else (gradients, b=0
 reference, mask) is left as it was, as a model would see it when the motion
 and the distortion go uncorrected.</p>
 <dl class="field-list simple">
@@ -581,7 +584,7 @@ positions after it.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=58cb63ae"></script>
+</div><script src="../_static/documentation_options.js?v=00c2fd10"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

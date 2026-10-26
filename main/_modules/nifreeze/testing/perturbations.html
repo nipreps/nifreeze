@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.testing.perturbations - nifreeze 26.0.0.dev400 documentation</title>
+        <title>nifreeze.testing.perturbations - nifreeze 26.0.0.dev405 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev400 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev405 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev400</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev405</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev400</span>
+  <span class="sidebar-brand-text">26.0.0.dev405</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -221,6 +221,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.analysis.filtering.html">nifreeze.analysis.filtering module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.analysis.measure_agreement.html">nifreeze.analysis.measure_agreement module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.analysis.motion.html">nifreeze.analysis.motion module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.analysis.phantoms.html">nifreeze.analysis.phantoms module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.analysis.sensitivity.html">nifreeze.analysis.sensitivity module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.analysis.similarity.html">nifreeze.analysis.similarity module</a></li>
 </ul>
@@ -642,7 +643,9 @@
 <span class="sd">    Copy a dataset with some of its volumes moved or distorted.</span>
 
 <span class="sd">    Each moved or distorted volume is resampled once from the aligned original,</span>
-<span class="sd">    through its motion and then its distortion. Everything else (gradients, b=0</span>
+<span class="sd">    through its motion and then its distortion. A distortion with an EPI readout</span>
+<span class="sd">    (:attr:`~nifreeze.analysis.sensitivity.Distortion.readout`) instead forms the</span>
+<span class="sd">    moved volume as that readout would. Everything else (gradients, b=0</span>
 <span class="sd">    reference, mask) is left as it was, as a model would see it when the motion</span>
 <span class="sd">    and the distortion go uncorrected.</span>
 
@@ -667,11 +670,18 @@
     <span class="k">if</span> <span class="n">distortion</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">displaced</span> <span class="o">|=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">distortion</span><span class="o">.</span><span class="n">coefficients</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))}</span>
 
+    <span class="n">readout</span> <span class="o">=</span> <span class="n">distortion</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">distortion</span><span class="o">.</span><span class="n">readout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="n">resampled</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">readout</span> <span class="k">else</span> <span class="n">distortion</span>
     <span class="n">dataobj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">dataobj</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">displaced</span><span class="p">):</span>
-        <span class="n">dataobj</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">_displace</span><span class="p">(</span>
-            <span class="n">dataset</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">motions</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">index</span><span class="p">),</span> <span class="n">distortion</span><span class="p">,</span> <span class="n">order</span>
-        <span class="p">)</span>
+        <span class="n">motion</span> <span class="o">=</span> <span class="n">motions</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">motion</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">resampled</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dataobj</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">_displace</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">motion</span><span class="p">,</span> <span class="n">resampled</span><span class="p">,</span> <span class="n">order</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">readout</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">distortion</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">dataobj</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">distortion</span><span class="o">.</span><span class="n">distort</span><span class="p">(</span>
+                <span class="n">dataobj</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dataset</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">distortion</span><span class="o">.</span><span class="n">coefficients</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">order</span>
+            <span class="p">)</span>
 
     <span class="n">moved</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
     <span class="n">moved</span><span class="o">.</span><span class="n">dataobj</span> <span class="o">=</span> <span class="n">dataobj</span>
@@ -739,7 +749,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=58cb63ae"></script>
+</div><script src="../../../_static/documentation_options.js?v=00c2fd10"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
