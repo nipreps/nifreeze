@@ -209,7 +209,9 @@ volumes are averaged into ``bzero``), and every volume gets the noise of the
 given seed on load.
 Each copy is loaded only when it is analyzed: the reference, with the copy's
 changed volumes spliced in.
-``counts`` turns each set of moved volumes into the copies that move its first K.
+``counts`` turns each set of moved volumes into the copies that move its first K,
+and ``alone`` into copies that move one of its volumes alone, with the motion the
+set gives it, to rank the volumes by their influence.
 
 The eddy currents of a copy come with their closed form
 (:meth:`~nifreeze.analysis.sensitivity.Distortion.from_sidecar`), including the
