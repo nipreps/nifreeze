@@ -88,6 +88,7 @@ def peak_rss():
 test_data_env = os.getenv("TEST_DATA_HOME", str(Path.home() / "nifreeze-tests"))
 test_output_dir = os.getenv("TEST_OUTPUT_DIR")
 test_workdir = os.getenv("TEST_WORK_DIR")
+phantoms_env = os.getenv("NIFREEZE_PHANTOMS")
 
 _datadir = (Path(__file__).parent / "data").absolute()
 
@@ -97,6 +98,7 @@ def pytest_report_header(config):
 TEST_DATA_HOME: {test_data_env}.
 TEST_OUTPUT_DIR: {test_output_dir or "<unset> (output files will be discarded)"}.
 TEST_WORK_DIR: {test_workdir or "<unset> (intermediate files will be discarded)"}.
+NIFREEZE_PHANTOMS: {phantoms_env or "<unset> (the phantom tests are skipped)"}.
 """
 
 
@@ -120,6 +122,14 @@ def outdir():
 def datadir():
     """Return a data path outside the package's structure (i.e., large datasets)."""
     return Path(test_data_env)
+
+
+@pytest.fixture(scope="session")
+def phantoms():
+    """Root of the CI phantom (``tools/phantoms/phantom.py fixture``); skip without it."""
+    if not phantoms_env or not Path(phantoms_env).is_dir():
+        pytest.skip("NIFREEZE_PHANTOMS does not point to a phantom dataset")
+    return Path(phantoms_env)
 
 
 @pytest.fixture(scope="session")

@@ -145,6 +145,8 @@ jobs:
           uv tool install --with=tox-uv --with=tox-gh-actions tox
       - name: Show tox config
         run: tox c
+      - name: Restore or simulate the phantom
+        uses: ./.github/actions/phantom-fixtures
       - name: Prepare test output directory
         run: mkdir -p "${TEST_OUTPUT_DIR}"
       - name: Run tox
