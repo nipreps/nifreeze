@@ -37,6 +37,12 @@ Name prefix          Measure                                           A pull re
   one leave-one-volume-out fit per model; peak RSS of loading a 132 MB file.
 - ``bench_cpu.py``: CPU time of model fits and predictions, and the wall time of
   a DKI fit over two workers.
+- ``bench_quality.py``: how far each model's predictions drift on the CI phantom
+  (``docs/phantoms.rst``) when volumes move or are distorted by eddy currents,
+  the share of a volume's own distortion that its prediction inherits, and
+  whether motion and eddy currents compound.
+  It needs the phantom at ``NIFREEZE_PHANTOMS``, which the workflow restores
+  with ``.github/actions/phantom-fixtures``; without it, it is skipped.
 
 How pull requests are checked
 -----------------------------
@@ -75,6 +81,9 @@ To check that one benchmark runs against the code you have installed::
 
 ``--quick`` takes a single sample: it shows that a benchmark runs, not how
 fast.
+The quality benchmarks need the CI phantom: simulate it once with
+``uv run tools/phantoms/phantom.py fixture --out <dataset>`` and set
+``NIFREEZE_PHANTOMS=<dataset>``.
 
 Writing benchmarks
 ------------------
@@ -90,6 +99,9 @@ Writing benchmarks
 - Return the files ``setup_cache`` writes and take them as the first argument of
   ``setup``: ASV runs a ``setup`` that takes no arguments before
   ``setup_cache``.
+  ``setup_cache`` must neither raise (the whole class fails) nor return
+  ``None`` (ASV then passes no cache to ``setup``): to skip, return an empty
+  value and raise ``NotImplementedError`` in ``setup``.
 - Keep each call above 10 ms of CPU or wall time, or rely on its allocations:
   shorter timings are reported but do not fail a pull request.
 - Each class sets ``version``.
