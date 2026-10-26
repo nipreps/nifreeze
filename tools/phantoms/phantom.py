@@ -35,11 +35,13 @@
 """Simulate the synthetic reference datasets with TRXScan (see ``docs/phantoms.rst``).
 
 The only code that imports TRXScan, pinned to one commit above (its motion fixes
-are not released yet). Run it with ``uv run``, which builds that environment::
+are not released yet). Run it with ``uv run``, which builds that environment
+from the versions locked in ``phantom.py.lock``::
 
     uv run tools/phantoms/phantom.py reference --protocol sherbrooke --out <dataset>
     uv run tools/phantoms/phantom.py cells --protocol sherbrooke --out <dataset>
     uv run tools/phantoms/phantom.py verify --protocol sherbrooke
+    uv run tools/phantoms/phantom.py fixture --out <dataset>
 
 ``reference`` simulates the phantom under one protocol of ``protocols.toml``,
 clean: no motion, eddy currents, susceptibility distortion, readout relaxation
@@ -58,6 +60,10 @@ under ``<dataset>/derivatives/perturbations/sub-60501/dwi``.
 repeated runs are identical, a subset of the gradient table reproduces the same
 volumes of the full run, the closed-form displacement reproduces TRXScan's
 eddy-current images, and a moved volume moves as its matrix says.
+
+``fixture`` writes the small dataset that CI simulates for the phantom tests
+and the quality benchmarks: the Sherbrooke protocol at 4 mm, one b=0 and 8
+directions per shell, its reference and the perturbed copies they use.
 """
 
 import argparse
@@ -93,6 +99,17 @@ EDDY_TAU_MS = 1e12
 """Decay time of the eddy currents: none during the readout, so they only displace."""
 CLEAN = ts.Artifacts(distortion=False, relaxation=False)
 """No susceptibility distortion and no T2 weighting along the readout."""
+FIXTURE: dict[str, Any] = {
+    "name": "sherbrooke",
+    "voxel": 4.0,
+    "streamlines": 50_000,
+    "directions": 8,
+    # Rigid motion of all volumes (the first quarter of them is a copy too), at 1 mm and 1°
+    "magnitudes": [1.0],
+    "eddies": [2.0],
+    "seeds": [0],
+}
+"""The dataset that CI simulates, small enough for every pull request."""
 
 
 def acquisition(name: str, voxel: float | None = None) -> Any:
@@ -140,7 +157,42 @@ def gradients(name: str, volumes: list[int] | None = None) -> tuple[np.ndarray, 
     table = np.loadtxt(HERE / CATALOG[name]["gradients"])
     if volumes is not None:
         table = table[volumes]
-    return table, gradient_table(table[:, 3], bvecs=table[:, :3], b0_threshold=50)
+    return table, _dipy(table)
+
+
+def _dipy(table: np.ndarray) -> Any:
+    return gradient_table(table[:, 3], bvecs=table[:, :3], b0_threshold=50)
+
+
+def spread(name: str, directions: int) -> list[int]:
+    """The first b=0 volume and ``directions`` volumes of each shell, spread over the sphere.
+
+    Each shell starts from its first direction and adds, one at a time, the one
+    farthest from those already taken (directions are axes: a direction and its
+    opposite are the same). The volumes keep the table's order.
+    """
+    table = gradients(name)[0]
+    picks = [int(np.flatnonzero(table[:, 3] < 50)[0])]
+    for b in np.unique(table[table[:, 3] >= 50, 3]):
+        shell = np.flatnonzero(table[:, 3] == b)
+        cosines = np.abs(table[shell, :3] @ table[shell, :3].T)
+        taken = [0]
+        while len(taken) < directions:
+            taken.append(int(np.argmin(cosines[taken].max(axis=0))))
+        picks += [int(shell[i]) for i in taken]
+    return sorted(picks)
+
+
+def _table_text(name: str, volumes: list[int] | None) -> str:
+    """The gradient file of a catalog entry, with only the rows of ``volumes``."""
+    text = (HERE / CATALOG[name]["gradients"]).read_text()
+    if volumes is None:
+        return text
+    lines = text.splitlines(keepends=True)
+    rows = [line for line in lines if not line.startswith("#")]
+    comments = [line for line in lines if line.startswith("#")]
+    comments.append(f"# only volumes {','.join(str(v) for v in volumes)} of the protocol\n")
+    return "".join(comments + [rows[v] for v in volumes])
 
 
 @cache
@@ -230,10 +282,14 @@ def write_reference(
     seed: int = 0,
     voxel: float | None = None,
     chunk: int | None = 8,
+    volumes: list[int] | None = None,
 ) -> Path:
-    """Write the clean and noisy datasets of one protocol, with their truth."""
+    """Write the clean and noisy datasets of one protocol, with their truth.
+
+    With ``volumes``, the datasets keep only those volumes of the protocol.
+    """
     entry = CATALOG[name]
-    result = simulate(name, streamlines, voxel=voxel, chunk=chunk)
+    result = simulate(name, streamlines, voxel=voxel, volumes=volumes, chunk=chunk)
     dwi, affine, table = result["dwi"], result["affine"], result["table"]
     bzero = dwi[..., table[:, 3] < 50].mean(axis=-1)
     white = result["white_matter"] & result["mask"]
@@ -251,9 +307,7 @@ def write_reference(
     nb.Nifti1Image(result["mask"].astype(np.uint8), affine).to_filename(
         f"{stem}_desc-brain_mask.nii.gz"
     )
-    (folder / f"sub-{SUBJECT}_acq-{name}_dwi.b").write_text(
-        (HERE / entry["gradients"]).read_text()
-    )
+    (folder / f"sub-{SUBJECT}_acq-{name}_dwi.b").write_text(_table_text(name, volumes))
     if result["peaks"] is not None:
         result["peaks"].to_filename(f"{stem}_desc-peaks_truth.nii.gz")
     for key, image in result["maps"].items():
@@ -266,6 +320,7 @@ def write_reference(
         "EchoTimeAssumed": echo_time(name)[1],
         "Protocol": name,
         "ProtocolSha256": entry["sha256"],
+        "ProtocolVolumes": volumes,
         "Noise": {
             "SNR": entry["snr_b0"],
             "Sigma": sigma,
@@ -289,6 +344,7 @@ def write_cells(
     streamlines: int = 400_000,
     voxel: float | None = None,
     chunk: int | None = 8,
+    volumes: list[int] | None = None,
 ) -> Path:
     """Write the perturbed copies of one protocol's reference, with their ground truth.
 
@@ -300,11 +356,12 @@ def write_cells(
     eddy currents, and so is every moved volume. An eddy-current magnitude is the
     largest displacement of any brain voxel over all volumes, in voxels along phase
     encoding; TRXScan's single strength then distorts each volume in proportion
-    to its b-value.
+    to its b-value. With ``volumes``, the reference keeps only those volumes of
+    the protocol, and the copies are numbered as the reference's volumes.
     """
     entry = CATALOG[name]
     protocol = acquisition(name, voxel)
-    table, gtab = gradients(name)
+    table, gtab = gradients(name, volumes)
     source = phantom(streamlines)
     grid = source.grid(protocol)
     weighted = np.flatnonzero(table[:, 3] >= 50)
@@ -338,15 +395,16 @@ def write_cells(
         }
 
     def write(
-        desc: str, data: list[np.ndarray], volumes: np.ndarray, sidecar: dict[str, Any]
+        desc: str, data: list[np.ndarray], sources: np.ndarray, sidecar: dict[str, Any]
     ) -> None:
         stem = folder / f"sub-{SUBJECT}_acq-{name}_desc-{desc}_dwi"
         nb.Nifti1Image(np.stack(data, axis=-1), affine).to_filename(f"{stem}.nii.gz")
         sidecar = {
             "Protocol": name,
             "ProtocolSha256": entry["sha256"],
+            "ProtocolVolumes": volumes,
             "Reference": reference,
-            "SourceVolumes": [int(v) for v in volumes],
+            "SourceVolumes": [int(v) for v in sources],
             **sidecar,
             "GeneratedBy": _provenance(streamlines),
         }
@@ -386,7 +444,7 @@ def write_cells(
             # The head moves in the scanner: the phantom is moved, then gridded as the reference
             moved_grid = source.moved(np.asarray(matrix)).grid(protocol, like=grid)
             # The table's largest b-value comes along, as in the reference's simulation
-            subset = gradients(name, [int(volume), largest])[1]
+            subset = _dipy(table[[volume, largest]])
             for magnitude in [None, *eddies]:
                 artifacts = CLEAN
                 if magnitude is not None:
@@ -406,6 +464,16 @@ def write_cells(
                 {"Kind": "motion+eddy", "Motion": motion, "Eddy": eddy(e, moved)},
             )
     return folder
+
+
+def write_fixture(out: Path) -> Path:
+    """Write the dataset that CI simulates: a reference and its perturbed copies."""
+    settings = {k: FIXTURE[k] for k in ("streamlines", "voxel")}
+    volumes = spread(FIXTURE["name"], FIXTURE["directions"])
+    write_reference(FIXTURE["name"], out, **settings, volumes=volumes)
+    perturbations = {k: FIXTURE[k] for k in ("magnitudes", "eddies", "seeds")}
+    write_cells(FIXTURE["name"], out, **perturbations, **settings, volumes=volumes)
+    return out
 
 
 def _provenance(streamlines: int) -> dict[str, Any]:
@@ -535,6 +603,8 @@ def main(argv: list[str] | None = None) -> int:
     cells.add_argument("--chunk", type=int, default=8, help="slices per simulated slab")
     check = commands.add_parser("verify", help="check what the perturbed copies rely on")
     check.add_argument("--protocol", default="sherbrooke", choices=sorted(CATALOG))
+    fixture = commands.add_parser("fixture", help="simulate the small dataset of CI")
+    fixture.add_argument("--out", type=Path, required=True, help="dataset root")
     args = parser.parse_args(argv)
 
     if args.command == "reference":
@@ -556,6 +626,9 @@ def main(argv: list[str] | None = None) -> int:
             args.chunk,
         )
         print(f"wrote {folder}")
+        return 0
+    if args.command == "fixture":
+        print(f"wrote {write_fixture(args.out)}")
         return 0
     failures = verify(args.protocol)
     for failure in failures:
