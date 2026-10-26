@@ -20,17 +20,23 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""End-to-end motion estimation on DIPY's Sherbrooke dataset with simulated motion.
+"""End-to-end motion estimation on a synthetic phantom with known motion.
 
-Every diffusion-weighted volume is moved by a seeded random rigid transform; the
-b=0 stays in place and defines the frame of the ground truth. The b-vector file
-holds the scanner-frame directions, which turn with the head: undoing a volume's
-motion maps its b-vector back to the direction its signal was simulated with.
-The tests are opt-in (``pytest -m e2e``) and need ANTs.
+The phantom is TRXScan's simulation of the Sherbrooke protocol (``tools/phantoms``,
+see ``docs/phantoms.rst``). In its perturbed set at 2° and 2 mm, every
+diffusion-weighted volume was simulated again from the head moved by its own
+rigid motion (2° about a random axis through the brain's centroid, and 2 mm along
+a random direction); the b=0 stays in place and defines the frame of the ground
+truth. The protocol's noise is added on load. The gradients are those prescribed,
+as a scanner writes them: the moved head turned under them, so even at the right
+position a volume differs from the one its model predicts. The truth is the
+motion of each volume, which is what the estimator reports. The tests
+are opt-in (``pytest -m e2e``), need ANTs, and need ``NIFREEZE_PHANTOMS`` to point
+to the phantom dataset (GIN ``tests-nifreeze``, subdataset ``phantoms``).
 
 The model gates record the current single-pass accuracy: the models are fit on
 the moving volumes, so their targets mix anatomy at different positions (see
-nipreps/nifreeze#497). Tighten them when motion estimates are fed back.
+nipreps/nifreeze#497). Tighten them when the instant update is in place.
 """
 
 import json
@@ -41,98 +47,67 @@ import nibabel as nb
 import nitransforms as nt
 import numpy as np
 import pytest
-from dipy.io import read_bvals_bvecs
-from nitransforms.resampling import apply
 from scipy.spatial.transform import Rotation
 
+from nifreeze.analysis.phantoms import load_phantom
 from nifreeze.cli.run import main
 from nifreeze.data import dmri
-from nifreeze.data.dmri.utils import transform_fsl_bvec
 from nifreeze.data.filtering import robust_window
 from nifreeze.registration.ants import _prepare_registration_data, _run_registration
 from nifreeze.registration.utils import displacements_within_mask
-from nifreeze.utils.ndimage import load_api
 
 pytestmark = [
     pytest.mark.e2e,
     pytest.mark.skipif(shutil.which("antsRegistration") is None, reason="ANTs is not installed"),
 ]
 
+PROTOCOL = "sherbrooke"
+"""The phantom's acquisition protocol: DIPY's Sherbrooke 3-shell."""
+MAGNITUDE = 2.0
+"""Rotation (degrees) and translation (mm) of every moved volume."""
 SEED = 20261020
-"""Seed of the simulated motion."""
-MAX_TRANSLATION_MM = 2.0
-"""Largest translation along each axis."""
-MAX_ROTATION_DEG = 2.0
-"""Largest rotation about each axis (about the centre of the field of view)."""
-LOW_B = 50
-"""Volumes below this b-value are references and are not moved."""
+"""Seed of the noise."""
 
 
 @pytest.fixture(scope="module")
-def sherbrooke_motion(tmp_path_factory):
-    """Sherbrooke with a seeded random rigid motion on every diffusion-weighted volume."""
-    from dipy.data import get_fnames
-    from dipy.segment.mask import median_otsu
+def phantom_motion(phantoms, tmp_path_factory):
+    """The phantom with every diffusion-weighted volume moved, written for the CLI."""
+    clean, _ = load_phantom(phantoms, PROTOCOL)
+    _, cells = load_phantom(phantoms, PROTOCOL, noise=SEED)
+    chosen = [
+        (perturbation, load)
+        for perturbation, load in cells
+        if perturbation.magnitude == MAGNITUDE
+        and perturbation.distortion is None
+        and perturbation.count == len(clean)
+    ]
+    if not chosen:
+        pytest.skip(f"the phantom moves no copy's every volume by {MAGNITUDE:g}° and mm")
+    perturbation, load = chosen[0]
+    moved = load()
 
-    dwi_fname, bval_fname, bvec_fname = get_fnames(name="sherbrooke_3shell")
-    work = tmp_path_factory.mktemp("sherbrooke_motion")
-
-    img = load_api(dwi_fname, nb.Nifti1Image)
-    data = np.asanyarray(img.dataobj)
-    bvals = np.loadtxt(bval_fname)
-    moving = np.flatnonzero(bvals >= LOW_B)
-
-    _, mask = median_otsu(data[..., bvals < LOW_B].mean(axis=-1), median_radius=2, numpass=1)
-    mask_img = nb.Nifti1Image(mask.astype("uint8"), img.affine)
+    work = tmp_path_factory.mktemp("phantom_motion")
+    dwi_path = work / "phantom_motion.h5"
+    moved.to_filename(dwi_path)
+    mask_img = nb.Nifti1Image(np.asarray(clean.brainmask, dtype="uint8"), clean.affine)
     mask_path = work / "brainmask.nii"
     mask_img.to_filename(mask_path)
 
-    rng = np.random.default_rng(SEED)
-    center = nb.affines.apply_affine(img.affine, (np.array(img.shape[:3]) - 1) / 2)
-    moved = data.copy()
-    truth = []
-    for i in moving:
-        angles = rng.uniform(-MAX_ROTATION_DEG, MAX_ROTATION_DEG, 3)
-        rotation = Rotation.from_euler("xyz", angles, degrees=True)
-        motion = np.eye(4)
-        motion[:3, :3] = rotation.as_matrix()
-        motion[:3, 3] = (
-            center
-            - rotation.apply(center)
-            + rng.uniform(-MAX_TRANSLATION_MM, MAX_TRANSLATION_MM, 3)
-        )
-        volume = nb.Nifti1Image(data[..., i].astype("float32"), img.affine)
-        resampled = np.asanyarray(
-            apply(nt.linear.Affine(motion), volume, reference=volume, order=3).dataobj
-        )
-        moved[..., i] = np.clip(np.round(resampled), 0, np.iinfo(data.dtype).max)
-        # The estimator reports the transform that undoes the motion
-        truth.append(np.linalg.inv(motion))
-
-    dwi_path = work / "sherbrooke_motion.nii"
-    nb.Nifti1Image(moved, img.affine, img.header).to_filename(dwi_path)
-
-    # The b-vector file holds scanner-frame directions, which turn with the head:
-    # undoing the motion (as the export does) recovers the simulated direction
-    _, bvecs = read_bvals_bvecs(str(bval_fname), str(bvec_fname))
-    scanner_bvecs = np.array(bvecs, dtype=float)
-    for i, matrix in zip(moving, truth, strict=True):
-        rotated = transform_fsl_bvec(bvecs[i], matrix, img.affine)
-        scanner_bvecs[i] = rotated / np.linalg.norm(rotated)
-    bvec_path = work / "sherbrooke_motion.bvec"
-    np.savetxt(bvec_path, scanner_bvecs.T, fmt="%.8f")
+    # The estimator reports the head's motion, as the sidecars do: the transform from
+    # the b=0's frame to each volume's (fixed to moving, in ANTs' terms)
+    truth = np.empty((len(clean), 4, 4))
+    for index, motion in zip(perturbation.moved, perturbation.motions, strict=True):
+        truth[index] = motion
 
     return SimpleNamespace(
         dwi_path=dwi_path,
-        original_path=dwi_fname,
-        bvec_path=bvec_path,
-        bval_path=bval_fname,
+        clean=clean,
+        moved=moved,
         mask=mask_img,
         mask_path=mask_path,
-        affine=img.affine,
-        moving=moving,
-        shells=np.round(bvals[moving], -2),
-        truth=np.stack(truth),
+        affine=clean.affine,
+        shells=np.round(clean.gradients[:, 3], -2),
+        truth=truth,
     )
 
 
@@ -181,19 +156,22 @@ def _record(outdir, name: str, result: dict) -> None:
         (outdir / "e2e" / f"{name}.json").write_text(json.dumps(result, indent=2))
 
 
-def test_e2e_registration_oracle(sherbrooke_motion, outdir, tmp_path):
-    """Registered to its unmoved original, each volume's motion is recovered."""
-    sim = sherbrooke_motion
-    original = load_api(sim.original_path, nb.Nifti1Image)
-    moved = load_api(sim.dwi_path, nb.Nifti1Image)
+def test_e2e_registration_oracle(phantom_motion, outdir, tmp_path):
+    """Registered to its unmoved original, each volume's motion is recovered.
+
+    The original is noise-free: the noise is keyed on the volume, so a noisy
+    original would share the moved volume's noise, voxel for voxel, and pull the
+    registration toward no motion.
+    """
+    sim = phantom_motion
     maskdata = np.asanyarray(sim.mask.dataobj) > 0
 
     # Four volumes per shell
-    picks = np.arange(0, len(sim.moving), 16)
+    picks = np.arange(0, len(sim.clean), 16)
     estimated = []
     for k in picks:
-        sample = np.asanyarray(moved.dataobj[..., sim.moving[k]])
-        target = np.asanyarray(original.dataobj[..., sim.moving[k]]).astype("float32")
+        sample = np.asarray(sim.moved.dataobj[k])
+        target = np.asarray(sim.clean.dataobj[k], dtype="float32")
         fixed_path, moving_path, _ = _prepare_registration_data(
             sample,
             target,
@@ -233,18 +211,15 @@ def test_e2e_registration_oracle(sherbrooke_motion, outdir, tmp_path):
     ids=["trivial", "gp-loo", "gqi-krr"],
 )
 def test_e2e_motion(
-    sherbrooke_motion, outdir, tmp_path, model, relative, gated_shells, max_median, max_p95
+    phantom_motion, outdir, tmp_path, model, relative, gated_shells, max_median, max_p95
 ):
     """The CLI recovers the simulated motion within the current single-pass accuracy."""
-    sim = sherbrooke_motion
+    sim = phantom_motion
     output_dir = tmp_path / "output"
     output_dir.mkdir()
     main(
         [
             str(sim.dwi_path),
-            "--gradient-file",
-            str(sim.bvec_path),
-            str(sim.bval_path),
             "--brainmask",
             str(sim.mask_path),
             "--models",
