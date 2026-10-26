@@ -693,7 +693,10 @@ def sensitivity(
         of the ``distortion`` (0 without one) and the share of the volume's own
         distortion that its prediction ``inherited`` (the projection of the
         coefficients fitted by :func:`inherited_distortion` onto the volume's
-        own; NaN without a distortion, or for an undistorted volume).
+        own; NaN without a distortion, or for an undistorted volume). With
+        motions too, the share is fitted to the change from the prediction with
+        the same motions and no distortion, since a motion alone also projects
+        onto the distortion's terms.
 
     """
     metrics = {} if metrics is None else metrics
@@ -710,12 +713,18 @@ def sensitivity(
         moved = perturb(dataset, perturbation, order=order, grid=grid)
         predicted = held_out_predictions(model, moved, reference, **model_kwargs)
         distortion = perturbation.distortion
+        undistorted = reference
+        if distortion is not None and perturbation.motions:
+            still = perturb(
+                dataset, attrs.evolve(perturbation, distortion=None), order=order, grid=grid
+            )
+            undistorted = held_out_predictions(model, still, reference, **model_kwargs)
         for index, prediction in predicted.items():
             inherited = float("nan")
             if distortion is not None and distortion.coefficients[index].any():
                 own = distortion.coefficients[index]
                 fitted = inherited_distortion(
-                    reference[index], prediction, distortion, aligned.affine, mask
+                    undistorted[index], prediction, distortion, aligned.affine, mask
                 )
                 inherited = float(fitted @ own / (own @ own))
             rows.append(
@@ -752,14 +761,16 @@ def inherited_distortion(
     :math:`\partial_{PE} p \, d + p \, \partial_{PE} d`, which is linear in the
     coefficients of :math:`d`. Least squares over the mask give the coefficients
     of the distortion that the change resembles; whatever the distortion cannot
-    explain (noise, rigid motion) stays in the residual.
+    explain (noise) stays in the residual. A rigid motion does not: a
+    translation along phase encoding is the distortion's constant term, so
+    ``aligned`` must carry the same motions as ``perturbed``.
 
     Parameters
     ----------
     aligned : :obj:`~numpy.ndarray`
-        The prediction on the aligned dataset.
+        The prediction without the distortion.
     perturbed : :obj:`~numpy.ndarray`
-        The prediction on the perturbed dataset.
+        The prediction with the distortion.
     distortion : :obj:`Distortion`
         The distortion, whose terms are fitted.
     affine : :obj:`~numpy.ndarray`
