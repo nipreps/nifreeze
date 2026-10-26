@@ -191,3 +191,44 @@ eddy-current magnitudes. The default grid of one protocol thus takes from about
 
 TRXScan's signal is a sum of Gaussian compartments, as the tensor and kurtosis
 models assume, so these models may fit the synthetic data better than real ones.
+
+Example: the Healthy Brain Network protocol
+-------------------------------------------
+The figures below show the HBN protocol (1.8 mm, two shells of 64 directions),
+drawn by ``tools/phantoms/figures.py`` from a dataset generated with
+``phantom.py`` (the reference, and copies with 4° and 4 mm of motion and with
+eddy currents of 2, 4 and 8 voxels), next to a real HBN subject acquired with the
+same gradient table::
+
+    python tools/phantoms/figures.py --dataset <dataset> --protocol hbn \
+        --real <real_dwi.nii.gz> --out docs/_static/phantoms
+
+.. figure:: _static/phantoms/hbn_real_vs_synthetic.png
+   :width: 100%
+
+   A real HBN subject (top) and the synthetic dataset, noise-free and at the
+   protocol's signal-to-noise ratio, at b=0 and at the first volume of each shell.
+   The synthetic tissues are piecewise constant, without the texture of real
+   brains, and the head around the brain is not simulated.
+
+.. figure:: _static/phantoms/hbn_truth.png
+   :width: 100%
+
+   The ground truth written with the reference: the scalar maps the simulated
+   compartments imply, and the orientation of the first fiber.
+
+.. figure:: _static/phantoms/hbn_eddy_currents.png
+   :width: 100%
+
+   Eddy currents of 2, 4 and 8 voxels on the volume most stretched along phase
+   encoding (gradient along it, top) and the most sheared (gradient along the
+   readout, bottom), with the outline of the undistorted brain. On the right, the
+   displacement of each at 8 voxels, from the coefficients stored in its sidecar.
+
+.. figure:: _static/phantoms/hbn_motion.png
+   :width: 100%
+
+   Two moved volumes against the reference, with the outline of the reference
+   brain. Each moved volume is simulated anew from the moved phantom, so its
+   contrast also changes as the fibers turn relative to the gradient.
+
