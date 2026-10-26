@@ -12,5 +12,6 @@ Submodules
 .. toctree::
    :maxdepth: 1
 
+   nifreeze.testing.perturbations
    nifreeze.testing.phantoms
    nifreeze.testing.simulations

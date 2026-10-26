@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.analysis.sensitivity - nifreeze 26.0.0.dev395 documentation</title>
+        <title>nifreeze.analysis.sensitivity - nifreeze 26.0.0.dev400 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev395 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev400 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev395</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev400</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev395</span>
+  <span class="sidebar-brand-text">26.0.0.dev400</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -267,6 +267,7 @@
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/nifreeze.testing.html">nifreeze.testing package</a><input aria-label="Toggle navigation of nifreeze.testing package" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.testing.perturbations.html">nifreeze.testing.perturbations module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.testing.phantoms.html">nifreeze.testing.phantoms module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/nifreeze.testing.simulations.html">nifreeze.testing.simulations module</a></li>
 </ul>
@@ -352,30 +353,28 @@
 <span class="sd">  dataset when some volumes move by known rigid motions, or are distorted as by</span>
 <span class="sd">  eddy currents (a *perturbation*)?</span>
 
-<span class="sd">A fresh model is built on each perturbed copy. A held-out prediction never uses</span>
-<span class="sd">its own volume, so every volume can be evaluated, the moved ones included: a</span>
-<span class="sd">moved volume&#39;s prediction sees the motion of the others only. Eddy-current</span>
-<span class="sd">distortions follow the diffusion gradient, so a prediction may still resemble</span>
-<span class="sd">its volume&#39;s own distortion through volumes with similar gradients:</span>
-<span class="sd">:func:`inherited_distortion` measures how much. Registration, the estimator and</span>
-<span class="sd">its intensity window are not involved.</span>
+<span class="sd">The perturbed copies are given, each with its ground truth (a</span>
+<span class="sd">:class:`Perturbation`): a simulator produces realistic ones, and</span>
+<span class="sd">:mod:`nifreeze.testing.perturbations` resamples a dataset for tests. A fresh</span>
+<span class="sd">model is built on each copy. A held-out prediction never uses its own volume, so</span>
+<span class="sd">every volume can be evaluated, the moved ones included: a moved volume&#39;s</span>
+<span class="sd">prediction sees the motion of the others only. Eddy-current distortions follow</span>
+<span class="sd">the diffusion gradient, so a prediction may still resemble its volume&#39;s own</span>
+<span class="sd">distortion through volumes with similar gradients: :func:`inherited_distortion`</span>
+<span class="sd">measures how much. Registration, the estimator and its intensity window are not</span>
+<span class="sd">involved.</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
-<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
+<span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
 
 <span class="kn">import</span> <span class="nn">attrs</span>
 <span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nb</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">nitransforms.linear</span> <span class="kn">import</span> <span class="n">Affine</span>
-<span class="kn">from</span> <span class="nn">nitransforms.resampling</span> <span class="kn">import</span> <span class="n">apply</span>
-<span class="kn">from</span> <span class="nn">numpy.typing</span> <span class="kn">import</span> <span class="n">ArrayLike</span>
 <span class="kn">from</span> <span class="nn">scipy.ndimage</span> <span class="kn">import</span> <span class="n">map_coordinates</span>
-<span class="kn">from</span> <span class="nn">scipy.spatial.transform</span> <span class="kn">import</span> <span class="n">Rotation</span>
 
 <span class="kn">from</span> <span class="nn">nifreeze.analysis.similarity</span> <span class="kn">import</span> <span class="n">METRICS</span><span class="p">,</span> <span class="n">nrmse</span>
 
@@ -390,8 +389,8 @@
 <span class="sd">    Volume ``i`` shows at each point what lies :math:`d_i` mm further along the</span>
 <span class="sd">    phase-encoding axis, with its intensity scaled by the Jacobian</span>
 <span class="sd">    :math:`1 + \partial d_i / \partial x_{PE}` so that no signal is created or lost.</span>
-<span class="sd">    :math:`d_i` is a polynomial of the voxel-axis coordinates, centered on the</span>
-<span class="sd">    mask and divided by its half-extent along each axis.</span>
+<span class="sd">    :math:`d_i` is a polynomial of the voxel-axis coordinates, centered on</span>
+<span class="sd">    ``center`` and divided by ``radius`` along each axis.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">magnitude</span><span class="p">:</span> <span class="nb">float</span>
@@ -405,7 +404,7 @@
     <span class="n">center</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;World coordinates of the origin of the polynomial.&quot;&quot;&quot;</span>
     <span class="n">radius</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Half-extent (mm) of the mask along each voxel axis.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Scale (mm) of the polynomial&#39;s variables along each voxel axis.&quot;&quot;&quot;</span>
     <span class="n">frame</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Direction cosines of the voxel axes, as columns.&quot;&quot;&quot;</span>
     <span class="n">coefficients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">eq</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -459,7 +458,11 @@
 <a class="viewcode-back" href="../../../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Perturbation">[docs]</a>
 <span class="nd">@attrs</span><span class="o">.</span><span class="n">define</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">Perturbation</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Rigid motions of some volumes of a dataset, and optionally a distortion of all.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The ground truth of a perturbed dataset.</span>
+
+<span class="sd">    Some volumes moved by rigid motions, and optionally every volume distorted.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">magnitude</span><span class="p">:</span> <span class="nb">float</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Rotation (degrees) and translation (mm) of every moved volume.&quot;&quot;&quot;</span>
@@ -480,428 +483,7 @@
 
 
 <span class="n">NO_PERTURBATION</span> <span class="o">=</span> <span class="n">Perturbation</span><span class="p">(</span><span class="n">magnitude</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-<span class="sd">&quot;&quot;&quot;The aligned dataset.&quot;&quot;&quot;</span>
-
-<span class="n">DEFAULT_GRID_SHIFT</span> <span class="o">=</span> <span class="mf">0.25</span>
-<span class="sd">&quot;&quot;&quot;Offset (voxels, along each axis) of the grid all volumes are resampled onto.&quot;&quot;&quot;</span>
-
-
-<div class="viewcode-block" id="rigid_motion">
-<a class="viewcode-back" href="../../../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.rigid_motion">[docs]</a>
-<span class="k">def</span> <span class="nf">rigid_motion</span><span class="p">(</span>
-    <span class="n">magnitude</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-    <span class="n">axis</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
-    <span class="n">direction</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
-    <span class="n">center</span><span class="p">:</span> <span class="n">ArrayLike</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Rotate by ``magnitude`` degrees about ``axis`` and shift by ``magnitude`` mm.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    magnitude : :obj:`float`</span>
-<span class="sd">        Rotation angle (degrees) and translation length (mm).</span>
-<span class="sd">    axis : :obj:`~numpy.typing.ArrayLike`</span>
-<span class="sd">        Rotation axis (normalized internally).</span>
-<span class="sd">    direction : :obj:`~numpy.typing.ArrayLike`</span>
-<span class="sd">        Translation direction (normalized internally).</span>
-<span class="sd">    center : :obj:`~numpy.typing.ArrayLike`, optional</span>
-<span class="sd">        World coordinates of a point on the rotation axis.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    :obj:`~numpy.ndarray`</span>
-<span class="sd">        The ``(4, 4)`` motion, mapping head positions before the motion to</span>
-<span class="sd">        positions after it.</span>
-
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; motion = rigid_motion(90.0, (0, 0, 1), (1, 0, 0), center=(10, 0, 0))</span>
-<span class="sd">    &gt;&gt;&gt; np.round(motion @ (10, 0, 5, 1), 6).tolist()</span>
-<span class="sd">    [100.0, 0.0, 5.0, 1.0]</span>
-<span class="sd">    &gt;&gt;&gt; np.round(motion @ (11, 0, 0, 1), 6).tolist()</span>
-<span class="sd">    [100.0, 1.0, 0.0, 1.0]</span>
-
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">unit_axis</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="n">unit_axis</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">unit_axis</span><span class="p">)</span>
-    <span class="n">shift</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">direction</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="n">shift</span> <span class="o">*=</span> <span class="n">magnitude</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">shift</span><span class="p">)</span>
-    <span class="n">pivot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-
-    <span class="n">matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
-    <span class="n">matrix</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">Rotation</span><span class="o">.</span><span class="n">from_rotvec</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">magnitude</span><span class="p">)</span> <span class="o">*</span> <span class="n">unit_axis</span><span class="p">)</span><span class="o">.</span><span class="n">as_matrix</span><span class="p">()</span>
-    <span class="n">matrix</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">pivot</span> <span class="o">-</span> <span class="n">matrix</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">@</span> <span class="n">pivot</span> <span class="o">+</span> <span class="n">shift</span>
-    <span class="k">return</span> <span class="n">matrix</span></div>
-
-
-
-<div class="viewcode-block" id="mask_centroid">
-<a class="viewcode-back" href="../../../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.mask_centroid">[docs]</a>
-<span class="k">def</span> <span class="nf">mask_centroid</span><span class="p">(</span><span class="n">dataset</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    World coordinates of the centroid of a mask (the brain mask by default).</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    dataset : :obj:`~nifreeze.data.base.BaseDataset`</span>
-<span class="sd">        The dataset.</span>
-<span class="sd">    mask : :obj:`~numpy.ndarray`, optional</span>
-<span class="sd">        Boolean mask; the dataset&#39;s brain mask, or the whole volume, if :obj:`None`.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    :obj:`~numpy.ndarray`</span>
-<span class="sd">        The centroid, of shape ``(3,)``.</span>
-
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">mask</span> <span class="o">=</span> <span class="n">_resolve_mask</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">mask</span><span class="p">)</span>
-    <span class="n">ijk</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">nb</span><span class="o">.</span><span class="n">affines</span><span class="o">.</span><span class="n">apply_affine</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">ijk</span><span class="p">)</span></div>
-
-
-
-<div class="viewcode-block" id="perturbation_plan">
-<a class="viewcode-back" href="../../../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.perturbation_plan">[docs]</a>
-<span class="k">def</span> <span class="nf">perturbation_plan</span><span class="p">(</span>
-    <span class="n">n_volumes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">magnitudes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
-    <span class="n">counts</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
-    <span class="n">seeds</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
-    <span class="n">center</span><span class="p">:</span> <span class="n">ArrayLike</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
-    <span class="n">fixed</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Perturbation</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Draw the perturbations of a sensitivity experiment.</span>
-
-<span class="sd">    For each seed, the moved volumes are the first ``count`` of a random ordering</span>
-<span class="sd">    of the volumes not listed in ``fixed``, each with a random rotation axis and</span>
-<span class="sd">    translation direction. Volumes moved with a smaller count</span>
-<span class="sd">    are thus also moved with a larger one, and they follow the same axis and</span>
-<span class="sd">    direction at every magnitude, so the curves over magnitude and count are</span>
-<span class="sd">    paired.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    n_volumes : :obj:`int`</span>
-<span class="sd">        Number of volumes in the dataset.</span>
-<span class="sd">    magnitudes : :obj:`~collections.abc.Sequence`</span>
-<span class="sd">        Motion magnitudes (degrees and mm, see :func:`rigid_motion`).</span>
-<span class="sd">    counts : :obj:`~collections.abc.Sequence`</span>
-<span class="sd">        Numbers of moved volumes.</span>
-<span class="sd">    seeds : :obj:`int` or :obj:`~collections.abc.Sequence`, optional</span>
-<span class="sd">        Number of seeds (``0, 1, ...``), or the seeds themselves.</span>
-<span class="sd">    center : :obj:`~numpy.typing.ArrayLike`, optional</span>
-<span class="sd">        World coordinates of a point on every rotation axis (see</span>
-<span class="sd">        :func:`mask_centroid`).</span>
-<span class="sd">    fixed : :obj:`~collections.abc.Iterable`, optional</span>
-<span class="sd">        Volumes that never move.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    :obj:`list` of :obj:`Perturbation`</span>
-<span class="sd">        One perturbation per seed, count and magnitude.</span>
-
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; plan = perturbation_plan(10, magnitudes=[0.5, 1.0], counts=[1, 3], seeds=2, fixed=[0])</span>
-<span class="sd">    &gt;&gt;&gt; len(plan)</span>
-<span class="sd">    8</span>
-<span class="sd">    &gt;&gt;&gt; any(0 in p.moved for p in plan)</span>
-<span class="sd">    False</span>
-<span class="sd">    &gt;&gt;&gt; set(plan[0].moved) &lt;= set(plan[2].moved)</span>
-<span class="sd">    True</span>
-
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">candidates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n_volumes</span><span class="p">))</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">fixed</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nb">max</span><span class="p">(</span><span class="n">counts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">candidates</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot move </span><span class="si">{</span><span class="nb">max</span><span class="p">(</span><span class="n">counts</span><span class="p">)</span><span class="si">}</span><span class="s2"> volumes: only </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">candidates</span><span class="p">)</span><span class="si">}</span><span class="s2"> may move.&quot;</span><span class="p">)</span>
-    <span class="n">seeds</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">seeds</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">seeds</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="n">seeds</span>
-
-    <span class="n">plan</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">seed</span> <span class="ow">in</span> <span class="n">seeds</span><span class="p">:</span>
-        <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
-        <span class="n">order</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="n">candidates</span><span class="p">)</span>
-        <span class="n">axes</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">order</span><span class="p">),</span> <span class="mi">3</span><span class="p">))</span>
-        <span class="n">directions</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">order</span><span class="p">),</span> <span class="mi">3</span><span class="p">))</span>
-        <span class="k">for</span> <span class="n">count</span> <span class="ow">in</span> <span class="n">counts</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">magnitude</span> <span class="ow">in</span> <span class="n">magnitudes</span><span class="p">:</span>
-                <span class="n">motions</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
-                    <span class="n">rigid_motion</span><span class="p">(</span><span class="n">magnitude</span><span class="p">,</span> <span class="n">axes</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">directions</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">center</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">count</span><span class="p">)</span>
-                <span class="p">)</span>
-                <span class="n">moved</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">order</span><span class="p">[:</span><span class="n">count</span><span class="p">])</span>
-                <span class="n">plan</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Perturbation</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">magnitude</span><span class="p">),</span> <span class="n">seed</span><span class="p">,</span> <span class="n">moved</span><span class="p">,</span> <span class="n">motions</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">plan</span></div>
-
-
-
-<div class="viewcode-block" id="one_at_a_time">
-<a class="viewcode-back" href="../../../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.one_at_a_time">[docs]</a>
-<span class="k">def</span> <span class="nf">one_at_a_time</span><span class="p">(</span>
-    <span class="n">volumes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
-    <span class="n">magnitude</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-    <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="n">center</span><span class="p">:</span> <span class="n">ArrayLike</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Perturbation</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Move each volume alone, to rank the volumes by their influence.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    volumes : :obj:`~collections.abc.Iterable`</span>
-<span class="sd">        The volumes to move, one per perturbation.</span>
-<span class="sd">    magnitude : :obj:`float`</span>
-<span class="sd">        Motion magnitude (degrees and mm, see :func:`rigid_motion`).</span>
-<span class="sd">    seed : :obj:`int`, optional</span>
-<span class="sd">        Seed for the rotation axes and translation directions.</span>
-<span class="sd">    center : :obj:`~numpy.typing.ArrayLike`, optional</span>
-<span class="sd">        World coordinates of a point on every rotation axis.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    :obj:`list` of :obj:`Perturbation`</span>
-<span class="sd">        One perturbation per volume.</span>
-
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">volumes</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">volumes</span><span class="p">]</span>
-    <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
-    <span class="n">axes</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">volumes</span><span class="p">),</span> <span class="mi">3</span><span class="p">))</span>
-    <span class="n">directions</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">volumes</span><span class="p">),</span> <span class="mi">3</span><span class="p">))</span>
-    <span class="k">return</span> <span class="p">[</span>
-        <span class="n">Perturbation</span><span class="p">(</span>
-            <span class="nb">float</span><span class="p">(</span><span class="n">magnitude</span><span class="p">),</span>
-            <span class="n">seed</span><span class="p">,</span>
-            <span class="p">(</span><span class="n">j</span><span class="p">,),</span>
-            <span class="p">(</span><span class="n">rigid_motion</span><span class="p">(</span><span class="n">magnitude</span><span class="p">,</span> <span class="n">axes</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">directions</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">center</span><span class="p">),),</span>
-        <span class="p">)</span>
-        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">volumes</span><span class="p">)</span>
-    <span class="p">]</span></div>
-
-
-
-<div class="viewcode-block" id="eddy_distortion">
-<a class="viewcode-back" href="../../../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.eddy_distortion">[docs]</a>
-<span class="k">def</span> <span class="nf">eddy_distortion</span><span class="p">(</span>
-    <span class="n">dataset</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
-    <span class="n">magnitude</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-    <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">degree</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="n">gradients</span><span class="p">:</span> <span class="n">ArrayLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Distortion</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Draw distortions that follow the diffusion gradients, as eddy currents do.</span>
-
-<span class="sd">    The fields that a diffusion gradient leaves behind scale with its amplitude</span>
-<span class="sd">    and change sign with its direction. Each volume&#39;s coefficients are therefore</span>
-<span class="sd">    one fixed random linear map of its gradient vector, scaled by</span>
-<span class="sd">    :math:`\sqrt{b / b_{max}}` (the gradient amplitude, at fixed timing). b=0</span>
-<span class="sd">    volumes are not distorted, and antipodal gradients get opposite distortions.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    dataset : :obj:`~nifreeze.data.base.BaseDataset`</span>
-<span class="sd">        The aligned dataset.</span>
-<span class="sd">    magnitude : :obj:`float`</span>
-<span class="sd">        Largest displacement (mm) of any voxel of the mask, over all volumes.</span>
-<span class="sd">    axis : :obj:`int`</span>
-<span class="sd">        Voxel axis of phase encoding.</span>
-<span class="sd">    degree : :obj:`int`, optional</span>
-<span class="sd">        Degree of the polynomial (1: translation, scaling and shears).</span>
-<span class="sd">    seed : :obj:`int`, optional</span>
-<span class="sd">        Seed for the linear map.</span>
-<span class="sd">    gradients : :obj:`~numpy.typing.ArrayLike`, optional</span>
-<span class="sd">        Gradient table, ``(n_volumes, 4)`` with the b-value last; the dataset&#39;s</span>
-<span class="sd">        if :obj:`None`.</span>
-<span class="sd">    mask : :obj:`~numpy.ndarray`, optional</span>
-<span class="sd">        Voxels over which the polynomial is normalized and ``magnitude`` reached.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    :obj:`Distortion`</span>
-<span class="sd">        The distortions.</span>
-
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">table</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">gradients</span> <span class="k">if</span> <span class="n">gradients</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">gradients</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="n">vectors</span><span class="p">,</span> <span class="n">bvals</span> <span class="o">=</span> <span class="n">table</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">table</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="n">norms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">vectors</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">unit</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">vectors</span><span class="p">,</span> <span class="n">norms</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">vectors</span><span class="p">),</span> <span class="n">where</span><span class="o">=</span><span class="n">norms</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
-    <span class="n">peak</span> <span class="o">=</span> <span class="n">bvals</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
-    <span class="n">amplitude</span> <span class="o">=</span> <span class="n">unit</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">bvals</span> <span class="o">/</span> <span class="n">peak</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="k">if</span> <span class="n">peak</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">0.0</span> <span class="o">*</span> <span class="n">unit</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">amplitude</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No volume has a diffusion gradient.&quot;</span><span class="p">)</span>
-
-    <span class="n">mask</span> <span class="o">=</span> <span class="n">_resolve_mask</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">mask</span><span class="p">)</span>
-    <span class="n">affine</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="n">frame</span> <span class="o">=</span> <span class="n">affine</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">affine</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-    <span class="n">points</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">affines</span><span class="o">.</span><span class="n">apply_affine</span><span class="p">(</span><span class="n">affine</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">mask</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
-    <span class="n">center</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-    <span class="n">radius</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="p">(</span><span class="n">points</span> <span class="o">-</span> <span class="n">center</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]))</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-
-    <span class="n">n_terms</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">_monomials</span><span class="p">(</span><span class="n">degree</span><span class="p">))</span>
-    <span class="n">linear_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">n_terms</span><span class="p">))</span>
-    <span class="n">distortion</span> <span class="o">=</span> <span class="n">Distortion</span><span class="p">(</span>
-        <span class="nb">float</span><span class="p">(</span><span class="n">magnitude</span><span class="p">),</span> <span class="n">axis</span><span class="p">,</span> <span class="n">seed</span><span class="p">,</span> <span class="n">degree</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">amplitude</span> <span class="o">@</span> <span class="n">linear_map</span>
-    <span class="p">)</span>
-    <span class="n">values</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">distortion</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
-    <span class="n">largest</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">row</span> <span class="o">@</span> <span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">distortion</span><span class="o">.</span><span class="n">coefficients</span><span class="p">)</span>
-    <span class="n">distortion</span><span class="o">.</span><span class="n">coefficients</span><span class="p">[:]</span> <span class="o">*=</span> <span class="n">magnitude</span> <span class="o">/</span> <span class="n">largest</span>
-    <span class="k">return</span> <span class="n">distortion</span></div>
-
-
-
-<div class="viewcode-block" id="shift_grid">
-<a class="viewcode-back" href="../../../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.shift_grid">[docs]</a>
-<span class="k">def</span> <span class="nf">shift_grid</span><span class="p">(</span><span class="n">dataset</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">shift</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">ArrayLike</span> <span class="o">=</span> <span class="n">DEFAULT_GRID_SHIFT</span><span class="p">,</span> <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Resample a whole dataset onto a grid offset by a fraction of a voxel.</span>
-
-<span class="sd">    Resampling smooths noise, which real motion does not. On the shifted grid</span>
-<span class="sd">    every volume goes through one interpolation, moved or not (see</span>
-<span class="sd">    :func:`perturb`), so moved and unmoved volumes are smoothed alike. Only the</span>
-<span class="sd">    sampling grid moves: the anatomy stays in place. A quarter of a voxel along</span>
-<span class="sd">    the diagonal smooths white noise as much as resampling through a rigid</span>
-<span class="sd">    motion of 0.5 to 4 degrees and millimeters (within about 3%), whereas half a</span>
-<span class="sd">    voxel smooths noticeably more.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    dataset : :obj:`~nifreeze.data.base.BaseDataset`</span>
-<span class="sd">        The aligned dataset.</span>
-<span class="sd">    shift : :obj:`float` or :obj:`~numpy.typing.ArrayLike`, optional</span>
-<span class="sd">        Offset of the grid, in voxels, along each axis.</span>
-<span class="sd">    order : :obj:`int`, optional</span>
-<span class="sd">        Interpolation order.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    :obj:`~nifreeze.data.base.BaseDataset`</span>
-<span class="sd">        A copy with ``float32`` volumes on the shifted grid. The brain mask and</span>
-<span class="sd">        the b=0 reference, if any, are resampled too.</span>
-
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">offset</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">shift</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="p">(</span><span class="mi">3</span><span class="p">,))</span>
-    <span class="n">affine</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="n">affine</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">+=</span> <span class="n">affine</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">@</span> <span class="n">offset</span>
-    <span class="n">reference</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">shape3d</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span> <span class="n">affine</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_resample</span><span class="p">(</span><span class="n">volume</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">interpolation</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-        <span class="n">image</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">volume</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">dataset</span><span class="o">.</span><span class="n">affine</span><span class="p">)</span>
-        <span class="n">resampled</span> <span class="o">=</span> <span class="n">apply</span><span class="p">(</span><span class="n">Affine</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">)),</span> <span class="n">image</span><span class="p">,</span> <span class="n">reference</span><span class="o">=</span><span class="n">reference</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">interpolation</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">resampled</span><span class="o">.</span><span class="n">dataobj</span><span class="p">)</span>
-
-    <span class="n">shifted</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
-    <span class="n">shifted</span><span class="o">.</span><span class="n">dataobj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">_resample</span><span class="p">(</span><span class="n">volume</span><span class="p">,</span> <span class="n">order</span><span class="p">)</span> <span class="k">for</span> <span class="n">volume</span> <span class="ow">in</span> <span class="n">dataset</span><span class="o">.</span><span class="n">dataobj</span><span class="p">])</span>
-    <span class="n">shifted</span><span class="o">.</span><span class="n">affine</span> <span class="o">=</span> <span class="n">affine</span>
-    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="s2">&quot;brainmask&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">shifted</span><span class="o">.</span><span class="n">brainmask</span> <span class="o">=</span> <span class="n">_resample</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">brainmask</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.5</span>
-    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="s2">&quot;bzero&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">shifted</span><span class="o">.</span><span class="n">bzero</span> <span class="o">=</span> <span class="n">_resample</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">bzero</span><span class="p">,</span> <span class="n">order</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">shifted</span></div>
-
-
-
-<div class="viewcode-block" id="perturb">
-<a class="viewcode-back" href="../../../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.perturb">[docs]</a>
-<span class="k">def</span> <span class="nf">perturb</span><span class="p">(</span>
-    <span class="n">dataset</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
-    <span class="n">perturbation</span><span class="p">:</span> <span class="n">Perturbation</span><span class="p">,</span>
-    <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-    <span class="n">round_trip</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="n">grid</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Copy a dataset with some of its volumes moved or distorted.</span>
-
-<span class="sd">    Each moved or distorted volume is resampled once from the aligned original,</span>
-<span class="sd">    through its motion and then its distortion. Everything else (gradients, b=0</span>
-<span class="sd">    reference, mask) is left as it was, as a model would see it when the motion</span>
-<span class="sd">    and the distortion go uncorrected.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    dataset : :obj:`~nifreeze.data.base.BaseDataset`</span>
-<span class="sd">        The aligned dataset.</span>
-<span class="sd">    perturbation : :obj:`Perturbation`</span>
-<span class="sd">        The volumes to move, their motions, and the distortion.</span>
-<span class="sd">    order : :obj:`int`, optional</span>
-<span class="sd">        Interpolation order.</span>
-<span class="sd">    round_trip : :obj:`bool`, optional</span>
-<span class="sd">        Move each volume and move it back, which leaves it in place but</span>
-<span class="sd">        interpolated twice (rigid motions only).</span>
-<span class="sd">    grid : :obj:`~nifreeze.data.base.BaseDataset`, optional</span>
-<span class="sd">        The dataset on a shifted grid (see :func:`shift_grid`). Moved volumes are</span>
-<span class="sd">        then resampled from the original onto that grid, through their motion,</span>
-<span class="sd">        and everything else is taken from ``grid``.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    :obj:`~nifreeze.data.base.BaseDataset`</span>
-<span class="sd">        A copy of the dataset (or of ``grid``) with ``float32`` volumes.</span>
-
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">distortion</span> <span class="o">=</span> <span class="n">perturbation</span><span class="o">.</span><span class="n">distortion</span>
-    <span class="k">if</span> <span class="n">round_trip</span> <span class="ow">and</span> <span class="n">grid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;A round trip cannot be combined with a shifted grid.&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">round_trip</span> <span class="ow">and</span> <span class="n">distortion</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;A round trip is defined for rigid motions only.&quot;</span><span class="p">)</span>
-    <span class="n">source</span> <span class="o">=</span> <span class="n">dataset</span> <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">grid</span>
-    <span class="n">motions</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">perturbation</span><span class="o">.</span><span class="n">moved</span><span class="p">,</span> <span class="n">perturbation</span><span class="o">.</span><span class="n">motions</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
-    <span class="n">displaced</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">motions</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">distortion</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">displaced</span> <span class="o">|=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">distortion</span><span class="o">.</span><span class="n">coefficients</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))}</span>
-
-    <span class="n">dataobj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">dataobj</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">round_trip</span><span class="p">:</span>
-        <span class="n">reference</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">shape3d</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span> <span class="n">source</span><span class="o">.</span><span class="n">affine</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">motion</span> <span class="ow">in</span> <span class="n">motions</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">image</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span>
-                <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">dataobj</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">dataset</span><span class="o">.</span><span class="n">affine</span>
-            <span class="p">)</span>
-            <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">motion</span><span class="p">),</span> <span class="n">motion</span><span class="p">):</span>
-                <span class="n">image</span> <span class="o">=</span> <span class="n">apply</span><span class="p">(</span><span class="n">Affine</span><span class="p">(</span><span class="n">step</span><span class="p">),</span> <span class="n">image</span><span class="p">,</span> <span class="n">reference</span><span class="o">=</span><span class="n">reference</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span>
-            <span class="n">dataobj</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">dataobj</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">displaced</span><span class="p">):</span>
-            <span class="n">dataobj</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">_displace</span><span class="p">(</span>
-                <span class="n">dataset</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">source</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">motions</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">index</span><span class="p">),</span> <span class="n">distortion</span><span class="p">,</span> <span class="n">order</span>
-            <span class="p">)</span>
-
-    <span class="n">moved</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
-    <span class="n">moved</span><span class="o">.</span><span class="n">dataobj</span> <span class="o">=</span> <span class="n">dataobj</span>
-    <span class="k">return</span> <span class="n">moved</span></div>
-
-
-
-<span class="k">def</span> <span class="nf">_displace</span><span class="p">(</span>
-    <span class="n">dataset</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
-    <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">motion</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">distortion</span><span class="p">:</span> <span class="n">Distortion</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">order</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resample one aligned volume onto a grid, through its motion and distortion.&quot;&quot;&quot;</span>
-    <span class="n">shape</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">shape3d</span>
-    <span class="n">ijk</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-    <span class="n">points</span> <span class="o">=</span> <span class="n">affine</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">@</span> <span class="n">ijk</span> <span class="o">+</span> <span class="n">affine</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">:]</span>
-    <span class="n">jacobian</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="mf">1.0</span>
-    <span class="k">if</span> <span class="n">distortion</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">values</span><span class="p">,</span> <span class="n">derivatives</span> <span class="o">=</span> <span class="n">distortion</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
-        <span class="n">coefficients</span> <span class="o">=</span> <span class="n">distortion</span><span class="o">.</span><span class="n">coefficients</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
-        <span class="c1"># The scanner shows at each point what lies further along phase encoding</span>
-        <span class="n">points</span> <span class="o">=</span> <span class="n">points</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">distortion</span><span class="o">.</span><span class="n">direction</span><span class="p">,</span> <span class="n">coefficients</span> <span class="o">@</span> <span class="n">values</span><span class="p">)</span>
-        <span class="n">jacobian</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">coefficients</span> <span class="o">@</span> <span class="n">derivatives</span>
-    <span class="k">if</span> <span class="n">motion</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="c1"># The moved head shows, at each position, what was at motion⁻¹(position)</span>
-        <span class="n">inverse</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">motion</span><span class="p">)</span>
-        <span class="n">points</span> <span class="o">=</span> <span class="n">inverse</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">@</span> <span class="n">points</span> <span class="o">+</span> <span class="n">inverse</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">:]</span>
-    <span class="n">to_voxels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">affine</span><span class="p">)</span>
-    <span class="n">coordinates</span> <span class="o">=</span> <span class="n">to_voxels</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">@</span> <span class="n">points</span> <span class="o">+</span> <span class="n">to_voxels</span><span class="p">[:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">:]</span>
-    <span class="n">volume</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">dataobj</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-    <span class="n">resampled</span> <span class="o">=</span> <span class="n">map_coordinates</span><span class="p">(</span><span class="n">volume</span><span class="p">,</span> <span class="n">coordinates</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span>  <span class="c1"># type: ignore[call-overload]</span>
-    <span class="k">return</span> <span class="p">(</span><span class="n">resampled</span> <span class="o">*</span> <span class="n">jacobian</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="sd">&quot;&quot;&quot;The ground truth of the aligned dataset.&quot;&quot;&quot;</span>
 
 
 <div class="viewcode-block" id="held_out_predictions">
@@ -998,59 +580,53 @@
 <a class="viewcode-back" href="../../../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.sensitivity">[docs]</a>
 <span class="k">def</span> <span class="nf">sensitivity</span><span class="p">(</span>
     <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
-    <span class="n">dataset</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
-    <span class="n">plan</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Perturbation</span><span class="p">],</span>
+    <span class="n">reference</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">cells</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Perturbation</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
     <span class="n">evaluate</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">metrics</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-    <span class="n">grid_shift</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">ArrayLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DEFAULT_GRID_SHIFT</span><span class="p">,</span>
     <span class="o">**</span><span class="n">model_kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Measure how far held-out predictions drift from the aligned ones under a plan.</span>
+<span class="sd">    Measure how far held-out predictions drift from those on a reference dataset.</span>
 
-<span class="sd">    Each prediction on a perturbed copy is compared with the prediction of the</span>
-<span class="sd">    same volume on the aligned dataset. The change is reported as an NRMSE</span>
-<span class="sd">    divided by the standard deviation of the actual volume, not by that of the</span>
-<span class="sd">    aligned prediction: a smooth prediction would otherwise inflate its own</span>
-<span class="sd">    error, and models could not be compared. By default, the whole dataset is first</span>
-<span class="sd">    resampled onto a shifted grid (see :func:`shift_grid`), so that every volume</span>
-<span class="sd">    is interpolated once and moved volumes differ from the others only by their</span>
-<span class="sd">    displacement.</span>
+<span class="sd">    Each cell pairs a perturbed copy of ``reference`` (same grid, same volumes,</span>
+<span class="sd">    some moved or distorted) with the :class:`Perturbation` that made it. Each</span>
+<span class="sd">    prediction on a copy is compared with the prediction of the same volume on</span>
+<span class="sd">    the reference. The change is reported as an NRMSE divided by the standard</span>
+<span class="sd">    deviation of the actual volume, not by that of the reference prediction: a</span>
+<span class="sd">    smooth prediction would otherwise inflate its own error, and models could not</span>
+<span class="sd">    be compared.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    model : :obj:`str` or :obj:`~collections.abc.Callable`</span>
 <span class="sd">        The model (see :func:`held_out_predictions`).</span>
-<span class="sd">    dataset : :obj:`~nifreeze.data.base.BaseDataset`</span>
+<span class="sd">    reference : :obj:`~nifreeze.data.base.BaseDataset`</span>
 <span class="sd">        The aligned dataset.</span>
-<span class="sd">    plan : :obj:`~collections.abc.Iterable` of :obj:`Perturbation`</span>
-<span class="sd">        The perturbations (see :func:`perturbation_plan`).</span>
+<span class="sd">    cells : :obj:`~collections.abc.Iterable`</span>
+<span class="sd">        Pairs of a :class:`Perturbation` and the perturbed copy of ``reference``.</span>
+<span class="sd">        A copy with both motions and a distortion needs the copy with the same</span>
+<span class="sd">        motions alone among the cells: its inherited share is measured on top of</span>
+<span class="sd">        them.</span>
 <span class="sd">    evaluate : :obj:`~collections.abc.Iterable`, optional</span>
 <span class="sd">        Volumes to predict (all if :obj:`None`), moved or not.</span>
 <span class="sd">    mask : :obj:`~numpy.ndarray`, optional</span>
-<span class="sd">        Voxels compared, on the grid of the compared volumes (the shifted grid,</span>
-<span class="sd">        unless ``grid_shift`` is :obj:`None`); the brain mask on that grid, or</span>
-<span class="sd">        the whole volume, if :obj:`None`.</span>
+<span class="sd">        Voxels compared; the reference&#39;s brain mask, or the whole volume, if</span>
+<span class="sd">        :obj:`None`.</span>
 <span class="sd">    metrics : :obj:`~collections.abc.Mapping`, optional</span>
 <span class="sd">        Further metrics by name, with the signature of</span>
 <span class="sd">        :func:`~nifreeze.analysis.similarity.masked_cc`, called as</span>
 <span class="sd">        ``metric(perturbed, aligned, mask)``.</span>
-<span class="sd">    order : :obj:`int`, optional</span>
-<span class="sd">        Interpolation order.</span>
-<span class="sd">    grid_shift : :obj:`float` or :obj:`~numpy.typing.ArrayLike`, optional</span>
-<span class="sd">        Offset of the shifted grid, in voxels; :obj:`None` resamples only the</span>
-<span class="sd">        moved volumes, which then come out smoother than the others.</span>
 <span class="sd">    **model_kwargs</span>
 <span class="sd">        Arguments for the model.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    :obj:`list` of :obj:`dict`</span>
-<span class="sd">        One row per perturbation and evaluated volume, with the ``nrmse``, each</span>
-<span class="sd">        further metric, whether that volume was itself ``moved``, the magnitude</span>
-<span class="sd">        of the ``distortion`` (0 without one) and the share of the volume&#39;s own</span>
+<span class="sd">        One row per cell and evaluated volume, with the ``nrmse``, each further</span>
+<span class="sd">        metric, whether that volume was itself ``moved``, the magnitude of the</span>
+<span class="sd">        ``distortion`` (0 without one) and the share of the volume&#39;s own</span>
 <span class="sd">        distortion that its prediction ``inherited`` (the projection of the</span>
 <span class="sd">        coefficients fitted by :func:`inherited_distortion` onto the volume&#39;s</span>
 <span class="sd">        own; NaN without a distortion, or for an undistorted volume). With</span>
@@ -1059,32 +635,46 @@
 <span class="sd">        onto the distortion&#39;s terms.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cells</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">cells</span><span class="p">)</span>
     <span class="n">metrics</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">metrics</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">metrics</span>
-    <span class="n">grid</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">grid_shift</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">shift_grid</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">grid_shift</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span>
-    <span class="n">aligned</span> <span class="o">=</span> <span class="n">dataset</span> <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">grid</span>
-    <span class="n">mask</span> <span class="o">=</span> <span class="n">_resolve_mask</span><span class="p">(</span><span class="n">aligned</span><span class="p">,</span> <span class="n">mask</span><span class="p">)</span>
-    <span class="n">reference</span> <span class="o">=</span> <span class="n">held_out_predictions</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">aligned</span><span class="p">,</span> <span class="n">evaluate</span><span class="p">,</span> <span class="o">**</span><span class="n">model_kwargs</span><span class="p">)</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">_resolve_mask</span><span class="p">(</span><span class="n">reference</span><span class="p">,</span> <span class="n">mask</span><span class="p">)</span>
+    <span class="n">aligned</span> <span class="o">=</span> <span class="n">held_out_predictions</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">reference</span><span class="p">,</span> <span class="n">evaluate</span><span class="p">,</span> <span class="o">**</span><span class="n">model_kwargs</span><span class="p">)</span>
     <span class="n">scale</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="n">index</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">aligned</span><span class="o">.</span><span class="n">dataobj</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)[</span><span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">()</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">reference</span>
+        <span class="n">index</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">reference</span><span class="o">.</span><span class="n">dataobj</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)[</span><span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">()</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">aligned</span>
     <span class="p">}</span>
 
+    <span class="n">still</span> <span class="o">=</span> <span class="p">{</span><span class="n">_motions_of</span><span class="p">(</span><span class="n">p</span><span class="p">):</span> <span class="n">data</span> <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">cells</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">distortion</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">p</span><span class="o">.</span><span class="n">motions</span><span class="p">}</span>
+    <span class="n">needed</span> <span class="o">=</span> <span class="p">{</span><span class="n">_motions_of</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">cells</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">distortion</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">p</span><span class="o">.</span><span class="n">motions</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">missing</span> <span class="o">:=</span> <span class="n">needed</span> <span class="o">-</span> <span class="n">still</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2"> cell(s) with motions and a distortion lack the cell with the same &quot;</span>
+            <span class="s2">&quot;motions alone, on top of which their inherited share is measured.&quot;</span>
+        <span class="p">)</span>
+    <span class="n">kept</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="n">perturbation</span><span class="p">:</span> <span class="n">Perturbation</span><span class="p">,</span> <span class="n">perturbed</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">_motions_of</span><span class="p">(</span><span class="n">perturbation</span><span class="p">)</span> <span class="k">if</span> <span class="n">perturbation</span><span class="o">.</span><span class="n">distortion</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">kept</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">kept</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="n">predicted</span> <span class="o">=</span> <span class="n">held_out_predictions</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">perturbed</span><span class="p">,</span> <span class="n">aligned</span><span class="p">,</span> <span class="o">**</span><span class="n">model_kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">needed</span><span class="p">:</span>
+            <span class="n">kept</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">predicted</span>
+        <span class="k">return</span> <span class="n">predicted</span>
+
     <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">perturbation</span> <span class="ow">in</span> <span class="n">plan</span><span class="p">:</span>
-        <span class="n">moved</span> <span class="o">=</span> <span class="n">perturb</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">perturbation</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">)</span>
-        <span class="n">predicted</span> <span class="o">=</span> <span class="n">held_out_predictions</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">moved</span><span class="p">,</span> <span class="n">reference</span><span class="p">,</span> <span class="o">**</span><span class="n">model_kwargs</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">perturbation</span><span class="p">,</span> <span class="n">perturbed</span> <span class="ow">in</span> <span class="n">cells</span><span class="p">:</span>
+        <span class="n">predicted</span> <span class="o">=</span> <span class="n">predict</span><span class="p">(</span><span class="n">perturbation</span><span class="p">,</span> <span class="n">perturbed</span><span class="p">)</span>
         <span class="n">distortion</span> <span class="o">=</span> <span class="n">perturbation</span><span class="o">.</span><span class="n">distortion</span>
-        <span class="n">undistorted</span> <span class="o">=</span> <span class="n">reference</span>
+        <span class="n">undistorted</span> <span class="o">=</span> <span class="n">aligned</span>
         <span class="k">if</span> <span class="n">distortion</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">perturbation</span><span class="o">.</span><span class="n">motions</span><span class="p">:</span>
-            <span class="n">still</span> <span class="o">=</span> <span class="n">perturb</span><span class="p">(</span>
-                <span class="n">dataset</span><span class="p">,</span> <span class="n">attrs</span><span class="o">.</span><span class="n">evolve</span><span class="p">(</span><span class="n">perturbation</span><span class="p">,</span> <span class="n">distortion</span><span class="o">=</span><span class="kc">None</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="n">grid</span>
-            <span class="p">)</span>
-            <span class="n">undistorted</span> <span class="o">=</span> <span class="n">held_out_predictions</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">still</span><span class="p">,</span> <span class="n">reference</span><span class="p">,</span> <span class="o">**</span><span class="n">model_kwargs</span><span class="p">)</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">_motions_of</span><span class="p">(</span><span class="n">perturbation</span><span class="p">)</span>
+            <span class="n">undistorted</span> <span class="o">=</span> <span class="n">predict</span><span class="p">(</span><span class="n">attrs</span><span class="o">.</span><span class="n">evolve</span><span class="p">(</span><span class="n">perturbation</span><span class="p">,</span> <span class="n">distortion</span><span class="o">=</span><span class="kc">None</span><span class="p">),</span> <span class="n">still</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
         <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">prediction</span> <span class="ow">in</span> <span class="n">predicted</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">inherited</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">distortion</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">distortion</span><span class="o">.</span><span class="n">coefficients</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
                 <span class="n">own</span> <span class="o">=</span> <span class="n">distortion</span><span class="o">.</span><span class="n">coefficients</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
                 <span class="n">fitted</span> <span class="o">=</span> <span class="n">inherited_distortion</span><span class="p">(</span>
-                    <span class="n">undistorted</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">prediction</span><span class="p">,</span> <span class="n">distortion</span><span class="p">,</span> <span class="n">aligned</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">mask</span>
+                    <span class="n">undistorted</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">prediction</span><span class="p">,</span> <span class="n">distortion</span><span class="p">,</span> <span class="n">reference</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">mask</span>
                 <span class="p">)</span>
                 <span class="n">inherited</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">fitted</span> <span class="o">@</span> <span class="n">own</span> <span class="o">/</span> <span class="p">(</span><span class="n">own</span> <span class="o">@</span> <span class="n">own</span><span class="p">))</span>
             <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
@@ -1095,10 +685,10 @@
                     <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="n">index</span><span class="p">,</span>
                     <span class="s2">&quot;moved&quot;</span><span class="p">:</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">perturbation</span><span class="o">.</span><span class="n">moved</span><span class="p">,</span>
                     <span class="s2">&quot;distortion&quot;</span><span class="p">:</span> <span class="mf">0.0</span> <span class="k">if</span> <span class="n">distortion</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">distortion</span><span class="o">.</span><span class="n">magnitude</span><span class="p">,</span>
-                    <span class="s2">&quot;nrmse&quot;</span><span class="p">:</span> <span class="n">nrmse</span><span class="p">(</span><span class="n">prediction</span><span class="p">,</span> <span class="n">reference</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">mask</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">[</span><span class="n">index</span><span class="p">]),</span>
+                    <span class="s2">&quot;nrmse&quot;</span><span class="p">:</span> <span class="n">nrmse</span><span class="p">(</span><span class="n">prediction</span><span class="p">,</span> <span class="n">aligned</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">mask</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">[</span><span class="n">index</span><span class="p">]),</span>
                     <span class="s2">&quot;inherited&quot;</span><span class="p">:</span> <span class="n">inherited</span><span class="p">,</span>
                     <span class="o">**</span><span class="p">{</span>
-                        <span class="n">name</span><span class="p">:</span> <span class="n">metric</span><span class="p">(</span><span class="n">prediction</span><span class="p">,</span> <span class="n">reference</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">mask</span><span class="p">)</span>
+                        <span class="n">name</span><span class="p">:</span> <span class="n">metric</span><span class="p">(</span><span class="n">prediction</span><span class="p">,</span> <span class="n">aligned</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">mask</span><span class="p">)</span>
                         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">metric</span> <span class="ow">in</span> <span class="n">metrics</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
                     <span class="p">},</span>
                 <span class="p">}</span>
@@ -1202,6 +792,11 @@
     <span class="p">]</span>
 
 
+<span class="k">def</span> <span class="nf">_motions_of</span><span class="p">(</span><span class="n">perturbation</span><span class="p">:</span> <span class="n">Perturbation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Identify the motions of a perturbation, whatever its distortion.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">perturbation</span><span class="o">.</span><span class="n">moved</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">m</span><span class="p">)</span><span class="o">.</span><span class="n">tobytes</span><span class="p">()</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">perturbation</span><span class="o">.</span><span class="n">motions</span><span class="p">)</span>
+
+
 <span class="k">def</span> <span class="nf">_resolve_mask</span><span class="p">(</span><span class="n">dataset</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
     <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
@@ -1240,7 +835,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=7aca5238"></script>
+</div><script src="../../../_static/documentation_options.js?v=58cb63ae"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

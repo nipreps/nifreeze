@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="nifreeze.analysis package" href="api/nifreeze.analysis.html"><link rel="prev" title="How to cite" href="citation.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>For developers - nifreeze 26.0.0.dev395 documentation</title>
+        <title>For developers - nifreeze 26.0.0.dev400 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev395 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev400 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev395</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev400</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev395</span>
+  <span class="sidebar-brand-text">26.0.0.dev400</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -268,6 +268,7 @@
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.testing.html">nifreeze.testing package</a><input aria-label="Toggle navigation of nifreeze.testing package" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.testing.perturbations.html">nifreeze.testing.perturbations module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.testing.phantoms.html">nifreeze.testing.phantoms module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.testing.simulations.html">nifreeze.testing.simulations module</a></li>
 </ul>
@@ -409,7 +410,6 @@ that change them, and lists the errors of every model in its job summary.</p>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html">nifreeze.analysis.sensitivity module</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.DEFAULT_GRID_SHIFT"><code class="docutils literal notranslate"><span class="pre">DEFAULT_GRID_SHIFT</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Distortion"><code class="docutils literal notranslate"><span class="pre">Distortion</span></code></a><ul>
 <li class="toctree-l5"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Distortion.axis"><code class="docutils literal notranslate"><span class="pre">Distortion.axis</span></code></a></li>
 <li class="toctree-l5"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Distortion.basis"><code class="docutils literal notranslate"><span class="pre">Distortion.basis()</span></code></a></li>
@@ -433,18 +433,11 @@ that change them, and lists the errors of every model in its job summary.</p>
 <li class="toctree-l5"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Perturbation.seed"><code class="docutils literal notranslate"><span class="pre">Perturbation.seed</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.eddy_distortion"><code class="docutils literal notranslate"><span class="pre">eddy_distortion()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.fidelity"><code class="docutils literal notranslate"><span class="pre">fidelity()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.held_out_predictions"><code class="docutils literal notranslate"><span class="pre">held_out_predictions()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.influence"><code class="docutils literal notranslate"><span class="pre">influence()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.inherited_distortion"><code class="docutils literal notranslate"><span class="pre">inherited_distortion()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.mask_centroid"><code class="docutils literal notranslate"><span class="pre">mask_centroid()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.one_at_a_time"><code class="docutils literal notranslate"><span class="pre">one_at_a_time()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.perturb"><code class="docutils literal notranslate"><span class="pre">perturb()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.perturbation_plan"><code class="docutils literal notranslate"><span class="pre">perturbation_plan()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.rigid_motion"><code class="docutils literal notranslate"><span class="pre">rigid_motion()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.sensitivity"><code class="docutils literal notranslate"><span class="pre">sensitivity()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.shift_grid"><code class="docutils literal notranslate"><span class="pre">shift_grid()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.similarity.html">nifreeze.analysis.similarity module</a><ul>
@@ -918,6 +911,15 @@ that change them, and lists the errors of every model in its job summary.</p>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="api/nifreeze.testing.html">nifreeze.testing package</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="api/nifreeze.testing.html#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.testing.perturbations.html">nifreeze.testing.perturbations module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.testing.perturbations.html#nifreeze.testing.perturbations.eddy_distortion"><code class="docutils literal notranslate"><span class="pre">eddy_distortion()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.testing.perturbations.html#nifreeze.testing.perturbations.mask_centroid"><code class="docutils literal notranslate"><span class="pre">mask_centroid()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.testing.perturbations.html#nifreeze.testing.perturbations.one_at_a_time"><code class="docutils literal notranslate"><span class="pre">one_at_a_time()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.testing.perturbations.html#nifreeze.testing.perturbations.perturb"><code class="docutils literal notranslate"><span class="pre">perturb()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.testing.perturbations.html#nifreeze.testing.perturbations.perturbation_plan"><code class="docutils literal notranslate"><span class="pre">perturbation_plan()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.testing.perturbations.html#nifreeze.testing.perturbations.rigid_motion"><code class="docutils literal notranslate"><span class="pre">rigid_motion()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="api/nifreeze.testing.phantoms.html">nifreeze.testing.phantoms module</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="api/nifreeze.testing.phantoms.html#nifreeze.testing.phantoms.add_noise"><code class="docutils literal notranslate"><span class="pre">add_noise()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/nifreeze.testing.phantoms.html#nifreeze.testing.phantoms.noise_sigma"><code class="docutils literal notranslate"><span class="pre">noise_sigma()</span></code></a></li>
@@ -1101,7 +1103,7 @@ that change them, and lists the errors of every model in its job summary.</p>
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=7aca5238"></script>
+</div><script src="_static/documentation_options.js?v=58cb63ae"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
