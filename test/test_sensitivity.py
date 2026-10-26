@@ -408,6 +408,12 @@ def _table(rng, n_volumes, bval=1000.0):
     return np.column_stack((vectors, np.full(n_volumes, bval)))
 
 
+def _epi(distortion, n_lines=SHAPE[1], spacing=5e-4):
+    """The distortion formed by an EPI readout with evenly spaced lines."""
+    times = (n_lines // 2 - np.arange(n_lines)) * spacing
+    return attrs.evolve(distortion, readout=times, readout_time=n_lines * spacing)
+
+
 def _only(distortion, index, coefficients):
     """The distortion of volume ``index`` replaced by ``coefficients``; others undistorted."""
     table = np.zeros_like(distortion.coefficients)
@@ -516,10 +522,104 @@ def test_distortion_moves_signal_along_phase_encoding_and_conserves_it():
     assert spread(stretched) < 0.95 * spread(bzero)
 
 
+def test_an_epi_readout_with_a_constant_field_shifts_whole_voxels():
+    """With evenly spaced lines, a field worth two voxels shows what lies two voxels further."""
+    dataset, bzero = _copies(np.random.default_rng(1234))
+    epi = _epi(
+        pert.eddy_distortion(dataset, 1.0, axis=1, gradients=_table(np.random.default_rng(0), 9))
+    )
+
+    formed = epi.distort(bzero, dataset.affine, [2 * ZOOMS, 0.0, 0.0, 0.0])
+
+    assert np.allclose(formed, np.roll(bzero, -2, axis=1), atol=1e-6 * bzero.max())
+
+
+def test_an_epi_readout_and_resampling_agree_on_small_distortions():
+    """Both move the signal the same way along every term; they differ in how they interpolate.
+
+    At 0.1 mm they agree within 10% of the change (4% measured), and a term of
+    the wrong sign would differ by twice the change.
+    """
+    dataset, bzero = _copies(np.random.default_rng(1234))
+    distortion = pert.eddy_distortion(
+        dataset, 0.1, axis=1, gradients=_table(np.random.default_rng(0), 9)
+    )
+
+    for coefficients in distortion.coefficients:
+        resampled = distortion.distort(bzero, dataset.affine, coefficients)
+        formed = _epi(distortion).distort(bzero, dataset.affine, coefficients)
+        change = np.abs(resampled - bzero).max()
+        assert np.abs(formed - resampled).max() < 0.1 * change
+
+
+@pytest.mark.parametrize("readout", [False, True])
+def test_no_distortion_leaves_a_volume_exactly_as_it_is(readout):
+    """Zero coefficients skip the model, which would add its interpolation error."""
+    dataset, bzero = _copies(np.random.default_rng(1234))
+    distortion = pert.eddy_distortion(
+        dataset, 1.0, axis=1, gradients=_table(np.random.default_rng(0), 9)
+    )
+    if readout:
+        distortion = _epi(distortion)
+
+    assert np.array_equal(distortion.distort(bzero, dataset.affine, np.zeros(4)), bzero)
+
+
+def test_an_epi_readout_needs_its_line_times():
+    dataset, bzero = _copies(np.random.default_rng(1234))
+    distortion = pert.eddy_distortion(
+        dataset, 1.0, axis=1, gradients=_table(np.random.default_rng(0), 9)
+    )
+    coefficients = distortion.coefficients[0]
+
+    with pytest.raises(ValueError, match="readout has 19 lines, the grid 20"):
+        _epi(distortion, n_lines=19).distort(bzero, dataset.affine, coefficients)
+    with pytest.raises(ValueError, match="total readout time"):
+        attrs.evolve(_epi(distortion), readout_time=None).distort(
+            bzero, dataset.affine, coefficients
+        )
+
+
+@pytest.mark.parametrize("readout", [False, True])
+def test_distortion_slopes_are_its_derivatives(readout):
+    """The slopes that Gauss-Newton follows match central differences of the distortion.
+
+    They are compared inside the brain, where Gauss-Newton uses them: at the
+    grid's edge, resampling drops to zero outside the field of view.
+    """
+    dataset, bzero = _copies(np.random.default_rng(1234))
+    distortion = pert.eddy_distortion(
+        dataset, 2.0, axis=1, degree=2, gradients=_table(np.random.default_rng(0), 9)
+    )
+    if readout:
+        distortion = _epi(distortion)
+    coefficients = distortion.coefficients[3]
+
+    _, slopes = distortion._distort(bzero, dataset.affine, coefficients, slopes=True)
+    assert slopes is not None
+
+    for term, unit in enumerate(np.eye(len(coefficients))):
+        ahead, behind = (
+            distortion.distort(bzero, dataset.affine, coefficients + side * unit)
+            for side in (1e-4, -1e-4)
+        )
+        expected = ((ahead - behind) / 2e-4)[dataset.brainmask]
+        inside = slopes[term][dataset.brainmask]
+        assert np.allclose(inside, expected, atol=1e-3 * np.abs(expected).max())
+
+
+@pytest.mark.parametrize("readout", [False, True])
+@pytest.mark.parametrize("magnitude", [0.5, 4.0])
 @pytest.mark.parametrize("degree", [1, 2])
-def test_inherited_distortion_recovers_a_volume_own_distortion(degree):
+def test_inherited_distortion_recovers_a_volume_own_distortion(degree, magnitude, readout):
+    """Gauss-Newton through the distortion's own model finds its coefficients, to 10⁻⁴.
+
+    The first-order fit it replaced was off by up to 5% at 0.5 mm.
+    """
     dataset = _dwi(np.random.default_rng(1234))
-    distortion = pert.eddy_distortion(dataset, 0.5, axis=1, degree=degree)
+    distortion = pert.eddy_distortion(dataset, magnitude, axis=1, degree=degree)
+    if readout:
+        distortion = _epi(distortion)
     distorted = pert.perturb(dataset, sens.Perturbation(0.0, None, distortion=distortion))
 
     for index in (0, 11, 23):
@@ -531,11 +631,68 @@ def test_inherited_distortion_recovers_a_volume_own_distortion(degree):
             dataset.brainmask,
         )
         own = distortion.coefficients[index]
-        assert np.linalg.norm(fitted - own) < 0.05 * np.linalg.norm(own)
+        assert np.linalg.norm(fitted - own) < 1e-4 * np.linalg.norm(own)
 
 
+def test_a_distortion_reads_from_a_phantom_sidecar():
+    """The sidecar lists some volumes; they land at their indices, the others stay undistorted."""
+    eddy = {
+        "Magnitude": 2.0,
+        "MagnitudeMm": 3.6,
+        "TotalReadoutTime": 0.04,
+        "ReadoutTimes": [0.01, 0.0, -0.01],
+        "Distortion": {
+            "Axis": 1,
+            "Degree": 1,
+            "Center": [1.0, 2.0, 3.0],
+            "Radius": [1.8, 1.8, 1.8],
+            "Frame": np.eye(3).tolist(),
+            "Coefficients": [[0.0, 1.0, 2.0, 3.0], [0.0, -1.0, 0.0, 1.0]],
+        },
+    }
+
+    distortion = sens.Distortion.from_sidecar(eddy, [3, 0], n_volumes=5)
+
+    assert distortion.coefficients.tolist() == [
+        [0.0, -1.0, 0.0, 1.0],
+        [0.0] * 4,
+        [0.0] * 4,
+        [0.0, 1.0, 2.0, 3.0],
+        [0.0] * 4,
+    ]
+    assert (distortion.magnitude, distortion.axis, distortion.degree) == (3.6, 1, 1)
+    assert np.asarray(distortion.readout).tolist() == [0.01, 0.0, -0.01]
+    assert distortion.readout_time == 0.04
+    with pytest.raises(ValueError, match="lists 2 volumes, but 1 indices"):
+        sens.Distortion.from_sidecar(eddy, [3], n_volumes=5)
+
+
+def test_copies_load_when_needed_and_rows_give_the_shell():
+    """A copy given as a loader is loaded once, and analyzed as if it had been given."""
+    dataset = _dwi(np.random.default_rng(1234))
+    perturbation = sens.Perturbation(
+        0.0, None, distortion=pert.eddy_distortion(dataset, 0.5, axis=1)
+    )
+    copy = pert.perturb(dataset, perturbation)
+    loads: list[None] = []
+
+    def load():
+        loads.append(None)
+        return copy
+
+    lazy = sens.sensitivity(ExpectationModel, dataset, [(perturbation, load)], [0, 5], stat="mean")
+    given = sens.sensitivity(
+        ExpectationModel, dataset, [(perturbation, copy)], [0, 5], stat="mean"
+    )
+
+    assert len(loads) == 1
+    assert lazy == given
+    assert [row["shell"] for row in lazy] == [1000.0, 1000.0]
+
+
+@pytest.mark.parametrize("readout", [False, True])
 @pytest.mark.parametrize("octant", [False, True])
-def test_copies_inherit_the_distortion_of_the_others(octant):
+def test_copies_inherit_the_distortion_of_the_others(octant, readout):
     """The mean of the others inherits their average distortion; the trivial model, none."""
     dataset, _ = _copies(np.random.default_rng(1234))
     n_volumes = len(dataset)
@@ -543,8 +700,12 @@ def test_copies_inherit_the_distortion_of_the_others(octant):
     if octant:
         # Distortions no longer cancel out over the others
         table[:, :3] = np.abs(table[:, :3])
-    # Small enough that the blur of averaging distortions (second order) is negligible
-    distortion = pert.eddy_distortion(dataset, 0.1, axis=1, gradients=table)
+    # Small enough that the blur of averaging distortions (second order) is negligible; the
+    # readout's magnitudes add a second-order change of their own, hence half the size
+    magnitude = 0.05 if readout else 0.1
+    distortion = pert.eddy_distortion(dataset, magnitude, axis=1, gradients=table)
+    if readout:
+        distortion = _epi(distortion)
     cells = _cells(dataset, [sens.Perturbation(0.0, None, distortion=distortion)])
 
     rows = sens.sensitivity(ExpectationModel, dataset, cells, stat="mean")
@@ -556,7 +717,9 @@ def test_copies_inherit_the_distortion_of_the_others(octant):
         own = coefficients[row["index"]]
         expected = (total - own) @ own / ((n_volumes - 1) * (own @ own))
         assert row["inherited"] == pytest.approx(expected, abs=0.015)
-        assert row["distortion"] == 0.1 and row["nrmse"] > 0.0
+        assert row["distortion"] == magnitude and row["nrmse"] > 0.0
+        # Copies of one b=0 volume have no gradients
+        assert np.isnan(row["shell"])
         inherited.append(row["inherited"])
     assert (np.mean(inherited) > 0.5) == octant
 

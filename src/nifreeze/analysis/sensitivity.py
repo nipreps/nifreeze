@@ -31,7 +31,8 @@ Two questions are asked of a model, on an aligned dataset:
   eddy currents (a *perturbation*)?
 
 The perturbed copies are given, each with its ground truth (a
-:class:`Perturbation`): a simulator produces realistic ones, and
+:class:`Perturbation`): a simulator produces realistic ones
+(:mod:`nifreeze.analysis.phantoms` reads them), and
 :mod:`nifreeze.testing.perturbations` resamples a dataset for tests. A fresh
 model is built on each copy. A held-out prediction never uses its own volume, so
 every volume can be evaluated, the moved ones included: a moved volume's
@@ -45,11 +46,10 @@ involved.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any
 
 import attrs
-import nibabel as nb
 import numpy as np
 from scipy.ndimage import map_coordinates
 
@@ -62,10 +62,17 @@ class Distortion:
     Displacements along the phase-encoding axis, polynomial in space, one per volume.
 
     Volume ``i`` shows at each point what lies :math:`d_i` mm further along the
-    phase-encoding axis, with its intensity scaled by the Jacobian
+    phase-encoding axis. :math:`d_i` is a polynomial of the voxel-axis
+    coordinates, centered on ``center`` and divided by ``radius`` along each axis.
+
+    Without ``readout``, a distorted volume is resampled at the displaced points,
+    with its intensity scaled by the Jacobian
     :math:`1 + \partial d_i / \partial x_{PE}` so that no signal is created or lost.
-    :math:`d_i` is a polynomial of the voxel-axis coordinates, centered on
-    ``center`` and divided by ``radius`` along each axis.
+    With it, the volume is formed as an EPI readout forms it, which is how TRXScan
+    simulates eddy currents: the displacement is that of an off-resonance field
+    :math:`f_i = d_i / (T \, \delta)` (Hz), with :math:`T` the total readout time
+    and :math:`\delta` the voxel size along phase encoding, and each
+    phase-encoding line accrues the field's phase at the time it is acquired.
     """
 
     magnitude: float
@@ -84,6 +91,54 @@ class Distortion:
     """Direction cosines of the voxel axes, as columns."""
     coefficients: np.ndarray = attrs.field(eq=False)
     """Displacement (mm) carried by each term, of shape ``(n_volumes, n_terms)``."""
+    readout: np.ndarray | None = attrs.field(default=None, eq=False)
+    """Acquisition time (s, from the echo) of each phase-encoding line: the ``n``-th
+    of ``N`` lines has the spatial frequency ``N // 2 - n``. :obj:`None` to resample."""
+    readout_time: float | None = None
+    """Total readout time (s), which turns displacements into fields."""
+
+    @classmethod
+    def from_sidecar(
+        cls, eddy: Mapping[str, Any], indices: Sequence[int], n_volumes: int
+    ) -> Distortion:
+        """
+        The eddy currents of a perturbed copy, from its sidecar.
+
+        Parameters
+        ----------
+        eddy : :obj:`~collections.abc.Mapping`
+            The ``Eddy`` entry of the sidecar written by ``tools/phantoms/phantom.py``.
+        indices : :obj:`~collections.abc.Sequence`
+            The dataset's index of each volume whose coefficients the sidecar lists.
+        n_volumes : :obj:`int`
+            Number of volumes of the dataset; the others are not distorted.
+
+        Returns
+        -------
+        :obj:`Distortion`
+            The distortion, formed as an EPI readout forms it.
+
+        """
+        terms = eddy["Distortion"]
+        listed = np.asarray(terms["Coefficients"], dtype=float)
+        if len(listed) != len(indices):
+            raise ValueError(
+                f"The sidecar lists {len(listed)} volumes, but {len(indices)} indices were given."
+            )
+        coefficients = np.zeros((n_volumes, listed.shape[1]))
+        coefficients[list(indices)] = listed
+        return cls(
+            magnitude=float(eddy["MagnitudeMm"]),
+            axis=int(terms["Axis"]),
+            seed=None,
+            degree=int(terms["Degree"]),
+            center=np.asarray(terms["Center"], dtype=float),
+            radius=np.asarray(terms["Radius"], dtype=float),
+            frame=np.asarray(terms["Frame"], dtype=float),
+            coefficients=coefficients,
+            readout=np.asarray(eddy["ReadoutTimes"], dtype=float),
+            readout_time=float(eddy["TotalReadoutTime"]),
+        )
 
     @property
     def direction(self) -> np.ndarray:
@@ -123,6 +178,153 @@ class Distortion:
                 / self.radius[self.axis]
             )
         return np.array(values), np.array(derivatives)
+
+    def distort(
+        self,
+        volume: np.ndarray,
+        affine: np.ndarray,
+        coefficients: np.ndarray,
+        order: int = 3,
+    ) -> np.ndarray:
+        """
+        Distort a volume by the displacement that some coefficients give.
+
+        Parameters
+        ----------
+        volume : :obj:`~numpy.ndarray`
+            The undistorted volume.
+        affine : :obj:`~numpy.ndarray`
+            Its grid, whose voxel axis :attr:`axis` is the phase-encoding axis.
+        coefficients : :obj:`~numpy.ndarray`
+            The displacement (mm) carried by each term, as a row of
+            :attr:`coefficients`.
+        order : :obj:`int`, optional
+            Interpolation order, when the volume is resampled.
+
+        Returns
+        -------
+        :obj:`~numpy.ndarray`
+            The distorted volume, on the same grid.
+
+        """
+        return self._distort(volume, affine, coefficients, order)[0]
+
+    def _distort(
+        self,
+        volume: np.ndarray,
+        affine: np.ndarray,
+        coefficients: np.ndarray,
+        order: int = 3,
+        slopes: bool = False,
+    ) -> tuple[np.ndarray, np.ndarray | None]:
+        """The distorted volume and, with ``slopes``, its derivative along each coefficient."""
+        volume = np.asarray(volume, dtype=float)
+        coefficients = np.asarray(coefficients, dtype=float)
+        affine = np.asarray(affine, dtype=float)
+        if not coefficients.any() and not slopes:
+            return volume.copy(), None
+        ijk = np.indices(volume.shape, dtype=float).reshape(3, -1)
+        values, derivatives = self.basis(affine[:3, :3] @ ijk + affine[:3, 3:])
+        displacement = coefficients @ values
+        if self.readout is None:
+            distorted, slope = self._resample(
+                volume, affine, ijk, values, derivatives, coefficients, displacement, order, slopes
+            )
+        else:
+            distorted, slope = self._readout(volume, affine, values, displacement, slopes)
+        if not coefficients.any():
+            # No distortion at all: exactly the volume, without interpolation error
+            distorted = volume.copy()
+        return distorted, slope
+
+    def _resample(
+        self,
+        volume: np.ndarray,
+        affine: np.ndarray,
+        ijk: np.ndarray,
+        values: np.ndarray,
+        derivatives: np.ndarray,
+        coefficients: np.ndarray,
+        displacement: np.ndarray,
+        order: int,
+        slopes: bool,
+    ) -> tuple[np.ndarray, np.ndarray | None]:
+        """Resample at the displaced points, scaled by the Jacobian."""
+        steps = np.linalg.inv(affine[:3, :3]) @ self.direction
+        coordinates = ijk + np.outer(steps, displacement)
+        resampled = map_coordinates(volume, coordinates, order=order)  # type: ignore[call-overload]
+        jacobian = 1.0 + coefficients @ derivatives
+        distorted = (resampled * jacobian).reshape(volume.shape)
+        if not slopes:
+            return distorted, None
+        # Derivative of the interpolant along phase encoding (per mm), over 0.02 mm
+        ahead, behind = (
+            map_coordinates(  # type: ignore[call-overload]
+                volume, coordinates + side * 1e-2 * np.outer(steps, 1.0), order=order
+            )
+            for side in (1.0, -1.0)
+        )
+        gradient = (ahead - behind) / 2e-2
+        slope = gradient * jacobian * values + resampled * derivatives
+        return distorted, slope.reshape(-1, *volume.shape)
+
+    def _readout(
+        self,
+        volume: np.ndarray,
+        affine: np.ndarray,
+        values: np.ndarray,
+        displacement: np.ndarray,
+        slopes: bool,
+    ) -> tuple[np.ndarray, np.ndarray | None]:
+        """Form the volume as an EPI readout does, line by line of k-space."""
+        if self.readout is None or self.readout_time is None:
+            raise ValueError("An EPI readout needs its line times and total readout time.")
+        n_lines = volume.shape[self.axis]
+        if len(self.readout) != n_lines:
+            raise ValueError(f"The readout has {len(self.readout)} lines, the grid {n_lines}.")
+        hertz = 1.0 / (self.readout_time * np.linalg.norm(affine[:3, self.axis]))
+
+        def columns(image: np.ndarray) -> np.ndarray:
+            """The image as columns along phase encoding, ``(..., n_lines)``."""
+            return np.moveaxis(image.reshape(volume.shape), self.axis, -1).reshape(-1, n_lines)
+
+        signal, field = columns(volume), columns(displacement * hertz)
+        # Each term times the signal: how a coefficient's field reaches each line
+        terms = np.stack([signal] + ([columns(v) * signal for v in values] if slopes else []), -1)
+        frequencies = n_lines // 2 - np.arange(n_lines)
+        forward = np.exp(-2j * np.pi * np.outer(frequencies, np.arange(n_lines)) / n_lines)
+        inverse = np.exp(2j * np.pi * np.outer(np.arange(n_lines), frequencies) / n_lines)
+        inverse /= n_lines
+        times = np.asarray(self.readout, dtype=float)
+        rate = 2j * np.pi * times[:, np.newaxis] * hertz
+
+        image = np.zeros((len(signal), n_lines))
+        slope = np.zeros((len(values), *image.shape)) if slopes else None
+        # Columns without signal stay empty; the others go in batches of bounded memory
+        active = np.flatnonzero(signal.any(axis=1))
+        batch = max(1, 2**22 // n_lines**2)
+        for start in range(0, len(active), batch):
+            rows = active[start : start + batch]
+            encoding = forward * np.exp(2j * np.pi * times[:, np.newaxis] * field[rows, None, :])
+            kspace = encoding @ terms[rows]
+            formed = kspace[..., 0] @ inverse.T
+            magnitude = np.abs(formed)
+            image[rows] = magnitude
+            if slope is not None:
+                changes = np.moveaxis(inverse @ (rate * kspace[..., 1:]), -1, 0)
+                # The magnitude changes with the part of the change in phase with the signal
+                with np.errstate(invalid="ignore", divide="ignore"):
+                    unit = np.where(magnitude > 0, np.conj(formed) / magnitude, 0.0)
+                slope[:, rows] = np.real(unit * changes)
+
+        def back(flat: np.ndarray) -> np.ndarray:
+            shape = np.moveaxis(np.empty(volume.shape), self.axis, -1).shape
+            return np.moveaxis(flat.reshape(shape), -1, self.axis)
+
+        distorted = back(image)
+        if slope is None:
+            return distorted, None
+        return distorted, np.stack([back(s) for s in slope])
 
 
 @attrs.define(frozen=True)
@@ -265,10 +467,11 @@ def sensitivity(
     reference : :obj:`~nifreeze.data.base.BaseDataset`
         The aligned dataset.
     cells : :obj:`~collections.abc.Iterable`
-        Pairs of a :class:`Perturbation` and the perturbed copy of ``reference``.
-        A copy with both motions and a distortion needs the copy with the same
-        motions alone among the cells: its inherited share is measured on top of
-        them.
+        Pairs of a :class:`Perturbation` and the perturbed copy of ``reference``,
+        or a function without arguments that loads it (each copy is then held in
+        memory only while it is analyzed). A copy with both motions and a
+        distortion needs the copy with the same motions alone among the cells: its
+        inherited share is measured on top of them.
     evaluate : :obj:`~collections.abc.Iterable`, optional
         Volumes to predict (all if :obj:`None`), moved or not.
     mask : :obj:`~numpy.ndarray`, optional
@@ -284,9 +487,10 @@ def sensitivity(
     Returns
     -------
     :obj:`list` of :obj:`dict`
-        One row per cell and evaluated volume, with the ``nrmse``, each further
-        metric, whether that volume was itself ``moved``, the magnitude of the
-        ``distortion`` (0 without one) and the share of the volume's own
+        One row per cell and evaluated volume, with the volume's ``shell`` (its
+        b-value to the nearest 100 s/mm², NaN without gradients), the ``nrmse``,
+        each further metric, whether that volume was itself ``moved``, the
+        magnitude of the ``distortion`` (0 without one) and the share of the volume's own
         distortion that its prediction ``inherited`` (the projection of the
         coefficients fitted by :func:`inherited_distortion` onto the volume's
         own; NaN without a distortion, or for an undistorted volume). With
@@ -302,6 +506,11 @@ def sensitivity(
     scale = {
         index: np.asarray(reference.dataobj[index], dtype=float)[mask].std() for index in aligned
     }
+    gradients = getattr(reference, "gradients", None)
+    shells = {
+        index: float("nan") if gradients is None else float(np.round(gradients[index, -1], -2))
+        for index in aligned
+    }
 
     still = {_motions_of(p): data for p, data in cells if p.distortion is None and p.motions}
     needed = {_motions_of(p) for p, _ in cells if p.distortion is not None and p.motions}
@@ -316,6 +525,8 @@ def sensitivity(
         key = _motions_of(perturbation) if perturbation.distortion is None else None
         if key in kept:
             return kept[key]
+        if callable(perturbed):
+            perturbed = perturbed()
         predicted = held_out_predictions(model, perturbed, aligned, **model_kwargs)
         if key in needed:
             kept[key] = predicted
@@ -343,6 +554,7 @@ def sensitivity(
                     "count": perturbation.count,
                     "seed": perturbation.seed,
                     "index": index,
+                    "shell": shells[index],
                     "moved": index in perturbation.moved,
                     "distortion": 0.0 if distortion is None else distortion.magnitude,
                     "nrmse": nrmse(prediction, aligned[index], mask, scale=scale[index]),
@@ -362,18 +574,17 @@ def inherited_distortion(
     distortion: Distortion,
     affine: np.ndarray,
     mask: np.ndarray,
+    iterations: int = 20,
 ) -> np.ndarray:
     r"""
     Distortion coefficients that best explain how a prediction changed.
 
-    To first order, displacing an image :math:`p` by :math:`d` along the
-    phase-encoding axis (with its Jacobian) changes it by
-    :math:`\partial_{PE} p \, d + p \, \partial_{PE} d`, which is linear in the
-    coefficients of :math:`d`. Least squares over the mask give the coefficients
-    of the distortion that the change resembles; whatever the distortion cannot
-    explain (noise) stays in the residual. A rigid motion does not: a
-    translation along phase encoding is the distortion's constant term, so
-    ``aligned`` must carry the same motions as ``perturbed``.
+    Gauss-Newton iterations, from no distortion, find the coefficients whose
+    distortion of ``aligned`` (:meth:`Distortion.distort`) comes closest to
+    ``perturbed`` in least squares over the mask. Whatever the distortion cannot
+    explain (noise) stays in the residual. A rigid motion does not: a translation
+    along phase encoding is the distortion's constant term, so ``aligned`` must
+    carry the same motions as ``perturbed``.
 
     Parameters
     ----------
@@ -387,6 +598,9 @@ def inherited_distortion(
         Grid of the predictions.
     mask : :obj:`~numpy.ndarray`
         Voxels fitted.
+    iterations : :obj:`int`, optional
+        Most Gauss-Newton steps; they stop once a step changes no coefficient by
+        more than 10⁻⁵ mm.
 
     Returns
     -------
@@ -397,18 +611,16 @@ def inherited_distortion(
     """
     aligned = np.asarray(aligned, dtype=float)
     mask = np.asarray(mask, dtype=bool)
-    ijk = np.argwhere(mask).T.astype(float)
-    # Derivative of the cubic spline that resampling interpolates with
-    step = np.zeros((3, 1))
-    step[distortion.axis] = 1e-2
-    ahead, behind = (map_coordinates(aligned, ijk + s, order=3) for s in (step, -step))
-    spacing = np.linalg.norm(np.asarray(affine)[:3, distortion.axis])
-    slope = (ahead - behind) / (2e-2 * spacing)
-    points = nb.affines.apply_affine(affine, ijk.T).T
-    values, derivatives = distortion.basis(points)
-    design = (values * slope + derivatives * aligned[mask]).T
-    change = (np.asarray(perturbed, dtype=float) - aligned)[mask]
-    return np.linalg.lstsq(design, change, rcond=None)[0]
+    target = np.asarray(perturbed, dtype=float)[mask]
+    coefficients = np.zeros(distortion.coefficients.shape[1])
+    for _ in range(iterations):
+        current, slopes = distortion._distort(aligned, affine, coefficients, slopes=True)
+        assert slopes is not None
+        step = np.linalg.lstsq(slopes[:, mask].T, target - current[mask], rcond=None)[0]
+        coefficients = coefficients + step
+        if np.abs(step).max() < 1e-5:
+            break
+    return coefficients
 
 
 def influence(model: Any) -> np.ndarray:
