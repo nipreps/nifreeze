@@ -24,6 +24,15 @@ env:
   ANTSPATH: /usr/share/miniconda/bin/
   NIFREEZE_WERRORS: 1
   TEST_DATA_REPO: https://gin.g-node.org/nipreps-data/tests-nifreeze
+  # The files of TEST_DATA_REPO that the tests read: fetching it whole would also bring
+  # its subdatasets (the phantoms of #548), larger than the cache
+  TEST_DATA_PATHS: >-
+    dwi.h5
+    dmri_data/motion_test_data/dwi_motion.h5
+    dwi-b0_desc-avg.nii.gz
+    dwi-b0_desc-brain.nii.gz
+    hcph-b0_desc-avg.nii.gz
+    hcph-b0_desc-brain.nii.gz
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -37,6 +46,7 @@ jobs:
     runs-on: 'ubuntu-latest'
     outputs:
       SHA: ${{ steps.test-head.outputs.SHA }}
+      KEY: ${{ steps.test-head.outputs.KEY }}
     steps:
       - name: Check remote HEAD
         id: test-head
@@ -54,24 +64,25 @@ jobs:
           fi
           echo SHA=$SHA >> $GITHUB_OUTPUT
           echo SHA7=${SHA:0:7} >> $GITHUB_OUTPUT
-      - name: Check for data-v2-${{ steps.test-head.outputs.SHA }}
+          # A path added to the list makes a new cache
+          echo KEY=data-v3-${SHA}-$( sha256sum <<< "$TEST_DATA_PATHS" | cut -c 1-8 ) >> $GITHUB_OUTPUT
+      - name: Check for ${{ steps.test-head.outputs.KEY }}
         uses: actions/cache@v5
         if: steps.test-head.outputs.SHA != ''
         id: test-data
         with:
           path: ${{ env.TEST_DATA_HOME }}
-          key: data-v2-${{ steps.test-head.outputs.SHA }}
+          key: ${{ steps.test-head.outputs.KEY }}
           lookup-only: true
-      - name: Create data-v2-${{ steps.test-head.outputs.SHA }}
+      - name: Create ${{ steps.test-head.outputs.KEY }}
         uses: actions/cache@v5
         if: steps.test-head.outputs.SHA != '' && steps.test-data.outputs.cache-hit != 'true'
         with:
           path: ${{ env.TEST_DATA_HOME }}
-          key: data-v2-${{ steps.test-head.outputs.SHA }}
+          key: ${{ steps.test-head.outputs.KEY }}
+          # Not the caches before v3, which hold the whole dataset
           restore-keys: |
-            data-v2
-            data-v1
-            data-v0
+            data-v3-
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
         if: steps.test-head.outputs.SHA != '' && steps.test-data.outputs.cache-hit != 'true'
@@ -82,16 +93,15 @@ jobs:
           uv tool install --with=datalad-osf --with=datalad-next datalad
           uv tool install --with=datalad-next datalad-osf
           datalad wtf
-      - name: Checkout commit ${{ steps.test-head.outputs.SHA7 }}
+      - name: Fetch the test data at ${{ steps.test-head.outputs.SHA7 }}
         if: steps.test-head.outputs.SHA != '' && steps.test-data.outputs.cache-hit != 'true'
         run: |
           if [[ ! -d "${TEST_DATA_HOME}" ]]; then
-            datalad install -rg --source=${TEST_DATA_REPO} ${TEST_DATA_HOME}
-          else
-            cd ${TEST_DATA_HOME}
-            datalad update --merge -r .
-            datalad get -r -J4 *
+            datalad clone ${TEST_DATA_REPO} ${TEST_DATA_HOME}
           fi
+          cd ${TEST_DATA_HOME}
+          datalad update --merge .
+          datalad get -J4 ${TEST_DATA_PATHS}
       - name: Install DIPY and fetch stanford_hardi dataset
         if: steps.test-head.outputs.SHA != '' && steps.test-data.outputs.cache-hit != 'true'
         run: |
@@ -132,10 +142,10 @@ jobs:
       - uses: actions/cache/restore@v5
         with:
           path: ${{ env.TEST_DATA_HOME }}
-          key: data-v2-${{ needs.cache-test-data.outputs.SHA }}
+          key: ${{ needs.cache-test-data.outputs.KEY }}
           # Latest cached test data when GIN could not be reached
           restore-keys: |
-            data-v2-
+            data-v3-
       - name: Install TeX Live
         run: |
           sudo apt-get update
