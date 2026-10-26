@@ -302,7 +302,9 @@ def perturb(dataset: Any, perturbation: Perturbation, order: int = 3) -> Any:
     Copy a dataset with some of its volumes moved or distorted.
 
     Each moved or distorted volume is resampled once from the aligned original,
-    through its motion and then its distortion. Everything else (gradients, b=0
+    through its motion and then its distortion. A distortion with an EPI readout
+    (:attr:`~nifreeze.analysis.sensitivity.Distortion.readout`) instead forms the
+    moved volume as that readout would. Everything else (gradients, b=0
     reference, mask) is left as it was, as a model would see it when the motion
     and the distortion go uncorrected.
 
@@ -327,11 +329,18 @@ def perturb(dataset: Any, perturbation: Perturbation, order: int = 3) -> Any:
     if distortion is not None:
         displaced |= {int(i) for i in np.flatnonzero(distortion.coefficients.any(axis=1))}
 
+    readout = distortion is not None and distortion.readout is not None
+    resampled = None if readout else distortion
     dataobj = np.array(dataset.dataobj, dtype=np.float32)
     for index in sorted(displaced):
-        dataobj[index] = _displace(
-            dataset, index, dataset.affine, motions.get(index), distortion, order
-        )
+        motion = motions.get(index)
+        if motion is not None or resampled is not None:
+            dataobj[index] = _displace(dataset, index, dataset.affine, motion, resampled, order)
+        if readout:
+            assert distortion is not None
+            dataobj[index] = distortion.distort(
+                dataobj[index], dataset.affine, distortion.coefficients[index], order
+            )
 
     moved = copy(dataset)
     moved.dataobj = dataobj
