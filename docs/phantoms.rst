@@ -146,7 +146,7 @@ Rigid motion
     For each seed and magnitude m (0.5, 1, 2 and 4 by default), every volume
     gets a rotation of m degrees about a random axis through the brain's
     centroid and a translation of m mm in a random direction, drawn by
-    :func:`~nifreeze.analysis.sensitivity.perturbation_plan`.
+    :func:`~nifreeze.testing.perturbations.perturbation_plan`.
     Each moved volume is simulated again from the phantom moved in the scanner,
     on the reference's grid, so the anatomy turns relative to the gradients as in
     a real scan.
