@@ -405,5 +405,152 @@
         "unit": "MB",
         "version": "1"
     },
+    "bench_quality.SensitivityQuality.track_quality_drift_both": {
+        "code": "class SensitivityQuality:\n    def track_quality_drift_both(self, values, model):\n        return self.values[\"drift_both\"]\n\n    def setup(self, values, model):\n        if not values:\n            raise NotImplementedError(\"no phantom (NIFREEZE_PHANTOMS) or no phantom loader\")\n        self.values = values[model]\n\n    def setup_cache(self):\n        # asv fails a class whose ``setup_cache`` raises, and takes ``None`` for no cache at\n        # all: without a phantom, an empty mapping tells ``setup`` to skip\n        root = os.getenv(\"NIFREEZE_PHANTOMS\")\n        if load_phantom is None or not root or not Path(root).is_dir():\n            return {}\n        with warnings.catch_warnings():\n            warnings.simplefilter(\"ignore\")\n            reference, cells = load_phantom(root, \"sherbrooke\", noise=0, counts=[6, 24])\n            chosen = [\n                (perturbation, load)\n                for perturbation, load in cells\n                if (perturbation.count, perturbation.distortion is not None) in COPIES\n            ]\n            return {model: measure(model, reference, chosen) for model in MODELS}",
+        "name": "bench_quality.SensitivityQuality.track_quality_drift_both",
+        "param_names": [
+            "model"
+        ],
+        "params": [
+            [
+                "'avgdwi'",
+                "'gp-loo'",
+                "'gqi-krr'",
+                "'gqi'"
+            ]
+        ],
+        "setup_cache_key": "bench_quality:99",
+        "setup_cache_timeout": 1800,
+        "timeout": 300,
+        "type": "track",
+        "unit": "unit",
+        "version": "1"
+    },
+    "bench_quality.SensitivityQuality.track_quality_drift_eddy": {
+        "code": "class SensitivityQuality:\n    def track_quality_drift_eddy(self, values, model):\n        return self.values[\"drift_eddy\"]\n\n    def setup(self, values, model):\n        if not values:\n            raise NotImplementedError(\"no phantom (NIFREEZE_PHANTOMS) or no phantom loader\")\n        self.values = values[model]\n\n    def setup_cache(self):\n        # asv fails a class whose ``setup_cache`` raises, and takes ``None`` for no cache at\n        # all: without a phantom, an empty mapping tells ``setup`` to skip\n        root = os.getenv(\"NIFREEZE_PHANTOMS\")\n        if load_phantom is None or not root or not Path(root).is_dir():\n            return {}\n        with warnings.catch_warnings():\n            warnings.simplefilter(\"ignore\")\n            reference, cells = load_phantom(root, \"sherbrooke\", noise=0, counts=[6, 24])\n            chosen = [\n                (perturbation, load)\n                for perturbation, load in cells\n                if (perturbation.count, perturbation.distortion is not None) in COPIES\n            ]\n            return {model: measure(model, reference, chosen) for model in MODELS}",
+        "name": "bench_quality.SensitivityQuality.track_quality_drift_eddy",
+        "param_names": [
+            "model"
+        ],
+        "params": [
+            [
+                "'avgdwi'",
+                "'gp-loo'",
+                "'gqi-krr'",
+                "'gqi'"
+            ]
+        ],
+        "setup_cache_key": "bench_quality:99",
+        "setup_cache_timeout": 1800,
+        "timeout": 300,
+        "type": "track",
+        "unit": "unit",
+        "version": "1"
+    },
+    "bench_quality.SensitivityQuality.track_quality_drift_motion_all": {
+        "code": "class SensitivityQuality:\n    def track_quality_drift_motion_all(self, values, model):\n        return self.values[\"drift_motion_all\"]\n\n    def setup(self, values, model):\n        if not values:\n            raise NotImplementedError(\"no phantom (NIFREEZE_PHANTOMS) or no phantom loader\")\n        self.values = values[model]\n\n    def setup_cache(self):\n        # asv fails a class whose ``setup_cache`` raises, and takes ``None`` for no cache at\n        # all: without a phantom, an empty mapping tells ``setup`` to skip\n        root = os.getenv(\"NIFREEZE_PHANTOMS\")\n        if load_phantom is None or not root or not Path(root).is_dir():\n            return {}\n        with warnings.catch_warnings():\n            warnings.simplefilter(\"ignore\")\n            reference, cells = load_phantom(root, \"sherbrooke\", noise=0, counts=[6, 24])\n            chosen = [\n                (perturbation, load)\n                for perturbation, load in cells\n                if (perturbation.count, perturbation.distortion is not None) in COPIES\n            ]\n            return {model: measure(model, reference, chosen) for model in MODELS}",
+        "name": "bench_quality.SensitivityQuality.track_quality_drift_motion_all",
+        "param_names": [
+            "model"
+        ],
+        "params": [
+            [
+                "'avgdwi'",
+                "'gp-loo'",
+                "'gqi-krr'",
+                "'gqi'"
+            ]
+        ],
+        "setup_cache_key": "bench_quality:99",
+        "setup_cache_timeout": 1800,
+        "timeout": 300,
+        "type": "track",
+        "unit": "unit",
+        "version": "1"
+    },
+    "bench_quality.SensitivityQuality.track_quality_drift_motion_quarter": {
+        "code": "class SensitivityQuality:\n    def track_quality_drift_motion_quarter(self, values, model):\n        return self.values[\"drift_motion_quarter\"]\n\n    def setup(self, values, model):\n        if not values:\n            raise NotImplementedError(\"no phantom (NIFREEZE_PHANTOMS) or no phantom loader\")\n        self.values = values[model]\n\n    def setup_cache(self):\n        # asv fails a class whose ``setup_cache`` raises, and takes ``None`` for no cache at\n        # all: without a phantom, an empty mapping tells ``setup`` to skip\n        root = os.getenv(\"NIFREEZE_PHANTOMS\")\n        if load_phantom is None or not root or not Path(root).is_dir():\n            return {}\n        with warnings.catch_warnings():\n            warnings.simplefilter(\"ignore\")\n            reference, cells = load_phantom(root, \"sherbrooke\", noise=0, counts=[6, 24])\n            chosen = [\n                (perturbation, load)\n                for perturbation, load in cells\n                if (perturbation.count, perturbation.distortion is not None) in COPIES\n            ]\n            return {model: measure(model, reference, chosen) for model in MODELS}",
+        "name": "bench_quality.SensitivityQuality.track_quality_drift_motion_quarter",
+        "param_names": [
+            "model"
+        ],
+        "params": [
+            [
+                "'avgdwi'",
+                "'gp-loo'",
+                "'gqi-krr'",
+                "'gqi'"
+            ]
+        ],
+        "setup_cache_key": "bench_quality:99",
+        "setup_cache_timeout": 1800,
+        "timeout": 300,
+        "type": "track",
+        "unit": "unit",
+        "version": "1"
+    },
+    "bench_quality.SensitivityQuality.track_quality_ratio_both": {
+        "code": "class SensitivityQuality:\n    def track_quality_ratio_both(self, values, model):\n        return self.values[\"ratio_both\"]\n\n    def setup(self, values, model):\n        if not values:\n            raise NotImplementedError(\"no phantom (NIFREEZE_PHANTOMS) or no phantom loader\")\n        self.values = values[model]\n\n    def setup_cache(self):\n        # asv fails a class whose ``setup_cache`` raises, and takes ``None`` for no cache at\n        # all: without a phantom, an empty mapping tells ``setup`` to skip\n        root = os.getenv(\"NIFREEZE_PHANTOMS\")\n        if load_phantom is None or not root or not Path(root).is_dir():\n            return {}\n        with warnings.catch_warnings():\n            warnings.simplefilter(\"ignore\")\n            reference, cells = load_phantom(root, \"sherbrooke\", noise=0, counts=[6, 24])\n            chosen = [\n                (perturbation, load)\n                for perturbation, load in cells\n                if (perturbation.count, perturbation.distortion is not None) in COPIES\n            ]\n            return {model: measure(model, reference, chosen) for model in MODELS}",
+        "name": "bench_quality.SensitivityQuality.track_quality_ratio_both",
+        "param_names": [
+            "model"
+        ],
+        "params": [
+            [
+                "'avgdwi'",
+                "'gp-loo'",
+                "'gqi-krr'",
+                "'gqi'"
+            ]
+        ],
+        "setup_cache_key": "bench_quality:99",
+        "setup_cache_timeout": 1800,
+        "timeout": 300,
+        "type": "track",
+        "unit": "unit",
+        "version": "1"
+    },
+    "bench_quality.SensitivityQuality.track_quality_share_both": {
+        "code": "class SensitivityQuality:\n    def track_quality_share_both(self, values, model):\n        return self.values[\"share_both\"]\n\n    def setup(self, values, model):\n        if not values:\n            raise NotImplementedError(\"no phantom (NIFREEZE_PHANTOMS) or no phantom loader\")\n        self.values = values[model]\n\n    def setup_cache(self):\n        # asv fails a class whose ``setup_cache`` raises, and takes ``None`` for no cache at\n        # all: without a phantom, an empty mapping tells ``setup`` to skip\n        root = os.getenv(\"NIFREEZE_PHANTOMS\")\n        if load_phantom is None or not root or not Path(root).is_dir():\n            return {}\n        with warnings.catch_warnings():\n            warnings.simplefilter(\"ignore\")\n            reference, cells = load_phantom(root, \"sherbrooke\", noise=0, counts=[6, 24])\n            chosen = [\n                (perturbation, load)\n                for perturbation, load in cells\n                if (perturbation.count, perturbation.distortion is not None) in COPIES\n            ]\n            return {model: measure(model, reference, chosen) for model in MODELS}",
+        "name": "bench_quality.SensitivityQuality.track_quality_share_both",
+        "param_names": [
+            "model"
+        ],
+        "params": [
+            [
+                "'avgdwi'",
+                "'gp-loo'",
+                "'gqi-krr'",
+                "'gqi'"
+            ]
+        ],
+        "setup_cache_key": "bench_quality:99",
+        "setup_cache_timeout": 1800,
+        "timeout": 300,
+        "type": "track",
+        "unit": "unit",
+        "version": "1"
+    },
+    "bench_quality.SensitivityQuality.track_quality_share_eddy": {
+        "code": "class SensitivityQuality:\n    def track_quality_share_eddy(self, values, model):\n        return self.values[\"share_eddy\"]\n\n    def setup(self, values, model):\n        if not values:\n            raise NotImplementedError(\"no phantom (NIFREEZE_PHANTOMS) or no phantom loader\")\n        self.values = values[model]\n\n    def setup_cache(self):\n        # asv fails a class whose ``setup_cache`` raises, and takes ``None`` for no cache at\n        # all: without a phantom, an empty mapping tells ``setup`` to skip\n        root = os.getenv(\"NIFREEZE_PHANTOMS\")\n        if load_phantom is None or not root or not Path(root).is_dir():\n            return {}\n        with warnings.catch_warnings():\n            warnings.simplefilter(\"ignore\")\n            reference, cells = load_phantom(root, \"sherbrooke\", noise=0, counts=[6, 24])\n            chosen = [\n                (perturbation, load)\n                for perturbation, load in cells\n                if (perturbation.count, perturbation.distortion is not None) in COPIES\n            ]\n            return {model: measure(model, reference, chosen) for model in MODELS}",
+        "name": "bench_quality.SensitivityQuality.track_quality_share_eddy",
+        "param_names": [
+            "model"
+        ],
+        "params": [
+            [
+                "'avgdwi'",
+                "'gp-loo'",
+                "'gqi-krr'",
+                "'gqi'"
+            ]
+        ],
+        "setup_cache_key": "bench_quality:99",
+        "setup_cache_timeout": 1800,
+        "timeout": 300,
+        "type": "track",
+        "unit": "unit",
+        "version": "1"
+    },
     "version": 2
 }
