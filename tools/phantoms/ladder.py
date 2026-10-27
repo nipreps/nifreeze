@@ -130,11 +130,15 @@ def run_model(
     out: Path,
     evaluate: list[int],
     alone: list[int],
+    resume: bool = False,
 ) -> str:
-    """All three rungs of one model, each written as soon as it is measured."""
+    """All three rungs of one model, each written as soon as it is measured.
+
+    With ``resume``, the tables (and parts of rung 3) that a stopped run wrote in full
+    are kept, and only the others are measured.
+    """
     from nifreeze.analysis.phantoms import load_phantom
-    from nifreeze.analysis.sensitivity import fidelity, influence, sensitivity
-    from nifreeze.model.base import ModelFactory
+    from nifreeze.analysis.sensitivity import fidelity, sensitivity
 
     n_volumes = len_dw(dataset, protocol)
     reference, cells = load_phantom(dataset, protocol, noise=NOISE, counts=counts(n_volumes))
@@ -142,37 +146,74 @@ def run_model(
     if name in SCALED:
         model = partial(Scaled, name=name, factors=scales(name, reference, evaluate))
 
-    def tagged(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        return [{"model": name, **row} for row in rows]
+    def table(path: Path, n_rows: int, measure: Callable[[], list[dict[str, Any]]]) -> None:
+        if not (resume and _complete(path, n_rows)):
+            _write(path, [{"model": name, **row} for row in measure()])
 
-    _write(out / f"fidelity_model-{name}.tsv", tagged(fidelity(model, reference, evaluate)))
+    n_rows = len(evaluate)
+    table(
+        out / f"fidelity_model-{name}.tsv", n_rows, partial(fidelity, model, reference, evaluate)
+    )
 
     still = [(p, load) for p, load in cells if p.distortion is None]
-    rows = sensitivity(model, reference, still, evaluate=evaluate)
-    _write(out / f"rung-1_model-{name}.tsv", tagged(rows))
+    path = out / f"rung-1_model-{name}.tsv"
+    table(path, len(still) * n_rows, partial(sensitivity, model, reference, still, evaluate))
 
     eddy = [(p, load) for p, load in cells if p.distortion is not None and not p.motions]
-    rows = sensitivity(model, reference, eddy, evaluate=evaluate)
-    _write(out / f"rung-2_model-{name}.tsv", tagged(rows))
+    path = out / f"rung-2_model-{name}.tsv"
+    table(path, len(eddy) * n_rows, partial(sensitivity, model, reference, eddy, evaluate))
 
-    # One count at a time, so that only the predictions of its moved copies are kept
-    both: list[dict[str, Any]] = []
-    for count in counts(n_volumes):
-        group = [(p, load) for p, load in cells if p.motions and p.count == count]
-        rows = sensitivity(model, reference, group, evaluate=evaluate)
-        both += [row for row in rows if row["distortion"] > 0]
-    _write(out / f"rung-3_model-{name}.tsv", tagged(both))
+    # One count at a time, so that only the predictions of its moved copies are kept;
+    # each count is written apart until all are measured
+    path = out / f"rung-3_model-{name}.tsv"
+    distorted = [p for p, _ in cells if p.motions and p.distortion is not None]
+    if not (resume and _complete(path, len(distorted) * n_rows)):
+        parts = []
+        for count in counts(n_volumes):
+            parts.append(path.with_name(f"{path.stem}_count-{count}.tsv"))
+            group = [(p, load) for p, load in cells if p.motions and p.count == count]
+            n_group = sum(p.count == count for p in distorted) * n_rows
+            table(parts[-1], n_group, partial(_rung_3, model, reference, group, evaluate))
+        _concatenate(parts, path)
 
     # Each volume moved alone, by the largest motion; its change against the reference
     # comes from the copy that moves every volume
     largest = max(p.magnitude for p, _ in still)
     _, lonely = load_phantom(dataset, protocol, noise=NOISE, counts=[], alone=alone)
     lonely = [(p, load) for p, load in lonely if p.distortion is None and p.magnitude == largest]
-    everyone = next(load() for p, load in still if p.count == n_volumes and p.magnitude == largest)
+    everyone = next(load for p, load in still if p.count == n_volumes and p.magnitude == largest)
+    path = out / f"alone_model-{name}.tsv"
+    table(path, len(lonely), partial(_alone, name, model, reference, lonely, everyone, evaluate))
+    return name
+
+
+def _rung_3(
+    model: str | Callable[..., Any], reference: Any, group: list[Any], evaluate: list[int]
+) -> list[dict[str, Any]]:
+    """The rows of the copies that are both moved and distorted, of one count."""
+    from nifreeze.analysis.sensitivity import sensitivity
+
+    rows = sensitivity(model, reference, group, evaluate=evaluate)
+    return [row for row in rows if row["distortion"] > 0]
+
+
+def _alone(
+    name: str,
+    model: str | Callable[..., Any],
+    reference: Any,
+    lonely: list[Any],
+    everyone: Callable[[], Any],
+    evaluate: list[int],
+) -> list[dict[str, Any]]:
+    """The mean drift of the other volumes when each volume moves alone, and its change."""
+    from nifreeze.analysis.sensitivity import influence, sensitivity
+    from nifreeze.model.base import ModelFactory
+
     weights = None
     if name in ("gp-loo", "gqi-krr"):
         weights = influence(ModelFactory.init(name, dataset=reference))
     rows = sensitivity(model, reference, lonely, evaluate=evaluate)
+    moved = everyone()
     measured = []
     for k, (perturbation, _) in enumerate(lonely):
         (volume,) = perturbation.moved
@@ -181,10 +222,9 @@ def run_model(
             for row in rows[k * len(evaluate) : (k + 1) * len(evaluate)]
             if row["index"] != volume
         ]
-        change = np.asarray(everyone.dataobj[volume]) - np.asarray(reference.dataobj[volume])
+        change = np.asarray(moved.dataobj[volume]) - np.asarray(reference.dataobj[volume])
         measured.append(
             {
-                "model": name,
                 "magnitude": perturbation.magnitude,
                 "volume": volume,
                 "shell": float(np.round(reference.gradients[volume, -1], -2)),
@@ -193,8 +233,30 @@ def run_model(
                 "influence": float("nan") if weights is None else float(weights[volume]),
             }
         )
-    _write(out / f"alone_model-{name}.tsv", measured)
-    return name
+    return measured
+
+
+def _complete(path: Path, n_rows: int) -> bool:
+    """Whether a table holds its header and all of its rows, none of them cut short."""
+    if not path.exists():
+        return False
+    text = path.read_text()
+    if not text.endswith("\n") or "\0" in text:
+        return False
+    lines = text.splitlines()
+    return len(lines) == n_rows + 1 and all(
+        line.count("\t") == lines[0].count("\t") for line in lines
+    )
+
+
+def _concatenate(parts: list[Path], path: Path) -> None:
+    """Write tables with one header as one, then remove them."""
+    lines = [
+        line for k, part in enumerate(parts) for line in part.read_text().splitlines()[k > 0 :]
+    ]
+    path.write_text("".join(f"{line}\n" for line in lines))
+    for part in parts:
+        part.unlink()
 
 
 def len_dw(dataset: Path, protocol: str) -> int:
@@ -381,6 +443,9 @@ def main(argv: list[str] | None = None) -> int:
         "--alone-every", type=int, default=4, help="move every n-th evaluated volume alone"
     )
     run.add_argument("--jobs", type=int, default=len(MODELS), help="models run at once")
+    run.add_argument(
+        "--resume", action="store_true", help="keep the tables a stopped run wrote in full"
+    )
     summary = commands.add_parser("tables", help="summarize every protocol of a results root")
     summary.add_argument("--results", type=Path, required=True, help="results root")
     summary.add_argument("--out", type=Path, required=True, help="folder of the tables")
@@ -405,7 +470,12 @@ def main(argv: list[str] | None = None) -> int:
         "Scaled": [m for m in args.models if m in SCALED],
         "NiFreezeVersion": version("nifreeze"),
     }
-    (out / "settings.json").write_text(json.dumps(settings, indent=2) + "\n")
+    written = out / "settings.json"
+    if args.resume and written.exists():
+        before = json.loads(written.read_text())
+        if {**before, "NiFreezeVersion": None} != {**settings, "NiFreezeVersion": None}:
+            parser.error(f"{written} holds other settings; remove {out} to start over")
+    written.write_text(json.dumps(settings, indent=2) + "\n")
 
     jobs = max(1, min(args.jobs, len(args.models)))
     # Each worker gets its share of the BLAS threads: spawned workers read them on import
@@ -419,6 +489,7 @@ def main(argv: list[str] | None = None) -> int:
         out=out,
         evaluate=evaluate,
         alone=alone,
+        resume=args.resume,
     )
     with ProcessPoolExecutor(jobs, mp_context=multiprocessing.get_context("spawn")) as pool:
         for name in pool.map(task, args.models):
