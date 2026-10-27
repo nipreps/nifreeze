@@ -186,10 +186,15 @@ replace their counterparts, then the first K moved volumes replace theirs.
 ``verify`` also checks that the closed-form displacement reproduces TRXScan's
 eddy-current images (within 10⁻⁴), and that a moved volume's center of mass moves
 as its matrix says (within a fifth of a voxel).
-A moved volume takes about 35 s at 2 mm (about 50 s at 1.25 mm): the moved
-phantom is gridded once, then simulated without and with each of the three
-eddy-current magnitudes. The default grid of one protocol thus takes from about
-1.5 hours (AOMIC-PIOP2) to 14 hours (HCP-YA).
+A moved volume takes about 35 s at 2 mm (about 50 s at 1.25 mm) on a laptop:
+the moved phantom is gridded once, then simulated without and with each of the
+three eddy-current magnitudes. The default grid of one protocol thus takes from
+about 1.5 hours (AOMIC-PIOP2) to 14 hours (HCP-YA) in one process.
+Most of that time is serial, and more threads barely shorten it, so
+``cells --jobs N`` simulates the moved volumes in N processes, which share the
+threads of ``RAYON_NUM_THREADS`` and write the same files.
+On an 18-core workstation, 16 processes simulate ten times as many moved volumes
+per hour as one; each process needs about 1.8 GB at 2 mm and 3.7 GB at 1.25 mm.
 
 TRXScan's signal is a sum of Gaussian compartments, as the tensor and kurtosis
 models assume, so these models may fit the synthetic data better than real ones.

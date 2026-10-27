@@ -54,7 +54,9 @@ the brain mask, the gradients, the truth maps and a JSON sidecar, under
 volumes moved by rigid motions (re-simulated from the moved phantom), distorted
 by eddy currents (TRXScan's linear model, whose displacement is known in closed
 form), or both. It writes only the changed volumes, with their ground truth,
-under ``<dataset>/derivatives/perturbations/sub-60501/dwi``.
+under ``<dataset>/derivatives/perturbations/sub-60501/dwi``. Each moved volume
+spends most of its time in serial code, so ``--jobs`` simulates them in that many
+processes, which share the threads of ``RAYON_NUM_THREADS``.
 
 ``verify`` checks, at a coarse resolution, what the perturbed copies rely on:
 repeated runs are identical, a subset of the gradient table reproduces the same
@@ -69,10 +71,16 @@ directions per shell, its reference and the perturbed copies they use.
 import argparse
 import json
 import math
+import multiprocessing
+import os
 import sys
 import tomllib
+from collections.abc import Iterator
+from concurrent.futures import ProcessPoolExecutor
+from contextlib import contextmanager
 from functools import cache
 from importlib.metadata import version
+from itertools import islice, repeat
 from pathlib import Path
 from typing import Any
 
@@ -349,6 +357,82 @@ def write_reference(
     return folder
 
 
+def simulate_moved(
+    source: Any,
+    protocol: Any,
+    grid: Any,
+    table: np.ndarray,
+    volume: int,
+    matrix: np.ndarray,
+    strengths: list[float],
+    chunk: int | None,
+) -> list[np.ndarray]:
+    """One volume of the phantom moved by ``matrix``: without eddy currents, then with each
+    strength."""
+    # The head moves in the scanner: the phantom is moved, then gridded as the reference
+    moved_grid = grid_moved(source, matrix, protocol, grid)
+    # The table's largest b-value comes along, as in the reference's simulation
+    subset = _dipy(table[[volume, int(np.argmax(table[:, 3]))]])
+    images = []
+    for strength in [None, *strengths]:
+        artifacts = CLEAN
+        if strength is not None:
+            artifacts = CLEAN.replace(eddy=strength, eddy_tau_ms=EDDY_TAU_MS)
+        simulation = moved_grid.simulate(
+            subset, protocol, artifacts, kspace=False, clean_b0=False, chunk=chunk
+        )
+        images.append(_magnitudes(simulation)[..., 0])
+    return images
+
+
+_WORKER: dict[str, Any] = {}
+"""What a worker process of ``cells --jobs`` moves, set up once per process."""
+
+
+def _start_worker(
+    name: str, streamlines: int, voxel: float | None, volumes: list[int] | None, threads: int
+) -> None:
+    ts.set_threads(threads)
+    protocol = acquisition(name, voxel)
+    source = phantom(streamlines)
+    _WORKER.update(
+        source=source,
+        protocol=protocol,
+        grid=source.grid(protocol),
+        table=gradients(name, volumes)[0],
+    )
+
+
+def _simulate_in_worker(
+    volume: int, matrix: np.ndarray, strengths: list[float], chunk: int | None
+) -> list[np.ndarray]:
+    return simulate_moved(
+        **_WORKER, volume=volume, matrix=matrix, strengths=strengths, chunk=chunk
+    )
+
+
+@contextmanager
+def _workers(
+    jobs: int, name: str, streamlines: int, voxel: float | None, volumes: list[int] | None
+) -> Iterator[ProcessPoolExecutor | None]:
+    """Processes that simulate moved volumes, or none for ``jobs=1``.
+
+    They share the threads of ``RAYON_NUM_THREADS`` (all CPUs by default). They are
+    spawned, not forked: TRXScan's thread pool does not survive a fork.
+    """
+    if jobs <= 1:
+        yield None
+        return
+    budget = int(os.environ.get("RAYON_NUM_THREADS") or os.cpu_count() or 1)
+    with ProcessPoolExecutor(
+        jobs,
+        mp_context=multiprocessing.get_context("spawn"),
+        initializer=_start_worker,
+        initargs=(name, streamlines, voxel, volumes, max(1, budget // jobs)),
+    ) as pool:
+        yield pool
+
+
 def write_cells(
     name: str,
     out: Path,
@@ -360,6 +444,7 @@ def write_cells(
     voxel: float | None = None,
     chunk: int | None = 8,
     volumes: list[int] | None = None,
+    jobs: int = 1,
 ) -> Path:
     """Write the perturbed copies of one protocol's reference, with their ground truth.
 
@@ -372,7 +457,9 @@ def write_cells(
     largest displacement of any brain voxel over all volumes, in voxels along phase
     encoding; TRXScan's single strength then distorts each volume in proportion
     to its b-value. With ``volumes``, the reference keeps only those volumes of
-    the protocol, and the copies are numbered as the reference's volumes.
+    the protocol, and the copies are numbered as the reference's volumes. With
+    ``jobs``, the moved volumes are simulated in that many processes; the files are
+    the same.
     """
     entry = CATALOG[name]
     protocol = acquisition(name, voxel)
@@ -380,7 +467,6 @@ def write_cells(
     source = phantom(streamlines)
     grid = source.grid(protocol)
     weighted = np.flatnonzero(table[:, 3] >= 50)
-    largest = int(np.argmax(table[:, 3]))
     terms = eddy_terms(grid, protocol, table)
     # Magnitudes are in voxels along phase encoding, so they mean the same at any resolution
     strengths = {e: e * terms["radius"][1] / terms["reach"] for e in eddies}
@@ -427,19 +513,6 @@ def write_cells(
         }
         Path(f"{stem}.json").write_text(json.dumps(sidecar, indent=2) + "\n")
 
-    for e in eddies:
-        artifacts = CLEAN.replace(eddy=strengths[e], eddy_tau_ms=EDDY_TAU_MS)
-        simulation = grid.simulate(
-            gtab, protocol, artifacts, kspace=False, clean_b0=False, chunk=chunk
-        )
-        distorted = _magnitudes(simulation)
-        write(
-            f"e{_label(e)}",
-            [distorted[..., v] for v in weighted],
-            weighted,
-            {"Kind": "eddy", "Motion": None, "Eddy": eddy(e, weighted)},
-        )
-
     plan = perturbation_plan(
         len(weighted),
         magnitudes,
@@ -447,39 +520,59 @@ def write_cells(
         seeds=seeds,
         center=center,
     )
-    for perturbation in plan:
-        moved = weighted[list(perturbation.moved)]
-        motion = {
-            "Magnitude": perturbation.magnitude,
-            "Seed": perturbation.seed,
-            "Center": center.tolist(),
-            "Matrices": [np.asarray(m).tolist() for m in perturbation.motions],
-        }
-        still: list[np.ndarray] = []
-        distorted_moved: dict[float, list[np.ndarray]] = {e: [] for e in eddies}
-        for volume, matrix in zip(moved, perturbation.motions, strict=True):
-            # The head moves in the scanner: the phantom is moved, then gridded as the reference
-            moved_grid = grid_moved(source, np.asarray(matrix), protocol, grid)
-            # The table's largest b-value comes along, as in the reference's simulation
-            subset = _dipy(table[[volume, largest]])
-            for magnitude in [None, *eddies]:
-                artifacts = CLEAN
-                if magnitude is not None:
-                    artifacts = CLEAN.replace(eddy=strengths[magnitude], eddy_tau_ms=EDDY_TAU_MS)
-                simulation = moved_grid.simulate(
-                    subset, protocol, artifacts, kspace=False, clean_b0=False, chunk=chunk
-                )
-                image = _magnitudes(simulation)[..., 0]
-                (still if magnitude is None else distorted_moved[magnitude]).append(image)
-        label = f"m{_label(perturbation.magnitude)}s{perturbation.seed}"
-        write(label, still, moved, {"Kind": "motion", "Motion": motion, "Eddy": None})
-        for e in eddies:
-            write(
-                f"{label}e{_label(e)}",
-                distorted_moved[e],
-                moved,
-                {"Kind": "motion+eddy", "Motion": motion, "Eddy": eddy(e, moved)},
+    units = [
+        (int(weighted[j]), np.asarray(matrix))
+        for perturbation in plan
+        for j, matrix in zip(perturbation.moved, perturbation.motions, strict=True)
+    ]
+    levels = [strengths[e] for e in eddies]
+    with _workers(jobs, name, streamlines, voxel, volumes) as pool:
+        # Every moved volume, in the order of the plan; the workers start on them at once
+        results: Iterator[list[np.ndarray]] = (
+            (simulate_moved(source, protocol, grid, table, v, m, levels, chunk) for v, m in units)
+            if pool is None
+            else pool.map(
+                _simulate_in_worker,
+                [v for v, _ in units],
+                [m for _, m in units],
+                repeat(levels),
+                repeat(chunk),
             )
+        )
+
+        for e in eddies:
+            artifacts = CLEAN.replace(eddy=strengths[e], eddy_tau_ms=EDDY_TAU_MS)
+            simulation = grid.simulate(
+                gtab, protocol, artifacts, kspace=False, clean_b0=False, chunk=chunk
+            )
+            distorted = _magnitudes(simulation)
+            write(
+                f"e{_label(e)}",
+                [distorted[..., v] for v in weighted],
+                weighted,
+                {"Kind": "eddy", "Motion": None, "Eddy": eddy(e, weighted)},
+            )
+
+        for perturbation in plan:
+            moved = weighted[list(perturbation.moved)]
+            motion = {
+                "Magnitude": perturbation.magnitude,
+                "Seed": perturbation.seed,
+                "Center": center.tolist(),
+                "Matrices": [np.asarray(m).tolist() for m in perturbation.motions],
+            }
+            # Each moved volume without eddy currents, then with each magnitude
+            images = list(islice(results, perturbation.count))
+            label = f"m{_label(perturbation.magnitude)}s{perturbation.seed}"
+            still = [i[0] for i in images]
+            write(label, still, moved, {"Kind": "motion", "Motion": motion, "Eddy": None})
+            for k, e in enumerate(eddies, start=1):
+                write(
+                    f"{label}e{_label(e)}",
+                    [i[k] for i in images],
+                    moved,
+                    {"Kind": "motion+eddy", "Motion": motion, "Eddy": eddy(e, moved)},
+                )
     return folder
 
 
@@ -524,6 +617,7 @@ def verify(name: str, voxel: float = 4.0, streamlines: int = 50_000) -> list[str
         failures.append("a subset of the gradient table does not reproduce the full run")
     failures += _verify_eddy(name, voxel, streamlines, picks)
     failures += _verify_motion(name, voxel, streamlines, picks)
+    failures += _verify_workers(name, voxel, streamlines, picks)
     return failures
 
 
@@ -589,6 +683,31 @@ def _verify_motion(name: str, voxel: float, streamlines: int, picks: list[int]) 
     return [] if error < 0.2 * voxel else [f"a moved volume is {error:.2f} mm off its motion"]
 
 
+def _verify_workers(name: str, voxel: float, streamlines: int, picks: list[int]) -> list[str]:
+    """Moved volumes simulated by worker processes equal those simulated in this one."""
+    protocol = acquisition(name, voxel)
+    table = gradients(name, picks)[0]
+    source = phantom(streamlines)
+    grid = source.grid(protocol)
+    # The last two, whose index in the subset is not their index in the protocol
+    volumes = [int(i) for i in np.flatnonzero(table[:, 3] >= 50)[-2:]]
+    matrices = [np.asarray(m) for m in perturbation_plan(2, (2.0,), (2,), seeds=(0,))[0].motions]
+    levels = [2.0 / eddy_terms(grid, protocol, table)["reach"]]
+    here = [
+        simulate_moved(source, protocol, grid, table, v, m, levels, 8)
+        for v, m in zip(volumes, matrices, strict=True)
+    ]
+    with _workers(2, name, streamlines, voxel, picks) as pool:
+        assert pool is not None
+        there = list(pool.map(_simulate_in_worker, volumes, matrices, repeat(levels), repeat(8)))
+    same = all(
+        np.array_equal(a, b)
+        for x, y in zip(here, there, strict=True)
+        for a, b in zip(x, y, strict=True)
+    )
+    return [] if same else ["moved volumes simulated by worker processes differ"]
+
+
 def _floats(text: str) -> list[float]:
     return [float(value) for value in text.split(",")]
 
@@ -618,6 +737,12 @@ def main(argv: list[str] | None = None) -> int:
     cells.add_argument("--streamlines", type=int, default=400_000)
     cells.add_argument("--voxel", type=float, help="isotropic voxel size (mm), same FOV")
     cells.add_argument("--chunk", type=int, default=8, help="slices per simulated slab")
+    cells.add_argument(
+        "--jobs",
+        type=int,
+        default=1,
+        help="processes simulating moved volumes, sharing the threads of RAYON_NUM_THREADS",
+    )
     check = commands.add_parser("verify", help="check what the perturbed copies rely on")
     check.add_argument("--protocol", choices=sorted(CATALOG), help="one protocol (all by default)")
     fixture = commands.add_parser("fixture", help="simulate the small dataset of CI")
@@ -641,6 +766,7 @@ def main(argv: list[str] | None = None) -> int:
             args.streamlines,
             args.voxel,
             args.chunk,
+            jobs=args.jobs,
         )
         print(f"wrote {folder}")
         return 0
