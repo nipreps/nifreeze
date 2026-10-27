@@ -46,9 +46,13 @@ It runs in NiFreeze's environment, never TRXScan's::
     uv run tools/phantoms/ladder.py run --dataset <dataset> --protocol sherbrooke \\
         --out <dataset>/derivatives/sensitivity
 
-and writes, under ``<out>/<protocol>``, one row per model, copy and evaluated
-volume (``rung-<n>.tsv``, ``fidelity.tsv``, ``alone.tsv``), with the settings
-(``settings.json``).
+and writes, under ``<out>/<protocol>``, one row per copy and evaluated volume
+(``rung-<n>_model-<model>.tsv``, ``fidelity_model-<model>.tsv``), one per volume
+moved alone (``alone_model-<model>.tsv``), and the settings (``settings.json``).
+The tables of ``docs/sensitivity.rst`` summarize every protocol of ``<out>``::
+
+    uv run tools/phantoms/ladder.py tables --results <dataset>/derivatives/sensitivity \\
+        --out <dataset>/derivatives/sensitivity/tables
 """
 
 import argparse
@@ -72,6 +76,10 @@ SCALED = ("gqi",)
 """Models whose predictions are overscaled (nipreps/nifreeze#495), see :class:`Scaled`."""
 FRACTIONS = (1 / 12, 1 / 3, 1 / 2, 1)
 """Moved volumes, as fractions of the diffusion-weighted volumes."""
+LABELS = ("N/12", "N/3", "N/2", "N")
+"""How the tables name the counts of :data:`FRACTIONS`."""
+TABLES = ("rung-1", "alone", "rung-2", "rung-3", "rung-3-compound", "rung-3-share")
+"""The tables of :func:`tables`, each written as ``<table>.csv``."""
 NOISE = 0
 """Seed of the noise added on load, at each protocol's signal-to-noise ratio."""
 
@@ -198,31 +206,189 @@ def len_dw(dataset: Path, protocol: str) -> int:
     return int((np.loadtxt(table, ndmin=2)[:, 3] > DEFAULT_LOWB_THRESHOLD).sum())
 
 
-def _write(path: Path, rows: list[dict[str, Any]]) -> None:
+def tables(results: Path, out: Path) -> list[Path]:
+    """Summaries of every protocol under ``results``, one CSV per table, as the docs show them.
+
+    A drift is the mean NRMSE over a shell's evaluated volumes. Motions are the largest
+    magnitude, and eddy currents the largest distortion, wherever a table does not vary them.
+    """
+    written: dict[str, list[dict[str, Any]]] = {name: [] for name in TABLES}
+    for folder in sorted(p.parent for p in results.glob("*/settings.json")):
+        settings = json.loads((folder / "settings.json").read_text())
+        for name in settings["Models"]:
+            for table, rows in _summaries(folder, settings, name).items():
+                written[table] += rows
+
+    out.mkdir(parents=True, exist_ok=True)
+    paths = [out / f"{table}.csv" for table in written]
+    for path, rows in zip(paths, written.values(), strict=True):
+        _write(path, [{k: _round(v) for k, v in row.items()} for row in rows], ",")
+    return paths
+
+
+def _summaries(
+    folder: Path, settings: dict[str, Any], name: str
+) -> dict[str, list[dict[str, Any]]]:
+    """The rows that one model of one protocol adds to each table."""
+    from scipy.stats import spearmanr
+
+    n_volumes = settings["Counts"][-1]
+    sizes = {
+        label: max(1, round(n_volumes * f)) for label, f in zip(LABELS, FRACTIONS, strict=True)
+    }
+    fidelity = _read(folder / f"fidelity_model-{name}.tsv")
+    still = _read(folder / f"rung-1_model-{name}.tsv")
+    eddy = _read(folder / f"rung-2_model-{name}.tsv")
+    both = _read(folder / f"rung-3_model-{name}.tsv")
+    alone = _read(folder / f"alone_model-{name}.tsv")
+    shell_of = {row["index"]: row["shell"] for row in still}
+    largest = max(row["magnitude"] for row in still)
+    strongest = max(row["distortion"] for row in eddy)
+    tag = {"protocol": settings["Protocol"], "model": name}
+
+    summaries: dict[str, list[dict[str, Any]]] = {table: [] for table in TABLES}
+    for shell in sorted(set(shell_of.values())):
+        at = {**tag, "shell": shell}
+        moved = _select(still, "nrmse", shell=shell, magnitude=largest, count=sizes["N/3"])
+        cc = [row["cc"] for row in fidelity if shell_of[row["index"]] == shell]
+        summaries["rung-1"].append(
+            {**at, "fidelity": np.mean(cc), "drift": moved.mean(), "drift_sd": moved.std()}
+        )
+        share = _select(eddy, "inherited", shell=shell)
+        drift = _select(eddy, "nrmse", shell=shell, distortion=strongest)
+        summaries["rung-2"].append(
+            {
+                **at,
+                "inherited": np.nanmean(share),
+                "inherited_q75": np.nanquantile(share, 0.75),
+                "drift": drift.mean(),
+            }
+        )
+        largest_both = {"shell": shell, "magnitude": largest, "distortion": strongest}
+        summaries["rung-3"].append(
+            {
+                **at,
+                **{
+                    f"K={label}": _select(both, "nrmse", count=size, **largest_both).mean()
+                    for label, size in sizes.items()
+                },
+            }
+        )
+        summaries["rung-3-share"].append(
+            {
+                **at,
+                "no motion": np.nanmean(share),
+                **{
+                    f"K={label}": np.nanmean(
+                        _select(both, "inherited", shell=shell, magnitude=largest, count=size)
+                    )
+                    for label, size in sizes.items()
+                    if label in ("N/3", "N")
+                },
+            }
+        )
+
+    # The drift with both, over the quadrature sum of the drifts with each alone
+    ratios = []
+    for cell in _cells(both, ("shell", "magnitude", "count", "distortion")):
+        motion = {k: v for k, v in cell.items() if k != "distortion"}
+        distortion = {"shell": cell["shell"], "distortion": cell["distortion"]}
+        separate = np.hypot(
+            _select(still, "nrmse", **motion).mean(), _select(eddy, "nrmse", **distortion).mean()
+        )
+        ratios.append(_select(both, "nrmse", **cell).mean() / separate)
+    summaries["rung-3-compound"].append(
+        {**tag, "ratio_min": min(ratios), "ratio_max": max(ratios)}
+    )
+
+    change = _select(alone, "change")
+    spread = _select(alone, "drift")
+    weights = _select(alone, "influence")
+    summaries["alone"].append(
+        {
+            **tag,
+            "volumes": len(alone),
+            "rho_change": spearmanr(spread, change).statistic,
+            "rho_influence": (
+                float("nan")
+                if np.isnan(weights).all()
+                else spearmanr(spread, weights * change).statistic
+            ),
+        }
+    )
+    return summaries
+
+
+def _read(path: Path) -> list[dict[str, Any]]:
+    """The rows of a TSV, with numbers and booleans parsed."""
+
+    def parse(value: str) -> Any:
+        if value in ("True", "False"):
+            return value == "True"
+        try:
+            number = float(value)
+        except ValueError:
+            return value
+        return int(number) if number.is_integer() and "." not in value else number
+
+    with path.open() as stream:
+        return [
+            {key: parse(value) for key, value in row.items()}
+            for row in csv.DictReader(stream, delimiter="\t")
+        ]
+
+
+def _select(rows: list[dict[str, Any]], column: str, **where: Any) -> np.ndarray:
+    """A column over the rows that match every condition."""
+    return np.array(
+        [row[column] for row in rows if all(row[k] == v for k, v in where.items())], dtype=float
+    )
+
+
+def _cells(rows: list[dict[str, Any]], keys: tuple[str, ...]) -> list[dict[str, Any]]:
+    """The distinct combinations of some columns, in order of appearance."""
+    distinct = dict.fromkeys(tuple(row[k] for k in keys) for row in rows)
+    return [dict(zip(keys, values, strict=True)) for values in distinct]
+
+
+def _round(value: Any) -> Any:
+    """Three significant decimals for floats, as the docs show them."""
+    return f"{value:.3f}" if isinstance(value, float | np.floating) else value
+
+
+def _write(path: Path, rows: list[dict[str, Any]], delimiter: str = "\t") -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as stream:
         if not rows:
             return
-        writer = csv.DictWriter(stream, fieldnames=list(rows[0]), delimiter="\t")
+        writer = csv.DictWriter(stream, fieldnames=list(rows[0]), delimiter=delimiter)
         writer.writeheader()
         writer.writerows(rows)
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("command", choices=["run"])
-    parser.add_argument("--dataset", type=Path, required=True, help="phantom dataset root")
-    parser.add_argument("--protocol", required=True)
-    parser.add_argument("--out", type=Path, required=True, help="results root")
-    parser.add_argument("--models", nargs="+", default=list(MODELS), choices=MODELS)
-    parser.add_argument(
+    commands = parser.add_subparsers(dest="command", required=True)
+    run = commands.add_parser("run", help="measure the rungs on one protocol")
+    run.add_argument("--dataset", type=Path, required=True, help="phantom dataset root")
+    run.add_argument("--protocol", required=True)
+    run.add_argument("--out", type=Path, required=True, help="results root")
+    run.add_argument("--models", nargs="+", default=list(MODELS), choices=MODELS)
+    run.add_argument(
         "--every", type=int, default=1, help="evaluate every n-th volume (bounds memory)"
     )
-    parser.add_argument(
+    run.add_argument(
         "--alone-every", type=int, default=4, help="move every n-th evaluated volume alone"
     )
-    parser.add_argument("--jobs", type=int, default=len(MODELS), help="models run at once")
+    run.add_argument("--jobs", type=int, default=len(MODELS), help="models run at once")
+    summary = commands.add_parser("tables", help="summarize every protocol of a results root")
+    summary.add_argument("--results", type=Path, required=True, help="results root")
+    summary.add_argument("--out", type=Path, required=True, help="folder of the tables")
     args = parser.parse_args(argv)
+    if args.command == "tables":
+        for path in tables(args.results, args.out):
+            print(path, flush=True)
+        return 0
 
     n_volumes = len_dw(args.dataset, args.protocol)
     evaluate = list(range(0, n_volumes, args.every))
