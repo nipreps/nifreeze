@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.analysis.phantoms - nifreeze 26.0.0.dev425 documentation</title>
+        <title>nifreeze.analysis.phantoms - nifreeze 26.0.0.dev428 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev425 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev428 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev425</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev428</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev425</span>
+  <span class="sidebar-brand-text">26.0.0.dev428</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -380,6 +380,10 @@
 <span class="n">Cell</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Perturbation</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">DWI</span><span class="p">]]</span>
 <span class="sd">&quot;&quot;&quot;The ground truth of a perturbed copy, and a function that loads the copy.&quot;&quot;&quot;</span>
 
+<span class="n">Part</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">int</span><span class="p">]</span>
+<span class="sd">&quot;&quot;&quot;A file of changed volumes, the reference&#39;s volumes that some of them replace, and the</span>
+<span class="sd">first of those in the file (they follow one another).&quot;&quot;&quot;</span>
+
 
 <div class="viewcode-block" id="load_phantom">
 <a class="viewcode-back" href="../../../api/nifreeze.analysis.phantoms.html#nifreeze.analysis.phantoms.load_phantom">[docs]</a>
@@ -388,14 +392,16 @@
     <span class="n">protocol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">noise</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">counts</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">alone</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DWI</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Cell</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Read a protocol&#39;s reference and its perturbed copies.</span>
 
 <span class="sd">    A copy is assembled from the reference: its eddy-current volumes replace their</span>
-<span class="sd">    counterparts, then its first K moved volumes replace theirs. The copies load</span>
-<span class="sd">    one at a time, when :func:`~nifreeze.analysis.sensitivity.sensitivity` needs</span>
-<span class="sd">    them, since each is as large as the reference.</span>
+<span class="sd">    counterparts, then its first K moved volumes replace theirs (or one of them,</span>
+<span class="sd">    see ``alone``). The copies load one at a time, when</span>
+<span class="sd">    :func:`~nifreeze.analysis.sensitivity.sensitivity` needs them, since each is as</span>
+<span class="sd">    large as the reference.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -411,6 +417,10 @@
 <span class="sd">    counts : :obj:`~collections.abc.Iterable`, optional</span>
 <span class="sd">        Numbers of moved volumes: each copy with motions gives one copy per count,</span>
 <span class="sd">        moving the first K of its volumes. All of them if :obj:`None`.</span>
+<span class="sd">    alone : :obj:`~collections.abc.Iterable`, optional</span>
+<span class="sd">        Volumes (numbered as the reference&#39;s) that each copy with motions also moves</span>
+<span class="sd">        alone, with the motion it gives them: one copy per volume, to rank the</span>
+<span class="sd">        volumes by their influence. None if :obj:`None`.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -442,31 +452,59 @@
         <span class="n">eddies</span><span class="p">[</span><span class="n">cell</span><span class="p">[</span><span class="s2">&quot;Eddy&quot;</span><span class="p">][</span><span class="s2">&quot;Magnitude&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span><span class="n">volumes</span><span class="p">,</span> <span class="n">sources</span><span class="p">,</span> <span class="n">distortion</span><span class="p">)</span>
 
     <span class="n">cells</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Cell</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="p">(</span><span class="n">Perturbation</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">distortion</span><span class="o">=</span><span class="n">distortion</span><span class="p">),</span> <span class="n">splice</span><span class="p">([(</span><span class="n">volumes</span><span class="p">,</span> <span class="n">sources</span><span class="p">)]))</span>
+        <span class="p">(</span><span class="n">Perturbation</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">distortion</span><span class="o">=</span><span class="n">distortion</span><span class="p">),</span> <span class="n">splice</span><span class="p">([(</span><span class="n">volumes</span><span class="p">,</span> <span class="n">sources</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]))</span>
         <span class="k">for</span> <span class="n">volumes</span><span class="p">,</span> <span class="n">sources</span><span class="p">,</span> <span class="n">distortion</span> <span class="ow">in</span> <span class="n">eddies</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
     <span class="p">]</span>
+    <span class="n">counts</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">counts</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">counts</span><span class="p">]</span>
+    <span class="n">alone</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">alone</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">alone</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">volumes</span><span class="p">,</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">motions</span><span class="p">:</span>
-        <span class="n">sources</span><span class="p">,</span> <span class="n">motion</span> <span class="o">=</span> <span class="n">cell</span><span class="p">[</span><span class="s2">&quot;SourceVolumes&quot;</span><span class="p">],</span> <span class="n">cell</span><span class="p">[</span><span class="s2">&quot;Motion&quot;</span><span class="p">]</span>
-        <span class="n">parts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">parts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Part</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">eddy</span><span class="p">:</span> <span class="n">Distortion</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">cell</span><span class="p">[</span><span class="s2">&quot;Eddy&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">cell</span><span class="p">[</span><span class="s2">&quot;Eddy&quot;</span><span class="p">][</span><span class="s2">&quot;Magnitude&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">eddies</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">volumes</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> needs the copy with its eddy currents alone.&quot;</span><span class="p">)</span>
             <span class="n">eddy_volumes</span><span class="p">,</span> <span class="n">eddy_sources</span><span class="p">,</span> <span class="n">eddy</span> <span class="o">=</span> <span class="n">eddies</span><span class="p">[</span><span class="n">cell</span><span class="p">[</span><span class="s2">&quot;Eddy&quot;</span><span class="p">][</span><span class="s2">&quot;Magnitude&quot;</span><span class="p">]]</span>
-            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">eddy_volumes</span><span class="p">,</span> <span class="n">eddy_sources</span><span class="p">))</span>
-        <span class="k">for</span> <span class="n">count</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">sources</span><span class="p">)]</span> <span class="k">if</span> <span class="n">counts</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">counts</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">sources</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">volumes</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> moves </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span><span class="si">}</span><span class="s2"> volumes, not </span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
-            <span class="n">perturbation</span> <span class="o">=</span> <span class="n">Perturbation</span><span class="p">(</span>
-                <span class="n">magnitude</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">motion</span><span class="p">[</span><span class="s2">&quot;Magnitude&quot;</span><span class="p">]),</span>
-                <span class="n">seed</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">motion</span><span class="p">[</span><span class="s2">&quot;Seed&quot;</span><span class="p">]),</span>
-                <span class="n">moved</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">position</span><span class="p">[</span><span class="n">v</span><span class="p">]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">[:</span><span class="n">count</span><span class="p">]),</span>
-                <span class="n">motions</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">motion</span><span class="p">[</span><span class="s2">&quot;Matrices&quot;</span><span class="p">][:</span><span class="n">count</span><span class="p">]),</span>
-                <span class="n">distortion</span><span class="o">=</span><span class="n">eddy</span><span class="p">,</span>
-            <span class="p">)</span>
-            <span class="n">cells</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">perturbation</span><span class="p">,</span> <span class="n">splice</span><span class="p">([</span><span class="o">*</span><span class="n">parts</span><span class="p">,</span> <span class="p">(</span><span class="n">volumes</span><span class="p">,</span> <span class="n">sources</span><span class="p">[:</span><span class="n">count</span><span class="p">])])))</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">eddy_volumes</span><span class="p">,</span> <span class="n">eddy_sources</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">perturbation</span><span class="p">,</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">_moving</span><span class="p">(</span><span class="n">volumes</span><span class="p">,</span> <span class="n">cell</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">eddy</span><span class="p">,</span> <span class="n">counts</span><span class="p">,</span> <span class="n">alone</span><span class="p">):</span>
+            <span class="n">cells</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">perturbation</span><span class="p">,</span> <span class="n">splice</span><span class="p">([</span><span class="o">*</span><span class="n">parts</span><span class="p">,</span> <span class="n">part</span><span class="p">])))</span>
     <span class="k">return</span> <span class="n">reference</span><span class="p">,</span> <span class="n">cells</span></div>
 
+
+
+<span class="k">def</span> <span class="nf">_moving</span><span class="p">(</span>
+    <span class="n">volumes</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">cell</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">position</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
+    <span class="n">eddy</span><span class="p">:</span> <span class="n">Distortion</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">counts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">alone</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Perturbation</span><span class="p">,</span> <span class="n">Part</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The copies that a file of moved volumes gives, each with the volumes it splices.&quot;&quot;&quot;</span>
+    <span class="n">sources</span><span class="p">,</span> <span class="n">motion</span> <span class="o">=</span> <span class="n">cell</span><span class="p">[</span><span class="s2">&quot;SourceVolumes&quot;</span><span class="p">],</span> <span class="n">cell</span><span class="p">[</span><span class="s2">&quot;Motion&quot;</span><span class="p">]</span>
+    <span class="n">moved</span> <span class="o">=</span> <span class="p">[</span><span class="n">position</span><span class="p">[</span><span class="n">v</span><span class="p">]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">]</span>
+    <span class="n">matrices</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">motion</span><span class="p">[</span><span class="s2">&quot;Matrices&quot;</span><span class="p">]]</span>
+
+    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="n">start</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">stop</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Perturbation</span><span class="p">,</span> <span class="n">Part</span><span class="p">]:</span>
+        <span class="n">perturbation</span> <span class="o">=</span> <span class="n">Perturbation</span><span class="p">(</span>
+            <span class="n">magnitude</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">motion</span><span class="p">[</span><span class="s2">&quot;Magnitude&quot;</span><span class="p">]),</span>
+            <span class="n">seed</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">motion</span><span class="p">[</span><span class="s2">&quot;Seed&quot;</span><span class="p">]),</span>
+            <span class="n">moved</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">moved</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]),</span>
+            <span class="n">motions</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">matrices</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]),</span>
+            <span class="n">distortion</span><span class="o">=</span><span class="n">eddy</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">perturbation</span><span class="p">,</span> <span class="p">(</span><span class="n">volumes</span><span class="p">,</span> <span class="n">sources</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">],</span> <span class="n">start</span><span class="p">)</span>
+
+    <span class="n">copies</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">count</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">sources</span><span class="p">)]</span> <span class="k">if</span> <span class="n">counts</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">counts</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">sources</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">volumes</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> moves </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span><span class="si">}</span><span class="s2"> volumes, not </span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="n">copies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">copy</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">count</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">volume</span> <span class="ow">in</span> <span class="n">alone</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">volume</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">moved</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">volumes</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> does not move volume </span><span class="si">{</span><span class="n">volume</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="n">moved</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">volume</span><span class="p">)</span>
+        <span class="n">copies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">copy</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">row</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">copies</span>
 
 
 <span class="k">def</span> <span class="nf">_noisy</span><span class="p">(</span>
@@ -515,19 +553,20 @@
     <span class="n">reference</span><span class="p">:</span> <span class="n">DWI</span><span class="p">,</span>
     <span class="n">position</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
     <span class="n">noisy</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
-    <span class="n">parts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]],</span>
+    <span class="n">parts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Part</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">DWI</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A function that loads a copy: the reference, with the volumes of each file in turn.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A function that loads a copy: the reference, with volumes of each file in turn.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">load</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">DWI</span><span class="p">:</span>
         <span class="n">dataobj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">reference</span><span class="o">.</span><span class="n">dataobj</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="n">sources</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="n">sources</span><span class="p">,</span> <span class="n">start</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">:</span>
             <span class="n">changed</span> <span class="o">=</span> <span class="n">load_api</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">SpatialImage</span><span class="p">)</span>
             <span class="n">grid</span> <span class="o">=</span> <span class="n">changed</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="n">reference</span><span class="o">.</span><span class="n">shape3d</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">grid</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">changed</span><span class="o">.</span><span class="n">affine</span><span class="p">,</span> <span class="n">reference</span><span class="o">.</span><span class="n">affine</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> is not on the reference&#39;s grid.&quot;</span><span class="p">)</span>
-            <span class="n">volumes</span> <span class="o">=</span> <span class="n">to_time_first</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">changed</span><span class="o">.</span><span class="n">dataobj</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
-            <span class="n">dataobj</span><span class="p">[[</span><span class="n">position</span><span class="p">[</span><span class="n">v</span><span class="p">]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">]]</span> <span class="o">=</span> <span class="n">noisy</span><span class="p">(</span><span class="n">volumes</span><span class="p">[:</span> <span class="nb">len</span><span class="p">(</span><span class="n">sources</span><span class="p">)],</span> <span class="n">sources</span><span class="p">)</span>
+            <span class="n">rows</span> <span class="o">=</span> <span class="n">changed</span><span class="o">.</span><span class="n">dataobj</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">start</span> <span class="p">:</span> <span class="n">start</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">sources</span><span class="p">)]</span>
+            <span class="n">volumes</span> <span class="o">=</span> <span class="n">to_time_first</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+            <span class="n">dataobj</span><span class="p">[[</span><span class="n">position</span><span class="p">[</span><span class="n">v</span><span class="p">]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">]]</span> <span class="o">=</span> <span class="n">noisy</span><span class="p">(</span><span class="n">volumes</span><span class="p">,</span> <span class="n">sources</span><span class="p">)</span>
         <span class="n">perturbed</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">reference</span><span class="p">)</span>
         <span class="n">perturbed</span><span class="o">.</span><span class="n">dataobj</span> <span class="o">=</span> <span class="n">dataobj</span>
         <span class="k">return</span> <span class="n">perturbed</span>
@@ -565,7 +604,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=c95d5d98"></script>
+</div><script src="../../../_static/documentation_options.js?v=b2c7f029"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
