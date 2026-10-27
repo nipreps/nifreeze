@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="What’s new?" href="changes.html"><link rel="prev" title="nifreeze.viz.signals module" href="api/nifreeze.viz.signals.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>Synthetic reference data - nifreeze 26.0.0.dev415 documentation</title>
+        <title>Synthetic reference data - nifreeze 26.0.0.dev417 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev415 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev417 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev415</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev417</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev415</span>
+  <span class="sidebar-brand-text">26.0.0.dev417</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -466,9 +466,10 @@ the scalar maps its compartments imply (FA, MD, kurtosis, NODDI and others).</p>
 volume’s index (<a class="reference internal" href="api/nifreeze.testing.phantoms.html#nifreeze.testing.phantoms.add_noise" title="nifreeze.testing.phantoms.add_noise"><code class="xref py py-func docutils literal notranslate"><span class="pre">nifreeze.testing.phantoms.add_noise()</span></code></a>), so the analysis can
 add the same noise to any stored noise-free volume, in the reference or in a
 perturbed copy of it.
-<code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">tools/phantoms/phantom.py</span> <span class="pre">verify</span></code> checks, at a coarse resolution, that
-repeated runs are identical and that a subset of the gradient table reproduces
-the same volumes of the full run, which the perturbed copies rely on.</p>
+<code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">tools/phantoms/phantom.py</span> <span class="pre">verify</span></code> checks, at a coarse resolution and
+for every protocol, that repeated runs are identical and that a subset of the
+gradient table reproduces the same volumes of the full run, which the perturbed
+copies rely on.</p>
 </section>
 <section id="perturbed-copies">
 <h2>Perturbed copies<a class="headerlink" href="#perturbed-copies" title="Link to this heading">¶</a></h2>
@@ -697,7 +698,7 @@ contrast also changes as the fibers turn relative to the gradient.</span><a clas
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=640d2d54"></script>
+</div><script src="_static/documentation_options.js?v=f78d2327"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
