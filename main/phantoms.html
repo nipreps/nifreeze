@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="What’s new?" href="changes.html"><link rel="prev" title="nifreeze.viz.signals module" href="api/nifreeze.viz.signals.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>Synthetic reference data - nifreeze 26.0.0.dev422 documentation</title>
+        <title>Synthetic reference data - nifreeze 26.0.0.dev425 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev422 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev425 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev422</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev425</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev422</span>
+  <span class="sidebar-brand-text">26.0.0.dev425</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -521,10 +521,15 @@ replace their counterparts, then the first K moved volumes replace theirs.</p>
 <p><code class="docutils literal notranslate"><span class="pre">verify</span></code> also checks that the closed-form displacement reproduces TRXScan’s
 eddy-current images (within 10⁻⁴), and that a moved volume’s center of mass moves
 as its matrix says (within a fifth of a voxel).
-A moved volume takes about 35 s at 2 mm (about 50 s at 1.25 mm): the moved
-phantom is gridded once, then simulated without and with each of the three
-eddy-current magnitudes. The default grid of one protocol thus takes from about
-1.5 hours (AOMIC-PIOP2) to 14 hours (HCP-YA).</p>
+A moved volume takes about 35 s at 2 mm (about 50 s at 1.25 mm) on a laptop:
+the moved phantom is gridded once, then simulated without and with each of the
+three eddy-current magnitudes. The default grid of one protocol thus takes from
+about 1.5 hours (AOMIC-PIOP2) to 14 hours (HCP-YA) in one process.
+Most of that time is serial, and more threads barely shorten it, so
+<code class="docutils literal notranslate"><span class="pre">cells</span> <span class="pre">--jobs</span> <span class="pre">N</span></code> simulates the moved volumes in N processes, which share the
+threads of <code class="docutils literal notranslate"><span class="pre">RAYON_NUM_THREADS</span></code> and write the same files.
+On an 18-core workstation, 16 processes simulate ten times as many moved volumes
+per hour as one; each process needs about 1.8 GB at 2 mm and 3.7 GB at 1.25 mm.</p>
 <p>TRXScan’s signal is a sum of Gaussian compartments, as the tensor and kurtosis
 models assume, so these models may fit the synthetic data better than real ones.</p>
 </section>
@@ -698,7 +703,7 @@ contrast also changes as the fibers turn relative to the gradient.</span><a clas
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=02d4cd55"></script>
+</div><script src="_static/documentation_options.js?v=c95d5d98"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
