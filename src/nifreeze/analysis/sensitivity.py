@@ -216,8 +216,13 @@ class Distortion:
         coefficients: np.ndarray,
         order: int = 3,
         slopes: bool = False,
+        within: np.ndarray | None = None,
     ) -> tuple[np.ndarray, np.ndarray | None]:
-        """The distorted volume and, with ``slopes``, its derivative along each coefficient."""
+        """The distorted volume and, with ``slopes``, its derivative along each coefficient.
+
+        With ``within`` (a mask), an EPI readout forms only the columns that cross it,
+        the only ones that reach its voxels.
+        """
         volume = np.asarray(volume, dtype=float)
         coefficients = np.asarray(coefficients, dtype=float)
         affine = np.asarray(affine, dtype=float)
@@ -231,7 +236,7 @@ class Distortion:
                 volume, affine, ijk, values, derivatives, coefficients, displacement, order, slopes
             )
         else:
-            distorted, slope = self._readout(volume, affine, values, displacement, slopes)
+            distorted, slope = self._readout(volume, affine, values, displacement, slopes, within)
         if not coefficients.any():
             # No distortion at all: exactly the volume, without interpolation error
             distorted = volume.copy()
@@ -275,6 +280,7 @@ class Distortion:
         values: np.ndarray,
         displacement: np.ndarray,
         slopes: bool,
+        within: np.ndarray | None = None,
     ) -> tuple[np.ndarray, np.ndarray | None]:
         """Form the volume as an EPI readout does, line by line of k-space."""
         if self.readout is None or self.readout_time is None:
@@ -300,8 +306,12 @@ class Distortion:
 
         image = np.zeros((len(signal), n_lines))
         slope = np.zeros((len(values), *image.shape)) if slopes else None
-        # Columns without signal stay empty; the others go in batches of bounded memory
-        active = np.flatnonzero(signal.any(axis=1))
+        # Columns without signal stay empty, as do those that miss ``within``; the others
+        # go in batches of bounded memory
+        filled = signal.any(axis=1)
+        if within is not None:
+            filled &= columns(np.asarray(within, dtype=bool)).any(axis=1)
+        active = np.flatnonzero(filled)
         batch = max(1, 2**22 // n_lines**2)
         for start in range(0, len(active), batch):
             rows = active[start : start + batch]
@@ -574,7 +584,8 @@ def inherited_distortion(
     distortion: Distortion,
     affine: np.ndarray,
     mask: np.ndarray,
-    iterations: int = 20,
+    iterations: int = 50,
+    memory: int = 4,
 ) -> np.ndarray:
     r"""
     Distortion coefficients that best explain how a prediction changed.
@@ -585,6 +596,14 @@ def inherited_distortion(
     explain (noise) stays in the residual. A rigid motion does not: a translation
     along phase encoding is the distortion's constant term, so ``aligned`` must
     carry the same motions as ``perturbed``.
+
+    The plain steps converge slowly: far from the answer, the slopes see only part
+    of a shift of several voxels (a step covered about an eighth of the way on the
+    AOMIC phantom at 8 mm), and where no distortion explains the change they creep
+    towards the best one (about 70 steps for a shell median). Anderson acceleration
+    mixes the last ``memory`` steps into each new point, at no extra distortion; a
+    mixed point that raises the misfit gives way to the plain step, and the mixing
+    starts afresh. Only the columns that cross the mask are formed.
 
     Parameters
     ----------
@@ -599,8 +618,9 @@ def inherited_distortion(
     mask : :obj:`~numpy.ndarray`
         Voxels fitted.
     iterations : :obj:`int`, optional
-        Most Gauss-Newton steps; they stop once a step changes no coefficient by
-        more than 10⁻⁵ mm.
+        Most points; they stop once one moves no coefficient by more than 10⁻⁵ mm.
+    memory : :obj:`int`, optional
+        Gauss-Newton steps mixed into each point.
 
     Returns
     -------
@@ -612,13 +632,35 @@ def inherited_distortion(
     aligned = np.asarray(aligned, dtype=float)
     mask = np.asarray(mask, dtype=bool)
     target = np.asarray(perturbed, dtype=float)[mask]
-    coefficients = np.zeros(distortion.coefficients.shape[1])
-    for _ in range(iterations):
-        current, slopes = distortion._distort(aligned, affine, coefficients, slopes=True)
+
+    def gauss_newton(coefficients: np.ndarray) -> tuple[np.ndarray, float]:
+        """The Gauss-Newton step from some coefficients, and their misfit."""
+        current, slopes = distortion._distort(
+            aligned, affine, coefficients, slopes=True, within=mask
+        )
         assert slopes is not None
-        step = np.linalg.lstsq(slopes[:, mask].T, target - current[mask], rcond=None)[0]
-        coefficients = coefficients + step
-        if np.abs(step).max() < 1e-5:
+        residual = target - current[mask]
+        step = np.linalg.lstsq(slopes[:, mask].T, residual, rcond=None)[0]
+        return step, float(residual @ residual)
+
+    coefficients = np.zeros(distortion.coefficients.shape[1])
+    step, misfit = gauss_newton(coefficients)
+    steps, points = [step], [coefficients + step]
+    for _ in range(iterations):
+        point = points[-1]
+        if len(steps) > 1:
+            weights = np.linalg.lstsq(np.diff(steps, axis=0).T, steps[-1], rcond=None)[0]
+            point = points[-1] - np.diff(points, axis=0).T @ weights
+        step, new_misfit = gauss_newton(point)
+        if new_misfit > misfit and len(steps) > 1:
+            point = points[-1]
+            step, new_misfit = gauss_newton(point)
+            steps, points = [], []
+        moved = np.abs(point - coefficients).max()
+        coefficients, misfit = point, new_misfit
+        steps = [*steps, step][-(memory + 1) :]
+        points = [*points, coefficients + step][-(memory + 1) :]
+        if moved < 1e-5:
             break
     return coefficients
 

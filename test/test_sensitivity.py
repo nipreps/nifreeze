@@ -634,6 +634,62 @@ def test_inherited_distortion_recovers_a_volume_own_distortion(degree, magnitude
         assert np.linalg.norm(fitted - own) < 1e-4 * np.linalg.norm(own)
 
 
+@pytest.mark.parametrize("readout", [False, True])
+@pytest.mark.parametrize("magnitude", [4.0, 8.0])
+def test_inherited_distortion_converges_on_a_blend_of_distortions(magnitude, readout):
+    """The fit ends where one more Gauss-Newton step would not move it.
+
+    The target blends the distortions of every volume, as a shell median does, so no
+    distortion reproduces it and the plain steps that the fit replaced crept towards
+    the best one, stopping short of it after 20.
+    """
+    dataset, bzero = _copies(np.random.default_rng(1234))
+    distortion = pert.eddy_distortion(
+        dataset, magnitude, axis=1, degree=1, gradients=_table(np.random.default_rng(0), 9)
+    )
+    if readout:
+        distortion = _epi(distortion)
+    mask = dataset.brainmask
+    blend = np.mean(
+        [distortion.distort(bzero, dataset.affine, c) for c in distortion.coefficients], axis=0
+    )
+
+    fitted = sens.inherited_distortion(bzero, blend, distortion, dataset.affine, mask)
+    current, slopes = distortion._distort(bzero, dataset.affine, fitted, slopes=True)
+    assert slopes is not None
+    step = np.linalg.lstsq(slopes[:, mask].T, (blend - current)[mask], rcond=None)[0]
+    assert np.abs(step).max() < 1e-4 * np.abs(fitted).max()
+
+
+def test_an_epi_readout_within_a_mask_forms_only_the_columns_that_cross_it():
+    """Within a mask, the mask's voxels come out as they do from the whole readout.
+
+    The columns that miss the mask stay empty, even where the volume has signal (a
+    shell median over a noisy grid has it everywhere): forming them was half the
+    fit's time on the AOMIC phantom.
+    """
+    dataset, bzero = _copies(np.random.default_rng(1234))
+    distortion = _epi(
+        pert.eddy_distortion(
+            dataset, 2.0, axis=1, degree=2, gradients=_table(np.random.default_rng(0), 9)
+        )
+    )
+    mask, coefficients = dataset.brainmask, distortion.coefficients[3]
+    floor = bzero + 1.0
+    crossing = np.broadcast_to(mask.any(axis=1, keepdims=True), mask.shape)
+    assert not crossing.all()
+
+    for slopes in (False, True):
+        whole = distortion._distort(floor, dataset.affine, coefficients, slopes=slopes)
+        within = distortion._distort(
+            floor, dataset.affine, coefficients, slopes=slopes, within=mask
+        )
+        assert np.array_equal(within[0][mask], whole[0][mask])
+        assert not within[0][~crossing].any()
+        if slopes:
+            assert np.array_equal(within[1][:, mask], whole[1][:, mask])
+
+
 def test_a_distortion_reads_from_a_phantom_sidecar():
     """The sidecar lists some volumes; they land at their indices, the others stay undistorted."""
     eddy = {
