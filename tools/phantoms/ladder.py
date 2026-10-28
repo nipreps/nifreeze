@@ -37,8 +37,7 @@ the aligned reference when TRXScan's perturbed copies of it are given instead
    the drift when the first K volumes of each moved set move; and the drift
    that one volume causes when it moves alone, against the closed-form
    influence of the linear smoothers;
-2. eddy currents (#543): the drift, and the share of each volume's own
-   distortion that its prediction inherits;
+2. eddy currents (#543): the drift at each distortion;
 3. both (#545): the first K volumes moved and every volume distorted.
 
 It runs in NiFreeze's environment, never TRXScan's::
@@ -78,7 +77,7 @@ FRACTIONS = (1 / 12, 1 / 3, 1 / 2, 1)
 """Moved volumes, as fractions of the diffusion-weighted volumes."""
 LABELS = ("N/12", "N/3", "N/2", "N")
 """How the tables name the counts of :data:`FRACTIONS`."""
-TABLES = ("rung-1", "alone", "rung-2", "rung-3", "rung-3-compound", "rung-3-share")
+TABLES = ("rung-1", "alone", "rung-2", "rung-3", "rung-3-compound")
 """The tables of :func:`tables`, each written as ``<table>.csv``."""
 NOISE = 0
 """Seed of the noise added on load, at each protocol's signal-to-noise ratio."""
@@ -90,8 +89,7 @@ class Scaled:
     GQI's held-out predictions are off by a factor that the NRMSE against the
     volume's spread does not absorb (nipreps/nifreeze#495). Each volume's factor
     is fixed once, on the reference (:func:`scales`), so that it scales the
-    predictions on every copy alike: the drift scales with it, and the inherited
-    share does not change.
+    predictions on every copy alike, and the drift scales with it.
     """
 
     def __init__(self, dataset: Any, name: str, factors: dict[int, float], **kwargs: Any):
@@ -163,17 +161,16 @@ def run_model(
     path = out / f"rung-2_model-{name}.tsv"
     table(path, len(eddy) * n_rows, partial(sensitivity, model, reference, eddy, evaluate))
 
-    # One count at a time, so that only the predictions of its moved copies are kept;
-    # each count is written apart until all are measured
+    # One count at a time, each written apart until all are measured
     path = out / f"rung-3_model-{name}.tsv"
-    distorted = [p for p, _ in cells if p.motions and p.distortion is not None]
-    if not (resume and _complete(path, len(distorted) * n_rows)):
+    both = [(p, load) for p, load in cells if p.motions and p.distortion is not None]
+    if not (resume and _complete(path, len(both) * n_rows)):
         parts = []
         for count in counts(n_volumes):
             parts.append(path.with_name(f"{path.stem}_count-{count}.tsv"))
-            group = [(p, load) for p, load in cells if p.motions and p.count == count]
-            n_group = sum(p.count == count for p in distorted) * n_rows
-            table(parts[-1], n_group, partial(_rung_3, model, reference, group, evaluate))
+            group = [(p, load) for p, load in both if p.count == count]
+            measure = partial(sensitivity, model, reference, group, evaluate)
+            table(parts[-1], len(group) * n_rows, measure)
         _concatenate(parts, path)
 
     # Each volume moved alone, by the largest motion; its change against the reference
@@ -185,16 +182,6 @@ def run_model(
     path = out / f"alone_model-{name}.tsv"
     table(path, len(lonely), partial(_alone, name, model, reference, lonely, everyone, evaluate))
     return name
-
-
-def _rung_3(
-    model: str | Callable[..., Any], reference: Any, group: list[Any], evaluate: list[int]
-) -> list[dict[str, Any]]:
-    """The rows of the copies that are both moved and distorted, of one count."""
-    from nifreeze.analysis.sensitivity import sensitivity
-
-    rows = sensitivity(model, reference, group, evaluate=evaluate)
-    return [row for row in rows if row["distortion"] > 0]
 
 
 def _alone(
@@ -316,14 +303,15 @@ def _summaries(
         summaries["rung-1"].append(
             {**at, "fidelity": np.mean(cc), "drift": moved.mean(), "drift_sd": moved.std()}
         )
-        share = _select(eddy, "inherited", shell=shell)
-        drift = _select(eddy, "nrmse", shell=shell, distortion=strongest)
         summaries["rung-2"].append(
             {
                 **at,
-                "inherited": np.nanmean(share),
-                "inherited_q75": np.nanquantile(share, 0.75),
-                "drift": drift.mean(),
+                **{
+                    f"{distortion:g} mm": _select(
+                        eddy, "nrmse", shell=shell, distortion=distortion
+                    ).mean()
+                    for distortion in sorted({row["distortion"] for row in eddy})
+                },
             }
         )
         largest_both = {"shell": shell, "magnitude": largest, "distortion": strongest}
@@ -333,19 +321,6 @@ def _summaries(
                 **{
                     f"K={label}": _select(both, "nrmse", count=size, **largest_both).mean()
                     for label, size in sizes.items()
-                },
-            }
-        )
-        summaries["rung-3-share"].append(
-            {
-                **at,
-                "no motion": np.nanmean(share),
-                **{
-                    f"K={label}": np.nanmean(
-                        _select(both, "inherited", shell=shell, magnitude=largest, count=size)
-                    )
-                    for label, size in sizes.items()
-                    if label in ("N/3", "N")
                 },
             }
         )
