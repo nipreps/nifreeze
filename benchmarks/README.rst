@@ -26,10 +26,9 @@ Name prefix          Measure                                           A pull re
                                                                        *p* < 0.01), and ``main`` takes
                                                                        10 ms or more
 ``time_``            Wall time                                         as for CPU time
-``track_quality_``   Dimensionless, deterministic measures of model    it rises by 0.01 (``drift_``),
-                     quality: prediction drift (``drift_``),           0.02 (``share_``) or 0.05
-                     inherited share (``share_``), compounding         (``ratio_``) or more, whatever
-                     ratio (``ratio_``); lower is better               ``main``'s value
+``track_quality_``   Dimensionless, deterministic measures of model    it rises by 0.01 (``drift_``) or
+                     quality: prediction drift (``drift_``),           0.05 (``ratio_``) or more,
+                     compounding ratio (``ratio_``); lower is better   whatever ``main``'s value
 ===================  ================================================  ====================================
 
 - ``bench_data.py``: wall time of loading and writing DWI and PET data.
@@ -39,8 +38,7 @@ Name prefix          Measure                                           A pull re
   a DKI fit over two workers.
 - ``bench_quality.py``: how far each model's predictions drift on the CI phantom
   (``docs/phantoms.rst``) when volumes move or are distorted by eddy currents,
-  the share of a volume's own distortion that its prediction inherits, and
-  whether motion and eddy currents compound.
+  and whether motion and eddy currents compound.
   It needs the phantom at ``NIFREEZE_PHANTOMS``, which the workflow restores
   with ``.github/actions/phantom-fixtures``; without it, it is skipped.
 

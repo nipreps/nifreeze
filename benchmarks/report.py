@@ -97,7 +97,6 @@ GATES = {
     "drift": Gate(
         "Prediction drift", "NRMSE against the aligned prediction", None, min_change=0.01
     ),
-    "share": Gate("Inherited share", "share of a volume's own distortion", None, min_change=0.02),
     "ratio": Gate(
         "Compounding",
         "combined drift over the quadrature sum of the separate drifts",
@@ -109,7 +108,6 @@ GATES = {
 
 KIND_PREFIXES = (
     ("track_quality_drift_", "drift"),
-    ("track_quality_share_", "share"),
     ("track_quality_ratio_", "ratio"),
     ("track_alloc_", "alloc"),
     ("track_rss_", "rss"),

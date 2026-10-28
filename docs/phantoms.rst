@@ -223,9 +223,6 @@ The eddy currents of a copy come with their closed form
 (:meth:`~nifreeze.analysis.sensitivity.Distortion.from_sidecar`), including the
 time at which each phase-encoding line is acquired. The analysis can thus form a
 distorted volume as TRXScan's readout does, within 10⁻⁵ of TRXScan's images.
-The share of a volume's own distortion that its prediction inherits is fitted
-through that same model, by Gauss-Newton, which recovers the coefficients of a
-TRXScan volume from its undistorted counterpart within 10⁻⁶.
 
 The dataset of continuous integration
 -------------------------------------
