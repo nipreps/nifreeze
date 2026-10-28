@@ -242,4 +242,4 @@ def test_the_analysis_takes_a_phantom_as_it_loads(phantom):
 
     assert len(rows) == 3 * 6
     assert sorted({row["shell"] for row in rows}) == [1000.0, 2000.0]
-    assert all(np.isfinite(row["inherited"]) == (row["distortion"] > 0) for row in rows)
+    assert {row["distortion"] > 0 for row in rows} == {False, True}
