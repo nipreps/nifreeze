@@ -129,9 +129,10 @@ The noise of each volume is drawn from a generator keyed on a seed and the
 volume's index (:func:`nifreeze.testing.phantoms.add_noise`), so the analysis can
 add the same noise to any stored noise-free volume, in the reference or in a
 perturbed copy of it.
-``uv run tools/phantoms/phantom.py verify`` checks, at a coarse resolution, that
-repeated runs are identical and that a subset of the gradient table reproduces
-the same volumes of the full run, which the perturbed copies rely on.
+``uv run tools/phantoms/phantom.py verify`` checks, at a coarse resolution and
+for every protocol, that repeated runs are identical and that a subset of the
+gradient table reproduces the same volumes of the full run, which the perturbed
+copies rely on.
 
 Perturbed copies
 ----------------
@@ -185,10 +186,15 @@ replace their counterparts, then the first K moved volumes replace theirs.
 ``verify`` also checks that the closed-form displacement reproduces TRXScan's
 eddy-current images (within 10⁻⁴), and that a moved volume's center of mass moves
 as its matrix says (within a fifth of a voxel).
-A moved volume takes about 35 s at 2 mm (about 50 s at 1.25 mm): the moved
-phantom is gridded once, then simulated without and with each of the three
-eddy-current magnitudes. The default grid of one protocol thus takes from about
-1.5 hours (AOMIC-PIOP2) to 14 hours (HCP-YA).
+A moved volume takes about 35 s at 2 mm (about 50 s at 1.25 mm) on a laptop:
+the moved phantom is gridded once, then simulated without and with each of the
+three eddy-current magnitudes. The default grid of one protocol thus takes from
+about 1.5 hours (AOMIC-PIOP2) to 14 hours (HCP-YA) in one process.
+Most of that time is serial, and more threads barely shorten it, so
+``cells --jobs N`` simulates the moved volumes in N processes, which share the
+threads of ``RAYON_NUM_THREADS`` and write the same files.
+On an 18-core workstation, 16 processes simulate ten times as many moved volumes
+per hour as one; each process needs about 1.8 GB at 2 mm and 3.7 GB at 1.25 mm.
 
 TRXScan's signal is a sum of Gaussian compartments, as the tensor and kurtosis
 models assume, so these models may fit the synthetic data better than real ones.
@@ -209,7 +215,9 @@ volumes are averaged into ``bzero``), and every volume gets the noise of the
 given seed on load.
 Each copy is loaded only when it is analyzed: the reference, with the copy's
 changed volumes spliced in.
-``counts`` turns each set of moved volumes into the copies that move its first K.
+``counts`` turns each set of moved volumes into the copies that move its first K,
+and ``alone`` into copies that move one of its volumes alone, with the motion the
+set gives it, to rank the volumes by their influence.
 
 The eddy currents of a copy come with their closed form
 (:meth:`~nifreeze.analysis.sensitivity.Distortion.from_sidecar`), including the

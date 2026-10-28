@@ -56,20 +56,26 @@ SUBJECT = "60501"
 Cell = tuple[Perturbation, Callable[[], DWI]]
 """The ground truth of a perturbed copy, and a function that loads the copy."""
 
+Part = tuple[Path, list[int], int]
+"""A file of changed volumes, the reference's volumes that some of them replace, and the
+first of those in the file (they follow one another)."""
+
 
 def load_phantom(
     root: Path | str,
     protocol: str,
     noise: int | None = None,
     counts: Iterable[int] | None = None,
+    alone: Iterable[int] | None = None,
 ) -> tuple[DWI, list[Cell]]:
     """
     Read a protocol's reference and its perturbed copies.
 
     A copy is assembled from the reference: its eddy-current volumes replace their
-    counterparts, then its first K moved volumes replace theirs. The copies load
-    one at a time, when :func:`~nifreeze.analysis.sensitivity.sensitivity` needs
-    them, since each is as large as the reference.
+    counterparts, then its first K moved volumes replace theirs (or one of them,
+    see ``alone``). The copies load one at a time, when
+    :func:`~nifreeze.analysis.sensitivity.sensitivity` needs them, since each is as
+    large as the reference.
 
     Parameters
     ----------
@@ -85,6 +91,10 @@ def load_phantom(
     counts : :obj:`~collections.abc.Iterable`, optional
         Numbers of moved volumes: each copy with motions gives one copy per count,
         moving the first K of its volumes. All of them if :obj:`None`.
+    alone : :obj:`~collections.abc.Iterable`, optional
+        Volumes (numbered as the reference's) that each copy with motions also moves
+        alone, with the motion it gives them: one copy per volume, to rank the
+        volumes by their influence. None if :obj:`None`.
 
     Returns
     -------
@@ -116,30 +126,58 @@ def load_phantom(
         eddies[cell["Eddy"]["Magnitude"]] = (volumes, sources, distortion)
 
     cells: list[Cell] = [
-        (Perturbation(0.0, None, distortion=distortion), splice([(volumes, sources)]))
+        (Perturbation(0.0, None, distortion=distortion), splice([(volumes, sources, 0)]))
         for volumes, sources, distortion in eddies.values()
     ]
+    counts = None if counts is None else [int(k) for k in counts]
+    alone = [] if alone is None else [int(j) for j in alone]
     for volumes, cell in motions:
-        sources, motion = cell["SourceVolumes"], cell["Motion"]
-        parts: list[tuple[Path, list[int]]] = []
+        parts: list[Part] = []
         eddy: Distortion | None = None
         if cell["Eddy"] is not None:
             if cell["Eddy"]["Magnitude"] not in eddies:
                 raise ValueError(f"{volumes.name} needs the copy with its eddy currents alone.")
             eddy_volumes, eddy_sources, eddy = eddies[cell["Eddy"]["Magnitude"]]
-            parts.append((eddy_volumes, eddy_sources))
-        for count in [len(sources)] if counts is None else counts:
-            if count > len(sources):
-                raise ValueError(f"{volumes.name} moves {len(sources)} volumes, not {count}.")
-            perturbation = Perturbation(
-                magnitude=float(motion["Magnitude"]),
-                seed=int(motion["Seed"]),
-                moved=tuple(position[v] for v in sources[:count]),
-                motions=tuple(np.asarray(m, dtype=float) for m in motion["Matrices"][:count]),
-                distortion=eddy,
-            )
-            cells.append((perturbation, splice([*parts, (volumes, sources[:count])])))
+            parts.append((eddy_volumes, eddy_sources, 0))
+        for perturbation, part in _moving(volumes, cell, position, eddy, counts, alone):
+            cells.append((perturbation, splice([*parts, part])))
     return reference, cells
+
+
+def _moving(
+    volumes: Path,
+    cell: dict[str, Any],
+    position: dict[int, int],
+    eddy: Distortion | None,
+    counts: list[int] | None,
+    alone: list[int],
+) -> list[tuple[Perturbation, Part]]:
+    """The copies that a file of moved volumes gives, each with the volumes it splices."""
+    sources, motion = cell["SourceVolumes"], cell["Motion"]
+    moved = [position[v] for v in sources]
+    matrices = [np.asarray(m, dtype=float) for m in motion["Matrices"]]
+
+    def copy(start: int, stop: int) -> tuple[Perturbation, Part]:
+        perturbation = Perturbation(
+            magnitude=float(motion["Magnitude"]),
+            seed=int(motion["Seed"]),
+            moved=tuple(moved[start:stop]),
+            motions=tuple(matrices[start:stop]),
+            distortion=eddy,
+        )
+        return perturbation, (volumes, sources[start:stop], start)
+
+    copies = []
+    for count in [len(sources)] if counts is None else counts:
+        if count > len(sources):
+            raise ValueError(f"{volumes.name} moves {len(sources)} volumes, not {count}.")
+        copies.append(copy(0, count))
+    for volume in alone:
+        if volume not in moved:
+            raise ValueError(f"{volumes.name} does not move volume {volume}.")
+        row = moved.index(volume)
+        copies.append(copy(row, row + 1))
+    return copies
 
 
 def _noisy(
@@ -188,19 +226,20 @@ def _splice(
     reference: DWI,
     position: dict[int, int],
     noisy: Callable[..., np.ndarray],
-    parts: list[tuple[Path, list[int]]],
+    parts: list[Part],
 ) -> Callable[[], DWI]:
-    """A function that loads a copy: the reference, with the volumes of each file in turn."""
+    """A function that loads a copy: the reference, with volumes of each file in turn."""
 
     def load() -> DWI:
         dataobj = np.array(reference.dataobj, dtype=np.float32)
-        for path, sources in parts:
+        for path, sources, start in parts:
             changed = load_api(path, SpatialImage)
             grid = changed.shape[:3] == reference.shape3d
             if not grid or not np.allclose(changed.affine, reference.affine):
                 raise ValueError(f"{path.name} is not on the reference's grid.")
-            volumes = to_time_first(np.asarray(changed.dataobj, dtype=np.float32))
-            dataobj[[position[v] for v in sources]] = noisy(volumes[: len(sources)], sources)
+            rows = changed.dataobj[..., start : start + len(sources)]
+            volumes = to_time_first(np.asarray(rows, dtype=np.float32))
+            dataobj[[position[v] for v in sources]] = noisy(volumes, sources)
         perturbed = copy(reference)
         perturbed.dataobj = dataobj
         return perturbed

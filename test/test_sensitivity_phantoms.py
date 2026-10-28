@@ -147,3 +147,57 @@ def test_the_analysis_of_the_phantom_carries_each_copy_truth(phantom):
         assert np.isfinite(row["inherited"]) == key[1]
         if key == (0, True):
             assert row["nrmse"] > 0.0
+
+
+@pytest.fixture(scope="module")
+def alone(phantoms):
+    """Copies that move two volumes alone: the last of the plan's order, and one inside it."""
+    _, cells = load_phantom(phantoms, "sherbrooke", counts=[24])
+    everyone = next(p for p, _ in cells if p.count == 24 and p.distortion is None)
+    volumes = [everyone.moved[-1], everyone.moved[10]]
+    reference, cells = load_phantom(phantoms, "sherbrooke", counts=[24], alone=volumes)
+    return reference, volumes, cells
+
+
+def test_a_volume_moved_alone_is_its_counterpart_in_the_moved_set(alone):
+    """Each copy moves one volume, with the motion and the image it has when all move.
+
+    Without eddy currents, every other volume is the reference's; with them, every
+    other volume is the copy's with eddy currents alone.
+    """
+    reference, volumes, cells = alone
+    full = {p.distortion is not None: (p, load()) for p, load in cells if p.count == 24}
+    eddy = next(load() for p, load in cells if p.count == 0)
+
+    for distorted in (False, True):
+        everyone, moved = full[distorted]
+        background = eddy if distorted else reference
+        for volume in volumes:
+            perturbation, load = next(
+                (p, load)
+                for p, load in cells
+                if p.moved == (volume,) and (p.distortion is not None) == distorted
+            )
+            copy = load()
+            row = everyone.moved.index(volume)
+            assert np.array_equal(perturbation.motions[0], everyone.motions[row])
+            assert np.array_equal(copy.dataobj[volume], moved.dataobj[volume])
+            others = [index for index in range(len(reference)) if index != volume]
+            assert np.array_equal(copy.dataobj[others], background.dataobj[others])
+
+
+def test_the_analysis_takes_volumes_moved_alone(alone):
+    """A copy with eddy currents and one volume moved finds the copy with that motion alone."""
+    reference, volumes, cells = alone
+    chosen = [(p, load) for p, load in cells if p.count == 1]
+
+    rows = sens.sensitivity("avgdwi", reference, chosen, evaluate=[0, 8, 16])
+
+    assert len(rows) == 3 * len(chosen) == 12
+    for row in rows:
+        assert row["moved"] == (row["index"] in volumes)
+
+
+def test_only_moved_volumes_can_move_alone(phantoms):
+    with pytest.raises(ValueError, match="does not move volume 24"):
+        load_phantom(phantoms, "sherbrooke", alone=[24])
