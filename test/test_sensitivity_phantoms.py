@@ -76,31 +76,6 @@ def test_the_epi_model_reproduces_trxscan_eddy_currents(phantom):
         assert np.abs(formed - actual).max() < 1e-4 * actual.max()
 
 
-def test_gauss_newton_recovers_trxscan_eddy_currents(phantom):
-    """The fit through the EPI model finds a volume's coefficients from its clean counterpart.
-
-    One volume per shell, within 10⁻⁴ (5·10⁻⁷ measured): an inherited share of
-    1 is then the volume's own distortion, as TRXScan made it.
-    """
-    reference, cells = phantom
-    perturbation, load = cells[(0, True)]
-    distortion = perturbation.distortion
-    assert distortion is not None and reference.brainmask is not None
-    distorted = load()
-
-    for volumes in SHELLS.values():
-        index = volumes[0]
-        fitted = sens.inherited_distortion(
-            reference.dataobj[index],
-            distorted.dataobj[index],
-            distortion,
-            reference.affine,
-            reference.brainmask,
-        )
-        own = distortion.coefficients[index]
-        assert np.linalg.norm(fitted - own) < 1e-4 * np.linalg.norm(own)
-
-
 def test_a_moved_copy_changes_only_its_moved_volumes(phantom):
     """The first six moved volumes are those of the copy that moves all, with the same motions."""
     reference, cells = phantom
@@ -144,7 +119,6 @@ def test_the_analysis_of_the_phantom_carries_each_copy_truth(phantom):
         assert row["moved"] == (row["index"] in moved[key])
         # Every diffusion-weighted volume is distorted, by 2 voxels of 4 mm at most
         assert row["distortion"] in (0.0, pytest.approx(8.0))
-        assert np.isfinite(row["inherited"]) == key[1]
         if key == (0, True):
             assert row["nrmse"] > 0.0
 

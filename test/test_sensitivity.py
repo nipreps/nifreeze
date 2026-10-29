@@ -580,60 +580,6 @@ def test_an_epi_readout_needs_its_line_times():
         )
 
 
-@pytest.mark.parametrize("readout", [False, True])
-def test_distortion_slopes_are_its_derivatives(readout):
-    """The slopes that Gauss-Newton follows match central differences of the distortion.
-
-    They are compared inside the brain, where Gauss-Newton uses them: at the
-    grid's edge, resampling drops to zero outside the field of view.
-    """
-    dataset, bzero = _copies(np.random.default_rng(1234))
-    distortion = pert.eddy_distortion(
-        dataset, 2.0, axis=1, degree=2, gradients=_table(np.random.default_rng(0), 9)
-    )
-    if readout:
-        distortion = _epi(distortion)
-    coefficients = distortion.coefficients[3]
-
-    _, slopes = distortion._distort(bzero, dataset.affine, coefficients, slopes=True)
-    assert slopes is not None
-
-    for term, unit in enumerate(np.eye(len(coefficients))):
-        ahead, behind = (
-            distortion.distort(bzero, dataset.affine, coefficients + side * unit)
-            for side in (1e-4, -1e-4)
-        )
-        expected = ((ahead - behind) / 2e-4)[dataset.brainmask]
-        inside = slopes[term][dataset.brainmask]
-        assert np.allclose(inside, expected, atol=1e-3 * np.abs(expected).max())
-
-
-@pytest.mark.parametrize("readout", [False, True])
-@pytest.mark.parametrize("magnitude", [0.5, 4.0])
-@pytest.mark.parametrize("degree", [1, 2])
-def test_inherited_distortion_recovers_a_volume_own_distortion(degree, magnitude, readout):
-    """Gauss-Newton through the distortion's own model finds its coefficients, to 10⁻⁴.
-
-    The first-order fit it replaced was off by up to 5% at 0.5 mm.
-    """
-    dataset = _dwi(np.random.default_rng(1234))
-    distortion = pert.eddy_distortion(dataset, magnitude, axis=1, degree=degree)
-    if readout:
-        distortion = _epi(distortion)
-    distorted = pert.perturb(dataset, sens.Perturbation(0.0, None, distortion=distortion))
-
-    for index in (0, 11, 23):
-        fitted = sens.inherited_distortion(
-            dataset.dataobj[index],
-            distorted.dataobj[index],
-            distortion,
-            dataset.affine,
-            dataset.brainmask,
-        )
-        own = distortion.coefficients[index]
-        assert np.linalg.norm(fitted - own) < 1e-4 * np.linalg.norm(own)
-
-
 def test_a_distortion_reads_from_a_phantom_sidecar():
     """The sidecar lists some volumes; they land at their indices, the others stay undistorted."""
     eddy = {
@@ -691,68 +637,28 @@ def test_copies_load_when_needed_and_rows_give_the_shell():
 
 
 @pytest.mark.parametrize("readout", [False, True])
-@pytest.mark.parametrize("octant", [False, True])
-def test_copies_inherit_the_distortion_of_the_others(octant, readout):
-    """The mean of the others inherits their average distortion; the trivial model, none."""
+def test_distortions_move_the_mean_of_the_others_but_not_the_trivial_model(readout):
+    """The mean of the others drifts with their distortions; the trivial model does not."""
     dataset, _ = _copies(np.random.default_rng(1234))
-    n_volumes = len(dataset)
-    table = _table(np.random.default_rng(0), n_volumes)
-    if octant:
-        # Distortions no longer cancel out over the others
-        table[:, :3] = np.abs(table[:, :3])
-    # Small enough that the blur of averaging distortions (second order) is negligible; the
-    # readout's magnitudes add a second-order change of their own, hence half the size
-    magnitude = 0.05 if readout else 0.1
-    distortion = pert.eddy_distortion(dataset, magnitude, axis=1, gradients=table)
+    distortion = pert.eddy_distortion(
+        dataset, 0.1, axis=1, gradients=_table(np.random.default_rng(0), len(dataset))
+    )
     if readout:
         distortion = _epi(distortion)
     cells = _cells(dataset, [sens.Perturbation(0.0, None, distortion=distortion)])
 
     rows = sens.sensitivity(ExpectationModel, dataset, cells, stat="mean")
 
-    coefficients = distortion.coefficients
-    total = coefficients.sum(axis=0)
-    inherited = []
-    for row in rows:
-        own = coefficients[row["index"]]
-        expected = (total - own) @ own / ((n_volumes - 1) * (own @ own))
-        assert row["inherited"] == pytest.approx(expected, abs=0.015)
-        assert row["distortion"] == magnitude and row["nrmse"] > 0.0
-        # Copies of one b=0 volume have no gradients
-        assert np.isnan(row["shell"])
-        inherited.append(row["inherited"])
-    assert (np.mean(inherited) > 0.5) == octant
+    assert all(row["distortion"] == 0.1 and row["nrmse"] > 0.0 for row in rows)
+    # Copies of one b=0 volume have no gradients
+    assert all(np.isnan(row["shell"]) for row in rows)
 
     rows = sens.sensitivity(TrivialModel, dataset, cells, predicted=dataset.dataobj[0])
-    assert all(row["nrmse"] == 0.0 and row["inherited"] == 0.0 for row in rows)
+    assert all(row["nrmse"] == 0.0 for row in rows)
 
 
-def test_inheritance_is_measured_on_top_of_the_motion():
-    """A motion shared by all copies leaves their inherited share at its closed form."""
-    dataset, _ = _copies(np.random.default_rng(1234))
-    n_volumes = len(dataset)
-    distortion = pert.eddy_distortion(
-        dataset, 0.1, axis=1, gradients=_table(np.random.default_rng(0), n_volumes)
-    )
-    # Moves along phase encoding too, which the distortion's constant term alone would absorb
-    motion = pert.rigid_motion(2.0, (1, 0, 1), (0, 1, 1), pert.mask_centroid(dataset))
-    everyone = tuple(range(n_volumes))
-    still = sens.Perturbation(2.0, None, everyone, (motion,) * n_volumes)
-    both = attrs.evolve(still, distortion=distortion)
-
-    rows = sens.sensitivity(ExpectationModel, dataset, _cells(dataset, [still, both]), stat="mean")
-    rows = [row for row in rows if row["distortion"]]
-
-    coefficients = distortion.coefficients
-    total = coefficients.sum(axis=0)
-    for row in rows:
-        own = coefficients[row["index"]]
-        expected = (total - own) @ own / ((n_volumes - 1) * (own @ own))
-        assert row["inherited"] == pytest.approx(expected, abs=0.015)
-
-
-def test_a_distortion_on_top_of_motions_needs_the_motions_alone():
-    """The inherited share of a moved and distorted copy is measured against the moved one."""
+def test_a_distortion_on_top_of_motions_is_analyzed_alone():
+    """A moved and distorted copy needs no other cell: one model for it, one for the reference."""
     dataset, _ = _copies(np.random.default_rng(1234))
     distortion = pert.eddy_distortion(
         dataset, 0.1, axis=1, gradients=_table(np.random.default_rng(0), len(dataset))
@@ -765,11 +671,8 @@ def test_a_distortion_on_top_of_motions_needs_the_motions_alone():
         built.append(data)
         return ExpectationModel(data, **kwargs)
 
-    with pytest.raises(ValueError, match="motions alone"):
-        sens.sensitivity(model, dataset, _cells(dataset, [both]), stat="mean")
+    rows = sens.sensitivity(model, dataset, _cells(dataset, [both]), stat="mean")
 
-    built.clear()
-    rows = sens.sensitivity(model, dataset, _cells(dataset, [both, still]), stat="mean")
-    # The reference, the moved copy (once, for its own rows and the share) and the distorted one
-    assert len(built) == 3
-    assert len(rows) == 2 * len(dataset)
+    assert len(built) == 2
+    assert len(rows) == len(dataset)
+    assert all(row["distortion"] == 0.1 for row in rows)
