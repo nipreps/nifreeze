@@ -16,5 +16,6 @@ Submodules
    nifreeze.analysis.measure_agreement
    nifreeze.analysis.motion
    nifreeze.analysis.phantoms
+   nifreeze.analysis.registration
    nifreeze.analysis.sensitivity
    nifreeze.analysis.similarity

@@ -1,0 +1,7 @@
+nifreeze.analysis.registration module
+=====================================
+
+.. automodule:: nifreeze.analysis.registration
+   :members:
+   :undoc-members:
+   :show-inheritance:
