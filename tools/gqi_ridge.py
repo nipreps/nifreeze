@@ -34,6 +34,8 @@ its output::
     python tools/gqi_ridge.py
 """
 
+import logging
+
 import numpy as np
 from dipy.core.gradients import gradient_table
 from dipy.data import dsi_voxels, get_fnames
@@ -73,6 +75,8 @@ def datasets():
 
 
 def main():
+    # DIPY logs to standard output, which holds the table
+    logging.getLogger("dipy").setLevel(logging.WARNING)
     rng = np.random.default_rng(SEED)
     columns, selected, amplitudes = [], [], []
     for name, signals, bvals, bvecs in datasets():

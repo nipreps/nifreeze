@@ -231,8 +231,6 @@ Sherbrooke 3-shell dataset (``get_fnames("sherbrooke_3shell")``: b=1000, 2000 an
 3500, 64 directions each), slab ``[32:96, 32:96, 25:35]``, with the brain defined
 as for the single-shell data. b=0 excluded in all three.
 
-[2026-10-29 12:48:11][dipy] INFO: Dataset is already in place. If you want to fetch it again please first remove the folder /home/oesteban/.dipy/stanford_hardi 
-[2026-10-29 12:48:13][dipy] INFO: Dataset is already in place. If you want to fetch it again please first remove the folder /home/oesteban/.dipy/sherbrooke_3shell 
 .. list-table:: Leave-one-volume-out error of GQI along the ridge path
    :header-rows: 1
 
