@@ -34,14 +34,15 @@ its output::
     python tools/gqi_ridge.py
 """
 
-import nibabel as nb
 import numpy as np
 from dipy.core.gradients import gradient_table
 from dipy.data import dsi_voxels, get_fnames
 from dipy.io.gradients import read_bvals_bvecs
+from nibabel.spatialimages import SpatialImage
 
 from nifreeze.model.gqi import GeneralizedQSamplingModel, shell_bvalues, sphere_gram
 from nifreeze.model.lovo import DEFAULT_KRR_LAMBDA_GRID, lovo_smoother
+from nifreeze.utils.ndimage import load_api
 
 VOXELS = 5000
 """Voxels drawn from each dataset's mask."""
@@ -53,7 +54,7 @@ def _dipy(name, slab):
     """The diffusion-weighted signals (volumes by voxels) of a DIPY dataset's slab."""
     fdwi, fbval, fbvec = get_fnames(name=name)
     bvals, bvecs = read_bvals_bvecs(str(fbval), str(fbvec))
-    data = np.asarray(nb.load(fdwi).dataobj[slab], dtype=float)
+    data = np.asarray(load_api(fdwi, SpatialImage).dataobj[slab], dtype=np.float64)
     weighted = bvals > 50
     reference = data[..., ~weighted].mean(axis=-1)
     mask = reference > np.percentile(reference, 60)

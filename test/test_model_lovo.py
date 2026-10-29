@@ -466,7 +466,9 @@ def test_gqikrr_matches_gqi_refits():
     krr = model.dmri.GQIKRRModel(dwi, ridge=0.1)
     gqi = model.dmri.GQIModel(dwi, ridge=0.1)
     for index in (0, 10, 20, 30):
-        assert np.allclose(krr.fit_predict(index), gqi.fit_predict(index), rtol=1e-5, atol=1e-3)
+        closed_form, refit = krr.fit_predict(index), gqi.fit_predict(index)
+        assert closed_form is not None and refit is not None
+        assert np.allclose(closed_form, refit, rtol=1e-5, atol=1e-3)
 
 
 def test_gqikrr_selects_ridge():
@@ -478,7 +480,9 @@ def test_gqikrr_selects_ridge():
 
     errors, observed = [], []
     for index in (0, 10, 20, 30):
-        errors.append(krr.fit_predict(index)[mask] - dwi.dataobj[index][mask])
+        predicted = krr.fit_predict(index)
+        assert predicted is not None
+        errors.append(predicted[mask] - dwi.dataobj[index][mask])
         observed.append(dwi.dataobj[index][mask])
     assert np.sqrt(np.mean(np.square(errors))) / np.mean(observed) < 0.2
     assert krr._krr_lambda in lovo.DEFAULT_KRR_LAMBDA_GRID
