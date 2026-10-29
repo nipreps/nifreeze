@@ -25,8 +25,8 @@ env:
   NIFREEZE_WERRORS: 1
   TEST_DATA_REPO: https://gin.g-node.org/nipreps-data/tests-nifreeze
   # The files of TEST_DATA_REPO that the tests read. They are git blobs, which any clone
-  # brings, but a recursive fetch would also bring its subdatasets (the phantoms of #548),
-  # larger than the cache
+  # brings, so `datalad get` only checks they are there. The phantoms are a dataset of
+  # their own, which e2e.yml fetches
   TEST_DATA_PATHS: >-
     dwi.h5
     dmri_data/motion_test_data/dwi_motion.h5
