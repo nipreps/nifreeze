@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="What’s new?" href="changes.html"><link rel="prev" title="nifreeze.viz.signals module" href="api/nifreeze.viz.signals.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>Synthetic reference data - nifreeze 26.0.0.dev443 documentation</title>
+        <title>Synthetic reference data - nifreeze 26.0.0.dev449 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev443 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev449 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev443</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev449</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev443</span>
+  <span class="sidebar-brand-text">26.0.0.dev449</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -577,6 +577,13 @@ the <code class="docutils literal notranslate"><span class="pre">NIFREEZE_PHANTO
 The generator’s environment is locked in <code class="docutils literal notranslate"><span class="pre">tools/phantoms/phantom.py.lock</span></code>
 (<code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">lock</span> <span class="pre">--script</span> <span class="pre">tools/phantoms/phantom.py</span></code>), so that a dataset simulated
 again comes from the same versions of every package.</p>
+<p>The end-to-end tests (<code class="docutils literal notranslate"><span class="pre">test/test_e2e_motion.py</span></code>, opt-in with <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">-m</span> <span class="pre">e2e</span></code>)
+read the Sherbrooke protocol at its native resolution instead. The workflow
+<code class="docutils literal notranslate"><span class="pre">.github/workflows/e2e.yml</span></code> fetches the files they read from the GIN dataset
+<code class="docutils literal notranslate"><span class="pre">nipreps-data/nifreeze-trxscan</span></code>, at the commit their gates were set on, and
+fails when a test is skipped. It fetches them over SSH, with a read-only key that
+only the runs on <code class="docutils literal notranslate"><span class="pre">nipreps/nifreeze</span></code> receive (<code class="docutils literal notranslate"><span class="pre">GIN_SSH_KEY</span></code>); pull requests from
+forks restore the files those runs cache.</p>
 </section>
 <section id="example-the-healthy-brain-network-protocol">
 <h2>Example: the Healthy Brain Network protocol<a class="headerlink" href="#example-the-healthy-brain-network-protocol" title="Link to this heading">¶</a></h2>
@@ -702,7 +709,7 @@ contrast also changes as the fibers turn relative to the gradient.</span><a clas
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=277dae95"></script>
+</div><script src="_static/documentation_options.js?v=976e93e9"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
