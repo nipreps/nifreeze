@@ -869,10 +869,13 @@ def test_to_nifti(
         np.allclose(_nii_dataobj.get_fdata(), _nii_load.get_fdata())
         np.allclose(_nii_dataobj.affine, _nii_load.affine)
 
-        # Check gradients
-        if motion_affines is not None:
-            bvecs_file = _filename.with_suffix("").with_suffix(".bvec")
-            bvals_file = _filename.with_suffix("").with_suffix(".bval")
+        # Check gradients, written if rotated or if a b=0 was inserted
+        bvecs_file = _filename.with_suffix("").with_suffix(".bvec")
+        bvals_file = _filename.with_suffix("").with_suffix(".bval")
+        if motion_affines is None and no_bzero:
+            assert not bvals_file.exists()
+            assert not bvecs_file.exists()
+        else:
             assert bvals_file.is_file()
             assert bvecs_file.is_file()
 

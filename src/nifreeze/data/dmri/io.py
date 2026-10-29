@@ -167,7 +167,8 @@ def to_nifti(
 
     Gradients (b-vecs & b-vals files) are only serialized if the DWI object has
     non-null :attr:`~nifreeze.data.base.BaseDataset.motion_affine` data (i.e. if
-    b-vectors need to be rotated following the motion estimation).
+    b-vectors need to be rotated following the motion estimation), or if a :math:`b=0`
+    is inserted (``insert_b0``).
 
     Parameters
     ----------
@@ -209,6 +210,10 @@ def to_nifti(
             for bvec, affine in zip(dwi.gradients[:, :3], dwi.motion_affines, strict=True)
         ]
         bvecs = np.asarray(rotated)
+    elif not no_bzero:
+        # The b=0 inserted changes the volumes, so their gradients are written too
+        bvals = dwi.bvals
+        bvecs = dwi.bvecs
 
     # Parent's to_nifti to handle the primary NIfTI export.
     nii = _base_to_nifti(
