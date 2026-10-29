@@ -167,7 +167,8 @@ def to_nifti(
 
     Gradients (b-vecs & b-vals files) are only serialized if the DWI object has
     non-null :attr:`~nifreeze.data.base.BaseDataset.motion_affine` data (i.e. if
-    b-vectors need to be rotated following the motion estimation).
+    b-vectors need to be rotated following the motion estimation), or if a :math:`b=0`
+    is inserted (``insert_b0``).
 
     Parameters
     ----------
@@ -225,17 +226,16 @@ def to_nifti(
                 stacklevel=2,
             )
     else:
-        data = np.concatenate((dwi.bzero[np.newaxis], dwi.dataobj), axis=0)  # type: ignore
-        nii = nb.Nifti1Image(np.moveaxis(data, 0, -1), nii.affine, nii.header)
+        # Prepend the b=0 to the volumes written, which are resampled if motion was estimated
+        volumes = np.asanyarray(nii.dataobj)
+        data = np.concatenate((dwi.bzero[..., np.newaxis], volumes), axis=-1)  # type: ignore
+        nii = nb.Nifti1Image(data, nii.affine, nii.header)
+        # And its null gradient to their gradients, rotated if motion was estimated
+        bvals = np.concatenate((np.zeros(1), dwi.bvals))
+        bvecs = np.vstack((np.zeros((1, 3)), dwi.bvecs if bvecs is None else bvecs))
 
         if filename is not None:
             nii.to_filename(filename)
-
-        # If inserting a b0 volume is requested, add the corresponding null
-        # gradient value to the bval/bvec pair
-        if bvecs is not None and bvals is not None:
-            bvals = np.concatenate((np.zeros(1), bvals))
-            bvecs = np.vstack((np.zeros((1, bvecs.shape[1])), bvecs))
 
     if filename is not None:
         # Convert filename to a Path object.

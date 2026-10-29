@@ -5,10 +5,19 @@ on:
     - cron: '0 3 * * 1' # At 03:00 UTC every Monday
   # Allow job to be triggered manually from GitHub interface
   workflow_dispatch:
+  # Runs on nipreps/nifreeze have the GIN key, and seed the phantom's cache for pull requests
+  push:
+    branches: ['main', 'maint/*']
+    paths:
+      - '.github/workflows/e2e.yml'
+      - 'src/nifreeze/analysis/phantoms.py'
+      - 'test/test_e2e_motion.py'
+      - 'tools/e2e_summary.py'
   pull_request:
     branches: ['main', 'maint/*']
     paths:
       - '.github/workflows/e2e.yml'
+      - 'src/nifreeze/analysis/phantoms.py'
       - 'test/test_e2e_motion.py'
       - 'tools/e2e_summary.py'
 
@@ -21,10 +30,23 @@ permissions:
 
 env:
   FORCE_COLOR: true
-  DIPY_HOME: /home/runner/nifreeze-e2e/dipy
   TEST_OUTPUT_DIR: /home/runner/nifreeze-e2e/output
   ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS: 4
   ANTSPATH: /usr/share/miniconda/bin/
+  NIFREEZE_PHANTOMS: /home/runner/nifreeze-e2e/phantoms
+  # Over SSH: GIN refuses anonymous HTTPS from GitHub's runners (HTTP 403)
+  PHANTOMS_REPO: git@gin.g-node.org:/nipreps-data/nifreeze-trxscan.git
+  GIN_HOST_KEY: >-
+    gin.g-node.org ssh-ed25519
+    AAAAC3NzaC1lZDI1NTE5AAAAIPaM8/WkCBR2wIcGgVgDzmA37qKGp+c+6zjlFSS14EVZ
+  # The commit of PHANTOMS_REPO that the gates of test/test_e2e_motion.py were set on
+  PHANTOMS_COMMIT: 2249c4df27227071b0cacf22c33a5eafb2e0aa1d
+  # The annexed files that the tests read: the reference, its mask, and the copy with
+  # every volume moved by 2° and 2 mm (the sidecars are in git, which the clone brings)
+  PHANTOMS_PATHS: >-
+    sub-60501/dwi/sub-60501_acq-sherbrooke_rec-clean_dwi.nii.gz
+    sub-60501/dwi/sub-60501_acq-sherbrooke_desc-brain_mask.nii.gz
+    derivatives/perturbations/sub-60501/dwi/sub-60501_acq-sherbrooke_desc-m2s0_dwi.nii.gz
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -53,21 +75,86 @@ jobs:
           conda install -c conda-forge ants=2.4 libitk=5.3 libiconv
       - name: Install nifreeze
         run: uv pip install --python "${{ steps.setup-python.outputs.python-path }}" ".[test]"
-      - uses: actions/cache@v5
-        with:
-          path: ${{ env.DIPY_HOME }}
-          key: dipy-sherbrooke-3shell-v1
-      - name: Fetch the Sherbrooke dataset
+      - name: Key the phantom's cache
+        id: phantoms-key
         run: |
-          "${{ steps.setup-python.outputs.python-path }}" -c \
-            "from dipy.data import fetch_sherbrooke_3shell; fetch_sherbrooke_3shell()"
+          # A path added to the list makes a new cache
+          echo KEY=phantoms-v1-${PHANTOMS_COMMIT}-$( sha256sum <<< "$PHANTOMS_PATHS" | cut -c 1-8 ) >> $GITHUB_OUTPUT
+      - name: Restore the phantom
+        id: phantoms
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ env.NIFREEZE_PHANTOMS }}
+          key: ${{ steps.phantoms-key.outputs.KEY }}
+      - name: Set up the SSH key of GIN
+        if: steps.phantoms.outputs.cache-hit != 'true'
+        env:
+          GIN_SSH_KEY: ${{ secrets.GIN_SSH_KEY }}
+        run: |
+          if [[ -z "${GIN_SSH_KEY}" ]]; then
+            # Pull requests from forks get no secrets: they restore the cache that a run
+            # on nipreps/nifreeze (a push, the schedule, or a manual run) saved
+            echo "::error title=Phantom::No cache for ${PHANTOMS_COMMIT}, and no GIN_SSH_KEY to fetch it. Run this workflow on nipreps/nifreeze first."
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${GIN_SSH_KEY}" > ~/.ssh/gin
+          chmod 600 ~/.ssh/gin
+          echo "${GIN_HOST_KEY}" >> ~/.ssh/known_hosts
+          printf 'Host gin.g-node.org\n  User git\n  IdentityFile ~/.ssh/gin\n  IdentitiesOnly yes\n' \
+            >> ~/.ssh/config
+      - name: Install DataLad
+        if: steps.phantoms.outputs.cache-hit != 'true'
+        run: |
+          uv tool install git-annex
+          uv tool install --with=datalad-next datalad
+          # git-annex commits to its branch when it initializes a clone
+          git config --global user.email "nipreps@gmail.com"
+          git config --global user.name "nipreps-bot"
+          datalad wtf
+      - name: Fetch the phantom at ${{ env.PHANTOMS_COMMIT }}
+        if: steps.phantoms.outputs.cache-hit != 'true'
+        run: |
+          # Retry each request to GIN, which may drop a connection
+          retry() {
+            for attempt in 1 2 3; do
+              "$@" && return 0
+              if (( attempt < 3 )); then sleep $(( attempt * 30 )); fi
+            done
+            return 1
+          }
+          clone() {
+            rm -rf "${NIFREEZE_PHANTOMS}"
+            datalad clone "${PHANTOMS_REPO}" "${NIFREEZE_PHANTOMS}"
+          }
+          retry clone
+          cd "${NIFREEZE_PHANTOMS}"
+          git checkout --detach "${PHANTOMS_COMMIT}"
+          retry datalad get -J4 ${PHANTOMS_PATHS}
+      - name: Save the phantom
+        if: steps.phantoms.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.NIFREEZE_PHANTOMS }}
+          key: ${{ steps.phantoms-key.outputs.KEY }}
       - name: Run the end-to-end tests
         run: |
           # ANTSPATH also holds conda's python: call the job's interpreter explicitly
           export PATH=$ANTSPATH:$PATH
           mkdir -p "${TEST_OUTPUT_DIR}"
           "${{ steps.setup-python.outputs.python-path }}" -m pytest -m e2e -p no:cacheprovider \
-            test/test_e2e_motion.py
+            --junitxml="${TEST_OUTPUT_DIR}/junit.xml" test/test_e2e_motion.py
+      - name: Fail on skipped tests
+        run: |
+          # Without ANTs or the phantom, the tests skip, and the job would pass
+          "${{ steps.setup-python.outputs.python-path }}" - "${TEST_OUTPUT_DIR}/junit.xml" <<'EOF'
+          import sys
+          import xml.etree.ElementTree as ET
+
+          skipped = sum(int(s.get("skipped", 0)) for s in ET.parse(sys.argv[1]).iter("testsuite"))
+          sys.exit(f"{skipped} end-to-end tests were skipped" if skipped else 0)
+          EOF
       - name: Write the job summary
         if: ${{ always() }}
         run: |

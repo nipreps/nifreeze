@@ -247,6 +247,14 @@ The generator's environment is locked in ``tools/phantoms/phantom.py.lock``
 (``uv lock --script tools/phantoms/phantom.py``), so that a dataset simulated
 again comes from the same versions of every package.
 
+The end-to-end tests (``test/test_e2e_motion.py``, opt-in with ``pytest -m e2e``)
+read the Sherbrooke protocol at its native resolution instead. The workflow
+``.github/workflows/e2e.yml`` fetches the files they read from the GIN dataset
+``nipreps-data/nifreeze-trxscan``, at the commit their gates were set on, and
+fails when a test is skipped. It fetches them over SSH, with a read-only key that
+only the runs on ``nipreps/nifreeze`` receive (``GIN_SSH_KEY``); pull requests from
+forks restore the files those runs cache.
+
 Example: the Healthy Brain Network protocol
 -------------------------------------------
 The figures below show the HBN protocol (1.8 mm, two shells of 64 directions),
