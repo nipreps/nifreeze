@@ -71,12 +71,14 @@ from dipy.core.subdivide_octahedron import create_unit_sphere
 from dipy.reconst.gqi import squared_radial_component
 from dipy.reconst.odf import OdfFit, OdfModel
 
-INVERSE_LAMBDA = 1e-6
+DEFAULT_RIDGE = 1e-2
 r"""
-Tikhonov regularization weight :math:`\lambda_0` for the reconstruction kernel
-:math:`(\mathbf{K}\mathbf{K}^{\mathsf T} + \lambda_0\mathbf{I})^{-1}\mathbf{K}`
-(see :func:`prediction_kernel`).
+Default ridge :math:`\lambda` of the prediction, in units of the Gram matrix
+averaged over the sphere (see :meth:`GeneralizedQSamplingFit.predict`).
 """
+
+SHELL_DECIMALS = -2
+"""Decimals to which b-values are rounded to group the volumes into shells."""
 
 DEFAULT_SPHERE_RECURSION_LEVEL = 5
 """
@@ -100,6 +102,7 @@ class GeneralizedQSamplingModel(OdfModel):
         sampling_length=1.2,
         sphere=None,
         recursion_level=DEFAULT_SPHERE_RECURSION_LEVEL,
+        ridge=DEFAULT_RIDGE,
     ):
         r"""Generalized Q-Sampling Imaging.
 
@@ -131,9 +134,14 @@ class GeneralizedQSamplingModel(OdfModel):
             :ref:`gqi-sphere-density` for the experiment justifying the default
             (past the fidelity knee for both single-shell and grid acquisitions,
             while denser spheres only keep paying off for grid/multi-shell data).
+        ridge : float, optional
+            Ridge :math:`\lambda` of the signal prediction (see
+            :meth:`GeneralizedQSamplingFit.predict`). Defaults to
+            :data:`DEFAULT_RIDGE`.
         """
         OdfModel.__init__(self, gtab)
         self.method = method
+        self.ridge = ridge
         self.Lambda = sampling_length
         self.gtab = gtab
         self.sphere = (
@@ -204,42 +212,73 @@ class GeneralizedQSamplingFit(OdfFit):
             method=self.model.method,
         )
 
-    def predict(self, gtab, *, S0=None):
+    def predict(self, gtab, *, S0=None, ridge=None):
         r"""Predict the diffusion signal on ``gtab`` from the fitted data.
 
         .. note::
 
            This signal-to-signal prediction is a **NiFreeze extension** of GQI;
            Yeh et al. (2010) defines only the forward signal-to-SDF transform.
-           It maps the fitted signal to the SDF and back via a
-           Tikhonov-regularized reconstruction kernel
-           (:func:`prediction_kernel`). See :ref:`gqi-models` for the
-           construction.
+           See :ref:`gqi-models` for the construction.
+
+        The prediction is kernel ridge regression on the GQI basis, around an
+        unpenalized mean per shell:
+
+        .. math::
+
+           \hat{\mathbf{y}}_o = \mathbf{G}_o (\mathbf{G} + \lambda\mathbf{I})^{-1}
+           (\mathbf{y} - \mathbf{m}) + \mathbf{m}_o,
+
+        with :math:`\mathbf{G} = \mathbf{K}\mathbf{K}^{\mathsf T} / n_v` the Gram
+        matrix of the fitted gradients averaged over the :math:`n_v` vertices of
+        the sphere (:func:`sphere_gram`), :math:`\mathbf{G}_o` that of the
+        predicted gradients with the fitted ones, :math:`\mathbf{m}` the mean of
+        each fitted volume's shell, and :math:`\mathbf{m}_o` the mean of the
+        fitted shell nearest to each predicted b-value (shells are b-values
+        rounded to :data:`SHELL_DECIMALS`). As :math:`\lambda \to 0` the
+        prediction interpolates the fitted data, and as :math:`\lambda \to
+        \infty` it returns the shell mean; at every :math:`\lambda` it keeps
+        the shell's amplitude.
 
         The result is clamped to non-negative values. ``S0`` is accepted for
         API compatibility with the other NiFreeze DWI models but is unused.
 
-        Notes
-        -----
-        The kernel round-trip approximately preserves signal scale for the
-        ``"standard"`` (sinc) kernel, but not for ``"gqi2"``; prefer
-        ``"standard"`` when the predicted amplitude matters. See
-        :ref:`gqi-reconstruction-fidelity`.
-        """
-        # ``model.kernel`` is (n_gradients_in, n_vertices); transpose it to
-        # contract the shared vertex axis against the reconstruction kernel,
-        # yielding the fused (n_gradients_out, n_gradients_in) operator.
-        K = (
-            prediction_kernel(
-                gtab,
-                self.model.Lambda,
-                self.model.sphere,
-                method=self.model.method,
-            )
-            @ self.model.kernel.T
-        )
+        Parameters
+        ----------
+        gtab : :obj:`~dipy.core.gradients.GradientTable`
+            Gradients of the predicted signal.
+        S0 : :obj:`~numpy.ndarray`, optional
+            Unused.
+        ridge : float, optional
+            Ridge :math:`\lambda`, in units of :math:`\mathbf{G}`. Defaults to
+            the model's ``ridge``.
 
-        return np.maximum((K @ self.data.T).T, 0)
+        Returns
+        -------
+        :obj:`~numpy.ndarray`
+            The predicted signal, shaped ``(n_predicted,)`` for a single voxel
+            or ``(n_voxels, n_predicted)`` for a masked volume.
+
+        """
+        model = self.model
+        ridge = model.ridge if ridge is None else ridge
+        if ridge < 0:
+            raise ValueError(f"The ridge must be non-negative (got {ridge}).")
+
+        shells, fitted_shell = np.unique(shell_bvalues(model.gtab.bvals), return_inverse=True)
+        members = np.eye(len(shells))[fitted_shell]  # (n_fitted, n_shells)
+        data = np.asarray(self.data)
+        means = (data @ members) / members.sum(axis=0)  # (..., n_shells)
+        nearest = np.abs(shell_bvalues(gtab.bvals)[:, np.newaxis] - shells).argmin(axis=1)
+
+        gram = sphere_gram(model.kernel)
+        cross = sphere_gram(
+            model.kernel, gqi_kernel(gtab, model.Lambda, model.sphere, method=model.method)
+        )
+        # (n_predicted, n_fitted) weights of the deviations from the shell means
+        weights = np.linalg.solve(gram + ridge * np.eye(len(gram)), cross).T
+        predicted = data @ weights.T - means @ (members.T @ weights.T) + means[..., nearest]
+        return np.maximum(predicted, 0)
 
 
 def gqi_kernel(gtab, param_lambda, sphere, method="standard"):
@@ -283,41 +322,40 @@ def gqi_kernel(gtab, param_lambda, sphere, method="standard"):
     return np.real(np.sinc(np.dot(b_vector, sphere.vertices.T) * param_lambda / np.pi))
 
 
-def prediction_kernel(gtab, param_lambda, sphere, method="standard"):
+def sphere_gram(kernel, other=None):
     r"""
-    Compute the Tikhonov-regularized reconstruction kernel for GQI.
+    Gram matrix of GQI kernels, averaged over the vertices of the sphere.
+
+    Averaging over the :math:`n_v` vertices, rather than summing, keeps the
+    ridge of :meth:`GeneralizedQSamplingFit.predict` independent of the
+    density of the sphere.
 
     Parameters
     ----------
-    gtab : :obj:`~dipy.core.gradients.GradientTable`
-        The gradient table for which the kernel is computed.
-    param_lambda : float
-        The GQI sampling length (:math:`\lambda`).
-    sphere : :obj:`~dipy.core.sphere.Sphere`
-        The sphere whose vertices define the ODF sampling directions.
-    method : str, optional
-        GQI variant, either ``"standard"`` or ``"gqi2"``.
+    kernel : :obj:`~numpy.ndarray`
+        A forward GQI kernel (:func:`gqi_kernel`), shape ``(n_a, n_vertices)``.
+    other : :obj:`~numpy.ndarray`, optional
+        Another kernel on the same sphere, shape ``(n_b, n_vertices)``
+        (``kernel`` itself if not given).
 
     Returns
     -------
     :obj:`~numpy.ndarray`
-        The reconstruction kernel with shape ``(n_gradients, n_vertices)``.
-
-    Notes
-    -----
-    With the forward GQI kernel :math:`\mathbf{K} \in \mathbb{R}^{n_g \times n_v}`,
-    the reconstruction kernel is
-
-    .. math::
-
-        \mathbf{K}^{+} = (\mathbf{K} \mathbf{K}^T + \lambda_0 \mathbf{I})^{-1} \mathbf{K}
-
-    where :math:`\lambda_0 = 10^{-6}` (``INVERSE_LAMBDA``) regularizes the
-    inversion and :math:`\mathbf{I}` is the :math:`n_g \times n_g` identity.
+        :math:`\mathbf{K}_a \mathbf{K}_b^{\mathsf T} / n_v`, shape ``(n_a, n_b)``.
 
     """
-    # K.shape = (n_gradients, n_vertices)
-    K = gqi_kernel(gtab, param_lambda, sphere, method=method)
-    GtG = K @ K.T
-    identity = np.eye(GtG.shape[0])
-    return np.linalg.inv(GtG + INVERSE_LAMBDA * identity) @ K
+    other = kernel if other is None else other
+    return kernel @ other.T / kernel.shape[1]
+
+
+def shell_bvalues(bvals):
+    """
+    The b-value of each volume's shell: its b-value rounded to :data:`SHELL_DECIMALS`.
+
+    Examples
+    --------
+    >>> shell_bvalues([5, 995, 1010, 1990, 3020])
+    array([   0., 1000., 1000., 2000., 3000.])
+
+    """
+    return np.round(np.asarray(bvals, dtype=float), SHELL_DECIMALS)

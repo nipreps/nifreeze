@@ -73,7 +73,9 @@ ILL_CONDITIONED_WARN_MSG = (
 """Warning raised when the covariance is close to singular."""
 
 
-def lovo_smoother(covariance: np.ndarray, center: bool = False) -> np.ndarray:
+def lovo_smoother(
+    covariance: np.ndarray, center: bool = False, shells: np.ndarray | None = None
+) -> np.ndarray:
     r"""
     Build the closed-form leave-one-volume-out smoother from a covariance matrix.
 
@@ -87,13 +89,20 @@ def lovo_smoother(covariance: np.ndarray, center: bool = False) -> np.ndarray:
         training volumes (as scikit-learn's ``normalize_y=True`` does). The
         standard deviation of the normalization cancels in the posterior mean,
         so only the mean needs correcting.
+    shells : :obj:`~numpy.ndarray`, optional
+        The shell (b-value) of each volume. The predictor then estimates the
+        mean of each shell on the training volumes, as
+        :meth:`~nifreeze.model.gqi.GeneralizedQSamplingFit.predict` does, and
+        predicts each volume around its shell's mean (the nearest shell's, if
+        no other volume is in its shell). Excludes ``center``.
 
     Returns
     -------
     :obj:`~numpy.ndarray`
         The smoother :math:`\mathbf{S}` of shape ``(N, N)``. Row :math:`i` holds
         the weights predicting volume :math:`i` from all the others, and its
-        diagonal is zero. With ``center=True``, every row sums to one.
+        diagonal is zero. With ``center=True`` or ``shells``, every row sums
+        to one.
 
     Examples
     --------
@@ -103,8 +112,12 @@ def lovo_smoother(covariance: np.ndarray, center: bool = False) -> np.ndarray:
     True
     >>> bool(np.allclose(lovo_smoother(A, center=True).sum(axis=1), 1.0))
     True
+    >>> bool(np.allclose(lovo_smoother(A, shells=np.zeros(3)), lovo_smoother(A, center=True)))
+    True
 
     """
+    if center and shells is not None:
+        raise ValueError("A smoother estimates either one mean (center) or one per shell.")
     n_volumes = len(covariance)
     eigenvalues = np.linalg.eigvalsh(covariance)
     if eigenvalues[0] > 0 and (cond := eigenvalues[-1] / eigenvalues[0]) > (
@@ -122,6 +135,39 @@ def lovo_smoother(covariance: np.ndarray, center: bool = False) -> np.ndarray:
     if center:
         smoother += ((1.0 - smoother.sum(axis=1)) / (n_volumes - 1))[:, np.newaxis]
         np.fill_diagonal(smoother, 0.0)
+    if shells is not None:
+        smoother = _shell_means(smoother, np.asarray(shells, dtype=float))
+    return smoother
+
+
+def _shell_means(smoother: np.ndarray, shells: np.ndarray) -> np.ndarray:
+    r"""
+    Predict around the mean of each shell, estimated on the training volumes.
+
+    Row :math:`i` of ``smoother`` weights the training volumes :math:`j \neq i`.
+    With :math:`m_s` the mean of the training volumes of shell :math:`s` and
+    :math:`s_i` the shell that volume :math:`i` is predicted from, the
+    prediction :math:`\sum_j S_{ij} (y_j - m_{s_j}) + m_{s_i}` is linear in the
+    data, and this function returns its weights.
+    """
+    n_volumes = len(smoother)
+    labels, shell = np.unique(shells, return_inverse=True)
+    members = np.eye(len(labels))[shell]  # (N, n_shells)
+    # Training volumes of each shell, without the predicted volume itself
+    counts = members.sum(axis=0) - members
+    # Each volume is predicted from its own shell, or the nearest one with training volumes
+    distance = np.abs(labels[shell][:, np.newaxis] - labels)
+    distance[counts == 0] = np.inf
+    target = distance.argmin(axis=1)
+    rows = np.arange(n_volumes)
+
+    shares = np.divide(
+        smoother @ members, counts, out=np.zeros_like(counts), where=counts > 0
+    )
+    own = np.zeros_like(counts)
+    own[rows, target] = 1.0 / counts[rows, target]
+    smoother = smoother + (own - shares) @ members.T
+    np.fill_diagonal(smoother, 0.0)
     return smoother
 
 
@@ -153,6 +199,7 @@ def select_krr_lambda(
     grams: Sequence[np.ndarray],
     signals: Sequence[np.ndarray],
     grid: Sequence[float] = DEFAULT_KRR_LAMBDA_GRID,
+    shells: Sequence[np.ndarray | None] | None = None,
 ) -> float:
     """
     Choose a ridge strength by closed-form LOVO error, pooled over datasets.
@@ -165,6 +212,9 @@ def select_krr_lambda(
         One signal matrix of shape ``(N_s, V_s)`` per dataset.
     grid : :obj:`~typing.Sequence` of :obj:`float`, optional
         Candidate ridge strengths, added to the diagonal of each Gram matrix.
+    shells : :obj:`~typing.Sequence` of :obj:`~numpy.ndarray`, optional
+        The shell of each volume, per dataset, when the predictor estimates a
+        mean per shell (see :func:`lovo_smoother`).
 
     Returns
     -------
@@ -172,10 +222,11 @@ def select_krr_lambda(
         The ridge strength with the lowest summed LOVO error.
 
     """
+    shells = [None] * len(grams) if shells is None else shells
     errors = [
         sum(
-            lovo_error(lovo_smoother(gram + lam * np.eye(len(gram))), y)
-            for gram, y in zip(grams, signals, strict=True)
+            lovo_error(lovo_smoother(gram + lam * np.eye(len(gram)), shells=shell), y)
+            for gram, y, shell in zip(grams, signals, shells, strict=True)
         )
         for lam in grid
     ]
@@ -418,6 +469,10 @@ class ClosedFormLOVOMixin:
         """Return the ``(N, N)`` covariance of the volumes for ``gradients``."""
         raise NotImplementedError
 
+    def _shells(self, gradients: np.ndarray) -> np.ndarray | None:
+        """Return the shell of each volume if the predictor estimates a mean per shell."""
+        return None
+
     def _postprocess(self, predicted: np.ndarray) -> np.ndarray:
         """Post-process the predicted signals of the masked voxels."""
         return predicted
@@ -467,7 +522,11 @@ class ClosedFormLOVOMixin:
             gradients, self._smoother_gradients
         )
         if self._smoother is None or stale:
-            self._smoother = lovo_smoother(self._covariance(gradients), center=self._center)
+            self._smoother = lovo_smoother(
+                self._covariance(gradients),
+                center=self._center,
+                shells=self._shells(gradients),
+            )
             self._smoother_gradients = gradients.copy()
         return 1
 

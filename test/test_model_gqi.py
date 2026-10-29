@@ -25,11 +25,6 @@
 The kernel-algebra and prediction API tests are ported from the tests written
 by @MadeInShineA for DIPY PR dipy/dipy#3553 (which the PR itself lacked) and
 adapted to NiFreeze's vendored implementation in :mod:`nifreeze.model.gqi`.
-
-NiFreeze's ``prediction_kernel`` returns the reconstruction kernel transposed
-with respect to the DIPY-branch version, i.e. with shape
-``(n_gradients, n_vertices)``.  The pseudo-inverse assertions below therefore
-carry a ``.T`` on ``K_plus`` relative to the original tests.
 """
 
 import warnings
@@ -48,7 +43,8 @@ from nifreeze.model.base import MASK_ABSENCE_WARN_MSG
 from nifreeze.model.gqi import (
     GeneralizedQSamplingModel,
     gqi_kernel,
-    prediction_kernel,
+    shell_bvalues,
+    sphere_gram,
 )
 
 SINGLE_VOXEL_CORRELATION_THRESHOLD = 0.8
@@ -198,49 +194,50 @@ def test_gqi_odf_family(method, keep_b0):
 
 
 # ---------------------------------------------------------------------------
-# Reconstruction (prediction) kernel — analytical validity
+# Prediction along the ridge path — analytical validity
 # ---------------------------------------------------------------------------
 @_KEEP_B0
 @pytest.mark.parametrize("method", ["standard", "gqi2"])
-def test_prediction_kernel_properties(method, keep_b0):
-    """The reconstruction kernel is a valid Tikhonov-regularized pseudo-inverse.
+def test_predict_ridge_path(method, keep_b0):
+    """Along the ridge path, the prediction goes from the shell means toward the data.
 
-    Ported from ``test_prediction_kernel``.  NiFreeze returns
-    ``K_plus`` with shape ``(n_gradients, n_vertices)`` (the transpose of the
-    DIPY-branch orientation), hence the ``.T`` on ``K_plus`` below.  The
-    pseudo-inverse properties hold whether or not b=0/low-b volumes are present.
+    At a large ridge, every gradient is predicted by the mean of its shell. As the
+    ridge decreases, the prediction on the fitted gradients comes closer to the
+    fitted data (the deviation from the shell means shrinks by
+    :math:`\\lambda / (g + \\lambda)` along each eigenvector of the Gram matrix).
+    Both hold whether or not b=0/low-b volumes are present.
     """
-    _, gtab = dsi_voxels()
-    train_gtab, _ = _train_gtab(gtab, keep_b0=keep_b0)
-    sphere = get_sphere(name="symmetric724")
+    data, gtab = dsi_voxels()
+    train_gtab, idx = _train_gtab(gtab, keep_b0=keep_b0)
+    data_2d = data[..., idx].reshape(-1, len(idx)).astype(float)
+    fit = GeneralizedQSamplingModel(
+        train_gtab, method=method, sampling_length=SAMPLING_LENGTH
+    ).fit(data_2d)
 
-    K = gqi_kernel(train_gtab, SAMPLING_LENGTH, sphere, method=method)
-    K_plus = prediction_kernel(train_gtab, SAMPLING_LENGTH, sphere, method=method)
+    shells = shell_bvalues(train_gtab.bvals)
+    means = np.stack([data_2d[:, shells == shell].mean(axis=1) for shell in shells], axis=1)
+    assert np.allclose(fit.predict(train_gtab, ridge=1e12), means, rtol=1e-6)
 
-    # Shape: (n_gradients, n_vertices) — same shape as the forward kernel here.
-    assert K_plus.shape == (len(train_gtab.bvals), len(sphere.vertices))
-    assert K_plus.shape == K.shape
+    errors = [
+        np.square(fit.predict(train_gtab, ridge=ridge) - data_2d).sum()
+        for ridge in (1e12, 1.0, 1e-2, 1e-6)
+    ]
+    assert np.all(np.diff(errors) < 0), errors
 
-    # Finite and non-zero.
-    assert np.all(np.isfinite(K_plus)), "K_plus contains non-finite values"
-    assert np.any(K_plus != 0), "K_plus is all zeros"
+    with pytest.raises(ValueError, match="non-negative"):
+        fit.predict(train_gtab, ridge=-1.0)
 
-    # Property 1: K @ K_plus.T @ K ≈ K (regularized reconstruction).
-    reconstructed_K = K @ K_plus.T @ K
-    assert np.allclose(reconstructed_K, K, atol=1e-4, rtol=1e-3), (
-        "Regularized reconstruction K K_plus K ≈ K failed"
+
+def test_predict_interpolates():
+    """Without a ridge, the prediction on the fitted gradients is the fitted data."""
+    rng = np.random.default_rng(1234)
+    bvecs = rng.standard_normal((20, 3))
+    gtab = gradient_table(
+        np.full(20, 1000.0), bvecs=bvecs / np.linalg.norm(bvecs, axis=1, keepdims=True)
     )
-
-    # Properties 2 & 3: K @ K_plus.T and K_plus.T @ K are symmetric.  Both equal
-    # a function of A = K Kᵀ (A(A+λI)⁻¹ and Kᵀ(A+λI)⁻¹K), symmetric in exact
-    # arithmetic.  The near-singular inverse (INVERSE_LAMBDA = 1e-6) leaves float
-    # rounding, so symmetry is checked relative to the matrix scale.
-    def _assert_symmetric(matrix, name):
-        asymmetry = np.abs(matrix - matrix.T).max()
-        assert asymmetry <= 1e-3 * np.abs(matrix).max(), f"{name} is not symmetric"
-
-    _assert_symmetric(K @ K_plus.T, "K K_plus")
-    _assert_symmetric(K_plus.T @ K, "K_plus K")
+    data = rng.uniform(50.0, 150.0, size=(5, 20))
+    fit = GeneralizedQSamplingModel(gtab, sampling_length=SAMPLING_LENGTH).fit(data)
+    assert np.allclose(fit.predict(gtab, ridge=0.0), data, rtol=1e-6)
 
 
 # ---------------------------------------------------------------------------
@@ -427,17 +424,15 @@ def test_gqi2_method_propagates():
     # The two methods use different kernels, so predictions must differ.
     assert not np.allclose(standard_pred, gqi2_pred)
 
-    # Each prediction must match the explicit forward/inverse composition for
-    # its own method (i.e. no cross-method leakage).
+    # Each prediction must match the explicit ridge regression around the shell
+    # means with its own method's kernel (i.e. no cross-method leakage).
+    shells = shell_bvalues(gtab.bvals)
+    means = np.array([voxel_data[shells == shell].mean() for shell in shells])
     for fit, method in ((standard_fit, "standard"), (gqi2_fit, "gqi2")):
-        expected = np.maximum(
-            voxel_data
-            @ (
-                prediction_kernel(gtab, SAMPLING_LENGTH, fit.model.sphere, method=method)
-                @ fit.model.kernel.T
-            ).T,
-            0,
-        )
+        kernel = gqi_kernel(gtab, SAMPLING_LENGTH, fit.model.sphere, method=method)
+        gram = sphere_gram(kernel)
+        ridge = gram + fit.model.ridge * np.eye(len(gram))
+        expected = np.maximum(gram @ np.linalg.solve(ridge, voxel_data - means) + means, 0)
         assert np.allclose(fit.predict(gtab), expected)
 
 
@@ -481,33 +476,13 @@ def test_gqimodel_forwards_model_kwargs():
 # ---------------------------------------------------------------------------
 # Integration: GQIModel LOVO prediction on real Stanford HARDI brain data
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize(
-    "method",
-    [
-        "standard",
-        pytest.param(
-            "gqi2",
-            marks=pytest.mark.xfail(
-                reason=(
-                    "gqi2 is a weaker signal predictor than the default 'standard' kernel; "
-                    "its LOVO correlation falls below the 0.6 gate on this single-shell slab "
-                    "(see docs/models.rst, 'Reconstruction fidelity')."
-                ),
-                strict=True,
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("method", ["standard", "gqi2"])
 def test_gqi_lovo_prediction_stanford_hardi(method):
     """A held-out DWI volume predicted by ``GQIModel`` correlates with truth.
 
     Loads a cropped slab of the Stanford HARDI dataset, fits GQI in
     leave-one-volume-out mode through the NiFreeze wrapper, and checks that the
     predicted volume correlates with the actual left-out volume within the mask.
-
-    The ``gqi2`` variant is expected to fail the correlation gate: it is a weaker
-    signal predictor (oscillatory, ill-conditioned reconstruction kernel), which
-    is why ``"standard"`` is the NiFreeze default.
     """
 
     from dipy.io.gradients import read_bvals_bvecs
