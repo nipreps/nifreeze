@@ -212,9 +212,8 @@ The ridge and its default
 -------------------------
 The ridge :math:`\lambda` of the prediction (``ridge``, a parameter of
 :class:`~nifreeze.model.gqi.GeneralizedQSamplingModel`) trades interpolation of
-the fitted data for smoothing toward the shell means.
-:class:`~nifreeze.model.dmri.GQIKRRModel` chooses it by closed-form
-leave-one-volume-out error. The default of :class:`~nifreeze.model.dmri.GQIModel`,
+the fitted data for smoothing toward the shell means. The default of
+:class:`~nifreeze.model.dmri.GQIModel` and :class:`~nifreeze.model.dmri.GQIKRRModel`,
 :data:`~nifreeze.model.gqi.DEFAULT_RIDGE` = 0.3, was chosen from the following
 experiment.
 
@@ -309,8 +308,11 @@ largest ridge).
 
 **Decision.** The default ridge is the single-shell optimum. Against their own
 optima, it costs 10% on the grid data and 3% on the multi-shell data.
-:class:`~nifreeze.model.dmri.GQIKRRModel` selects the ridge on the data, and needs
-no default.
+:class:`~nifreeze.model.dmri.GQIKRRModel` shares it. Asked to choose the ridge on
+the data it is built on (``krr_lambda=None``), it chooses a larger one where volumes
+moved: on the CI phantom, 0.32 on the reference and 1.0 on every copy with motion
+(`#605 <https://github.com/nipreps/nifreeze/pull/605>`__). Its targets would then
+change with the motion through the ridge as well, so the choice is opt-in.
 
 **Reproduction.** ``python tools/gqi_ridge.py`` prints the table.
 
@@ -362,9 +364,10 @@ unchanged:
    the GQI basis averaged over the sphere. Like the refitting model, it predicts
    around the mean of each shell, estimated on the training volumes
    (``shells`` of :func:`~nifreeze.model.lovo.lovo_smoother`), and at the same
-   :math:`\lambda` both give the same predictions. :math:`\lambda` is given
-   (``krr_lambda``, or ``ridge``) or chosen by closed-form LOVO error
-   (:func:`~nifreeze.model.lovo.select_krr_lambda`).
+   :math:`\lambda` both give the same predictions. :math:`\lambda` defaults to
+   that of :class:`~nifreeze.model.dmri.GQIModel` (see :ref:`gqi-ridge`). It can
+   be given (``krr_lambda``, or ``ridge``), or chosen by closed-form LOVO error
+   with ``krr_lambda=None`` (:func:`~nifreeze.model.lovo.select_krr_lambda`).
 
 **Held-out independence.** No prediction uses the held-out volume, so single-fit
 mode returns the same genuine LOVO predictions and is not a canary. The

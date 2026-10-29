@@ -460,11 +460,12 @@ def test_gqi_closed_form_matches_refits(ridge):
         assert smoother[index, index] == 0.0
 
 
-def test_gqikrr_matches_gqi_refits():
+@pytest.mark.parametrize("kwargs", [{}, {"ridge": 0.1}], ids=["default", "ridge"])
+def test_gqikrr_matches_gqi_refits(kwargs):
     """With the same ridge, GQI-KRR predicts as GQI refit on the other volumes."""
     dwi = _crossing_dwi()
-    krr = model.dmri.GQIKRRModel(dwi, ridge=0.1)
-    gqi = model.dmri.GQIModel(dwi, ridge=0.1)
+    krr = model.dmri.GQIKRRModel(dwi, **kwargs)
+    gqi = model.dmri.GQIModel(dwi, **kwargs)
     for index in (0, 10, 20, 30):
         closed_form, refit = krr.fit_predict(index), gqi.fit_predict(index)
         assert closed_form is not None and refit is not None
@@ -472,10 +473,10 @@ def test_gqikrr_matches_gqi_refits():
 
 
 def test_gqikrr_selects_ridge():
-    """Without a ridge, GQI-KRR chooses one from the grid and predicts the signal."""
+    """Asked to, GQI-KRR chooses its ridge from the grid and predicts the signal."""
     dwi = _crossing_dwi()
     mask = np.ones(dwi.shape3d, dtype=bool)
-    krr = model.dmri.GQIKRRModel(dwi)
+    krr = model.dmri.GQIKRRModel(dwi, krr_lambda=None)
     assert krr._krr_lambda is None
 
     errors, observed = [], []
