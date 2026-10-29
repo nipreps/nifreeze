@@ -178,7 +178,7 @@ def test_noise_with_outlier_not_significant(tmp_path):
 
 
 DRIFT = "bench_quality.M.track_quality_drift_gploo"
-SHARE = "bench_quality.M.track_quality_share_gploo"
+RATIO = "bench_quality.M.track_quality_ratio_gploo"
 
 
 @pytest.mark.parametrize(
@@ -189,8 +189,8 @@ SHARE = "bench_quality.M.track_quality_share_gploo"
         (DRIFT, 0.100, 0.105, "", 0),
         (DRIFT, 0.300, 0.200, "better", 0),
         (DRIFT, 0.0, 0.020, "worse", 1),  # a zero base, where a ratio is undefined
-        (SHARE, -0.050, -0.030, "worse", 1),  # negative values: a rise of 0.02
-        (SHARE, 0.120, 0.105, "", 0),
+        (DRIFT, -0.050, -0.040, "worse", 1),  # negative values: a rise of 0.01
+        (RATIO, 1.120, 1.085, "", 0),
     ],
 )
 def test_quality_gates_on_absolute_change(tmp_path, name, base, target, expected, status):
@@ -198,7 +198,7 @@ def test_quality_gates_on_absolute_change(tmp_path, name, base, target, expected
     Check the verdict on a quality benchmark, which comes from its absolute change.
 
     A quality gate (``factor=None``) compares the change ``PR - main`` with its
-    ``min_change`` (0.01 for the drift, 0.02 for the inherited share) instead of
+    ``min_change`` (0.01 for the drift, 0.05 for the compounding ratio) instead of
     taking a ratio, which would be undefined for a zero base and misleading for
     negative values. A rise of at least ``min_change`` is "worse" and fails the
     job, a fall of at least ``min_change`` is "better", and a smaller change gets
@@ -246,23 +246,24 @@ def test_quality_report(tmp_path):
     summary, one table lists the failing benchmarks of every kind, so its change
     column is named "Change" and holds ratios and differences alike.
     """
+    skipped = "bench_quality.M.track_quality_drift_gqi"
     benchmarks: dict[str, tuple[list, str]] = {
         DRIFT: ([], "unitless"),
-        SHARE: ([], "unitless"),
-        "bench_quality.M.track_quality_ratio_gploo": ([], "unitless"),
+        skipped: ([], "unitless"),
+        RATIO: ([], "unitless"),
         ALLOC: ([], "MB"),
     }
-    base = {DRIFT: _row([0.100]), SHARE: _row([0.100]), ALLOC: _row([10.0])}
+    base = {DRIFT: _row([0.100]), skipped: _row([0.100]), ALLOC: _row([10.0])}
     target = {
         ALLOC: _row([13.0]),
         DRIFT: _row([0.200]),
-        SHARE: _row([float("nan")]),
-        "bench_quality.M.track_quality_ratio_gploo": _row([0.950]),
+        skipped: _row([float("nan")]),
+        RATIO: _row([0.950]),
     }
     status, text = run(tmp_path, benchmarks, base, target)
     assert status == 1
     assert "Prediction drift (" in text and "fails when it rises by 0.01 or more" in text
-    assert "skipped" in text.split("M.track_quality_share_gploo", 1)[1].splitlines()[0]
+    assert "skipped" in text.split("M.track_quality_drift_gqi", 1)[1].splitlines()[0]
     assert "new" in text.split("M.track_quality_ratio_gploo", 1)[1].splitlines()[0]
     assert re.search(r"main +PR +Δ +Verdict", text)
     assert re.search(r"main +PR +Ratio +Verdict", text)

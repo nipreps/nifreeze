@@ -37,8 +37,6 @@ some brain voxel by 2 voxels (``eddy``), and both, with every volume moved
 
 - ``drift_<copy>``: the mean NRMSE of its held-out prediction on the copy against
   that on the reference, over the volume's standard deviation;
-- ``share_<copy>``: the mean share of the volume's own distortion that its
-  prediction inherits;
 - ``ratio_both``: the drift with both over the quadrature sum of the drifts with
   each, which exceeds 1 when they compound.
 
@@ -71,7 +69,7 @@ MODELS = ["avgdwi", "gp-loo", "gqi-krr", "gqi"]
 
 
 def measure(model: str, reference, cells) -> dict[str, float]:
-    """The drifts, shares and compounding ratio of one model."""
+    """The drifts and compounding ratio of one model."""
     rows = sensitivity(model, reference, cells, evaluate=EVALUATE)
     copies: dict[str, list[dict]] = {}
     for row in rows:
@@ -79,8 +77,6 @@ def measure(model: str, reference, cells) -> dict[str, float]:
     values = {
         f"drift_{name}": np.mean([r["nrmse"] for r in group]) for name, group in copies.items()
     }
-    for name in ("eddy", "both"):
-        values[f"share_{name}"] = np.mean([r["inherited"] for r in copies[name]])
     values["ratio_both"] = values["drift_both"] / np.hypot(
         values["drift_motion_all"], values["drift_eddy"]
     )
@@ -88,7 +84,7 @@ def measure(model: str, reference, cells) -> dict[str, float]:
 
 
 class SensitivityQuality:
-    """Drift, inherited share and compounding of each model on the CI phantom."""
+    """Drift and compounding of each model on the CI phantom."""
 
     # Bump when the phantom of ``tools/phantoms/phantom.py fixture`` changes, too
     version = "1"
@@ -130,12 +126,6 @@ class SensitivityQuality:
 
     def track_quality_drift_both(self, values, model):
         return self.values["drift_both"]
-
-    def track_quality_share_eddy(self, values, model):
-        return self.values["share_eddy"]
-
-    def track_quality_share_both(self, values, model):
-        return self.values["share_both"]
 
     def track_quality_ratio_both(self, values, model):
         return self.values["ratio_both"]
