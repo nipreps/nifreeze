@@ -510,5 +510,45 @@
         "unit": "unit",
         "version": "1"
     },
+    "bench_registration.RegistrationAccuracy.track_registration_oracle_median": {
+        "code": "class RegistrationAccuracy:\n    def track_registration_oracle_median(self, values):\n        return self.values[\"median\"]\n\n    def setup(self, values):\n        if not values:\n            raise NotImplementedError(\"no phantom (NIFREEZE_PHANTOMS), no ANTs, or no harness\")\n        self.values = values\n\n    def setup_cache(self):\n        # asv fails a class whose ``setup_cache`` raises: an empty mapping tells\n        # ``setup`` to skip\n        phantom = _phantom()\n        if phantom is None:\n            return {}\n        clean, reference, moved, truth = phantom\n        with tempfile.TemporaryDirectory() as workdir:\n            rows = registration_accuracy(\n                AntsRegistration(workdir, num_threads=1),\n                clean,\n                reference,\n                moved,\n                truth,\n                fixed=[\"oracle\"],\n            )\n        errors = [row[\"max\"] for row in rows]\n        return {\"median\": float(np.median(errors)), \"p95\": float(np.percentile(errors, 95))}",
+        "name": "bench_registration.RegistrationAccuracy.track_registration_oracle_median",
+        "param_names": [],
+        "params": [],
+        "setup_cache_key": "bench_registration:84",
+        "setup_cache_timeout": 900,
+        "timeout": 300,
+        "type": "track",
+        "unit": "unit",
+        "version": "1"
+    },
+    "bench_registration.RegistrationAccuracy.track_registration_oracle_p95": {
+        "code": "class RegistrationAccuracy:\n    def track_registration_oracle_p95(self, values):\n        return self.values[\"p95\"]\n\n    def setup(self, values):\n        if not values:\n            raise NotImplementedError(\"no phantom (NIFREEZE_PHANTOMS), no ANTs, or no harness\")\n        self.values = values\n\n    def setup_cache(self):\n        # asv fails a class whose ``setup_cache`` raises: an empty mapping tells\n        # ``setup`` to skip\n        phantom = _phantom()\n        if phantom is None:\n            return {}\n        clean, reference, moved, truth = phantom\n        with tempfile.TemporaryDirectory() as workdir:\n            rows = registration_accuracy(\n                AntsRegistration(workdir, num_threads=1),\n                clean,\n                reference,\n                moved,\n                truth,\n                fixed=[\"oracle\"],\n            )\n        errors = [row[\"max\"] for row in rows]\n        return {\"median\": float(np.median(errors)), \"p95\": float(np.percentile(errors, 95))}",
+        "name": "bench_registration.RegistrationAccuracy.track_registration_oracle_p95",
+        "param_names": [],
+        "params": [],
+        "setup_cache_key": "bench_registration:84",
+        "setup_cache_timeout": 900,
+        "timeout": 300,
+        "type": "track",
+        "unit": "unit",
+        "version": "1"
+    },
+    "bench_registration.RegistrationTime.time_register": {
+        "code": "class RegistrationTime:\n    def time_register(self):\n        self.register(*self.args)\n\n    def setup(self):\n        phantom = _phantom()\n        if phantom is None:\n            raise NotImplementedError(\"no phantom (NIFREEZE_PHANTOMS), no ANTs, or no harness\")\n        clean, reference, moved, _ = phantom\n        self.workdir = tempfile.TemporaryDirectory()\n        self.register = AntsRegistration(self.workdir.name, num_threads=1)\n        self.args = (\n            np.asarray(clean.dataobj[0], dtype=\"float32\"),\n            np.asarray(moved.dataobj[0]),\n            reference.affine,\n            np.asanyarray(reference.brainmask, dtype=bool),\n            0,\n        )",
+        "min_run_count": 2,
+        "name": "bench_registration.RegistrationTime.time_register",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "timeout": 120,
+        "type": "time",
+        "unit": "seconds",
+        "version": "280080ccc9717f9a9e21b6241939503f38e852989c4d1c394cdd7f7251c5215b",
+        "warmup_time": -1
+    },
     "version": 2
 }
