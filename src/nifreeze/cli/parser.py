@@ -122,8 +122,7 @@ def _build_parser() -> ArgumentParser:
         default=None,
         help=(
             "Number of random voxels used to fit the hyperparameters of the "
-            "Gaussian process models ('gp', 'gp-loo') and to choose the ridge "
-            "strength of 'gqi-krr'."
+            "Gaussian process models ('gp', 'gp-loo')."
         ),
     )
     parser.add_argument(

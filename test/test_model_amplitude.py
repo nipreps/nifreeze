@@ -74,13 +74,7 @@ def reference(phantoms):
         "gp",
         "gp-loo",
         "gqi-krr",
-        pytest.param(
-            "gqi",
-            marks=pytest.mark.xfail(
-                reason="GQI normalizes its prediction by the target's own norm (#495)",
-                strict=True,
-            ),
-        ),
+        "gqi",
     ],
 )
 def test_held_out_predictions_keep_the_amplitude(reference, model):
