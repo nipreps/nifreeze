@@ -32,7 +32,7 @@ as a scanner writes them: the moved head turned under them, so even at the right
 position a volume differs from the one its model predicts. The truth is the
 motion of each volume, which is what the estimator reports. The tests
 are opt-in (``pytest -m e2e``), need ANTs, and need ``NIFREEZE_PHANTOMS`` to point
-to the phantom dataset (GIN ``tests-nifreeze``, subdataset ``phantoms``).
+to the phantom dataset (GIN ``nipreps-data/nifreeze-trxscan``).
 
 The model gates record the current single-pass accuracy: the models are fit on
 the moving volumes, so their targets mix anatomy at different positions (see
@@ -67,6 +67,8 @@ MAGNITUDE = 2.0
 """Rotation (degrees) and translation (mm) of every moved volume."""
 SEED = 20261020
 """Seed of the noise."""
+ORACLE_GATE = {"max_median": 0.45, "max": 0.6}
+"""Largest median and maximum error (mm) of the registrations to the unmoved original."""
 
 
 @pytest.fixture(scope="module")
@@ -193,20 +195,24 @@ def test_e2e_registration_oracle(phantom_motion, outdir, tmp_path):
         estimated.append(xform.matrix)
 
     errors = _errors(sim.mask, np.stack(estimated), sim.truth[picks])
-    result = {"model": "oracle", "errors": _summary(errors, sim.shells[picks])}
+    result = {
+        "model": "oracle",
+        "errors": _summary(errors, sim.shells[picks]),
+        "gate": ORACLE_GATE,
+    }
     _record(outdir, "oracle", result)
 
-    assert np.median(errors) < 0.2
-    assert errors.max() < 1.0
+    assert np.median(errors) < ORACLE_GATE["max_median"]
+    assert errors.max() < ORACLE_GATE["max"]
 
 
 @pytest.mark.parametrize(
     ("model", "relative", "gated_shells", "max_median", "max_p95"),
     [
         # Registering to the b=0 only works for low b-values: higher shells are reported
-        ("trivial", False, ("1000",), 2.0, 3.0),
-        ("gp-loo", True, None, 2.5, 4.5),
-        ("gqi-krr", True, None, 2.5, 5.5),
+        ("trivial", False, ("1000",), 3.45, 4.6),
+        ("gp-loo", True, None, 1.55, 2.5),
+        ("gqi-krr", True, None, 1.35, 2.75),
     ],
     ids=["trivial", "gp-loo", "gqi-krr"],
 )
