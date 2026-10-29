@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.exceptions module" href="nifreeze.exceptions.html"><link rel="prev" title="nifreeze.data.utils module" href="nifreeze.data.utils.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.estimator module - nifreeze 26.0.0.dev15 documentation</title>
+        <title>nifreeze.estimator module - nifreeze 26.0.0.dev18 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev15 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev18 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev15</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev18</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev15</span>
+  <span class="sidebar-brand-text">26.0.0.dev18</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -365,6 +365,9 @@ refitting per held-out volume. Prediction is no longer unbiased.</p></li>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dataset</strong> (<a class="reference internal" href="nifreeze.data.base.html#nifreeze.data.base.BaseDataset" title="nifreeze.data.base.BaseDataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BaseDataset</span></code></a>) – The input dataset this estimator operates on.</p></li>
+<li><p><strong>align_kwargs</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a>, optional) – Registration settings for every estimator of the chain (e.g., those of
+<code class="docutils literal notranslate"><span class="pre">--align-config</span></code>). The settings given to an estimator at construction
+take precedence.</p></li>
 <li><p><strong>clip</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a>, optional) – Clip the intensity of <code class="docutils literal notranslate"><span class="pre">&quot;sample&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;predicted&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;both&quot;</span></code>
 (default) or <code class="docutils literal notranslate"><span class="pre">&quot;none&quot;</span></code> of the images before registration.</p></li>
 <li><p><strong>clip_windows</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a>, optional) – Intensity windows by volume index. A volume’s window is estimated
@@ -383,6 +386,7 @@ export keep using the original volumes. It applies to models given by
 name and to model instances built on this dataset (see
 <a class="reference internal" href="nifreeze.model.base.html#nifreeze.model.base.BaseModel.set_dataset" title="nifreeze.model.base.BaseModel.set_dataset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_dataset()</span></code></a>), except the
 trivial model, whose reference never moves.</p></li>
+<li><p><strong>num_threads</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Threads of each registration (default: <code class="docutils literal notranslate"><span class="pre">omp_nthreads</span></code>).</p></li>
 <li><p><strong>realigned</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a>, optional) – Realigned views by dataset, shared by the estimators of a chain.</p></li>
 </ul>
 </dd>
@@ -498,7 +502,7 @@ trivial model, whose reference never moves.</p></li>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=58c4455c"></script>
+</div><script src="../_static/documentation_options.js?v=235ee8ed"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

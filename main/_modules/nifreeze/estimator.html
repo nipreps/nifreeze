@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.estimator - nifreeze 26.0.0.dev15 documentation</title>
+        <title>nifreeze.estimator - nifreeze 26.0.0.dev18 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">nifreeze 26.0.0.dev15 documentation</div></a>
+      <a href="../../index.html"><div class="brand">nifreeze 26.0.0.dev18 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev15</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev18</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev15</span>
+  <span class="sidebar-brand-text">26.0.0.dev18</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -482,6 +482,10 @@
 <span class="sd">        ----------</span>
 <span class="sd">        dataset : :obj:`~nifreeze.data.base.BaseDataset`</span>
 <span class="sd">            The input dataset this estimator operates on.</span>
+<span class="sd">        align_kwargs : :obj:`dict`, optional</span>
+<span class="sd">            Registration settings for every estimator of the chain (e.g., those of</span>
+<span class="sd">            ``--align-config``). The settings given to an estimator at construction</span>
+<span class="sd">            take precedence.</span>
 <span class="sd">        clip : :obj:`str`, optional</span>
 <span class="sd">            Clip the intensity of ``&quot;sample&quot;``, ``&quot;predicted&quot;``, ``&quot;both&quot;``</span>
 <span class="sd">            (default) or ``&quot;none&quot;`` of the images before registration.</span>
@@ -504,6 +508,8 @@
 <span class="sd">            name and to model instances built on this dataset (see</span>
 <span class="sd">            :meth:`~nifreeze.model.base.BaseModel.set_dataset`), except the</span>
 <span class="sd">            trivial model, whose reference never moves.</span>
+<span class="sd">        num_threads : :obj:`int`, optional</span>
+<span class="sd">            Threads of each registration (default: ``omp_nthreads``).</span>
 <span class="sd">        realigned : :obj:`dict`, optional</span>
 <span class="sd">            Realigned views by dataset, shared by the estimators of a chain.</span>
 
@@ -596,8 +602,10 @@
             <span class="n">model</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">fit_pred_kwargs</span><span class="p">)</span>
             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Fitting &#39;single&#39; model finished, elapsed </span><span class="si">{</span><span class="n">timer</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start</span><span class="si">}</span><span class="s2">s.&quot;</span><span class="p">)</span>
 
-        <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;num_threads&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">n_threads</span>
-        <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_align_kwargs</span> <span class="o">|</span> <span class="n">kwargs</span>
+        <span class="c1"># Registration settings: the run&#39;s (shared by the chain), this estimator&#39;s, and</span>
+        <span class="c1"># then the run&#39;s other keyword arguments</span>
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;align_kwargs&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">_align_kwargs</span> <span class="o">|</span> <span class="n">kwargs</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;num_threads&quot;</span><span class="p">,</span> <span class="n">n_threads</span><span class="p">)</span>
         <span class="n">clip</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;clip&quot;</span><span class="p">,</span> <span class="s2">&quot;both&quot;</span><span class="p">)</span>
         <span class="n">clipping</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">clip</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;sample&quot;</span><span class="p">,</span> <span class="s2">&quot;predicted&quot;</span><span class="p">,</span> <span class="s2">&quot;both&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span><span class="p">)</span>
         <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;clip_windows&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
@@ -751,7 +759,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=58c4455c"></script>
+</div><script src="../../_static/documentation_options.js?v=235ee8ed"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>
