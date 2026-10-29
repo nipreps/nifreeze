@@ -21,5 +21,6 @@ Contents
     citation
     developers
     phantoms
+    roadmap
     changes
     bibliography
