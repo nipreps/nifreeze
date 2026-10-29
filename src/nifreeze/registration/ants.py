@@ -61,6 +61,9 @@ PARAMETERS_DOUBLE_LIST = {"shrink_factors", "smoothing_sigmas", "transform_param
 REGISTRATION_MALFORMED_SETTINGS_ERROR_MSG = "Malformed settings file (levels: {levels})"
 """Registration malformed settings error message."""
 
+REGISTRATION_UNKNOWN_SETTINGS_ERROR_MSG = "Unknown registration settings: {keys}"
+"""Unknown registration settings error message."""
+
 REGISTRATION_INIT_WITHOUT_COLLAPSE_ERROR_MSG = (
     "An initial transform requires 'collapse_output_transforms': otherwise the first "
     "output transform is the initialization, not the estimate."
@@ -241,8 +244,8 @@ def _get_ants_settings(settings: str = "b0-to-b0_level0") -> Path:
     >>> _get_ants_settings()
     PosixPath('.../config/b0-to-b0_level0.json')
 
-    >>> _get_ants_settings("b0-to-b0_level1")
-    PosixPath('.../config/b0-to-b0_level1.json')
+    >>> _get_ants_settings("dwi-to-dwi_level1")
+    PosixPath('.../config/dwi-to-dwi_level1.json')
 
     """
     return Path(str(files("nifreeze.registration").joinpath(f"config/{settings}.json")))
@@ -447,6 +450,8 @@ def generate_command(
     settings = loads(_get_ants_settings(default).read_text()) | {
         k: kwargs.pop(k) for k in PARAMETERS_SINGLE_VALUE if k in kwargs
     }
+    if unknown := sorted(set(kwargs) - PARAMETERS_SINGLE_LIST - PARAMETERS_DOUBLE_LIST):
+        raise TypeError(REGISTRATION_UNKNOWN_SETTINGS_ERROR_MSG.format(keys=", ".join(unknown)))
 
     # Determine number of levels and assert consistency of levels
     levels = {len(settings[p]) for p in PARAMETERS_SINGLE_LIST if p in settings}
@@ -458,8 +463,6 @@ def generate_command(
     for key, value in kwargs.items():
         if key in PARAMETERS_DOUBLE_LIST:
             value = [value]
-        elif key not in PARAMETERS_SINGLE_LIST:
-            continue
 
         if nlevels == 1:
             settings[key] = [value]

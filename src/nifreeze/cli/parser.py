@@ -79,7 +79,9 @@ def _build_parser() -> ArgumentParser:
         default=None,
         help=(
             "Path to the yaml file containing the parameters "
-            "to configure the image registration process."
+            "to configure the image registration process, at every level of the "
+            "cascade: 'ants_config' names a configuration of "
+            "nifreeze/registration/config, and the other keys override its settings."
         ),
     )
     parser.add_argument(
