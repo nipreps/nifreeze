@@ -57,8 +57,8 @@ from sklearn.gaussian_process.kernels import Kernel
 from nifreeze.model._dipy import DEFAULT_NVOX_PREFIT, GP_JITTER
 from nifreeze.model.gpr import LBFGS_DEFAULT_GTOL, DiffusionGPR
 
-DEFAULT_KRR_LAMBDA_GRID = tuple(np.logspace(-4, 1, 11))
-"""Default grid of ridge strengths (relative to the mean Gram diagonal)."""
+DEFAULT_KRR_LAMBDA_GRID = tuple(np.logspace(-4, 2, 13))
+"""Default grid of ridge strengths (in units of :func:`~nifreeze.model.gqi.sphere_gram`)."""
 
 HYPERPARAMETERS_SCHEMA = "nifreeze-gp-hyperparameters/1"
 """Schema identifier written to (and required from) hyperparameter files."""
@@ -161,9 +161,7 @@ def _shell_means(smoother: np.ndarray, shells: np.ndarray) -> np.ndarray:
     target = distance.argmin(axis=1)
     rows = np.arange(n_volumes)
 
-    shares = np.divide(
-        smoother @ members, counts, out=np.zeros_like(counts), where=counts > 0
-    )
+    shares = np.divide(smoother @ members, counts, out=np.zeros_like(counts), where=counts > 0)
     own = np.zeros_like(counts)
     own[rows, target] = 1.0 / counts[rows, target]
     smoother = smoother + (own - shares) @ members.T

@@ -194,7 +194,7 @@ def test_gqi_odf_family(method, keep_b0):
 
 
 # ---------------------------------------------------------------------------
-# Prediction along the ridge path — analytical validity
+# Prediction along the ridge path: analytical validity
 # ---------------------------------------------------------------------------
 @_KEEP_B0
 @pytest.mark.parametrize("method", ["standard", "gqi2"])

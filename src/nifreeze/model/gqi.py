@@ -71,10 +71,11 @@ from dipy.core.subdivide_octahedron import create_unit_sphere
 from dipy.reconst.gqi import squared_radial_component
 from dipy.reconst.odf import OdfFit, OdfModel
 
-DEFAULT_RIDGE = 1e-2
+DEFAULT_RIDGE = 0.3
 r"""
 Default ridge :math:`\lambda` of the prediction, in units of the Gram matrix
-averaged over the sphere (see :meth:`GeneralizedQSamplingFit.predict`).
+averaged over the sphere (see :meth:`GeneralizedQSamplingFit.predict`); see
+:ref:`gqi-ridge` for the experiment justifying it.
 """
 
 SHELL_DECIMALS = -2
