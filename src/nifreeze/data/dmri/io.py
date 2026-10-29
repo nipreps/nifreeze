@@ -210,10 +210,6 @@ def to_nifti(
             for bvec, affine in zip(dwi.gradients[:, :3], dwi.motion_affines, strict=True)
         ]
         bvecs = np.asarray(rotated)
-    elif not no_bzero:
-        # The b=0 inserted changes the volumes, so their gradients are written too
-        bvals = dwi.bvals
-        bvecs = dwi.bvecs
 
     # Parent's to_nifti to handle the primary NIfTI export.
     nii = _base_to_nifti(
@@ -234,15 +230,12 @@ def to_nifti(
         volumes = np.asanyarray(nii.dataobj)
         data = np.concatenate((dwi.bzero[..., np.newaxis], volumes), axis=-1)  # type: ignore
         nii = nb.Nifti1Image(data, nii.affine, nii.header)
+        # And its null gradient to their gradients, rotated if motion was estimated
+        bvals = np.concatenate((np.zeros(1), dwi.bvals))
+        bvecs = np.vstack((np.zeros((1, 3)), dwi.bvecs if bvecs is None else bvecs))
 
         if filename is not None:
             nii.to_filename(filename)
-
-        # If inserting a b0 volume is requested, add the corresponding null
-        # gradient value to the bval/bvec pair
-        if bvecs is not None and bvals is not None:
-            bvals = np.concatenate((np.zeros(1), bvals))
-            bvecs = np.vstack((np.zeros((1, bvecs.shape[1])), bvecs))
 
     if filename is not None:
         # Convert filename to a Path object.
