@@ -79,6 +79,9 @@ jobs:
         run: |
           uv tool install git-annex
           uv tool install --with=datalad-next datalad
+          # git-annex commits to its branch when it initializes a clone
+          git config --global user.email "nipreps@gmail.com"
+          git config --global user.name "nipreps-bot"
           datalad wtf
       - name: Fetch the phantom at ${{ env.PHANTOMS_COMMIT }}
         if: steps.phantoms.outputs.cache-hit != 'true'
