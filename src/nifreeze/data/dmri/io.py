@@ -163,12 +163,12 @@ def to_nifti(
     bvecs_dec_places: int = 6,
 ) -> nb.nifti1.Nifti1Image:
     """
-    Export the dMRI object to disk (NIfTI data, and gradients, if applicable).
+    Export the dMRI object to disk (NIfTI data, and gradients).
 
-    Gradients (b-vecs & b-vals files) are only serialized if the DWI object has
-    non-null :attr:`~nifreeze.data.base.BaseDataset.motion_affine` data (i.e. if
-    b-vectors need to be rotated following the motion estimation), or if a :math:`b=0`
-    is inserted (``insert_b0``).
+    Gradients (b-vecs & b-vals files) are written next to the NIfTI file, matching its
+    volumes. The b-vectors are rotated if the DWI object has non-null
+    :attr:`~nifreeze.data.base.BaseDataset.motion_affine` data (i.e., following the
+    motion estimation).
 
     Parameters
     ----------
@@ -199,12 +199,11 @@ def to_nifti(
 
     no_bzero = dwi.bzero is None or not insert_b0
 
-    bvals = None
-    bvecs = None
+    bvals = dwi.bvals
+    bvecs = dwi.bvecs
 
     # Rotate b-vectors if dwi.motion_affines is not None
     if dwi.motion_affines is not None:
-        bvals = dwi.bvals
         rotated = [
             transform_fsl_bvec(bvec, affine, dwi.affine, invert=True)
             for bvec, affine in zip(dwi.gradients[:, :3], dwi.motion_affines, strict=True)
@@ -231,8 +230,8 @@ def to_nifti(
         data = np.concatenate((dwi.bzero[..., np.newaxis], volumes), axis=-1)  # type: ignore
         nii = nb.Nifti1Image(data, nii.affine, nii.header)
         # And its null gradient to their gradients, rotated if motion was estimated
-        bvals = np.concatenate((np.zeros(1), dwi.bvals))
-        bvecs = np.vstack((np.zeros((1, 3)), dwi.bvecs if bvecs is None else bvecs))
+        bvals = np.concatenate((np.zeros(1), bvals))
+        bvecs = np.vstack((np.zeros((1, 3)), bvecs))
 
         if filename is not None:
             nii.to_filename(filename)
@@ -249,8 +248,7 @@ def to_nifti(
         bvals_file = out_root.with_suffix(".bval")
 
         # Save bvecs and bvals to text files. BIDS expects 3 rows x N columns.
-        if bvecs is not None and bvals is not None:
-            np.savetxt(bvecs_file, bvecs.T, fmt=f"%.{bvecs_dec_places}f")
-            np.savetxt(bvals_file, bvals[np.newaxis, :], fmt=f"%.{bvals_dec_places}f")
+        np.savetxt(bvecs_file, bvecs.T, fmt=f"%.{bvecs_dec_places}f")
+        np.savetxt(bvals_file, bvals[np.newaxis, :], fmt=f"%.{bvals_dec_places}f")
 
     return nii
