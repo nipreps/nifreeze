@@ -1,1 +1,1 @@
-{"regressions": [["bench_registration.RegistrationTime.time_register", "graphs/branch-HEAD/dipy/machine-gha/nest-asyncio/nipype/nitransforms/numpy/psutil/python-3.12/scikit_learn/scipy/bench_registration.RegistrationTime.time_register.json", {}, null, 0.29634569949998024, 0.23130027400002007, [[null, 1782, 0.23130027400002007, 0.29634569949998024]]]]}
+{"regressions": []}
