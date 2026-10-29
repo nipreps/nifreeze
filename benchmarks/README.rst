@@ -13,23 +13,25 @@ What is measured
 The kind of each benchmark is given by its name, and each kind has its own
 threshold for a regression (see ``GATES`` in ``report.py``):
 
-===================  ================================================  ====================================
-Name prefix          Measure                                           A pull request fails when
-===================  ================================================  ====================================
-``track_alloc_``     Peak memory Python allocates during the call      1.25 times ``main`` and 2 MB more
-                     (``tracemalloc``), the same on every run
-``track_rss_``       Peak RSS increase of forked processes running     1.5 times ``main`` and 16 MB more
-                     the call (median of three); also counts memory
-                     maps and the buffers of C libraries
-``time_cpu_``        CPU seconds, joblib's workers included            1.5 times ``main``, significant
-                                                                       (one-sided Mann-Whitney U,
-                                                                       *p* < 0.01), and ``main`` takes
-                                                                       10 ms or more
-``time_``            Wall time                                         as for CPU time
-``track_quality_``   Dimensionless, deterministic measures of model    it rises by 0.01 (``drift_``) or
-                     quality: prediction drift (``drift_``),           0.05 (``ratio_``) or more,
-                     compounding ratio (``ratio_``); lower is better   whatever ``main``'s value
-===================  ================================================  ====================================
+=======================  ================================================  ====================================
+Name prefix              Measure                                           A pull request fails when
+=======================  ================================================  ====================================
+``track_alloc_``         Peak memory Python allocates during the call      1.25 times ``main`` and 2 MB more
+                         (``tracemalloc``), the same on every run
+``track_rss_``           Peak RSS increase of forked processes running     1.5 times ``main`` and 16 MB more
+                         the call (median of three); also counts memory
+                         maps and the buffers of C libraries
+``time_cpu_``            CPU seconds, joblib's workers included            1.5 times ``main``, significant
+                                                                           (one-sided Mann-Whitney U,
+                                                                           *p* < 0.01), and ``main`` takes
+                                                                           10 ms or more
+``time_``                Wall time                                         as for CPU time
+``track_quality_``       Dimensionless, deterministic measures of model    it rises by 0.01 (``drift_``) or
+                         quality: prediction drift (``drift_``),           0.05 (``ratio_``) or more,
+                         compounding ratio (``ratio_``); lower is better   whatever ``main``'s value
+``track_registration_``  Registration error (mm), deterministic; lower     it rises by 0.1 mm or more,
+                         is better                                         whatever ``main``'s value
+=======================  ================================================  ====================================
 
 - ``bench_data.py``: wall time of loading and writing DWI and PET data.
 - ``bench_memory.py``: allocations of the same operations on 40 MB series and of
@@ -41,6 +43,10 @@ Name prefix          Measure                                           A pull re
   and whether motion and eddy currents compound.
   It needs the phantom at ``NIFREEZE_PHANTOMS``, which the workflow restores
   with ``.github/actions/phantom-fixtures``; without it, it is skipped.
+- ``bench_registration.py``: how far registration misses each volume's true
+  motion on the CI phantom, registering to the noise-free reference (no model
+  involved), and the wall time of one registration with the estimator's ANTs path.
+  It needs the phantom and ANTs; without either, it is skipped.
 
 How pull requests are checked
 -----------------------------
