@@ -83,10 +83,22 @@ jobs:
       - name: Fetch the phantom at ${{ env.PHANTOMS_COMMIT }}
         if: steps.phantoms.outputs.cache-hit != 'true'
         run: |
-          datalad clone "${PHANTOMS_REPO}" "${NIFREEZE_PHANTOMS}"
+          # GIN may refuse CI runners (e.g., HTTP 403): retry each request
+          retry() {
+            for attempt in 1 2 3; do
+              "$@" && return 0
+              if (( attempt < 3 )); then sleep $(( attempt * 30 )); fi
+            done
+            return 1
+          }
+          clone() {
+            rm -rf "${NIFREEZE_PHANTOMS}"
+            datalad clone "${PHANTOMS_REPO}" "${NIFREEZE_PHANTOMS}"
+          }
+          retry clone
           cd "${NIFREEZE_PHANTOMS}"
           git checkout --detach "${PHANTOMS_COMMIT}"
-          datalad get -J4 ${PHANTOMS_PATHS}
+          retry datalad get -J4 ${PHANTOMS_PATHS}
       - name: Save the phantom
         if: steps.phantoms.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
