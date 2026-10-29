@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.model.lovo module" href="nifreeze.model.lovo.html"><link rel="prev" title="nifreeze.model.gpr module" href="nifreeze.model.gpr.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.gqi module - nifreeze 26.0.0.dev18 documentation</title>
+        <title>nifreeze.model.gqi module - nifreeze 26.0.0.dev27 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev18 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev27 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev18</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev27</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev18</span>
+  <span class="sidebar-brand-text">26.0.0.dev27</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -333,6 +333,14 @@
 <span id="nifreeze-model-gqi-module"></span><h1>nifreeze.model.gqi module<a class="headerlink" href="#module-nifreeze.model.gqi" title="Link to this heading">¶</a></h1>
 <p>Classes and functions for generalized q-sampling</p>
 <dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.model.gqi.DEFAULT_RIDGE">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">DEFAULT_RIDGE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.3</span></em><a class="headerlink" href="#nifreeze.model.gqi.DEFAULT_RIDGE" title="Link to this definition">¶</a></dt>
+<dd><p>Default ridge <span class="math notranslate nohighlight">\(\lambda\)</span> of the prediction, in units of the Gram matrix
+averaged over the sphere (see <a class="reference internal" href="#nifreeze.model.gqi.GeneralizedQSamplingFit.predict" title="nifreeze.model.gqi.GeneralizedQSamplingFit.predict"><code class="xref py py-meth docutils literal notranslate"><span class="pre">GeneralizedQSamplingFit.predict()</span></code></a>); see
+<a class="reference internal" href="../models.html#gqi-ridge"><span class="std std-ref">The ridge and its default</span></a> for the experiment justifying it.</p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="nifreeze.model.gqi.DEFAULT_SPHERE_RECURSION_LEVEL">
 <span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">DEFAULT_SPHERE_RECURSION_LEVEL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">5</span></em><a class="headerlink" href="#nifreeze.model.gqi.DEFAULT_SPHERE_RECURSION_LEVEL" title="Link to this definition">¶</a></dt>
 <dd><p>Default icosahedral subdivision level of the ODF sampling sphere (1026
@@ -388,31 +396,57 @@ values (matching DIPY).</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nifreeze.model.gqi.GeneralizedQSamplingFit.predict">
-<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gtab</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">S0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#GeneralizedQSamplingFit.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.GeneralizedQSamplingFit.predict" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gtab</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">S0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ridge</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#GeneralizedQSamplingFit.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.GeneralizedQSamplingFit.predict" title="Link to this definition">¶</a></dt>
 <dd><p>Predict the diffusion signal on <code class="docutils literal notranslate"><span class="pre">gtab</span></code> from the fitted data.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>This signal-to-signal prediction is a <strong>NiFreeze extension</strong> of GQI;
 Yeh et al. (2010) defines only the forward signal-to-SDF transform.
-It maps the fitted signal to the SDF and back via a
-Tikhonov-regularized reconstruction kernel
-(<a class="reference internal" href="#nifreeze.model.gqi.prediction_kernel" title="nifreeze.model.gqi.prediction_kernel"><code class="xref py py-func docutils literal notranslate"><span class="pre">prediction_kernel()</span></code></a>). See <a class="reference internal" href="../models.html#gqi-models"><span class="std std-ref">Generalized q-Sampling Imaging (GQI)</span></a> for the
-construction.</p>
+See <a class="reference internal" href="../models.html#gqi-models"><span class="std std-ref">Generalized q-Sampling Imaging (GQI)</span></a> for the construction.</p>
 </div>
+<p>The prediction is kernel ridge regression on the GQI basis, around an
+unpenalized mean per shell:</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\hat{\mathbf{y}}_o = \mathbf{G}_o (\mathbf{G} + \lambda\mathbf{I})^{-1}
+(\mathbf{y} - \mathbf{m}) + \mathbf{m}_o,\]</div>
+</div>
+<p>with <span class="math notranslate nohighlight">\(\mathbf{G} = \mathbf{K}\mathbf{K}^{\mathsf T} / n_v\)</span> the Gram
+matrix of the fitted gradients averaged over the <span class="math notranslate nohighlight">\(n_v\)</span> vertices of
+the sphere (<a class="reference internal" href="#nifreeze.model.gqi.sphere_gram" title="nifreeze.model.gqi.sphere_gram"><code class="xref py py-func docutils literal notranslate"><span class="pre">sphere_gram()</span></code></a>), <span class="math notranslate nohighlight">\(\mathbf{G}_o\)</span> that of the
+predicted gradients with the fitted ones, <span class="math notranslate nohighlight">\(\mathbf{m}\)</span> the mean of
+each fitted volume’s shell, and <span class="math notranslate nohighlight">\(\mathbf{m}_o\)</span> the mean of the
+fitted shell nearest to each predicted b-value (shells are b-values
+rounded to <a class="reference internal" href="#nifreeze.model.gqi.SHELL_DECIMALS" title="nifreeze.model.gqi.SHELL_DECIMALS"><code class="xref py py-data docutils literal notranslate"><span class="pre">SHELL_DECIMALS</span></code></a>). As <span class="math notranslate nohighlight">\(\lambda \to 0\)</span> the
+prediction interpolates the fitted data, and as <span class="math notranslate nohighlight">\(\lambda \to
+\infty\)</span> it returns the shell mean; at every <span class="math notranslate nohighlight">\(\lambda\)</span> it keeps
+the shell’s amplitude.</p>
 <p>The result is clamped to non-negative values. <code class="docutils literal notranslate"><span class="pre">S0</span></code> is accepted for
 API compatibility with the other NiFreeze DWI models but is unused.</p>
-<p class="rubric">Notes</p>
-<p>The kernel round-trip approximately preserves signal scale for the
-<code class="docutils literal notranslate"><span class="pre">&quot;standard&quot;</span></code> (sinc) kernel, but not for <code class="docutils literal notranslate"><span class="pre">&quot;gqi2&quot;</span></code>; prefer
-<code class="docutils literal notranslate"><span class="pre">&quot;standard&quot;</span></code> when the predicted amplitude matters. See
-<a class="reference internal" href="../models.html#gqi-reconstruction-fidelity"><span class="std std-ref">Reconstruction fidelity and the intercept behaviour</span></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>gtab</strong> (<a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.core.html#dipy.core.gradients.GradientTable" title="(in dipy v1.12.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GradientTable</span></code></a>) – Gradients of the predicted signal.</p></li>
+<li><p><strong>S0</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>, optional) – Unused.</p></li>
+<li><p><strong>ridge</strong> (<em>float, optional</em>) – Ridge <span class="math notranslate nohighlight">\(\lambda\)</span>, in units of <span class="math notranslate nohighlight">\(\mathbf{G}\)</span>. Defaults to
+the model’s <code class="docutils literal notranslate"><span class="pre">ridge</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The predicted signal, shaped <code class="docutils literal notranslate"><span class="pre">(n_predicted,)</span></code> for a single voxel
+or <code class="docutils literal notranslate"><span class="pre">(n_voxels,</span> <span class="pre">n_predicted)</span></code> for a masked volume.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nifreeze.model.gqi.GeneralizedQSamplingModel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">GeneralizedQSamplingModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gtab</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'standard'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sphere</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recursion_level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#GeneralizedQSamplingModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.GeneralizedQSamplingModel" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">GeneralizedQSamplingModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gtab</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'standard'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sphere</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recursion_level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ridge</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.3</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#GeneralizedQSamplingModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.GeneralizedQSamplingModel" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.reconst.html#dipy.reconst.odf.OdfModel" title="(in dipy v1.12.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">OdfModel</span></code></a></p>
 <p>Generalized Q-Sampling Imaging.</p>
 <dl class="field-list">
@@ -440,6 +474,9 @@ Defaults to <a class="reference internal" href="#nifreeze.model.gqi.DEFAULT_SPHE
 <a class="reference internal" href="../models.html#gqi-sphere-density"><span class="std std-ref">Sphere density and the default recursion level</span></a> for the experiment justifying the default
 (past the fidelity knee for both single-shell and grid acquisitions,
 while denser spheres only keep paying off for grid/multi-shell data).</p></li>
+<li><p><strong>ridge</strong> (<em>float, optional</em>) – Ridge <span class="math notranslate nohighlight">\(\lambda\)</span> of the signal prediction (see
+<a class="reference internal" href="#nifreeze.model.gqi.GeneralizedQSamplingFit.predict" title="nifreeze.model.gqi.GeneralizedQSamplingFit.predict"><code class="xref py py-meth docutils literal notranslate"><span class="pre">GeneralizedQSamplingFit.predict()</span></code></a>). Defaults to
+<a class="reference internal" href="#nifreeze.model.gqi.DEFAULT_RIDGE" title="nifreeze.model.gqi.DEFAULT_RIDGE"><code class="xref py py-data docutils literal notranslate"><span class="pre">DEFAULT_RIDGE</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -451,11 +488,9 @@ while denser spheres only keep paying off for grid/multi-shell data).</p></li>
 </dd></dl>
 
 <dl class="py data">
-<dt class="sig sig-object py" id="nifreeze.model.gqi.INVERSE_LAMBDA">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">INVERSE_LAMBDA</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1e-06</span></em><a class="headerlink" href="#nifreeze.model.gqi.INVERSE_LAMBDA" title="Link to this definition">¶</a></dt>
-<dd><p>Tikhonov regularization weight <span class="math notranslate nohighlight">\(\lambda_0\)</span> for the reconstruction kernel
-<span class="math notranslate nohighlight">\((\mathbf{K}\mathbf{K}^{\mathsf T} + \lambda_0\mathbf{I})^{-1}\mathbf{K}\)</span>
-(see <a class="reference internal" href="#nifreeze.model.gqi.prediction_kernel" title="nifreeze.model.gqi.prediction_kernel"><code class="xref py py-func docutils literal notranslate"><span class="pre">prediction_kernel()</span></code></a>).</p>
+<dt class="sig sig-object py" id="nifreeze.model.gqi.SHELL_DECIMALS">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">SHELL_DECIMALS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">-2</span></em><a class="headerlink" href="#nifreeze.model.gqi.SHELL_DECIMALS" title="Link to this definition">¶</a></dt>
+<dd><p>Decimals to which b-values are rounded to group the volumes into shells.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -486,34 +521,38 @@ An unknown value falls back to <code class="docutils literal notranslate"><span 
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="nifreeze.model.gqi.prediction_kernel">
-<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">prediction_kernel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gtab</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_lambda</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sphere</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'standard'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#prediction_kernel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.prediction_kernel" title="Link to this definition">¶</a></dt>
-<dd><p>Compute the Tikhonov-regularized reconstruction kernel for GQI.</p>
+<dt class="sig sig-object py" id="nifreeze.model.gqi.shell_bvalues">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">shell_bvalues</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bvals</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#shell_bvalues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.shell_bvalues" title="Link to this definition">¶</a></dt>
+<dd><p>The b-value of each volume’s shell: its b-value rounded to <a class="reference internal" href="#nifreeze.model.gqi.SHELL_DECIMALS" title="nifreeze.model.gqi.SHELL_DECIMALS"><code class="xref py py-data docutils literal notranslate"><span class="pre">SHELL_DECIMALS</span></code></a>.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">shell_bvalues</span><span class="p">([</span><span class="mi">5</span><span class="p">,</span> <span class="mi">995</span><span class="p">,</span> <span class="mi">1010</span><span class="p">,</span> <span class="mi">1990</span><span class="p">,</span> <span class="mi">3020</span><span class="p">])</span>
+<span class="go">array([   0., 1000., 1000., 2000., 3000.])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nifreeze.model.gqi.sphere_gram">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.model.gqi.</span></span><span class="sig-name descname"><span class="pre">sphere_gram</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kernel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/gqi.html#sphere_gram"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.gqi.sphere_gram" title="Link to this definition">¶</a></dt>
+<dd><p>Gram matrix of GQI kernels, averaged over the vertices of the sphere.</p>
+<p>Averaging over the <span class="math notranslate nohighlight">\(n_v\)</span> vertices, rather than summing, keeps the
+ridge of <a class="reference internal" href="#nifreeze.model.gqi.GeneralizedQSamplingFit.predict" title="nifreeze.model.gqi.GeneralizedQSamplingFit.predict"><code class="xref py py-meth docutils literal notranslate"><span class="pre">GeneralizedQSamplingFit.predict()</span></code></a> independent of the
+density of the sphere.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>gtab</strong> (<a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.core.html#dipy.core.gradients.GradientTable" title="(in dipy v1.12.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GradientTable</span></code></a>) – The gradient table for which the kernel is computed.</p></li>
-<li><p><strong>param_lambda</strong> (<em>float</em>) – The GQI sampling length (<span class="math notranslate nohighlight">\(\lambda\)</span>).</p></li>
-<li><p><strong>sphere</strong> (<a class="reference external" href="https://docs.dipy.org/stable/reference/dipy.core.html#dipy.core.sphere.Sphere" title="(in dipy v1.12.0)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sphere</span></code></a>) – The sphere whose vertices define the ODF sampling directions.</p></li>
-<li><p><strong>method</strong> (<em>str, optional</em>) – GQI variant, either <code class="docutils literal notranslate"><span class="pre">&quot;standard&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;gqi2&quot;</span></code>.</p></li>
+<li><p><strong>kernel</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – A forward GQI kernel (<a class="reference internal" href="#nifreeze.model.gqi.gqi_kernel" title="nifreeze.model.gqi.gqi_kernel"><code class="xref py py-func docutils literal notranslate"><span class="pre">gqi_kernel()</span></code></a>), shape <code class="docutils literal notranslate"><span class="pre">(n_a,</span> <span class="pre">n_vertices)</span></code>.</p></li>
+<li><p><strong>other</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>, optional) – Another kernel on the same sphere, shape <code class="docutils literal notranslate"><span class="pre">(n_b,</span> <span class="pre">n_vertices)</span></code>
+(<code class="docutils literal notranslate"><span class="pre">kernel</span></code> itself if not given).</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The reconstruction kernel with shape <code class="docutils literal notranslate"><span class="pre">(n_gradients,</span> <span class="pre">n_vertices)</span></code>.</p>
+<dd class="field-even"><p><span class="math notranslate nohighlight">\(\mathbf{K}_a \mathbf{K}_b^{\mathsf T} / n_v\)</span>, shape <code class="docutils literal notranslate"><span class="pre">(n_a,</span> <span class="pre">n_b)</span></code>.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></p>
 </dd>
 </dl>
-<p class="rubric">Notes</p>
-<p>With the forward GQI kernel <span class="math notranslate nohighlight">\(\mathbf{K} \in \mathbb{R}^{n_g \times n_v}\)</span>,
-the reconstruction kernel is</p>
-<div class="math-wrapper docutils container">
-<div class="math notranslate nohighlight">
-\[\mathbf{K}^{+} = (\mathbf{K} \mathbf{K}^T + \lambda_0 \mathbf{I})^{-1} \mathbf{K}\]</div>
-</div>
-<p>where <span class="math notranslate nohighlight">\(\lambda_0 = 10^{-6}\)</span> (<code class="docutils literal notranslate"><span class="pre">INVERSE_LAMBDA</span></code>) regularizes the
-inversion and <span class="math notranslate nohighlight">\(\mathbf{I}\)</span> is the <span class="math notranslate nohighlight">\(n_g \times n_g\)</span> identity.</p>
 </dd></dl>
 
 </section>
@@ -574,6 +613,7 @@ inversion and <span class="math notranslate nohighlight">\(\mathbf{I}\)</span> i
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">nifreeze.model.gqi module</a><ul>
+<li><a class="reference internal" href="#nifreeze.model.gqi.DEFAULT_RIDGE"><code class="docutils literal notranslate"><span class="pre">DEFAULT_RIDGE</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.model.gqi.DEFAULT_SPHERE_RECURSION_LEVEL"><code class="docutils literal notranslate"><span class="pre">DEFAULT_SPHERE_RECURSION_LEVEL</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.model.gqi.FREE_WATER_DIFFUSIVITY_6D"><code class="docutils literal notranslate"><span class="pre">FREE_WATER_DIFFUSIVITY_6D</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.model.gqi.GeneralizedQSamplingFit"><code class="docutils literal notranslate"><span class="pre">GeneralizedQSamplingFit</span></code></a><ul>
@@ -585,9 +625,10 @@ inversion and <span class="math notranslate nohighlight">\(\mathbf{I}\)</span> i
 <li><a class="reference internal" href="#nifreeze.model.gqi.GeneralizedQSamplingModel.fit"><code class="docutils literal notranslate"><span class="pre">GeneralizedQSamplingModel.fit()</span></code></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#nifreeze.model.gqi.INVERSE_LAMBDA"><code class="docutils literal notranslate"><span class="pre">INVERSE_LAMBDA</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.model.gqi.SHELL_DECIMALS"><code class="docutils literal notranslate"><span class="pre">SHELL_DECIMALS</span></code></a></li>
 <li><a class="reference internal" href="#nifreeze.model.gqi.gqi_kernel"><code class="docutils literal notranslate"><span class="pre">gqi_kernel()</span></code></a></li>
-<li><a class="reference internal" href="#nifreeze.model.gqi.prediction_kernel"><code class="docutils literal notranslate"><span class="pre">prediction_kernel()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.model.gqi.shell_bvalues"><code class="docutils literal notranslate"><span class="pre">shell_bvalues()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.model.gqi.sphere_gram"><code class="docutils literal notranslate"><span class="pre">sphere_gram()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -599,7 +640,7 @@ inversion and <span class="math notranslate nohighlight">\(\mathbf{I}\)</span> i
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=235ee8ed"></script>
+</div><script src="../_static/documentation_options.js?v=66143be3"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

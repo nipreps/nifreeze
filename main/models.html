@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Prediction gallery" href="gallery.html"><link rel="prev" title="Design Principles" href="design.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>Model implementation - nifreeze 26.0.0.dev18 documentation</title>
+        <title>Model implementation - nifreeze 26.0.0.dev27 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev18 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev27 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev18</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev27</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev18</span>
+  <span class="sidebar-brand-text">26.0.0.dev27</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -357,21 +357,32 @@ would only discard that vectorization.</p>
 <h3>GQI as a signal predictor (a NiFreeze extension)<a class="headerlink" href="#gqi-as-a-signal-predictor-a-nifreeze-extension" title="Link to this heading">¶</a></h3>
 <p>Yeh (2010) defines only the <em>forward</em> map signal → SDF. <em>NiFreeze</em> additionally
 needs the <em>inverse</em> to predict the diffusion signal given a b-vector (and -value).
-<a class="reference internal" href="api/nifreeze.model.gqi.html#nifreeze.model.gqi.GeneralizedQSamplingFit.predict" title="nifreeze.model.gqi.GeneralizedQSamplingFit.predict"><code class="xref py py-meth docutils literal notranslate"><span class="pre">predict()</span></code></a> composes the
-forward GQI kernel with a Tikhonov-regularized reconstruction kernel
-(<a class="reference internal" href="api/nifreeze.model.gqi.html#nifreeze.model.gqi.prediction_kernel" title="nifreeze.model.gqi.prediction_kernel"><code class="xref py py-func docutils literal notranslate"><span class="pre">prediction_kernel()</span></code></a>):</p>
+<a class="reference internal" href="api/nifreeze.model.gqi.html#nifreeze.model.gqi.GeneralizedQSamplingFit.predict" title="nifreeze.model.gqi.GeneralizedQSamplingFit.predict"><code class="xref py py-meth docutils literal notranslate"><span class="pre">predict()</span></code></a> uses the GQI basis
+as the kernel of a ridge regression, around an unpenalized mean per shell:</p>
 <div class="math-wrapper docutils container">
 <div class="math notranslate nohighlight">
-\[\mathbf{K}^{+} = (\mathbf{K}\mathbf{K}^{\mathsf T} + \lambda_0 \mathbf{I})^{-1}
-\mathbf{K}, \qquad \lambda_0 = 10^{-6}.\]</div>
+\[\hat{\mathbf{y}}_o = \mathbf{G}_o (\mathbf{G} + \lambda\mathbf{I})^{-1}
+(\mathbf{y} - \mathbf{m}) + \mathbf{m}_o, \qquad
+\mathbf{G} = \mathbf{K}\mathbf{K}^{\mathsf T} / n_v,\]</div>
 </div>
-<p>This is the regularized least-squares signal whose forward GQI transform
-reproduces the fitted SDF. It is a <em>NiFreeze</em> modeling choice and is <strong>not</strong> part
-of Yeh (2010).</p>
+<p>where <span class="math notranslate nohighlight">\(\mathbf{G}\)</span> is the Gram matrix of the fitted gradients averaged over
+the <span class="math notranslate nohighlight">\(n_v\)</span> vertices of the sphere (<a class="reference internal" href="api/nifreeze.model.gqi.html#nifreeze.model.gqi.sphere_gram" title="nifreeze.model.gqi.sphere_gram"><code class="xref py py-func docutils literal notranslate"><span class="pre">sphere_gram()</span></code></a>),
+<span class="math notranslate nohighlight">\(\mathbf{G}_o\)</span> that of the predicted gradients with them, <span class="math notranslate nohighlight">\(\mathbf{m}\)</span>
+the mean of each fitted volume’s shell and <span class="math notranslate nohighlight">\(\mathbf{m}_o\)</span> that of the
+nearest shell to each predicted b-value. As <span class="math notranslate nohighlight">\(\lambda \to 0\)</span> the prediction
+interpolates the fitted data, and as <span class="math notranslate nohighlight">\(\lambda \to \infty\)</span> it returns the
+shell mean; at every <span class="math notranslate nohighlight">\(\lambda\)</span> it keeps the shell’s amplitude. It is a
+<em>NiFreeze</em> modeling choice and is <strong>not</strong> part of Yeh (2010).</p>
+<p>An earlier prediction divided by the norm of the predicted direction’s own kernel
+row, instead of using the Gram matrix of the fitted gradients, and overscaled the
+signal 30 to 80 times on held-out volumes (<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/495">#495</a>).</p>
 </section>
 <section id="reconstruction-fidelity-and-the-intercept-behaviour">
 <span id="gqi-reconstruction-fidelity"></span><h3>Reconstruction fidelity and the intercept behaviour<a class="headerlink" href="#reconstruction-fidelity-and-the-intercept-behaviour" title="Link to this heading">¶</a></h3>
-<p>Applied to the signal, the round-trip operator is
+<p>This characterization predates the ridge path: it is of the earlier round trip,
+without a mean per shell and with a vanishing ridge <span class="math notranslate nohighlight">\(\lambda_0 = 10^{-6}\)</span>
+(in units of <span class="math notranslate nohighlight">\(\mathbf{K}\mathbf{K}^{\mathsf T}\)</span>).
+Applied to the signal, the round-trip operator is
 <span class="math notranslate nohighlight">\(\mathbf{P} = \mathbf{A}(\mathbf{A}+\lambda_0\mathbf{I})^{-1}\)</span> with
 <span class="math notranslate nohighlight">\(\mathbf{A} = \mathbf{K}\mathbf{K}^{\mathsf T}\)</span>. Empirically, on
 diffusion-weighted (<code class="docutils literal notranslate"><span class="pre">b</span> <span class="pre">&gt;</span> <span class="pre">0</span></code>) volumes:</p>
@@ -416,7 +427,7 @@ downstream <em>quantitative</em> use of the predicted signal.</p>
 default, <a class="reference internal" href="api/nifreeze.model.gqi.html#nifreeze.model.gqi.DEFAULT_SPHERE_RECURSION_LEVEL" title="nifreeze.model.gqi.DEFAULT_SPHERE_RECURSION_LEVEL"><code class="xref py py-data docutils literal notranslate"><span class="pre">DEFAULT_SPHERE_RECURSION_LEVEL</span></code></a> = 5 (1026
 vertices), was chosen from the following experiment.</p>
 <p><strong>Settings.</strong> <code class="docutils literal notranslate"><span class="pre">method=&quot;standard&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">sampling_length</span></code> <span class="math notranslate nohighlight">\(\sigma = 1.2\)</span>,
-<code class="docutils literal notranslate"><span class="pre">INVERSE_LAMBDA</span></code> <span class="math notranslate nohighlight">\(\lambda_0 = 10^{-6}\)</span>. Metric: per-voxel round-trip
+<span class="math notranslate nohighlight">\(\lambda_0 = 10^{-6}\)</span>. Metric: per-voxel round-trip
 slope (fit the model on the diffusion-weighted set, reconstruct that <em>same</em> set,
 then take the least-squares slope of predicted vs. observed, averaged over
 voxels) and the mean per-voxel correlation. <strong>No direction is held out</strong>: this
@@ -521,6 +532,130 @@ build) for no single-shell benefit, so they are opt-in rather than the default.<
 </pre></div>
 </div>
 </section>
+<section id="the-ridge-and-its-default">
+<span id="gqi-ridge"></span><h3>The ridge and its default<a class="headerlink" href="#the-ridge-and-its-default" title="Link to this heading">¶</a></h3>
+<p>The ridge <span class="math notranslate nohighlight">\(\lambda\)</span> of the prediction (<code class="docutils literal notranslate"><span class="pre">ridge</span></code>, a parameter of
+<a class="reference internal" href="api/nifreeze.model.gqi.html#nifreeze.model.gqi.GeneralizedQSamplingModel" title="nifreeze.model.gqi.GeneralizedQSamplingModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GeneralizedQSamplingModel</span></code></a>) trades interpolation of
+the fitted data for smoothing toward the shell means. The default of
+<a class="reference internal" href="api/nifreeze.model.dmri.html#nifreeze.model.dmri.GQIModel" title="nifreeze.model.dmri.GQIModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GQIModel</span></code></a> and <a class="reference internal" href="api/nifreeze.model.dmri.html#nifreeze.model.dmri.GQIKRRModel" title="nifreeze.model.dmri.GQIKRRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GQIKRRModel</span></code></a>,
+<a class="reference internal" href="api/nifreeze.model.gqi.html#nifreeze.model.gqi.DEFAULT_RIDGE" title="nifreeze.model.gqi.DEFAULT_RIDGE"><code class="xref py py-data docutils literal notranslate"><span class="pre">DEFAULT_RIDGE</span></code></a> = 0.3, was chosen from the following
+experiment.</p>
+<p><strong>Settings.</strong> <code class="docutils literal notranslate"><span class="pre">method=&quot;standard&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">sampling_length</span></code> <span class="math notranslate nohighlight">\(\sigma = 1.2\)</span>,
+<code class="docutils literal notranslate"><span class="pre">recursion_level</span></code> 5. Each diffusion-weighted volume (b=0 excluded) is predicted
+from all the others, in closed form, at each ridge of
+<a class="reference internal" href="api/nifreeze.model.lovo.html#nifreeze.model.lovo.DEFAULT_KRR_LAMBDA_GRID" title="nifreeze.model.lovo.DEFAULT_KRR_LAMBDA_GRID"><code class="xref py py-data docutils literal notranslate"><span class="pre">DEFAULT_KRR_LAMBDA_GRID</span></code></a>. Metrics: the squared error
+normalized by each voxel’s signal energy, averaged over 5000 voxels drawn from the
+brain; and, at the ridge with the lowest error, the median over volumes of the
+ratio between the predicted and observed mean signals (amplitude).</p>
+<p><strong>Data.</strong> The grid and single-shell data of <a class="reference internal" href="#gqi-sphere-density"><span class="std std-ref">Sphere density and the default recursion level</span></a>, and DIPY’s
+Sherbrooke 3-shell dataset (<code class="docutils literal notranslate"><span class="pre">get_fnames(&quot;sherbrooke_3shell&quot;)</span></code>: b=1000, 2000 and
+3500, 64 directions each), slab <code class="docutils literal notranslate"><span class="pre">[32:96,</span> <span class="pre">32:96,</span> <span class="pre">25:35]</span></code>, with the brain defined
+as for the single-shell data. b=0 excluded in all three.</p>
+<div class="table-wrapper docutils container" id="id7">
+<table class="docutils align-default" id="id7">
+<caption><span class="caption-number">Table 2 </span><span class="caption-text">Leave-one-volume-out error of GQI along the ridge path</span><a class="headerlink" href="#id7" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>ridge</p></th>
+<th class="head"><p>grid (dsi_voxels), 101 volumes</p></th>
+<th class="head"><p>single-shell (stanford_hardi), 150 volumes</p></th>
+<th class="head"><p>multi-shell (sherbrooke_3shell), 192 volumes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0.0001</p></td>
+<td><p>0.0538</p></td>
+<td><p>0.0912</p></td>
+<td><p>0.1598</p></td>
+</tr>
+<tr class="row-odd"><td><p>0.00032</p></td>
+<td><p>0.0428</p></td>
+<td><p>0.0886</p></td>
+<td><p>0.1428</p></td>
+</tr>
+<tr class="row-even"><td><p>0.001</p></td>
+<td><p>0.0356</p></td>
+<td><p>0.0847</p></td>
+<td><p>0.1300</p></td>
+</tr>
+<tr class="row-odd"><td><p>0.0032</p></td>
+<td><p>0.0302</p></td>
+<td><p>0.0804</p></td>
+<td><p>0.1222</p></td>
+</tr>
+<tr class="row-even"><td><p>0.01</p></td>
+<td><p>0.0261</p></td>
+<td><p>0.0774</p></td>
+<td><p>0.1155</p></td>
+</tr>
+<tr class="row-odd"><td><p>0.032</p></td>
+<td><p>0.0236</p></td>
+<td><p>0.0749</p></td>
+<td><p>0.1099</p></td>
+</tr>
+<tr class="row-even"><td><p>0.1</p></td>
+<td><p>0.0230</p></td>
+<td><p>0.0719</p></td>
+<td><p>0.1058</p></td>
+</tr>
+<tr class="row-odd"><td><p>0.32</p></td>
+<td><p>0.0252</p></td>
+<td><p>0.0698</p></td>
+<td><p>0.1022</p></td>
+</tr>
+<tr class="row-even"><td><p>1</p></td>
+<td><p>0.0330</p></td>
+<td><p>0.0705</p></td>
+<td><p>0.0997</p></td>
+</tr>
+<tr class="row-odd"><td><p>3.2</p></td>
+<td><p>0.0455</p></td>
+<td><p>0.0779</p></td>
+<td><p>0.0990</p></td>
+</tr>
+<tr class="row-even"><td><p>10</p></td>
+<td><p>0.0558</p></td>
+<td><p>0.0900</p></td>
+<td><p>0.1004</p></td>
+</tr>
+<tr class="row-odd"><td><p>32</p></td>
+<td><p>0.0607</p></td>
+<td><p>0.0985</p></td>
+<td><p>0.1019</p></td>
+</tr>
+<tr class="row-even"><td><p>1e+02</p></td>
+<td><p>0.0626</p></td>
+<td><p>0.1023</p></td>
+<td><p>0.1027</p></td>
+</tr>
+<tr class="row-odd"><td><p>selected</p></td>
+<td><p>0.1</p></td>
+<td><p>0.32</p></td>
+<td><p>3.2</p></td>
+</tr>
+<tr class="row-even"><td><p>amplitude</p></td>
+<td><p>1.000</p></td>
+<td><p>0.997</p></td>
+<td><p>1.000</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Reading.</strong> Every curve has an interior minimum, and the amplitude is within
+0.3% of the observed one at each. The selected ridge grows as the basis
+represents the signal less well: the grid acquisition interpolates best (0.1),
+the single shell needs more smoothing (0.32), and the multi-shell data the most
+(3.2). There, the curve is nearly flat from 1 to 100: across shells, the sinc
+basis predicts barely better than the shell means (0.099 against 0.103 at the
+largest ridge).</p>
+<p><strong>Decision.</strong> The default ridge is the single-shell optimum. Against their own
+optima, it costs 10% on the grid data and 3% on the multi-shell data.
+<a class="reference internal" href="api/nifreeze.model.dmri.html#nifreeze.model.dmri.GQIKRRModel" title="nifreeze.model.dmri.GQIKRRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GQIKRRModel</span></code></a> shares it. Asked to choose the ridge on
+the data it is built on (<code class="docutils literal notranslate"><span class="pre">krr_lambda=None</span></code>), it chooses a larger one where volumes
+moved: on the CI phantom, 0.32 on the reference and 1.0 on every copy with motion
+(<a class="reference external" href="https://github.com/nipreps/nifreeze/pull/605">#605</a>). Its targets would then
+change with the motion through the ridge as well, so the choice is opt-in.</p>
+<p><strong>Reproduction.</strong> <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">tools/gqi_ridge.py</span></code> prints the table.</p>
+</section>
 </section>
 <section id="closed-form-leave-one-volume-out-prediction">
 <span id="closed-form-lovo"></span><h2>Closed-form leave-one-volume-out prediction<a class="headerlink" href="#closed-form-leave-one-volume-out-prediction" title="Link to this heading">¶</a></h2>
@@ -557,15 +692,17 @@ Hyperparameters <span class="math notranslate nohighlight">\(\theta\)</span> are
 random subsample of voxels across all volumes (<code class="docutils literal notranslate"><span class="pre">nvox_prefit</span></code>, CLI
 <code class="docutils literal notranslate"><span class="pre">--nvox-prefit</span></code>, 1000 by default).</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">gqi-krr</span></code> (<a class="reference internal" href="api/nifreeze.model.dmri.html#nifreeze.model.dmri.GQIKRRModel" title="nifreeze.model.dmri.GQIKRRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GQIKRRModel</span></code></a>)</dt><dd><p>GQI <a class="footnote-reference brackets" href="#footcite-yeh-generalized-2010" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a> as kernel ridge regression. The GQI
-basis <span class="math notranslate nohighlight">\(\mathbf{K}\)</span> induces the q-space Gram matrix
-<span class="math notranslate nohighlight">\(\mathbf{G} = \mathbf{K}\mathbf{K}^{\mathsf T}\)</span> and
-<span class="math notranslate nohighlight">\(\mathbf{A} = \mathbf{G} + \lambda\mathbf{I}\)</span>, with <span class="math notranslate nohighlight">\(\lambda\)</span>
-relative to the mean diagonal of <span class="math notranslate nohighlight">\(\mathbf{G}\)</span>. Unlike the one-row
-prediction of <a class="reference internal" href="api/nifreeze.model.dmri.html#nifreeze.model.dmri.GQIModel" title="nifreeze.model.dmri.GQIModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GQIModel</span></code></a>, which normalizes by the
-target direction’s own norm and overscales the signal, it predicts from the
-training Gram matrix. <span class="math notranslate nohighlight">\(\lambda\)</span> is given (<code class="docutils literal notranslate"><span class="pre">krr_lambda</span></code>) or chosen by
-closed-form LOVO error (<a class="reference internal" href="api/nifreeze.model.lovo.html#nifreeze.model.lovo.select_krr_lambda" title="nifreeze.model.lovo.select_krr_lambda"><code class="xref py py-func docutils literal notranslate"><span class="pre">select_krr_lambda()</span></code></a>).</p>
+<dt><code class="docutils literal notranslate"><span class="pre">gqi-krr</span></code> (<a class="reference internal" href="api/nifreeze.model.dmri.html#nifreeze.model.dmri.GQIKRRModel" title="nifreeze.model.dmri.GQIKRRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GQIKRRModel</span></code></a>)</dt><dd><p>GQI <a class="footnote-reference brackets" href="#footcite-yeh-generalized-2010" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a> as kernel ridge regression, the
+prediction of <a class="reference internal" href="api/nifreeze.model.dmri.html#nifreeze.model.dmri.GQIModel" title="nifreeze.model.dmri.GQIModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GQIModel</span></code></a> (see <a class="reference internal" href="#gqi-models"><span class="std std-ref">Generalized q-Sampling Imaging (GQI)</span></a>)
+in closed form: <span class="math notranslate nohighlight">\(\mathbf{A} = \mathbf{G} + \lambda\mathbf{I}\)</span>, with
+<span class="math notranslate nohighlight">\(\mathbf{G} = \mathbf{K}\mathbf{K}^{\mathsf T} / n_v\)</span> the Gram matrix of
+the GQI basis averaged over the sphere. Like the refitting model, it predicts
+around the mean of each shell, estimated on the training volumes
+(<code class="docutils literal notranslate"><span class="pre">shells</span></code> of <a class="reference internal" href="api/nifreeze.model.lovo.html#nifreeze.model.lovo.lovo_smoother" title="nifreeze.model.lovo.lovo_smoother"><code class="xref py py-func docutils literal notranslate"><span class="pre">lovo_smoother()</span></code></a>), and at the same
+<span class="math notranslate nohighlight">\(\lambda\)</span> both give the same predictions. <span class="math notranslate nohighlight">\(\lambda\)</span> defaults to
+that of <a class="reference internal" href="api/nifreeze.model.dmri.html#nifreeze.model.dmri.GQIModel" title="nifreeze.model.dmri.GQIModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GQIModel</span></code></a> (see <a class="reference internal" href="#gqi-ridge"><span class="std std-ref">The ridge and its default</span></a>). It can
+be given (<code class="docutils literal notranslate"><span class="pre">krr_lambda</span></code>, or <code class="docutils literal notranslate"><span class="pre">ridge</span></code>), or chosen by closed-form LOVO error
+with <code class="docutils literal notranslate"><span class="pre">krr_lambda=None</span></code> (<a class="reference internal" href="api/nifreeze.model.lovo.html#nifreeze.model.lovo.select_krr_lambda" title="nifreeze.model.lovo.select_krr_lambda"><code class="xref py py-func docutils literal notranslate"><span class="pre">select_krr_lambda()</span></code></a>).</p>
 </dd>
 </dl>
 <p><strong>Held-out independence.</strong> No prediction uses the held-out volume, so single-fit
@@ -680,6 +817,7 @@ where Patch2Self regresses each volume on the others
 <li><a class="reference internal" href="#gqi-as-a-signal-predictor-a-nifreeze-extension">GQI as a signal predictor (a NiFreeze extension)</a></li>
 <li><a class="reference internal" href="#reconstruction-fidelity-and-the-intercept-behaviour">Reconstruction fidelity and the intercept behaviour</a></li>
 <li><a class="reference internal" href="#sphere-density-and-the-default-recursion-level">Sphere density and the default recursion level</a></li>
+<li><a class="reference internal" href="#the-ridge-and-its-default">The ridge and its default</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#closed-form-leave-one-volume-out-prediction">Closed-form leave-one-volume-out prediction</a></li>
@@ -694,7 +832,7 @@ where Patch2Self regresses each volume on the others
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=235ee8ed"></script>
+</div><script src="_static/documentation_options.js?v=66143be3"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

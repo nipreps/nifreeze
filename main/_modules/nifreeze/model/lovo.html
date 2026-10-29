@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.lovo - nifreeze 26.0.0.dev18 documentation</title>
+        <title>nifreeze.model.lovo - nifreeze 26.0.0.dev27 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev18 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev27 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev18</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev27</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev18</span>
+  <span class="sidebar-brand-text">26.0.0.dev27</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -382,8 +382,8 @@
 <span class="kn">from</span> <span class="nn">nifreeze.model._dipy</span> <span class="kn">import</span> <span class="n">DEFAULT_NVOX_PREFIT</span><span class="p">,</span> <span class="n">GP_JITTER</span>
 <span class="kn">from</span> <span class="nn">nifreeze.model.gpr</span> <span class="kn">import</span> <span class="n">LBFGS_DEFAULT_GTOL</span><span class="p">,</span> <span class="n">DiffusionGPR</span>
 
-<span class="n">DEFAULT_KRR_LAMBDA_GRID</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">11</span><span class="p">))</span>
-<span class="sd">&quot;&quot;&quot;Default grid of ridge strengths (relative to the mean Gram diagonal).&quot;&quot;&quot;</span>
+<span class="n">DEFAULT_KRR_LAMBDA_GRID</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">13</span><span class="p">))</span>
+<span class="sd">&quot;&quot;&quot;Default grid of ridge strengths (in units of :func:`~nifreeze.model.gqi.sphere_gram`).&quot;&quot;&quot;</span>
 
 <span class="n">HYPERPARAMETERS_SCHEMA</span> <span class="o">=</span> <span class="s2">&quot;nifreeze-gp-hyperparameters/1&quot;</span>
 <span class="sd">&quot;&quot;&quot;Schema identifier written to (and required from) hyperparameter files.&quot;&quot;&quot;</span>
@@ -400,7 +400,9 @@
 
 <div class="viewcode-block" id="lovo_smoother">
 <a class="viewcode-back" href="../../../api/nifreeze.model.lovo.html#nifreeze.model.lovo.lovo_smoother">[docs]</a>
-<span class="k">def</span> <span class="nf">lovo_smoother</span><span class="p">(</span><span class="n">covariance</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">center</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="k">def</span> <span class="nf">lovo_smoother</span><span class="p">(</span>
+    <span class="n">covariance</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">center</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">shells</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Build the closed-form leave-one-volume-out smoother from a covariance matrix.</span>
 
@@ -414,13 +416,20 @@
 <span class="sd">        training volumes (as scikit-learn&#39;s ``normalize_y=True`` does). The</span>
 <span class="sd">        standard deviation of the normalization cancels in the posterior mean,</span>
 <span class="sd">        so only the mean needs correcting.</span>
+<span class="sd">    shells : :obj:`~numpy.ndarray`, optional</span>
+<span class="sd">        The shell (b-value) of each volume. The predictor then estimates the</span>
+<span class="sd">        mean of each shell on the training volumes, as</span>
+<span class="sd">        :meth:`~nifreeze.model.gqi.GeneralizedQSamplingFit.predict` does, and</span>
+<span class="sd">        predicts each volume around its shell&#39;s mean (the nearest shell&#39;s, if</span>
+<span class="sd">        no other volume is in its shell). Excludes ``center``.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    :obj:`~numpy.ndarray`</span>
 <span class="sd">        The smoother :math:`\mathbf{S}` of shape ``(N, N)``. Row :math:`i` holds</span>
 <span class="sd">        the weights predicting volume :math:`i` from all the others, and its</span>
-<span class="sd">        diagonal is zero. With ``center=True``, every row sums to one.</span>
+<span class="sd">        diagonal is zero. With ``center=True`` or ``shells``, every row sums</span>
+<span class="sd">        to one.</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
@@ -430,8 +439,12 @@
 <span class="sd">    True</span>
 <span class="sd">    &gt;&gt;&gt; bool(np.allclose(lovo_smoother(A, center=True).sum(axis=1), 1.0))</span>
 <span class="sd">    True</span>
+<span class="sd">    &gt;&gt;&gt; bool(np.allclose(lovo_smoother(A, shells=np.zeros(3)), lovo_smoother(A, center=True)))</span>
+<span class="sd">    True</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">center</span> <span class="ow">and</span> <span class="n">shells</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;A smoother estimates either one mean (center) or one per shell.&quot;</span><span class="p">)</span>
     <span class="n">n_volumes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">covariance</span><span class="p">)</span>
     <span class="n">eigenvalues</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigvalsh</span><span class="p">(</span><span class="n">covariance</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">eigenvalues</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="p">(</span><span class="n">cond</span> <span class="o">:=</span> <span class="n">eigenvalues</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">eigenvalues</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&gt;</span> <span class="p">(</span>
@@ -449,8 +462,39 @@
     <span class="k">if</span> <span class="n">center</span><span class="p">:</span>
         <span class="n">smoother</span> <span class="o">+=</span> <span class="p">((</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">smoother</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">n_volumes</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
         <span class="n">np</span><span class="o">.</span><span class="n">fill_diagonal</span><span class="p">(</span><span class="n">smoother</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">shells</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">smoother</span> <span class="o">=</span> <span class="n">_shell_means</span><span class="p">(</span><span class="n">smoother</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">shells</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">smoother</span></div>
 
+
+
+<span class="k">def</span> <span class="nf">_shell_means</span><span class="p">(</span><span class="n">smoother</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">shells</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Predict around the mean of each shell, estimated on the training volumes.</span>
+
+<span class="sd">    Row :math:`i` of ``smoother`` weights the training volumes :math:`j \neq i`.</span>
+<span class="sd">    With :math:`m_s` the mean of the training volumes of shell :math:`s` and</span>
+<span class="sd">    :math:`s_i` the shell that volume :math:`i` is predicted from, the</span>
+<span class="sd">    prediction :math:`\sum_j S_{ij} (y_j - m_{s_j}) + m_{s_i}` is linear in the</span>
+<span class="sd">    data, and this function returns its weights.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n_volumes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">smoother</span><span class="p">)</span>
+    <span class="n">labels</span><span class="p">,</span> <span class="n">shell</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">shells</span><span class="p">,</span> <span class="n">return_inverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">members</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">))[</span><span class="n">shell</span><span class="p">]</span>  <span class="c1"># (N, n_shells)</span>
+    <span class="c1"># Training volumes of each shell, without the predicted volume itself</span>
+    <span class="n">counts</span> <span class="o">=</span> <span class="n">members</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">-</span> <span class="n">members</span>
+    <span class="c1"># Each volume is predicted from its own shell, or the nearest one with training volumes</span>
+    <span class="n">distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">labels</span><span class="p">[</span><span class="n">shell</span><span class="p">][:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">-</span> <span class="n">labels</span><span class="p">)</span>
+    <span class="n">distance</span><span class="p">[</span><span class="n">counts</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">distance</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_volumes</span><span class="p">)</span>
+
+    <span class="n">shares</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">smoother</span> <span class="o">@</span> <span class="n">members</span><span class="p">,</span> <span class="n">counts</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">counts</span><span class="p">),</span> <span class="n">where</span><span class="o">=</span><span class="n">counts</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">own</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">counts</span><span class="p">)</span>
+    <span class="n">own</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="n">target</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">counts</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="n">target</span><span class="p">]</span>
+    <span class="n">smoother</span> <span class="o">=</span> <span class="n">smoother</span> <span class="o">+</span> <span class="p">(</span><span class="n">own</span> <span class="o">-</span> <span class="n">shares</span><span class="p">)</span> <span class="o">@</span> <span class="n">members</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">fill_diagonal</span><span class="p">(</span><span class="n">smoother</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">smoother</span>
 
 
 <div class="viewcode-block" id="lovo_error">
@@ -486,6 +530,7 @@
     <span class="n">grams</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
     <span class="n">signals</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
     <span class="n">grid</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">DEFAULT_KRR_LAMBDA_GRID</span><span class="p">,</span>
+    <span class="n">shells</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Choose a ridge strength by closed-form LOVO error, pooled over datasets.</span>
@@ -498,6 +543,9 @@
 <span class="sd">        One signal matrix of shape ``(N_s, V_s)`` per dataset.</span>
 <span class="sd">    grid : :obj:`~typing.Sequence` of :obj:`float`, optional</span>
 <span class="sd">        Candidate ridge strengths, added to the diagonal of each Gram matrix.</span>
+<span class="sd">    shells : :obj:`~typing.Sequence` of :obj:`~numpy.ndarray`, optional</span>
+<span class="sd">        The shell of each volume, per dataset, when the predictor estimates a</span>
+<span class="sd">        mean per shell (see :func:`lovo_smoother`).</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -505,10 +553,11 @@
 <span class="sd">        The ridge strength with the lowest summed LOVO error.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">shells</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">grams</span><span class="p">)</span> <span class="k">if</span> <span class="n">shells</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">shells</span>
     <span class="n">errors</span> <span class="o">=</span> <span class="p">[</span>
         <span class="nb">sum</span><span class="p">(</span>
-            <span class="n">lovo_error</span><span class="p">(</span><span class="n">lovo_smoother</span><span class="p">(</span><span class="n">gram</span> <span class="o">+</span> <span class="n">lam</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">gram</span><span class="p">))),</span> <span class="n">y</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">gram</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">grams</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">lovo_error</span><span class="p">(</span><span class="n">lovo_smoother</span><span class="p">(</span><span class="n">gram</span> <span class="o">+</span> <span class="n">lam</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">gram</span><span class="p">)),</span> <span class="n">shells</span><span class="o">=</span><span class="n">shell</span><span class="p">),</span> <span class="n">y</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">gram</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">shell</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">grams</span><span class="p">,</span> <span class="n">signals</span><span class="p">,</span> <span class="n">shells</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="p">)</span>
         <span class="k">for</span> <span class="n">lam</span> <span class="ow">in</span> <span class="n">grid</span>
     <span class="p">]</span>
@@ -769,6 +818,10 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the ``(N, N)`` covariance of the volumes for ``gradients``.&quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
+    <span class="k">def</span> <span class="nf">_shells</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gradients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the shell of each volume if the predictor estimates a mean per shell.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
     <span class="k">def</span> <span class="nf">_postprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">predicted</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Post-process the predicted signals of the masked voxels.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">predicted</span>
@@ -821,7 +874,11 @@
             <span class="n">gradients</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_smoother_gradients</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_smoother</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">stale</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_smoother</span> <span class="o">=</span> <span class="n">lovo_smoother</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_covariance</span><span class="p">(</span><span class="n">gradients</span><span class="p">),</span> <span class="n">center</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_center</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_smoother</span> <span class="o">=</span> <span class="n">lovo_smoother</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_covariance</span><span class="p">(</span><span class="n">gradients</span><span class="p">),</span>
+                <span class="n">center</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_center</span><span class="p">,</span>
+                <span class="n">shells</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_shells</span><span class="p">(</span><span class="n">gradients</span><span class="p">),</span>
+            <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_smoother_gradients</span> <span class="o">=</span> <span class="n">gradients</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="k">return</span> <span class="mi">1</span>
 
@@ -874,7 +931,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=235ee8ed"></script>
+</div><script src="../../../_static/documentation_options.js?v=66143be3"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

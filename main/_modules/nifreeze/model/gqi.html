@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.gqi - nifreeze 26.0.0.dev18 documentation</title>
+        <title>nifreeze.model.gqi - nifreeze 26.0.0.dev27 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev18 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev27 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev18</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev27</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev18</span>
+  <span class="sidebar-brand-text">26.0.0.dev27</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -396,12 +396,15 @@
 <span class="kn">from</span> <span class="nn">dipy.reconst.gqi</span> <span class="kn">import</span> <span class="n">squared_radial_component</span>
 <span class="kn">from</span> <span class="nn">dipy.reconst.odf</span> <span class="kn">import</span> <span class="n">OdfFit</span><span class="p">,</span> <span class="n">OdfModel</span>
 
-<span class="n">INVERSE_LAMBDA</span> <span class="o">=</span> <span class="mf">1e-6</span>
+<span class="n">DEFAULT_RIDGE</span> <span class="o">=</span> <span class="mf">0.3</span>
 <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Tikhonov regularization weight :math:`\lambda_0` for the reconstruction kernel</span>
-<span class="sd">:math:`(\mathbf{K}\mathbf{K}^{\mathsf T} + \lambda_0\mathbf{I})^{-1}\mathbf{K}`</span>
-<span class="sd">(see :func:`prediction_kernel`).</span>
+<span class="sd">Default ridge :math:`\lambda` of the prediction, in units of the Gram matrix</span>
+<span class="sd">averaged over the sphere (see :meth:`GeneralizedQSamplingFit.predict`); see</span>
+<span class="sd">:ref:`gqi-ridge` for the experiment justifying it.</span>
 <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">SHELL_DECIMALS</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span>
+<span class="sd">&quot;&quot;&quot;Decimals to which b-values are rounded to group the volumes into shells.&quot;&quot;&quot;</span>
 
 <span class="n">DEFAULT_SPHERE_RECURSION_LEVEL</span> <span class="o">=</span> <span class="mi">5</span>
 <span class="sd">&quot;&quot;&quot;</span>
@@ -427,6 +430,7 @@
         <span class="n">sampling_length</span><span class="o">=</span><span class="mf">1.2</span><span class="p">,</span>
         <span class="n">sphere</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">recursion_level</span><span class="o">=</span><span class="n">DEFAULT_SPHERE_RECURSION_LEVEL</span><span class="p">,</span>
+        <span class="n">ridge</span><span class="o">=</span><span class="n">DEFAULT_RIDGE</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Generalized Q-Sampling Imaging.</span>
 
@@ -458,9 +462,14 @@
 <span class="sd">            :ref:`gqi-sphere-density` for the experiment justifying the default</span>
 <span class="sd">            (past the fidelity knee for both single-shell and grid acquisitions,</span>
 <span class="sd">            while denser spheres only keep paying off for grid/multi-shell data).</span>
+<span class="sd">        ridge : float, optional</span>
+<span class="sd">            Ridge :math:`\lambda` of the signal prediction (see</span>
+<span class="sd">            :meth:`GeneralizedQSamplingFit.predict`). Defaults to</span>
+<span class="sd">            :data:`DEFAULT_RIDGE`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">OdfModel</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gtab</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="n">method</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ridge</span> <span class="o">=</span> <span class="n">ridge</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">Lambda</span> <span class="o">=</span> <span class="n">sampling_length</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">gtab</span> <span class="o">=</span> <span class="n">gtab</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sphere</span> <span class="o">=</span> <span class="p">(</span>
@@ -542,48 +551,79 @@
 
 <div class="viewcode-block" id="GeneralizedQSamplingFit.predict">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.GeneralizedQSamplingFit.predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gtab</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">S0</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gtab</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">S0</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ridge</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Predict the diffusion signal on ``gtab`` from the fitted data.</span>
 
 <span class="sd">        .. note::</span>
 
 <span class="sd">           This signal-to-signal prediction is a **NiFreeze extension** of GQI;</span>
 <span class="sd">           Yeh et al. (2010) defines only the forward signal-to-SDF transform.</span>
-<span class="sd">           It maps the fitted signal to the SDF and back via a</span>
-<span class="sd">           Tikhonov-regularized reconstruction kernel</span>
-<span class="sd">           (:func:`prediction_kernel`). See :ref:`gqi-models` for the</span>
-<span class="sd">           construction.</span>
+<span class="sd">           See :ref:`gqi-models` for the construction.</span>
+
+<span class="sd">        The prediction is kernel ridge regression on the GQI basis, around an</span>
+<span class="sd">        unpenalized mean per shell:</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">           \hat{\mathbf{y}}_o = \mathbf{G}_o (\mathbf{G} + \lambda\mathbf{I})^{-1}</span>
+<span class="sd">           (\mathbf{y} - \mathbf{m}) + \mathbf{m}_o,</span>
+
+<span class="sd">        with :math:`\mathbf{G} = \mathbf{K}\mathbf{K}^{\mathsf T} / n_v` the Gram</span>
+<span class="sd">        matrix of the fitted gradients averaged over the :math:`n_v` vertices of</span>
+<span class="sd">        the sphere (:func:`sphere_gram`), :math:`\mathbf{G}_o` that of the</span>
+<span class="sd">        predicted gradients with the fitted ones, :math:`\mathbf{m}` the mean of</span>
+<span class="sd">        each fitted volume&#39;s shell, and :math:`\mathbf{m}_o` the mean of the</span>
+<span class="sd">        fitted shell nearest to each predicted b-value (shells are b-values</span>
+<span class="sd">        rounded to :data:`SHELL_DECIMALS`). As :math:`\lambda \to 0` the</span>
+<span class="sd">        prediction interpolates the fitted data, and as :math:`\lambda \to</span>
+<span class="sd">        \infty` it returns the shell mean; at every :math:`\lambda` it keeps</span>
+<span class="sd">        the shell&#39;s amplitude.</span>
 
 <span class="sd">        The result is clamped to non-negative values. ``S0`` is accepted for</span>
 <span class="sd">        API compatibility with the other NiFreeze DWI models but is unused.</span>
 
-<span class="sd">        Notes</span>
-<span class="sd">        -----</span>
-<span class="sd">        The kernel round-trip approximately preserves signal scale for the</span>
-<span class="sd">        ``&quot;standard&quot;`` (sinc) kernel, but not for ``&quot;gqi2&quot;``; prefer</span>
-<span class="sd">        ``&quot;standard&quot;`` when the predicted amplitude matters. See</span>
-<span class="sd">        :ref:`gqi-reconstruction-fidelity`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># ``model.kernel`` is (n_gradients_in, n_vertices); transpose it to</span>
-        <span class="c1"># contract the shared vertex axis against the reconstruction kernel,</span>
-        <span class="c1"># yielding the fused (n_gradients_out, n_gradients_in) operator.</span>
-        <span class="n">K</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">prediction_kernel</span><span class="p">(</span>
-                <span class="n">gtab</span><span class="p">,</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">Lambda</span><span class="p">,</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">sphere</span><span class="p">,</span>
-                <span class="n">method</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">method</span><span class="p">,</span>
-            <span class="p">)</span>
-<div class="viewcode-block" id="gqi_kernel">
-<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.gqi_kernel">[docs]</a>
-            <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">kernel</span><span class="o">.</span><span class="n">T</span>
-        <span class="p">)</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        gtab : :obj:`~dipy.core.gradients.GradientTable`</span>
+<span class="sd">            Gradients of the predicted signal.</span>
+<span class="sd">        S0 : :obj:`~numpy.ndarray`, optional</span>
+<span class="sd">            Unused.</span>
+<span class="sd">        ridge : float, optional</span>
+<span class="sd">            Ridge :math:`\lambda`, in units of :math:`\mathbf{G}`. Defaults to</span>
+<span class="sd">            the model&#39;s ``ridge``.</span>
 
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">((</span><span class="n">K</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span></div>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        :obj:`~numpy.ndarray`</span>
+<span class="sd">            The predicted signal, shaped ``(n_predicted,)`` for a single voxel</span>
+<span class="sd">            or ``(n_voxels, n_predicted)`` for a masked volume.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span>
+        <span class="n">ridge</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">ridge</span> <span class="k">if</span> <span class="n">ridge</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">ridge</span>
+        <span class="k">if</span> <span class="n">ridge</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The ridge must be non-negative (got </span><span class="si">{</span><span class="n">ridge</span><span class="si">}</span><span class="s2">).&quot;</span><span class="p">)</span>
+
+        <span class="n">shells</span><span class="p">,</span> <span class="n">fitted_shell</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">shell_bvalues</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">gtab</span><span class="o">.</span><span class="n">bvals</span><span class="p">),</span> <span class="n">return_inverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">members</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shells</span><span class="p">))[</span><span class="n">fitted_shell</span><span class="p">]</span>  <span class="c1"># (n_fitted, n_shells)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">means</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span> <span class="o">@</span> <span class="n">members</span><span class="p">)</span> <span class="o">/</span> <span class="n">members</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># (..., n_shells)</span>
+        <span class="n">nearest</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">shell_bvalues</span><span class="p">(</span><span class="n">gtab</span><span class="o">.</span><span class="n">bvals</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">-</span> <span class="n">shells</span><span class="p">)</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">gram</span> <span class="o">=</span> <span class="n">sphere_gram</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">kernel</span><span class="p">)</span>
+        <span class="n">cross</span> <span class="o">=</span> <span class="n">sphere_gram</span><span class="p">(</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">kernel</span><span class="p">,</span> <span class="n">gqi_kernel</span><span class="p">(</span><span class="n">gtab</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">Lambda</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">sphere</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">method</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="c1"># (n_predicted, n_fitted) weights of the deviations from the shell means</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">gram</span> <span class="o">+</span> <span class="n">ridge</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">gram</span><span class="p">)),</span> <span class="n">cross</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">predicted</span> <span class="o">=</span> <span class="n">data</span> <span class="o">@</span> <span class="n">weights</span><span class="o">.</span><span class="n">T</span> <span class="o">-</span> <span class="n">means</span> <span class="o">@</span> <span class="p">(</span><span class="n">members</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">weights</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">+</span> <span class="n">means</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">nearest</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">predicted</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span></div>
 </div>
 
 
 
+<div class="viewcode-block" id="gqi_kernel">
+<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.gqi_kernel">[docs]</a>
 <span class="k">def</span> <span class="nf">gqi_kernel</span><span class="p">(</span><span class="n">gtab</span><span class="p">,</span> <span class="n">param_lambda</span><span class="p">,</span> <span class="n">sphere</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;standard&quot;</span><span class="p">):</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Forward GQI kernel, shape ``(n_gradients, n_vertices)``.</span>
@@ -626,46 +666,48 @@
 
 
 
-<div class="viewcode-block" id="prediction_kernel">
-<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.prediction_kernel">[docs]</a>
-<span class="k">def</span> <span class="nf">prediction_kernel</span><span class="p">(</span><span class="n">gtab</span><span class="p">,</span> <span class="n">param_lambda</span><span class="p">,</span> <span class="n">sphere</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;standard&quot;</span><span class="p">):</span>
+<div class="viewcode-block" id="sphere_gram">
+<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.sphere_gram">[docs]</a>
+<span class="k">def</span> <span class="nf">sphere_gram</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Compute the Tikhonov-regularized reconstruction kernel for GQI.</span>
+<span class="sd">    Gram matrix of GQI kernels, averaged over the vertices of the sphere.</span>
+
+<span class="sd">    Averaging over the :math:`n_v` vertices, rather than summing, keeps the</span>
+<span class="sd">    ridge of :meth:`GeneralizedQSamplingFit.predict` independent of the</span>
+<span class="sd">    density of the sphere.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    gtab : :obj:`~dipy.core.gradients.GradientTable`</span>
-<span class="sd">        The gradient table for which the kernel is computed.</span>
-<span class="sd">    param_lambda : float</span>
-<span class="sd">        The GQI sampling length (:math:`\lambda`).</span>
-<span class="sd">    sphere : :obj:`~dipy.core.sphere.Sphere`</span>
-<span class="sd">        The sphere whose vertices define the ODF sampling directions.</span>
-<span class="sd">    method : str, optional</span>
-<span class="sd">        GQI variant, either ``&quot;standard&quot;`` or ``&quot;gqi2&quot;``.</span>
+<span class="sd">    kernel : :obj:`~numpy.ndarray`</span>
+<span class="sd">        A forward GQI kernel (:func:`gqi_kernel`), shape ``(n_a, n_vertices)``.</span>
+<span class="sd">    other : :obj:`~numpy.ndarray`, optional</span>
+<span class="sd">        Another kernel on the same sphere, shape ``(n_b, n_vertices)``</span>
+<span class="sd">        (``kernel`` itself if not given).</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    :obj:`~numpy.ndarray`</span>
-<span class="sd">        The reconstruction kernel with shape ``(n_gradients, n_vertices)``.</span>
-
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    With the forward GQI kernel :math:`\mathbf{K} \in \mathbb{R}^{n_g \times n_v}`,</span>
-<span class="sd">    the reconstruction kernel is</span>
-
-<span class="sd">    .. math::</span>
-
-<span class="sd">        \mathbf{K}^{+} = (\mathbf{K} \mathbf{K}^T + \lambda_0 \mathbf{I})^{-1} \mathbf{K}</span>
-
-<span class="sd">    where :math:`\lambda_0 = 10^{-6}` (``INVERSE_LAMBDA``) regularizes the</span>
-<span class="sd">    inversion and :math:`\mathbf{I}` is the :math:`n_g \times n_g` identity.</span>
+<span class="sd">        :math:`\mathbf{K}_a \mathbf{K}_b^{\mathsf T} / n_v`, shape ``(n_a, n_b)``.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># K.shape = (n_gradients, n_vertices)</span>
-    <span class="n">K</span> <span class="o">=</span> <span class="n">gqi_kernel</span><span class="p">(</span><span class="n">gtab</span><span class="p">,</span> <span class="n">param_lambda</span><span class="p">,</span> <span class="n">sphere</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)</span>
-    <span class="n">GtG</span> <span class="o">=</span> <span class="n">K</span> <span class="o">@</span> <span class="n">K</span><span class="o">.</span><span class="n">T</span>
-    <span class="n">identity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">GtG</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">GtG</span> <span class="o">+</span> <span class="n">INVERSE_LAMBDA</span> <span class="o">*</span> <span class="n">identity</span><span class="p">)</span> <span class="o">@</span> <span class="n">K</span></div>
+    <span class="n">other</span> <span class="o">=</span> <span class="n">kernel</span> <span class="k">if</span> <span class="n">other</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">other</span>
+    <span class="k">return</span> <span class="n">kernel</span> <span class="o">@</span> <span class="n">other</span><span class="o">.</span><span class="n">T</span> <span class="o">/</span> <span class="n">kernel</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="shell_bvalues">
+<a class="viewcode-back" href="../../../api/nifreeze.model.gqi.html#nifreeze.model.gqi.shell_bvalues">[docs]</a>
+<span class="k">def</span> <span class="nf">shell_bvalues</span><span class="p">(</span><span class="n">bvals</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The b-value of each volume&#39;s shell: its b-value rounded to :data:`SHELL_DECIMALS`.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; shell_bvalues([5, 995, 1010, 1990, 3020])</span>
+<span class="sd">    array([   0., 1000., 1000., 2000., 3000.])</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">bvals</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">SHELL_DECIMALS</span><span class="p">)</span></div>
 
 </pre></div>
         </article>
@@ -699,7 +741,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=235ee8ed"></script>
+</div><script src="../../../_static/documentation_options.js?v=66143be3"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

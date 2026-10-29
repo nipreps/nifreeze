@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.model.gpr module" href="nifreeze.model.gpr.html"><link rel="prev" title="nifreeze.model.dki module" href="nifreeze.model.dki.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.dmri module - nifreeze 26.0.0.dev18 documentation</title>
+        <title>nifreeze.model.dmri module - nifreeze 26.0.0.dev27 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev18 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev27 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev18</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev27</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev18</span>
+  <span class="sidebar-brand-text">26.0.0.dev27</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -545,25 +545,29 @@ therefore overridden here rather than reusing the chunked DIPY path.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nifreeze.model.dmri.GQIKRRModel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.dmri.</span></span><span class="sig-name descname"><span class="pre">GQIKRRModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="nifreeze.data.dmri.base.html#nifreeze.data.dmri.base.DWI" title="nifreeze.data.dmri.base.DWI"><span class="pre">nifreeze.data.dmri.base.DWI</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">krr_lambda</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">krr_lambda_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(np.float64(0.0001),</span> <span class="pre">np.float64(0.00031622776601683794),</span> <span class="pre">np.float64(0.001),</span> <span class="pre">np.float64(0.0031622776601683794),</span> <span class="pre">np.float64(0.01),</span> <span class="pre">np.float64(0.03162277660168379),</span> <span class="pre">np.float64(0.1),</span> <span class="pre">np.float64(0.31622776601683794),</span> <span class="pre">np.float64(1.0),</span> <span class="pre">np.float64(3.1622776601683795),</span> <span class="pre">np.float64(10.0))</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/dmri.html#GQIKRRModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.dmri.GQIKRRModel" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.model.dmri.</span></span><span class="sig-name descname"><span class="pre">GQIKRRModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="nifreeze.data.dmri.base.html#nifreeze.data.dmri.base.DWI" title="nifreeze.data.dmri.base.DWI"><span class="pre">nifreeze.data.dmri.base.DWI</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">krr_lambda</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">krr_lambda_grid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(np.float64(0.0001),</span> <span class="pre">np.float64(0.00031622776601683794),</span> <span class="pre">np.float64(0.001),</span> <span class="pre">np.float64(0.0031622776601683794),</span> <span class="pre">np.float64(0.01),</span> <span class="pre">np.float64(0.03162277660168379),</span> <span class="pre">np.float64(0.1),</span> <span class="pre">np.float64(0.31622776601683794),</span> <span class="pre">np.float64(1.0),</span> <span class="pre">np.float64(3.1622776601683795),</span> <span class="pre">np.float64(10.0),</span> <span class="pre">np.float64(31.622776601683793),</span> <span class="pre">np.float64(100.0))</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nifreeze/model/dmri.html#GQIKRRModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.model.dmri.GQIKRRModel" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="nifreeze.model.lovo.html#nifreeze.model.lovo.ClosedFormLOVOMixin" title="nifreeze.model.lovo.ClosedFormLOVOMixin"><code class="xref py py-class docutils literal notranslate"><span class="pre">ClosedFormLOVOMixin</span></code></a>, <a class="reference internal" href="#nifreeze.model.dmri.GQIModel" title="nifreeze.model.dmri.GQIModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GQIModel</span></code></a></p>
-<p>GQI as kernel ridge regression, with closed-form leave-one-volume-out prediction.</p>
-<p>The GQI basis <span class="math notranslate nohighlight">\(\mathbf{K}\)</span> (gradients by sphere vertices) induces the
-q-space Gram matrix <span class="math notranslate nohighlight">\(\mathbf{G} = \mathbf{K}\mathbf{K}^T\)</span>. Kernel ridge
-regression with <span class="math notranslate nohighlight">\(\mathbf{A} = \mathbf{G} + \lambda \mathbf{I}\)</span> predicts
-each volume from the training Gram matrix (rather than from the target’s own
-norm, as the one-row <a class="reference internal" href="#nifreeze.model.dmri.GQIModel" title="nifreeze.model.dmri.GQIModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GQIModel</span></code></a> prediction does), and its LOVO
-predictions come from one matrix.</p>
+<p>GQI with closed-form leave-one-volume-out prediction.</p>
+<p>The prediction of <a class="reference internal" href="#nifreeze.model.dmri.GQIModel" title="nifreeze.model.dmri.GQIModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GQIModel</span></code></a> is kernel ridge regression on the GQI
+basis, around a mean per shell (see
+<a class="reference internal" href="nifreeze.model.gqi.html#nifreeze.model.gqi.GeneralizedQSamplingFit.predict" title="nifreeze.model.gqi.GeneralizedQSamplingFit.predict"><code class="xref py py-meth docutils literal notranslate"><span class="pre">predict()</span></code></a>). With the same
+ridge <span class="math notranslate nohighlight">\(\lambda\)</span>, the predictions of all volumes come from one matrix,
+built from <span class="math notranslate nohighlight">\(\mathbf{A} = \mathbf{G} + \lambda \mathbf{I}\)</span>, instead of
+one fit per volume. Both models share their default ridge.</p>
 <p>Initialization.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dataset</strong> (<a class="reference internal" href="nifreeze.data.dmri.base.html#nifreeze.data.dmri.base.DWI" title="nifreeze.data.dmri.base.DWI"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DWI</span></code></a>) – Reference to a DWI object.</p></li>
-<li><p><strong>krr_lambda</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional) – Ridge strength, relative to the mean diagonal of the Gram matrix. If
-<a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, it is chosen from <code class="docutils literal notranslate"><span class="pre">krr_lambda_grid</span></code> by closed-form LOVO
-error on a random voxel subsample.</p></li>
+<li><p><strong>krr_lambda</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional) – Ridge <span class="math notranslate nohighlight">\(\lambda\)</span>, the <code class="docutils literal notranslate"><span class="pre">ridge</span></code> of <a class="reference internal" href="#nifreeze.model.dmri.GQIModel" title="nifreeze.model.dmri.GQIModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">GQIModel</span></code></a> (which takes
+precedence when given). Defaults to
+<a class="reference internal" href="nifreeze.model.gqi.html#nifreeze.model.gqi.DEFAULT_RIDGE" title="nifreeze.model.gqi.DEFAULT_RIDGE"><code class="xref py py-data docutils literal notranslate"><span class="pre">DEFAULT_RIDGE</span></code></a>. If <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, it is chosen
+from <code class="docutils literal notranslate"><span class="pre">krr_lambda_grid</span></code> by closed-form LOVO error on a random voxel
+subsample, on the dataset the model is built on; the ridge chosen then
+changes with the motion in the data.</p></li>
 <li><p><strong>krr_lambda_grid</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sequence</span></code></a> of <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a>, optional) – Candidate ridge strengths.</p></li>
-<li><p><strong>nvox_prefit</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Number of voxels used to choose the ridge strength (all if <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>).</p></li>
+<li><p><strong>nvox_prefit</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Number of voxels used to choose the ridge strength, when <code class="docutils literal notranslate"><span class="pre">krr_lambda</span></code>
+is <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a> (all if <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>).</p></li>
 <li><p><strong>random_state</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Seed for the voxel subsample.</p></li>
 </ul>
 </dd>
@@ -703,7 +707,7 @@ error on a random voxel subsample.</p></li>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=235ee8ed"></script>
+</div><script src="../_static/documentation_options.js?v=66143be3"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
