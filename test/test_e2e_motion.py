@@ -32,7 +32,7 @@ as a scanner writes them: the moved head turned under them, so even at the right
 position a volume differs from the one its model predicts. The truth is the
 motion of each volume, which is what the estimator reports. The tests
 are opt-in (``pytest -m e2e``), need ANTs, and need ``NIFREEZE_PHANTOMS`` to point
-to the phantom dataset (GIN ``tests-nifreeze``, subdataset ``phantoms``).
+to the phantom dataset (GIN ``nipreps-data/nifreeze-trxscan``).
 
 The model gates record the current single-pass accuracy: the models are fit on
 the moving volumes, so their targets mix anatomy at different positions (see
