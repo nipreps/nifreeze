@@ -5,6 +5,14 @@ on:
     - cron: '0 3 * * 1' # At 03:00 UTC every Monday
   # Allow job to be triggered manually from GitHub interface
   workflow_dispatch:
+  # Runs on nipreps/nifreeze have the GIN key, and seed the phantom's cache for pull requests
+  push:
+    branches: ['main', 'maint/*']
+    paths:
+      - '.github/workflows/e2e.yml'
+      - 'src/nifreeze/analysis/phantoms.py'
+      - 'test/test_e2e_motion.py'
+      - 'tools/e2e_summary.py'
   pull_request:
     branches: ['main', 'maint/*']
     paths:
@@ -26,7 +34,11 @@ env:
   ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS: 4
   ANTSPATH: /usr/share/miniconda/bin/
   NIFREEZE_PHANTOMS: /home/runner/nifreeze-e2e/phantoms
-  PHANTOMS_REPO: https://gin.g-node.org/nipreps-data/nifreeze-trxscan
+  # Over SSH: GIN refuses anonymous HTTPS from GitHub's runners (HTTP 403)
+  PHANTOMS_REPO: git@gin.g-node.org:/nipreps-data/nifreeze-trxscan.git
+  GIN_HOST_KEY: >-
+    gin.g-node.org ssh-ed25519
+    AAAAC3NzaC1lZDI1NTE5AAAAIPaM8/WkCBR2wIcGgVgDzmA37qKGp+c+6zjlFSS14EVZ
   # The commit of PHANTOMS_REPO that the gates of test/test_e2e_motion.py were set on
   PHANTOMS_COMMIT: 2249c4df27227071b0cacf22c33a5eafb2e0aa1d
   # The annexed files that the tests read: the reference, its mask, and the copy with
@@ -74,6 +86,24 @@ jobs:
         with:
           path: ${{ env.NIFREEZE_PHANTOMS }}
           key: ${{ steps.phantoms-key.outputs.KEY }}
+      - name: Set up the SSH key of GIN
+        if: steps.phantoms.outputs.cache-hit != 'true'
+        env:
+          GIN_SSH_KEY: ${{ secrets.GIN_SSH_KEY }}
+        run: |
+          if [[ -z "${GIN_SSH_KEY}" ]]; then
+            # Pull requests from forks get no secrets: they restore the cache that a run
+            # on nipreps/nifreeze (a push, the schedule, or a manual run) saved
+            echo "::error title=Phantom::No cache for ${PHANTOMS_COMMIT}, and no GIN_SSH_KEY to fetch it. Run this workflow on nipreps/nifreeze first."
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${GIN_SSH_KEY}" > ~/.ssh/gin
+          chmod 600 ~/.ssh/gin
+          echo "${GIN_HOST_KEY}" >> ~/.ssh/known_hosts
+          printf 'Host gin.g-node.org\n  User git\n  IdentityFile ~/.ssh/gin\n  IdentitiesOnly yes\n' \
+            >> ~/.ssh/config
       - name: Install DataLad
         if: steps.phantoms.outputs.cache-hit != 'true'
         run: |
@@ -86,7 +116,7 @@ jobs:
       - name: Fetch the phantom at ${{ env.PHANTOMS_COMMIT }}
         if: steps.phantoms.outputs.cache-hit != 'true'
         run: |
-          # GIN may refuse CI runners (e.g., HTTP 403): retry each request
+          # Retry each request to GIN, which may drop a connection
           retry() {
             for attempt in 1 2 3; do
               "$@" && return 0
