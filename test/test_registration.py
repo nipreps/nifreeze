@@ -46,6 +46,7 @@ from nifreeze.registration import ants
 from nifreeze.registration.ants import (
     REGISTRATION_INIT_WITHOUT_COLLAPSE_ERROR_MSG,
     REGISTRATION_MALFORMED_SETTINGS_ERROR_MSG,
+    REGISTRATION_UNKNOWN_SETTINGS_ERROR_MSG,
     _massage_mask_path,
     _prepare_registration_data,
     generate_command,
@@ -295,6 +296,23 @@ def test_generate_command_basic(tmp_path, random_nifti_file):
     assert isinstance(reg, Registration)
     assert reg.inputs.fixed_image[0] == str(Path(fixed).absolute())
     assert reg.inputs.moving_image[0] == str(Path(moving).absolute())
+
+
+def test_generate_command_unknown_settings(tmp_path, random_nifti_file):
+    """A setting that generate_command does not know raises instead of being dropped."""
+    fixed = random_nifti_file(tmp_path / "fixed.nii.gz")
+    moving = random_nifti_file(tmp_path / "moving.nii.gz")
+
+    message = REGISTRATION_UNKNOWN_SETTINGS_ERROR_MSG.format(
+        keys="align_kwargs, convergence_threshold"
+    )
+    with pytest.raises(TypeError, match=re.escape(message)):
+        generate_command(
+            fixed_path=fixed,
+            moving_path=moving,
+            align_kwargs={"metric": "GC"},
+            convergence_threshold=[1e-6],
+        )
 
 
 def test_generate_command_with_masks_init_and_threads(tmp_path, random_nifti_file):
