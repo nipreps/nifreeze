@@ -97,9 +97,11 @@ def test_the_model_targets_need_a_model(phantom):
     clean, reference, moved, truth = phantom
 
     with pytest.raises(ValueError, match="model is required"):
-        reg.registration_accuracy(np.eye, clean, reference, moved, truth)
+        reg.registration_accuracy(lambda *_: np.eye(4), clean, reference, moved, truth)
     with pytest.raises(ValueError, match="unknown fixed"):
-        reg.registration_accuracy(np.eye, clean, reference, moved, truth, fixed=["b0"])
+        reg.registration_accuracy(
+            lambda *_: np.eye(4), clean, reference, moved, truth, fixed=["b0"]
+        )
 
 
 @pytest.mark.skipif(shutil.which("antsRegistration") is None, reason="ANTs is not installed")
