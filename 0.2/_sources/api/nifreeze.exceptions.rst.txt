@@ -1,0 +1,7 @@
+nifreeze.exceptions module
+==========================
+
+.. automodule:: nifreeze.exceptions
+   :members:
+   :undoc-members:
+   :show-inheritance:

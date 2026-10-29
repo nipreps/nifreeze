@@ -1,0 +1,7 @@
+nifreeze.model.dki module
+=========================
+
+.. automodule:: nifreeze.model.dki
+   :members:
+   :undoc-members:
+   :show-inheritance:

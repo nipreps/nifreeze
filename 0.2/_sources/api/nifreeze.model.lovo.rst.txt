@@ -1,0 +1,7 @@
+nifreeze.model.lovo module
+==========================
+
+.. automodule:: nifreeze.model.lovo
+   :members:
+   :undoc-members:
+   :show-inheritance:

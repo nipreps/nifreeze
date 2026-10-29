@@ -1,0 +1,7 @@
+nifreeze.testing.perturbations module
+=====================================
+
+.. automodule:: nifreeze.testing.perturbations
+   :members:
+   :undoc-members:
+   :show-inheritance:

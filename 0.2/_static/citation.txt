@@ -1,0 +1,7 @@
+Legarreta, J. H., Savary, E., Markiewicz, C. J., Rokem, A., Norgaard, M., and
+   Esteban, O. (2025). “An open implementation of FSL’s eddy with volume-to-
+   volume artifact estimation for neuroimaging beyond diffusion MRI”. In: 34th
+   Annual Conference & Exhibition of the International Society for Magnetic
+   Resonance in Medicine (ISMRM). Program #3252. Honolulu, HI, US. doi:
+   10.58530/2025/3252. url: https://archive.ismrm.org/2025/3252.
+   html.

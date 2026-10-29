@@ -1,0 +1,7 @@
+nifreeze.viz.signals module
+===========================
+
+.. automodule:: nifreeze.viz.signals
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,7 @@
+nifreeze.analysis.phantoms module
+=================================
+
+.. automodule:: nifreeze.analysis.phantoms
+   :members:
+   :undoc-members:
+   :show-inheritance:

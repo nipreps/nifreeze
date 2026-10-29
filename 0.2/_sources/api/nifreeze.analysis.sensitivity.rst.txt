@@ -1,0 +1,7 @@
+nifreeze.analysis.sensitivity module
+====================================
+
+.. automodule:: nifreeze.analysis.sensitivity
+   :members:
+   :undoc-members:
+   :show-inheritance:

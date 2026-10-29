@@ -1,0 +1,710 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Model implementation" href="models.html"><link rel="prev" title="Installation" href="installation.html">
+
+    <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
+        <title>Design Principles - nifreeze 0.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="_static/css/version-switch.css?v=45d66e8a" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">nifreeze 0.2.0 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+    <span class="sidebar-brand-text">nifreeze</span>
+    <span id="version-slug" class="sidebar-brand-text">0.2.0</span>
+</a>
+
+<!-- Versions dropdown -->
+<div id="version-menu" class="version-tree">
+  <ul>
+  <li class="toctree-l1 has-children">
+  <span class="sidebar-brand-text">0.2.0</span>
+  <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
+  <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
+  <ul id="v-tags"></ul>
+  </ul>
+</div><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Design Principles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#extending-nifreeze">Extending <em>NiFreeze</em></a></li>
+<li class="toctree-l1"><a class="reference internal" href="#contributing-to-nifreeze">Contributing to NiFreeze</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Model implementation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="gallery.html">Prediction gallery</a><input aria-label="Toggle navigation of Prediction gallery" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="gallery/ds000206.html">Legacy DTI (ds000206)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gallery/ds000114.html">Single-shell HARDI (ds000114)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gallery/ds003138.html">Multi-shell (ds003138)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gallery/ds004737.html">DSI (ds004737)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">How to Use</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running.html">Running <em>NiFreeze</em></a></li>
+<li class="toctree-l1"><a class="reference internal" href="citation.html">How to cite</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="developers.html">For developers</a><input aria-label="Toggle navigation of For developers" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.analysis.html">nifreeze.analysis package</a><input aria-label="Toggle navigation of nifreeze.analysis package" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.filtering.html">nifreeze.analysis.filtering module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.measure_agreement.html">nifreeze.analysis.measure_agreement module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.motion.html">nifreeze.analysis.motion module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.phantoms.html">nifreeze.analysis.phantoms module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html">nifreeze.analysis.sensitivity module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.similarity.html">nifreeze.analysis.similarity module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.cli.html">nifreeze.cli package</a><input aria-label="Toggle navigation of nifreeze.cli package" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.cli.parser.html">nifreeze.cli.parser module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.cli.run.html">nifreeze.cli.run module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.data.html">nifreeze.data package</a><input aria-label="Toggle navigation of nifreeze.data package" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="api/nifreeze.data.dmri.html">nifreeze.data.dmri package</a><input aria-label="Toggle navigation of nifreeze.data.dmri package" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.dmri.base.html">nifreeze.data.dmri.base module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.dmri.io.html">nifreeze.data.dmri.io module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.dmri.utils.html">nifreeze.data.dmri.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="api/nifreeze.data.pet.html">nifreeze.data.pet package</a><input aria-label="Toggle navigation of nifreeze.data.pet package" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.pet.base.html">nifreeze.data.pet.base module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.pet.io.html">nifreeze.data.pet.io module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.pet.utils.html">nifreeze.data.pet.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.data.base.html">nifreeze.data.base module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.data.filtering.html">nifreeze.data.filtering module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.data.splitting.html">nifreeze.data.splitting module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.data.utils.html">nifreeze.data.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/nifreeze.estimator.html">nifreeze.estimator module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/nifreeze.exceptions.html">nifreeze.exceptions module</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.model.html">nifreeze.model package</a><input aria-label="Toggle navigation of nifreeze.model package" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.base.html">nifreeze.model.base module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.dki.html">nifreeze.model.dki module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.dmri.html">nifreeze.model.dmri module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.gpr.html">nifreeze.model.gpr module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.gqi.html">nifreeze.model.gqi module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.lovo.html">nifreeze.model.lovo module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.pet.html">nifreeze.model.pet module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.registration.html">nifreeze.registration package</a><input aria-label="Toggle navigation of nifreeze.registration package" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.registration.ants.html">nifreeze.registration.ants module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.registration.utils.html">nifreeze.registration.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.testing.html">nifreeze.testing package</a><input aria-label="Toggle navigation of nifreeze.testing package" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.testing.perturbations.html">nifreeze.testing.perturbations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.testing.phantoms.html">nifreeze.testing.phantoms module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.testing.simulations.html">nifreeze.testing.simulations module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.utils.html">nifreeze.utils package</a><input aria-label="Toggle navigation of nifreeze.utils package" class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.utils.iterators.html">nifreeze.utils.iterators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.utils.ndimage.html">nifreeze.utils.ndimage module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.viz.html">nifreeze.viz package</a><input aria-label="Toggle navigation of nifreeze.viz package" class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.viz.bland_altman.html">nifreeze.viz.bland_altman module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.viz.motion_viz.html">nifreeze.viz.motion_viz module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.viz.signals.html">nifreeze.viz.signals module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="phantoms.html">Synthetic reference data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changes.html">What’s new?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">References</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="_sources/design.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="design-principles">
+<h1>Design Principles<a class="headerlink" href="#design-principles" title="Link to this heading">¶</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<p><em>NiFreeze</em>’s architecture is modular, facilitating extensibility and
+adaptability. <em>NiFreeze</em> is designed around the following core concepts:</p>
+<ul class="simple">
+<li><p><strong>Data ingestion</strong>: Handles input data, providing generalized 4D data
+management across modalities.</p></li>
+<li><p><strong>Preprocessing pipelines</strong>: Implements modality-specific preprocessing
+steps prior to artifact estimation. Examples of preprocessing operations are
+value clipping and smoothing.</p></li>
+<li><p><strong>Modelling</strong>: Implements statistical models to estimate and correct
+artifacts. Models follow a <code class="docutils literal notranslate"><span class="pre">fit</span> <span class="pre">&amp;</span> <span class="pre">predict</span></code> design, where the <code class="docutils literal notranslate"><span class="pre">fit</span></code> step
+fits the model to the data, and the <code class="docutils literal notranslate"><span class="pre">predict</span></code> step estimates the volume
+that has been held out.</p></li>
+<li><p><strong>Estimation</strong>: Orchestrates the registration target prediction. Estimates
+the motion and distortion artifacts of the data employing a particular
+model and iterating over the data using a leave-one-volume-out approach. It
+computes the registration transforms on the estimated, artifact-free volumes.
+Estimator instances can be stacked so that the output of an estimator
+instance becomes the input to the subsequent instance.</p></li>
+</ul>
+</section>
+<section id="main-concepts">
+<h2>Main Concepts<a class="headerlink" href="#main-concepts" title="Link to this heading">¶</a></h2>
+<section id="data-ingestion">
+<h3>Data Ingestion<a class="headerlink" href="#data-ingestion" title="Link to this heading">¶</a></h3>
+<p><em>NiFreeze</em> implements a set of modality-specific 4D data readers that expose a
+uniform API, enabling transparent access to individual volumes by index.</p>
+<section id="dmri">
+<h4>dMRI<a class="headerlink" href="#dmri" title="Link to this heading">¶</a></h4>
+<p>dRMI modality gradients are handled internally arrays arranged according to
+the <code class="docutils literal notranslate"><span class="pre">[gx</span> <span class="pre">gy</span> <span class="pre">gz</span> <span class="pre">b]</span></code> layout, where <code class="docutils literal notranslate"><span class="pre">[gx</span> <span class="pre">gy</span> <span class="pre">gz]</span></code> are the components of a
+given gradient vector, and <code class="docutils literal notranslate"><span class="pre">b</span></code> is the b-value in units of <span class="math notranslate nohighlight">\(s/mm^2\)</span>.</p>
+<p># ToDo
+# Or use [ R A S+ b ] instead of <code class="docutils literal notranslate"><span class="pre">[gx</span> <span class="pre">gy</span> <span class="pre">gz</span> <span class="pre">b]</span></code>  as in usage.rst</p>
+<p>The dMRI data class holds a single <code class="docutils literal notranslate"><span class="pre">b0</span></code> volume. The rationale behind this is
+that this volume serves as a canonical reference for transforming non-zero
+gradient volumes. Users can compute such reference <code class="docutils literal notranslate"><span class="pre">b0</span></code> volume using their
+preferred method and provide it when instantiating a <code class="xref py py-class docutils literal notranslate"><span class="pre">api/nifreeze.data.dmri.DWI</span></code>
+class (e.g. through the <a class="reference internal" href="api/nifreeze.data.dmri.io.html#nifreeze.data.dmri.io.from_nii" title="nifreeze.data.dmri.io.from_nii"><code class="xref py py-meth docutils literal notranslate"><span class="pre">from_nii()</span></code></a>); otherwise,
+<em>NiFreeze</em> computes a reference <code class="docutils literal notranslate"><span class="pre">b0</span></code> as the median volume across
+non-diffusion-weighted volumes. Note that following this design choice,
+the gradient data hosted by the <code class="xref py py-class docutils literal notranslate"><span class="pre">api/nifreeze.data.dmri.DWI</span></code> instance
+only contains (nonzero) diffusion-weighted gradient values.</p>
+</section>
+<section id="nfhdf5-files">
+<span id="nfhdf5"></span><h4>nfHDF5 files<a class="headerlink" href="#nfhdf5-files" title="Link to this heading">¶</a></h4>
+<p><em>nfHDF5</em> is the HDF5 layout <em>NiFreeze</em> saves datasets in.
+<a class="reference internal" href="api/nifreeze.data.base.html#nifreeze.data.base.BaseDataset.to_filename" title="nifreeze.data.base.BaseDataset.to_filename"><code class="xref py py-meth docutils literal notranslate"><span class="pre">to_filename()</span></code></a> writes it, and
+<a class="reference internal" href="api/nifreeze.data.html#nifreeze.data.load" title="nifreeze.data.load"><code class="xref py py-func docutils literal notranslate"><span class="pre">load()</span></code></a> and
+<a class="reference internal" href="api/nifreeze.data.base.html#nifreeze.data.base.BaseDataset.from_filename" title="nifreeze.data.base.BaseDataset.from_filename"><code class="xref py py-meth docutils literal notranslate"><span class="pre">from_filename()</span></code></a> read it back.</p>
+<ul class="simple">
+<li><p>The file attributes <code class="docutils literal notranslate"><span class="pre">Format</span></code> (<code class="docutils literal notranslate"><span class="pre">&quot;nfHDF5&quot;</span></code>) and <code class="docutils literal notranslate"><span class="pre">Version</span></code> (<code class="docutils literal notranslate"><span class="pre">2</span></code>)
+identify the layout.</p></li>
+<li><p>The group <code class="docutils literal notranslate"><span class="pre">/0</span></code> holds one HDF5 dataset per field of the dataset object:
+<code class="docutils literal notranslate"><span class="pre">dataobj</span></code>, <code class="docutils literal notranslate"><span class="pre">affine</span></code>, <code class="docutils literal notranslate"><span class="pre">brainmask</span></code> and <code class="docutils literal notranslate"><span class="pre">motion_affines</span></code>, plus the
+modality’s own fields, such as <code class="docutils literal notranslate"><span class="pre">gradients</span></code> and <code class="docutils literal notranslate"><span class="pre">bzero</span></code> (dMRI) or
+<code class="docutils literal notranslate"><span class="pre">midframe</span></code> and <code class="docutils literal notranslate"><span class="pre">total_duration</span></code> (PET).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dataobj</span></code> stores the volumes on the first axis, <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">X,</span> <span class="pre">Y,</span> <span class="pre">Z)</span></code>, and has
+the attribute <code class="docutils literal notranslate"><span class="pre">volume_axis</span></code> set to <code class="docutils literal notranslate"><span class="pre">0</span></code>.
+Each volume is one contiguous block, so the file is memory-mapped when
+loaded and volumes are read from disk as they are accessed.
+Compressed files (<code class="docutils literal notranslate"><span class="pre">to_filename(...,</span> <span class="pre">compression=&quot;gzip&quot;)</span></code>) are
+decompressed into a temporary file first.</p></li>
+</ul>
+<p>Files written by earlier versions of <em>NiFreeze</em> (version 1) store the volumes
+last, and their <code class="docutils literal notranslate"><span class="pre">Format</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;NFDH5&quot;</span></code> (<code class="docutils literal notranslate"><span class="pre">&quot;EMC/PET&quot;</span></code> for PET).
+They still load, after a conversion into a temporary file;
+save them again with <code class="docutils literal notranslate"><span class="pre">to_filename</span></code> to skip that step.</p>
+</section>
+</section>
+</section>
+<section id="preprocessing">
+<h2>Preprocessing<a class="headerlink" href="#preprocessing" title="Link to this heading">¶</a></h2>
+<p><em>NiFreeze</em> provides a set of minimal preprocessing utilities under the form
+of <code class="xref py py-class docutils literal notranslate"><span class="pre">api/nifreeze.estimator.Filter</span></code>s. <code class="xref py py-class docutils literal notranslate"><span class="pre">api/nifreeze.estimator.Filter</span></code>s
+can be specified as inputs to estimators so that the data used by the
+estimator is processed through the given filter instance.</p>
+</section>
+<section id="modeling">
+<h2>Modeling<a class="headerlink" href="#modeling" title="Link to this heading">¶</a></h2>
+<p>These modules encapsulate the algorithms used for artifact estimation and
+correction. By abstracting the modeling logic, <em>NiFreeze</em> enables the
+integration of diverse methodologies tailored to specific research
+requirements.</p>
+<p>Models <strong>do not</strong> preprocess the data, and users are expected to have their
+data preprocessed minimally (e.g., computing a unique, meaningful <em>b0</em> volume
+for DWI data, smoothing and thresholding the PET data, clipping or detrending
+the data).</p>
+</section>
+<section id="iterators">
+<h2>Iterators<a class="headerlink" href="#iterators" title="Link to this heading">¶</a></h2>
+<p>Iterators in <em>NiFreeze</em> manage the traversal of data volumes, allowing access
+operations to particular data volumes. They are designed to be extensible,
+allowing developers to implement custom traversal logic as needed.</p>
+</section>
+<section id="estimation">
+<h2>Estimation<a class="headerlink" href="#estimation" title="Link to this heading">¶</a></h2>
+<p><em>NiFreeze</em> estimators rely on predictive models to reconstruct artifact-free
+volumes from artifact-affected 4D datasets. Each model maintains access to the
+full dataset, while the estimator traverses the data according to a specified
+iteration strategy (e.g., forward, reverse, or random ordering). At each step,
+the estimator selects a target (held-out) volume as defined by the iterator,
+fits the model on the remaining volumes, and predicts the held-out volume. A
+registration process estimates the affine transformation between the held-out
+and predicted volumes, storing the result at the corresponding index in the
+dataset’s motion parameter attribute.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>The <strong>Update &amp; iterate</strong> procedure treats registration and modeling
+differently:</p>
+<ul class="simple">
+<li><p><strong>Registration never sees resampled data.</strong> Each volume is registered in
+its original form. The current estimate (found by an earlier estimator of
+the chain, or stored with the dataset) only initializes the registration,
+so that it starts closer to the target.</p></li>
+<li><p><strong>Models train on the realigned view</strong> (the <em>instant update</em>). As soon as a
+volume is registered, the models see it resampled from the original with
+its estimate and, for DWI, with its b-vector rotated accordingly. The
+predictions of the remaining volumes, and those of later estimators,
+improve as the motion is corrected.</p></li>
+</ul>
+<p>A realigned volume is never resampled again: a new estimate replaces it,
+resampled from the original. <code class="docutils literal notranslate"><span class="pre">--no-instant-update</span></code>
+(<code class="docutils literal notranslate"><span class="pre">Estimator.run(instant_update=False)</span></code>) trains the models on the original
+volumes only.</p>
+</div>
+<p>Corrected datasets and associated metadata are produced in standardized
+formats for downstream analysis.</p>
+</section>
+</section>
+<section id="extending-nifreeze">
+<h1>Extending <em>NiFreeze</em><a class="headerlink" href="#extending-nifreeze" title="Link to this heading">¶</a></h1>
+<p>To extend <em>NiFreeze</em>’s functionality,</p>
+<section id="creating-new-iterators">
+<h2>Creating New Iterators<a class="headerlink" href="#creating-new-iterators" title="Link to this heading">¶</a></h2>
+<p>To extend <em>NiFreeze</em>’s functionality, such as implementing a custom iterator,
+follow these general steps:</p>
+<ol class="arabic">
+<li><p><strong>Create a new function</strong>: Define a new iterator function implementing the
+desired logic.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterator</span>
+
+<span class="k">def</span> <span class="nf">my_iterator</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="c1"># Size is the number of volumes in the dataset</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="n">get_size</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="c1"># Implement custom iteration logic</span>
+    <span class="n">index_order</span> <span class="o">=</span> <span class="n">establish_order</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">index_order</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ol>
+<ol class="arabic">
+<li><p><strong>Integrate the function</strong>: Incorporate the newly created iterator into the
+<em>NiFreeze</em> workflow by updating the configuration or pipeline definitions to
+utilize your new implementation.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">list</span><span class="p">(</span><span class="n">my_iterator</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+</pre></div>
+</div>
+</li>
+</ol>
+<ol class="arabic simple">
+<li><p><strong>Test the Implementation</strong>: Ensure that your custom class functions as intended by
+running unit tests and validating the outputs against expected results.</p></li>
+</ol>
+</section>
+<section id="creating-new-models">
+<h2>Creating New Models<a class="headerlink" href="#creating-new-models" title="Link to this heading">¶</a></h2>
+<p>To implement a new model:</p>
+<p>1. Subclass the <code class="xref py py-class docutils literal notranslate"><span class="pre">api/nifreeze.model.base.BaseModel</span></code> class.
+1. Implement the <code class="docutils literal notranslate"><span class="pre">fit(data)</span></code> method, which returns a 3D volume.
+1. Register the model in your pipeline or CLI wrapper.</p>
+<section id="example-extrapolation-model">
+<h3>Example: Extrapolation model<a class="headerlink" href="#example-extrapolation-model" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">nifreeze.data.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span>
+<span class="kn">from</span> <span class="nn">nifreeze.model.base</span> <span class="kn">import</span> <span class="n">BaseModel</span>
+
+<span class="k">class</span> <span class="nc">ExtrapolationModel</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Model a volume extrapolating across training volumes.&quot;&quot;&quot;</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;_param1&quot;</span><span class="p">:</span> <span class="s2">&quot;Parameter 1&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_param2&quot;</span><span class="p">:</span> <span class="s2">&quot;Parameter 2&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">BaseDataset</span><span class="p">,</span> <span class="n">param1</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">param2</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_param1</span> <span class="o">=</span> <span class="n">param1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_param2</span> <span class="o">=</span> <span class="n">param2</span>
+
+    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># Fit the data</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># Compute prediction</span>
+        <span class="k">return</span> <span class="n">pred</span>
+</pre></div>
+</div>
+<p>so <code class="docutils literal notranslate"><span class="pre">fit_predict</span></code> is suitable for case where the model is fit only once per iteration, and <code class="docutils literal notranslate"><span class="pre">predict</span></code> is for cases where
+the model is fit across multiple volumes in each iteration.</p>
+</section>
+<section id="usage">
+<h3>Usage<a class="headerlink" href="#usage" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">ExtrapolationModel</span><span class="p">()</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="fitting-and-prediction">
+<h2>Fitting and Prediction<a class="headerlink" href="#fitting-and-prediction" title="Link to this heading">¶</a></h2>
+<p>In the default Leave-One-Volume-Out (LOVO) mode described above, each call to a
+model’s <code class="docutils literal notranslate"><span class="pre">fit_predict(index)</span></code> fits on every volume <em>except</em> <code class="docutils literal notranslate"><span class="pre">index</span></code> and
+predicts the held-out one. This held-out independence is what makes the
+registration target valid: the prediction volume <code class="docutils literal notranslate"><span class="pre">k</span></code> is registered against
+must not itself depend on volume <code class="docutils literal notranslate"><span class="pre">k</span></code>.</p>
+<p>Models also support a <em>single-fit mode</em>, activated by calling</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>which fits the model once on all available data (that is, no volume is held out) and <em>locks</em> that fit (stored in <code class="docutils literal notranslate"><span class="pre">_locked_fit</span></code>). Subsequent calls reuse the
+locked model fit instead of refitting.
+Do not confuse the <em>single-fit mode</em> with <em>returning the same volume regardless
+of the index</em>.</p>
+<p>Single-fit forfeits <em>independence</em>: because the queried volume was part
+of the data the locked fit was trained on, its prediction is no longer the
+unbiased, out-of-sample estimate LOVO provides. Therefore, single-fit can be
+used where this bias is either absent or tolerable. For example, contexts where
+the bias is anticipated to be negligible, such as a coarse, low-DOF early
+rigid-body realignment that a subsequent LOVO stage refines, or trading accuracy
+for speed during development or debugging.</p>
+</section>
+<section id="id1">
+<h2>Usage<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
+<p>The <em>NiFreeze</em> command-line interface supports specifying multiple models, which are applied in a cascade fashion. Users
+can indicate which model should be used to address a specific problem, such as head motion or eddy current correction.</p>
+<p>The transformations estimated at each level initialize the registration of the next level, whose models train on
+the data realigned with them.</p>
+<p>Refer to the <a class="reference external" href="https://www.nipreps.org/smriprep/usage.html#usage" title="(in smriprep v0.20.1.dev13)"><span>Usage</span></a> document for a self-contained usage example.</p>
+</section>
+</section>
+<section id="contributing-to-nifreeze">
+<h1>Contributing to NiFreeze<a class="headerlink" href="#contributing-to-nifreeze" title="Link to this heading">¶</a></h1>
+<section id="set-up-for-development">
+<h2>Set up for Development<a class="headerlink" href="#set-up-for-development" title="Link to this heading">¶</a></h2>
+<p>Install the appropriate modules:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>.<span class="o">[</span>test,<span class="w"> </span>doc,<span class="w"> </span>style,<span class="w"> </span>contributing<span class="o">]</span>
+</pre></div>
+</div>
+<p>Download data from OSF, OpenNeuro, etc.:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>download
+</pre></div>
+</div>
+<p>Typechecking, spellchecking, style, doc</p>
+</section>
+<section id="developer-resources">
+<h2>Developer Resources<a class="headerlink" href="#developer-resources" title="Link to this heading">¶</a></h2>
+<p>Refer to the <a class="reference external" href="https://nipype.readthedocs.io/en/latest/developers.html#developers" title="(in nipype v1.12.1.dev11)"><span>Developer’s Corner</span></a> document for detailed development guidelines.</p>
+<p>For guidance on contributing to <em>NiFreeze</em>, refer to the <em>NiPreps</em>
+Contributing Guidelines:</p>
+<p><a class="reference external" href="https://www.nipreps.org/community/CONTRIBUTING/">https://www.nipreps.org/community/CONTRIBUTING/</a></p>
+<p>This resource provides detailed instructions on community principles and
+contributor acknowledgements.</p>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="models.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Model implementation</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="installation.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Installation</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; Copyright 2024, The NiFreeze developers
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Design Principles</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#main-concepts">Main Concepts</a><ul>
+<li><a class="reference internal" href="#data-ingestion">Data Ingestion</a><ul>
+<li><a class="reference internal" href="#dmri">dMRI</a></li>
+<li><a class="reference internal" href="#nfhdf5-files">nfHDF5 files</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#preprocessing">Preprocessing</a></li>
+<li><a class="reference internal" href="#modeling">Modeling</a></li>
+<li><a class="reference internal" href="#iterators">Iterators</a></li>
+<li><a class="reference internal" href="#estimation">Estimation</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#extending-nifreeze">Extending <em>NiFreeze</em></a><ul>
+<li><a class="reference internal" href="#creating-new-iterators">Creating New Iterators</a></li>
+<li><a class="reference internal" href="#creating-new-models">Creating New Models</a><ul>
+<li><a class="reference internal" href="#example-extrapolation-model">Example: Extrapolation model</a></li>
+<li><a class="reference internal" href="#usage">Usage</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#fitting-and-prediction">Fitting and Prediction</a></li>
+<li><a class="reference internal" href="#id1">Usage</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#contributing-to-nifreeze">Contributing to NiFreeze</a><ul>
+<li><a class="reference internal" href="#set-up-for-development">Set up for Development</a></li>
+<li><a class="reference internal" href="#developer-resources">Developer Resources</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=938c9ccc"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/furo.js?v=46bd48cc"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/version-switch.js?v=8028bf13"></script>
+    </body>
+</html>

@@ -1,0 +1,7 @@
+nifreeze.data.splitting module
+==============================
+
+.. automodule:: nifreeze.data.splitting
+   :members:
+   :undoc-members:
+   :show-inheritance:

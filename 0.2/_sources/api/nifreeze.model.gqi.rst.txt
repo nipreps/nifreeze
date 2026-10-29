@@ -1,0 +1,7 @@
+nifreeze.model.gqi module
+=========================
+
+.. automodule:: nifreeze.model.gqi
+   :members:
+   :undoc-members:
+   :show-inheritance:

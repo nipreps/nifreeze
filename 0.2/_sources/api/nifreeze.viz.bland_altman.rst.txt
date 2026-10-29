@@ -1,0 +1,7 @@
+nifreeze.viz.bland\_altman module
+=================================
+
+.. automodule:: nifreeze.viz.bland_altman
+   :members:
+   :undoc-members:
+   :show-inheritance:
