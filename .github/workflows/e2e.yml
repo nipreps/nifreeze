@@ -28,7 +28,7 @@ env:
   NIFREEZE_PHANTOMS: /home/runner/nifreeze-e2e/phantoms
   PHANTOMS_REPO: https://gin.g-node.org/nipreps-data/nifreeze-trxscan
   # The commit of PHANTOMS_REPO that the gates of test/test_e2e_motion.py were set on
-  PHANTOMS_COMMIT: 3364a734b6a72d892161c8a990b1b343f40bc806
+  PHANTOMS_COMMIT: 2249c4df27227071b0cacf22c33a5eafb2e0aa1d
   # The annexed files that the tests read: the reference, its mask, and the copy with
   # every volume moved by 2° and 2 mm (the sidecars are in git, which the clone brings)
   PHANTOMS_PATHS: >-
