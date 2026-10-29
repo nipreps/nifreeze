@@ -793,7 +793,8 @@ def test_to_nifti(
     def simple_to_nifti(_dataset, filename=None, write_hmxfms=None, order=None):
         _ = write_hmxfms
         _ = order
-        _nii = nb.Nifti1Image(np.moveaxis(_dataset.dataobj, 0, -1), _dataset.affine)
+        # Offset, standing in for the resampling, so the output tells the two apart
+        _nii = nb.Nifti1Image(np.moveaxis(_dataset.dataobj + 1.0, 0, -1), _dataset.affine)
         if filename is not None:
             _nii.to_filename(filename)
         return _nii
@@ -831,15 +832,15 @@ def test_to_nifti(
         ]
         bvecs_dwi = np.asarray(rotated)
 
-    # Check the primary NIfTI output
-    _dataobj = dwi_obj.dataobj
+    # Check the primary NIfTI output: the volumes of ``_base_to_nifti``
+    _dataobj = dwi_obj.dataobj + 1.0
     # Concatenate the b0 if the primary data has a b0 volume or if it was
     # requested to do so
     if not no_bzero:
         assert dwi_obj.bzero is not None
         # ToDo
         # The code will concatenate as many zeros as they exist to the data
-        _dataobj = np.concatenate((dwi_obj.bzero[np.newaxis], dwi_obj.dataobj), axis=0)
+        _dataobj = np.concatenate((dwi_obj.bzero[np.newaxis], _dataobj), axis=0)
         # But when inserting b0 data to the gradients, it inserts a single b0.
         # Here I will insert as many values as b0 volumes to make the test fail
         dwi_b0_count = dwi_obj.bzero.shape[0] if dwi_obj.bzero.ndim == 4 else 1

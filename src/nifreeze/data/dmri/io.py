@@ -225,8 +225,10 @@ def to_nifti(
                 stacklevel=2,
             )
     else:
-        data = np.concatenate((dwi.bzero[np.newaxis], dwi.dataobj), axis=0)  # type: ignore
-        nii = nb.Nifti1Image(np.moveaxis(data, 0, -1), nii.affine, nii.header)
+        # Prepend the b=0 to the volumes written, which are resampled if motion was estimated
+        volumes = np.asanyarray(nii.dataobj)
+        data = np.concatenate((dwi.bzero[..., np.newaxis], volumes), axis=-1)  # type: ignore
+        nii = nb.Nifti1Image(data, nii.affine, nii.header)
 
         if filename is not None:
             nii.to_filename(filename)
