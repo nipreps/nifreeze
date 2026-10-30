@@ -34,11 +34,13 @@ orientation, with anterior up.
 """
 
 import argparse
+import base64
 import csv
 import json
 import re
 import tempfile
 import textwrap
+from io import BytesIO
 from pathlib import Path
 
 import matplotlib as mpl
@@ -50,6 +52,8 @@ import nitransforms as nt
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 from nipype.interfaces.ants.registration import Registration
+from nireports.reportlets.mosaic import plot_slice
+from PIL import Image
 
 from nifreeze.analysis.phantoms import load_phantom
 from nifreeze.registration.utils import displacements_within_mask
@@ -185,6 +189,118 @@ def inputs_figure(clean, noisy, moved, mask, picks, out: Path) -> Path:
     path = out / "floor-inputs.png"
     fig.savefig(path, dpi=150)
     plt.close(fig)
+    return path
+
+
+def outline_polylines(brain: np.ndarray, zs: np.ndarray, rows: int) -> list[str]:
+    """The outline of the brain on each panel of a frame, as SVG polylines in pixels."""
+    from skimage.measure import find_contours
+
+    nx, ny = brain.shape[:2]
+    polylines = []
+    for r in range(rows):
+        for c, z in enumerate(zs):
+            # plot_slice draws the slice transposed, with its origin at the bottom
+            for contour in find_contours(brain[:, :, z].T.astype(float), 0.5):
+                points = " ".join(
+                    f"{c * nx + x + 0.5:.1f},{r * ny + ny - 0.5 - y:.1f}" for y, x in contour
+                )
+                polylines.append(f'<polyline points="{points}"/>')
+    return polylines
+
+
+def orientations_animation(
+    clean, copies: dict, mask: np.ndarray, volumes: list[int], out: Path, encoding: str = "JPEG"
+) -> Path:
+    """The registered volumes, noise-free and in order: the oracle and each moved copy.
+
+    Each frame draws axial slices with the panel renderer of NiReports' mosaic
+    reportlet (:func:`~nireports.reportlets.mosaic.plot_slice`), one pixel per voxel,
+    into a single grayscale image; the frames play in an SVG with a CSS animation, as
+    NiReports' reportlets do, under one outline of the brain at the reference
+    position. (``plot_mosaic`` writes one image per slice into an SVG, which for 64
+    frames of three rows would weigh about 6 MB.)
+    """
+    slices, scale, seconds = 3, 2, 0.25
+    reference = nb.as_closest_canonical(nb.Nifti1Image(mask.astype("uint8"), clean.affine))
+    zooms = reference.header.get_zooms()[:2]
+    brain = np.asarray(reference.dataobj) > 0
+    corners = np.argwhere(brain)
+    crop = tuple(slice(a, b + 1) for a, b in zip(corners.min(0), corners.max(0), strict=True))
+    brain = brain[crop]
+    nx, ny, nz = brain.shape
+    zs = np.linspace(0, nz - 1, slices + 2).round().astype(int)[1:-1]
+
+    def canonical(data: np.ndarray) -> np.ndarray:
+        image = nb.as_closest_canonical(nb.Nifti1Image(data, clean.affine))
+        return np.asarray(image.dataobj)[crop]
+
+    labels = ["No motion", "(the oracle)"], *[[f"{m:g}° and {m:g} mm"] for m in sorted(copies)]
+    rows = len(labels)
+    frames = []
+    for index in volumes:
+        oracle = np.asarray(clean.dataobj[index], dtype="float32")
+        window = float(np.percentile(oracle[mask], 99.5))
+        images = [oracle, *[copies[m][index] for m in sorted(copies)]]
+        # One pixel per voxel: each panel is nx by ny pixels at 100 dpi
+        fig, axes = plt.subplots(rows, slices, figsize=(slices * nx / 100, rows * ny / 100))
+        fig.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
+        for row, image in zip(axes, images, strict=True):
+            data = canonical(image)
+            for ax, z in zip(row, zs, strict=True):
+                plot_slice(data[:, :, z], spacing=zooms, vmin=1e-6, vmax=window, ax=ax)
+        buffer = BytesIO()
+        fig.savefig(buffer, format="png", dpi=100, facecolor="black")
+        plt.close(fig)
+        frame = Image.open(buffer).convert("L")
+        encoded = BytesIO()
+        frame.save(encoded, format=encoding, **({"quality": 80} if encoding == "JPEG" else {}))
+        shell = float(np.round(clean.gradients[index, -1], -2))
+        frames.append((index, shell, base64.b64encode(encoded.getvalue()).decode()))
+
+    outline = outline_polylines(brain, zs, rows)
+
+    width, height = frame.size
+    left, top = 120, 26
+    mime = f"image/{encoding.lower()}"
+    svg = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
+        f'viewBox="0 0 {left + scale * width} {top + scale * height}" font-family="sans-serif" '
+        'font-size="13">',
+        "<style>",
+        f".frame {{ visibility: hidden; animation: play {seconds * len(frames):g}s step-end "
+        "infinite; }",
+        f"@keyframes play {{ 0% {{ visibility: visible; }} {100 / len(frames):.4f}% "
+        "{ visibility: hidden; } 100% { visibility: hidden; } }",
+        "image { image-rendering: pixelated; }",
+        "</style>",
+        f'<rect width="{left + scale * width}" height="{top + scale * height}" fill="black"/>',
+    ]
+    for r, lines in enumerate(labels):
+        middle = top + (r + 0.5) * scale * height / rows
+        for k, line in enumerate(lines):
+            dy = (k - (len(lines) - 1) / 2) * 16
+            svg.append(
+                f'<text x="{left - 10}" y="{middle + dy + 5:.0f}" text-anchor="end" '
+                f'fill="#f0efec">{line}</text>'
+            )
+    for k, (index, shell, data) in enumerate(frames):
+        svg.append(
+            f'<g class="frame" style="animation-delay: {k * seconds:g}s">'
+            f'<image x="{left}" y="{top}" width="{scale * width}" height="{scale * height}" '
+            f'xlink:href="data:{mime};base64,{data}"/>'
+            f'<text x="{left}" y="18" fill="#f0efec">Volume {index} of {len(clean)}, '
+            f"b={shell:g} s/mm²</text></g>"
+        )
+    svg.append(
+        f'<g transform="translate({left} {top}) scale({scale})" fill="none" stroke="#eb6834" '
+        f'stroke-width="0.6">'
+    )
+    svg.extend(outline)
+    svg.append("</g>")
+    svg.append("</svg>")
+    path = out / "floor-orientations.svg"
+    path.write_text("\n".join(svg) + "\n")
     return path
 
 
@@ -435,6 +551,37 @@ def write_tables(
     )
 
 
+def load_inputs(dataset: Path, settings: dict):
+    """The data, loaded as the experiment loaded them, and the true motion's error."""
+    clean, _ = load_phantom(dataset, PROTOCOL, counts=[])
+    mask = np.asanyarray(clean.brainmask, dtype=bool)
+    mask_img = nb.Nifti1Image(mask.astype("uint8"), clean.affine)
+    evaluate = settings["Evaluate"]
+    shells = np.round(clean.gradients[:, -1], -2)
+    picks = {float(s): next(i for i in evaluate if shells[i] == s) for s in np.unique(shells)}
+    motion, noisy, copies = {}, {}, {}
+    for seed in (settings["Noise"], None):
+        _, cells = load_phantom(dataset, PROTOCOL, noise=seed)
+        for perturbation, load in cells:
+            if perturbation.distortion is not None or perturbation.count != len(clean):
+                continue
+            if perturbation.magnitude not in settings["Magnitudes"]:
+                continue
+            truth = dict(zip(perturbation.moved, perturbation.motions, strict=True))
+            motion[perturbation.magnitude] = [
+                float(displacements_within_mask(mask_img, nt.linear.Affine(truth[i])).mean())
+                for i in evaluate
+            ]
+            copy = load()
+            if seed is None:
+                copies[perturbation.magnitude] = {
+                    i: np.asarray(copy.dataobj[i], dtype="float32") for i in evaluate
+                }
+            elif perturbation.magnitude == 1.0:
+                noisy = {i: np.asarray(copy.dataobj[i], dtype="float32") for i in picks.values()}
+    return clean, mask, picks, motion, noisy, copies
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--dataset", type=Path, required=True, help="phantom dataset root")
@@ -464,33 +611,9 @@ def main(argv: list[str] | None = None) -> int:
             numbers = {k: float(row[k]) for k in row if k not in variant}
             rows.append({"variant": key[json.dumps(variant, sort_keys=True)], **numbers})
 
-    # The data, loaded as the experiment loaded them
-    clean, _ = load_phantom(args.dataset, PROTOCOL, counts=[])
-    mask = np.asanyarray(clean.brainmask, dtype=bool)
-    mask_img = nb.Nifti1Image(mask.astype("uint8"), clean.affine)
-    evaluate = settings["Evaluate"]
-    shells = np.round(clean.gradients[:, -1], -2)
-    picks = {float(s): next(i for i in evaluate if shells[i] == s) for s in np.unique(shells)}
-    motion, moving = {}, {}
-    for seed in (settings["Noise"], None):
-        _, cells = load_phantom(args.dataset, PROTOCOL, noise=seed)
-        for perturbation, load in cells:
-            if perturbation.distortion is not None or perturbation.count != len(clean):
-                continue
-            if perturbation.magnitude not in settings["Magnitudes"]:
-                continue
-            truth = dict(zip(perturbation.moved, perturbation.motions, strict=True))
-            motion[perturbation.magnitude] = [
-                float(displacements_within_mask(mask_img, nt.linear.Affine(truth[i])).mean())
-                for i in evaluate
-            ]
-            if perturbation.magnitude == 1.0:
-                copy = load()
-                moving[seed is not None] = {
-                    i: np.asarray(copy.dataobj[i], dtype="float32") for i in picks.values()
-                }
-
-    inputs_figure(clean, moving[True], moving[False], mask, picks, args.out)
+    clean, mask, picks, motion, noisy, copies = load_inputs(args.dataset, settings)
+    inputs_figure(clean, noisy, copies[1.0], mask, picks, args.out)
+    orientations_animation(clean, copies, mask, settings["Evaluate"], args.out)
     errors_figure(
         rows, variants, letters, {m: float(np.median(v)) for m, v in motion.items()}, args.out
     )
@@ -504,7 +627,6 @@ def main(argv: list[str] | None = None) -> int:
         motion,
         args.out,
     )
-    print("mask voxels", int(mask.sum()), "evaluated", len(evaluate), "picks", picks)
     return 0
 
 

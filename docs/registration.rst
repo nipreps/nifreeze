@@ -8,20 +8,28 @@ How accurate that registration can be is measured on the synthetic phantom
 
 What limits registration to a perfect target
 --------------------------------------------
-This section reports an experiment on the error that remains when registration
-gets the best possible fixed image
+This section reports an experiment, with ANTs, on the error that remains when
+registration gets the best possible fixed image
 (`#609 <https://github.com/nipreps/nifreeze/issues/609>`__).
 
 The question
 ~~~~~~~~~~~~
 The registration benchmark (``tools/registration/bench.py``,
-`#584 <https://github.com/nipreps/nifreeze/issues/584>`__) takes the Sherbrooke
-phantom at its original resolution of 2 mm, moves its volumes by known amounts, and
-registers each moved volume to several fixed images.
+`#584 <https://github.com/nipreps/nifreeze/issues/584>`__) uses TRXScan's default
+adult phantom simulated with the Sherbrooke acquisition protocol, at that protocol's
+resolution of 2 mm (:doc:`phantoms`).
+Its moved copies are made before simulation: the phantom itself is rotated and
+shifted by a known rigid motion, and each moved volume is then simulated from the
+moved phantom (see `Data`_, below).
+The benchmark registers each moved volume to several fixed images.
 One of them is the *oracle*: the noise-free simulation of the same gradient
 direction, with the head at its reference position, before the motion.
-The oracle is what a perfect model would predict for that volume, so the error of
-registering to it is the error of registration alone.
+The oracle is what a perfect model would predict for that volume, so registering to
+it removes the error of the model's prediction.
+It does not remove the noise of the moving image: in the benchmark, the moved
+volumes carry the protocol's noise, and only the oracle is noise-free.
+What remains is the error of registering a noisy volume to a perfect, noise-free
+fixed image; this experiment also registers the moved volumes without their noise.
 With the estimator's default ANTs settings, that error was about 0.2 mm at every
 motion size, from 0.5° and 0.5 mm to 4° and 4 mm.
 Over the 192 volumes, the median of the mean displacement error within the brain
@@ -30,9 +38,10 @@ Over the 192 volumes, the median of the mean displacement error within the brain
 Variant A below repeats that setting on a third of the volumes, and finds 0.22 mm at
 both sizes it tests.
 
-An error that does not grow with the motion is a floor: something other than the
-size of the motion sets it.
-This experiment tests five candidates:
+The error did not grow with the motion, so the size of the motion does not explain
+it.
+This experiment estimates how much of it each of five aspects of the registration
+accounts for, by changing them one or two at a time on the same volumes:
 
 1. **Resolution.** The last stage of the default settings runs at shrink factor 2:
    ANTs computes the similarity of the two images on a grid with half as many
@@ -50,17 +59,39 @@ This experiment tests five candidates:
    It then stores the clipped intensities as 12-bit integers (4,096 levels across
    the window), which rounds them.
 
+The answers hold for ANTs, with variations of *NiFreeze*'s default command, on this
+phantom.
+They estimate what these settings achieve, not a limit of registration: other
+settings, or another registration library, may reach lower errors.
+
 Data
 ~~~~
 The phantom is TRXScan's adult brain under the Sherbrooke protocol
 (:doc:`phantoms`): 128 × 128 × 60 voxels of 2 mm, one b=0 volume, and 64 gradient
 directions at each of b=1000, 2000 and 3500 s/mm².
-In its moved copies, every diffusion-weighted volume moves: the head is rotated by
-exactly *m* degrees about an axis drawn at random through the center of the brain,
-shifted by exactly *m* mm in a direction drawn at random, and the volume is then
-simulated again from the moved phantom.
+In its moved copies, every diffusion-weighted volume moves, and the motion comes
+before the simulation.
+For each volume, the phantom is rotated by exactly *m* degrees about an axis drawn
+at random through the center of the brain, and shifted by exactly *m* mm in a
+direction drawn at random; the volume is then simulated from the moved phantom.
+Each volume has its own axis and direction.
+The gradient directions stay fixed in the scanner, as in a real acquisition, so
+the diffusion contrast of a moved volume also changes as its fibers turn.
 This experiment uses the copies with *m* = 1 and *m* = 4, and every third volume:
 64 of the 192, of which 22 are at b=1000, 21 at b=2000 and 21 at b=3500.
+
+.. figure:: _static/registration/floor-orientations.svg
+   :width: 100%
+
+   The 64 volumes this experiment registers, noise-free, played in order, a quarter
+   of a second each: the b=1000 volumes, then b=2000, then b=3500.
+   Top row: the oracle, with the head at its reference position; its contrast
+   changes from frame to frame because each volume has its own gradient direction.
+   Middle and bottom rows: the same volumes in the moved copies with *m* = 1 and
+   *m* = 4, where each volume also has its own motion.
+   The orange line outlines the brain at the reference position and is the same in
+   every frame, so the moved brains shift and turn against it.
+   Each frame is drawn with the slice renderer of NiReports' mosaic reportlet.
 
 The moving volumes are registered with noise, as in the benchmark, and without.
 The noise is complex Gaussian with a standard deviation of 3.0 in each channel,
@@ -224,7 +255,7 @@ Results
 
 What the results show
 ~~~~~~~~~~~~~~~~~~~~~
-**Noise sets the floor.**
+**Noise accounts for most of the error.**
 Without noise (B), the default settings miss by 0.04 mm; with noise (A), by 0.22
 mm.
 A and B differ only in the moving image, with or without noise, and in the
@@ -250,8 +281,8 @@ This experiment does not separate the resolution itself from the number of point
 Full resolution costs about 1.8 times the time per registration (3.5 against 2.0
 seconds).
 
-**The optimization is not the limit.**
-The longer optimization gives the same error as the default one: at 1°, 0.22 mm for
+**The longer optimization gives the same error as the default one.**
+At 1°, 0.22 mm for
 both A and E, and 0.11 against 0.10 mm for F and C; at 4°, 0.23 against 0.22 mm
 (E and A) and 0.09 against 0.10 mm (F and C).
 The default's 10 iterations therefore reach the same accuracy as 100 smaller steps
@@ -282,7 +313,7 @@ The p95 is similar at 1° (0.225 against 0.231 mm) and lower at 4° (0.16 agains
 0.22 mm).
 Neither setting is better at both sizes.
 Because I removes the clipping and the rounding together, this experiment cannot
-tell their effects apart; it shows that together they do not set the floor.
+tell their effects apart; it shows that together they change the error little.
 
 **There is no bias.**
 The table below gives, for each variant, the mean residual over its 128
@@ -311,7 +342,8 @@ Full resolution lowers it to 0.14 mm (C).
 Consequences
 ~~~~~~~~~~~~
 - The benchmark's oracle error of about 0.2 mm is a property of the default settings
-  on noisy data. It bounds what any model can reach with those settings.
+  on noisy data, not a limit of registration: at full resolution, the same command
+  reaches 0.10 mm, and other settings may do better.
 - For the tuning of registration settings
   (`#593 <https://github.com/nipreps/nifreeze/issues/593>`__, and the subsampling
   question of `#11 <https://github.com/nipreps/nifreeze/issues/11>`__), running the
@@ -322,9 +354,9 @@ Consequences
   the oracle. In the benchmark, with the Gaussian-process model's prediction from
   the moved data as the fixed image, the median error is 0.31 mm at 0.5° and 2.00
   mm at 4° (the tables ``derivatives/registration/sherbrooke/desc-m*_model-gp-loo.tsv``
-  of the phantom dataset), well above this floor. The floor becomes the limit only
-  once the data the model learns from are mostly realigned, so that its prediction
-  approaches the oracle.
+  of the phantom dataset), well above the oracle's 0.2 mm. The oracle's error
+  becomes the limit only once the data the model learns from are mostly realigned,
+  so that its prediction approaches the oracle.
 
 Open question
 ~~~~~~~~~~~~~
