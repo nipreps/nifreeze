@@ -44,6 +44,10 @@ permissions:
 
 jobs:
   cache-test-data:
+    # Skipped on pull requests that only change documentation (#611)
+    if: >-
+      !(startsWith(github.head_ref, 'doc/') || startsWith(github.head_ref, 'docs/')
+      || startsWith(github.event.pull_request.title, 'DOC:'))
     runs-on: 'ubuntu-latest'
     outputs:
       SHA: ${{ steps.test-head.outputs.SHA }}
@@ -113,6 +117,10 @@ jobs:
           uv run fetch.py
 
   stable:
+    # Skipped on pull requests that only change documentation (#611)
+    if: >-
+      !(startsWith(github.head_ref, 'doc/') || startsWith(github.head_ref, 'docs/')
+      || startsWith(github.event.pull_request.title, 'DOC:'))
     # Unit tests only on Linux/Python 3.12
     runs-on: 'ubuntu-latest'
     needs: ['cache-test-data']

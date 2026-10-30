@@ -55,6 +55,10 @@ concurrency:
 jobs:
   sherbrooke:
     name: Sherbrooke with simulated motion
+    # Skipped on pull requests that only change documentation (#611)
+    if: >-
+      !(startsWith(github.head_ref, 'doc/') || startsWith(github.head_ref, 'docs/')
+      || startsWith(github.event.pull_request.title, 'DOC:'))
     runs-on: 'ubuntu-latest'
     timeout-minutes: 90
     steps:
