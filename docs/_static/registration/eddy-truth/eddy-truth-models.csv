@@ -1,0 +1,19 @@
+Protocol,Eddy currents (voxels),Model,Volumes,"Largest, median","Largest, worst","p99, median","p99, worst"
+Sherbrooke (2 mm),2,Readout (as TRXScan forms the volume),960,1.8e-07,6.6e-06,7.8e-08,2.2e-07
+Sherbrooke (2 mm),2,Warp by the sidecar's coefficients,960,0.13,0.29,0.025,0.052
+Sherbrooke (2 mm),2,Warp by the inverted coefficients,960,0.13,0.29,0.025,0.052
+Sherbrooke (2 mm),4,Readout (as TRXScan forms the volume),960,2.8e-07,6.9e-06,8.6e-08,4.5e-07
+Sherbrooke (2 mm),4,Warp by the sidecar's coefficients,960,0.13,0.33,0.027,0.081
+Sherbrooke (2 mm),4,Warp by the inverted coefficients,960,0.13,0.33,0.026,0.043
+Sherbrooke (2 mm),8,Readout (as TRXScan forms the volume),960,5.5e-07,7.3e-06,1.3e-07,9.2e-07
+Sherbrooke (2 mm),8,Warp by the sidecar's coefficients,960,0.15,0.91,0.038,0.26
+Sherbrooke (2 mm),8,Warp by the inverted coefficients,960,0.14,0.32,0.027,0.052
+HCP-YA (1.25 mm),2,Readout (as TRXScan forms the volume),1350,4.2e-06,6e-06,7.6e-08,2e-07
+HCP-YA (1.25 mm),2,Warp by the sidecar's coefficients,1350,0.13,0.36,0.021,0.047
+HCP-YA (1.25 mm),2,Warp by the inverted coefficients,1350,0.13,0.36,0.021,0.047
+HCP-YA (1.25 mm),4,Readout (as TRXScan forms the volume),1350,4.1e-06,6.1e-06,8.1e-08,3.8e-07
+HCP-YA (1.25 mm),4,Warp by the sidecar's coefficients,1350,0.13,0.4,0.022,0.035
+HCP-YA (1.25 mm),4,Warp by the inverted coefficients,1350,0.13,0.4,0.021,0.032
+HCP-YA (1.25 mm),8,Readout (as TRXScan forms the volume),1350,3.9e-06,6.4e-06,1.3e-07,7.6e-07
+HCP-YA (1.25 mm),8,Warp by the sidecar's coefficients,1350,0.16,0.57,0.028,0.1
+HCP-YA (1.25 mm),8,Warp by the inverted coefficients,1350,0.14,0.38,0.022,0.038

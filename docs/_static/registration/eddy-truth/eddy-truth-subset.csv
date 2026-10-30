@@ -1,0 +1,7 @@
+Protocol,b-value,Volumes per copy,Fitted volumes per copy
+Sherbrooke (2 mm),1000,64,22
+Sherbrooke (2 mm),2000,64,21
+Sherbrooke (2 mm),3500,64,21
+HCP-YA (1.25 mm),1000,90,23
+HCP-YA (1.25 mm),2000,90,0
+HCP-YA (1.25 mm),3000,90,7

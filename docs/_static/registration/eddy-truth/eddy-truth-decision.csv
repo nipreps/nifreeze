@@ -1,0 +1,5 @@
+Comparison,Protocol,Fitted volumes,p95 above 0.05 voxel,Rule holds
+"Q3, as pre-registered: against the sidecar's coefficients",Sherbrooke (2 mm),320,131,no
+"Q3, as pre-registered: against the sidecar's coefficients",HCP-YA (1.25 mm),150,22,no
+"Q3b, post hoc: against the inverted coefficients",Sherbrooke (2 mm),320,0,yes
+"Q3b, post hoc: against the inverted coefficients",HCP-YA (1.25 mm),150,0,yes

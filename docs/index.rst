@@ -22,5 +22,6 @@ Contents
     developers
     phantoms
     registration
+    edd/index
     changes
     bibliography
