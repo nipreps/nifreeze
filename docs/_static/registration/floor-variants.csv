@@ -1,0 +1,10 @@
+Variant,Shrink factor,Noise,Optimization,Sampled voxels,Inputs,Second-stage options that differ from A
+A,2,yes,default,random 18%,12-bit,(none)
+B,2,no,default,random 18%,12-bit,(none)
+C,1,yes,default,random 18%,12-bit,``--shrink-factors 1``
+D,1,no,default,random 18%,12-bit,``--shrink-factors 1``
+E,2,yes,longer,random 18%,12-bit,"``--transform Rigid[ 0.25 ]`` ``--convergence [ 100, 1e-08, 10 ]``"
+F,1,yes,longer,random 18%,12-bit,"``--transform Rigid[ 0.25 ]`` ``--convergence [ 100, 1e-08, 10 ]`` ``--shrink-factors 1``"
+G,1,no,longer,random 18%,12-bit,"``--transform Rigid[ 0.25 ]`` ``--convergence [ 100, 1e-08, 10 ]`` ``--shrink-factors 1``"
+H,2,yes,longer,every voxel,12-bit,"``--transform Rigid[ 0.25 ]`` ``--metric GC[ fixed.nii, moving.nii, 1, 4, None, 1 ]`` ``--convergence [ 100, 1e-08, 10 ]``"
+I,1,yes,default,random 18%,float32,``--shrink-factors 1``

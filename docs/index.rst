@@ -21,5 +21,6 @@ Contents
     citation
     developers
     phantoms
+    registration
     changes
     bibliography
