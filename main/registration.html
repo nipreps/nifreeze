@@ -1,0 +1,1157 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="What’s new?" href="changes.html"><link rel="prev" title="Synthetic reference data" href="phantoms.html">
+
+    <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
+        <title>Registration accuracy - nifreeze 26.0.0.dev35 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="_static/css/version-switch.css?v=45d66e8a" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev35 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+    <span class="sidebar-brand-text">nifreeze</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev35</span>
+</a>
+
+<!-- Versions dropdown -->
+<div id="version-menu" class="version-tree">
+  <ul>
+  <li class="toctree-l1 has-children">
+  <span class="sidebar-brand-text">26.0.0.dev35</span>
+  <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
+  <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
+  <ul id="v-tags"></ul>
+  </ul>
+</div><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="design.html">Design Principles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="design.html#extending-nifreeze">Extending <em>NiFreeze</em></a></li>
+<li class="toctree-l1"><a class="reference internal" href="design.html#contributing-to-nifreeze">Contributing to NiFreeze</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Model implementation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="gallery.html">Prediction gallery</a><input aria-label="Toggle navigation of Prediction gallery" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="gallery/ds000206.html">Legacy DTI (ds000206)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gallery/ds000114.html">Single-shell HARDI (ds000114)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gallery/ds003138.html">Multi-shell (ds003138)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gallery/ds004737.html">DSI (ds004737)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">How to Use</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running.html">Running <em>NiFreeze</em></a></li>
+<li class="toctree-l1"><a class="reference internal" href="citation.html">How to cite</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="developers.html">For developers</a><input aria-label="Toggle navigation of For developers" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.analysis.html">nifreeze.analysis package</a><input aria-label="Toggle navigation of nifreeze.analysis package" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.filtering.html">nifreeze.analysis.filtering module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.measure_agreement.html">nifreeze.analysis.measure_agreement module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.motion.html">nifreeze.analysis.motion module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.phantoms.html">nifreeze.analysis.phantoms module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.registration.html">nifreeze.analysis.registration module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.sensitivity.html">nifreeze.analysis.sensitivity module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.analysis.similarity.html">nifreeze.analysis.similarity module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.cli.html">nifreeze.cli package</a><input aria-label="Toggle navigation of nifreeze.cli package" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.cli.parser.html">nifreeze.cli.parser module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.cli.run.html">nifreeze.cli.run module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.data.html">nifreeze.data package</a><input aria-label="Toggle navigation of nifreeze.data package" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="api/nifreeze.data.dmri.html">nifreeze.data.dmri package</a><input aria-label="Toggle navigation of nifreeze.data.dmri package" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.dmri.base.html">nifreeze.data.dmri.base module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.dmri.io.html">nifreeze.data.dmri.io module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.dmri.utils.html">nifreeze.data.dmri.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="api/nifreeze.data.pet.html">nifreeze.data.pet package</a><input aria-label="Toggle navigation of nifreeze.data.pet package" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.pet.base.html">nifreeze.data.pet.base module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.pet.io.html">nifreeze.data.pet.io module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/nifreeze.data.pet.utils.html">nifreeze.data.pet.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.data.base.html">nifreeze.data.base module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.data.filtering.html">nifreeze.data.filtering module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.data.splitting.html">nifreeze.data.splitting module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.data.utils.html">nifreeze.data.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/nifreeze.estimator.html">nifreeze.estimator module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/nifreeze.exceptions.html">nifreeze.exceptions module</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.model.html">nifreeze.model package</a><input aria-label="Toggle navigation of nifreeze.model package" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.base.html">nifreeze.model.base module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.dki.html">nifreeze.model.dki module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.dmri.html">nifreeze.model.dmri module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.gpr.html">nifreeze.model.gpr module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.gqi.html">nifreeze.model.gqi module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.lovo.html">nifreeze.model.lovo module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.model.pet.html">nifreeze.model.pet module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.registration.html">nifreeze.registration package</a><input aria-label="Toggle navigation of nifreeze.registration package" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.registration.ants.html">nifreeze.registration.ants module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.registration.utils.html">nifreeze.registration.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.testing.html">nifreeze.testing package</a><input aria-label="Toggle navigation of nifreeze.testing package" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.testing.perturbations.html">nifreeze.testing.perturbations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.testing.phantoms.html">nifreeze.testing.phantoms module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.testing.simulations.html">nifreeze.testing.simulations module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.utils.html">nifreeze.utils package</a><input aria-label="Toggle navigation of nifreeze.utils package" class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.utils.iterators.html">nifreeze.utils.iterators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.utils.ndimage.html">nifreeze.utils.ndimage module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/nifreeze.viz.html">nifreeze.viz package</a><input aria-label="Toggle navigation of nifreeze.viz package" class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.viz.bland_altman.html">nifreeze.viz.bland_altman module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.viz.motion_viz.html">nifreeze.viz.motion_viz module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/nifreeze.viz.signals.html">nifreeze.viz.signals module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="phantoms.html">Synthetic reference data</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Registration accuracy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changes.html">What’s new?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">References</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="_sources/registration.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="registration-accuracy">
+<h1>Registration accuracy<a class="headerlink" href="#registration-accuracy" title="Link to this heading">¶</a></h1>
+<p><em>NiFreeze</em> estimates head motion by registering each volume to a prediction of it.
+How accurate that registration can be is measured on the synthetic phantom
+(<a class="reference internal" href="phantoms.html"><span class="doc">Synthetic reference data</span></a>), where the true motion of every volume is known exactly.</p>
+<section id="what-limits-registration-to-a-perfect-target">
+<h2>What limits registration to a perfect target<a class="headerlink" href="#what-limits-registration-to-a-perfect-target" title="Link to this heading">¶</a></h2>
+<p>This section reports an experiment, with ANTs, on the error that remains when
+registration gets the best possible fixed image
+(<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/609">#609</a>).</p>
+<section id="the-question">
+<h3>The question<a class="headerlink" href="#the-question" title="Link to this heading">¶</a></h3>
+<p>The registration benchmark (<code class="docutils literal notranslate"><span class="pre">tools/registration/bench.py</span></code>,
+<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/584">#584</a>) uses TRXScan’s default
+adult phantom simulated with the Sherbrooke acquisition protocol, at that protocol’s
+resolution of 2 mm (<a class="reference internal" href="phantoms.html"><span class="doc">Synthetic reference data</span></a>).
+Its moved copies are made before simulation: the phantom itself is rotated and
+shifted by a known rigid motion, and each moved volume is then simulated from the
+moved phantom (see <a class="reference internal" href="#data">Data</a>, below).
+The benchmark registers each moved volume to several fixed images.
+One of them is the <em>oracle</em>: the noise-free simulation of the same gradient
+direction, with the head at its reference position, before the motion.
+The oracle is what a perfect model would predict for that volume, so registering to
+it removes the error of the model’s prediction.
+It does not remove the noise of the moving image: in the benchmark, the moved
+volumes carry the protocol’s noise, and only the oracle is noise-free.
+What remains is the error of registering a noisy volume to a perfect, noise-free
+fixed image; this experiment also registers the moved volumes without their noise.
+With the estimator’s default ANTs settings, that error was about 0.2 mm at every
+motion size, from 0.5° and 0.5 mm to 4° and 4 mm.
+Over the 192 volumes, the median of the mean displacement error within the brain
+(defined below) was 0.20, 0.22, 0.22 and 0.23 mm at the four sizes (the tables
+<code class="docutils literal notranslate"><span class="pre">derivatives/registration/sherbrooke/desc-m*_oracle.tsv</span></code> of the phantom dataset).
+Variant A below repeats that setting on a third of the volumes, and finds 0.22 mm at
+both sizes it tests.</p>
+<p>The error did not grow with the motion, so the size of the motion does not explain
+it.
+This experiment estimates how much of it each of five aspects of the registration
+accounts for, by changing them one or two at a time on the same volumes:</p>
+<ol class="arabic simple">
+<li><p><strong>Resolution.</strong> The last stage of the default settings runs at shrink factor 2:
+ANTs computes the similarity of the two images on a grid with half as many
+points as the image along each axis, one eighth in total.
+Registration never works on the images at full resolution.</p></li>
+<li><p><strong>Noise.</strong> The moving volume carries the noise of the protocol, while the oracle
+is noise-free.</p></li>
+<li><p><strong>Optimization.</strong> The last stage runs at most 10 iterations, and stops earlier
+if the similarity stops improving. It may stop before the best transform.</p></li>
+<li><p><strong>Sampling.</strong> The similarity is computed on a random 18% of the grid’s points,
+not on all of them.</p></li>
+<li><p><strong>Coding of the inputs.</strong> Before writing the two images for ANTs, <em>NiFreeze</em>
+clips both to an intensity window computed from the moving image: the 1st and
+99.98th percentiles, within the brain mask, of a median-filtered copy of it.
+It then stores the clipped intensities as 12-bit integers (4,096 levels across
+the window), which rounds them.</p></li>
+</ol>
+<p>The answers hold for ANTs, with variations of <em>NiFreeze</em>’s default command, on this
+phantom.
+They estimate what these settings achieve, not a limit of registration: other
+settings, or another registration library, may reach lower errors.</p>
+</section>
+<section id="data">
+<h3>Data<a class="headerlink" href="#data" title="Link to this heading">¶</a></h3>
+<p>The phantom is TRXScan’s adult brain under the Sherbrooke protocol
+(<a class="reference internal" href="phantoms.html"><span class="doc">Synthetic reference data</span></a>): 128 × 128 × 60 voxels of 2 mm, one b=0 volume, and 64 gradient
+directions at each of b=1000, 2000 and 3500 s/mm².
+In its moved copies, every diffusion-weighted volume moves, and the motion comes
+before the simulation.
+For each volume, the phantom is rotated by exactly <em>m</em> degrees about an axis drawn
+at random through the center of the brain, and shifted by exactly <em>m</em> mm in a
+direction drawn at random; the volume is then simulated from the moved phantom.
+Each volume has its own axis and direction.
+The gradient directions stay fixed in the scanner, as in a real acquisition, so
+the diffusion contrast of a moved volume also changes as its fibers turn.
+This experiment uses the copies with <em>m</em> = 1 and <em>m</em> = 4, and every third volume:
+64 of the 192, of which 22 are at b=1000, 21 at b=2000 and 21 at b=3500.</p>
+<figure class="align-default" id="id1">
+<a class="reference internal image-reference" href="_images/floor-orientations.svg"><img alt="_images/floor-orientations.svg" src="_images/floor-orientations.svg" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 5 </span><span class="caption-text">The 64 volumes this experiment registers, noise-free, played in order, a quarter
+of a second each: the b=1000 volumes, then b=2000, then b=3500.
+Top row: the oracle, with the head at its reference position; its contrast
+changes from frame to frame because each volume has its own gradient direction.
+Middle and bottom rows: the same volumes in the moved copies with <em>m</em> = 1 and
+<em>m</em> = 4, where each volume also has its own motion.
+The orange line outlines the brain at the reference position and is the same in
+every frame, so the moved brains shift and turn against it.
+Each frame is drawn with the slice renderer of NiReports’ mosaic reportlet.</span><a class="headerlink" href="#id1" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>The moving volumes are registered with noise, as in the benchmark, and without.
+The noise is complex Gaussian with a standard deviation of 3.0 in each channel,
+and the magnitude is kept, so it follows a Rice distribution.
+It is added on loading, with the benchmark’s seed (20261029), so the noisy volumes
+are the benchmark’s.
+That standard deviation comes from the protocol’s signal-to-noise ratio of 8.9 at
+b=0: the mean b=0 signal in white matter divided by the standard deviation of the
+noise (<a class="reference internal" href="phantoms.html"><span class="doc">Synthetic reference data</span></a>).
+Diffusion weighting lowers the signal, so the ratio is lower at higher b-values.
+The brain mask (171,170 voxels) limits where ANTs computes the similarity, on the
+fixed image, and where the error is measured.</p>
+<figure class="align-default" id="id2">
+<a class="reference internal image-reference" href="_images/floor-inputs.png"><img alt="_images/floor-inputs.png" src="_images/floor-inputs.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 6 </span><span class="caption-text">One volume of each shell at <em>m</em> = 1, on an axial slice through the center of the
+brain, with the brain mask outlined on the fixed image.
+The fixed image (the oracle) and the moving image share each row’s intensity
+window. The third column subtracts the fixed image from the noise-free moving
+image, in the simulation’s intensity units: blue is negative, red positive, and
+the colors saturate at the value printed in the corner. Edges show where the
+head moved. The last column is the moving image that the benchmark registers.</span><a class="headerlink" href="#id2" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="how-the-error-is-measured">
+<h3>How the error is measured<a class="headerlink" href="#how-the-error-is-measured" title="Link to this heading">¶</a></h3>
+<p>Registration returns a rigid transform, the <em>estimate</em>; the phantom’s sidecars give
+the <em>true</em> transform.
+For each voxel inside the brain mask, the displacement error is the distance
+between the point where the estimate maps the voxel’s center and the point where
+the true transform maps it.
+The error of one registration is the mean of that distance over the brain
+(<a class="reference internal" href="api/nifreeze.registration.utils.html#nifreeze.registration.utils.displacements_within_mask" title="nifreeze.registration.utils.displacements_within_mask"><code class="xref py py-func docutils literal notranslate"><span class="pre">displacements_within_mask()</span></code></a>).
+Each variant below reports the median and the 95th percentile (p95) of this error
+over the 64 volumes.
+Not registering at all (returning the identity) has the true motion as its error:
+a median of 1.21 mm at <em>m</em> = 1, and 4.85 mm at <em>m</em> = 4.</p>
+</section>
+<section id="the-ants-settings">
+<h3>The ANTs settings<a class="headerlink" href="#the-ants-settings" title="Link to this heading">¶</a></h3>
+<p><em>NiFreeze</em> builds its ANTs command from
+<code class="docutils literal notranslate"><span class="pre">src/nifreeze/registration/config/b0-to-b0_level0.json</span></code>.
+This is the command of the benchmark, with the file names replaced by placeholders:
+<code class="docutils literal notranslate"><span class="pre">fixed.nii</span></code> is the oracle, <code class="docutils literal notranslate"><span class="pre">moving.nii</span></code> the moved volume and <code class="docutils literal notranslate"><span class="pre">mask.nii</span></code> the
+brain mask.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>antsRegistration<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--collapse-output-transforms<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--dimensionality<span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--initialize-transforms-per-stage<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--interpolation<span class="w"> </span>Linear<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--output<span class="w"> </span>ants-<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--transform<span class="w"> </span>Rigid<span class="o">[</span><span class="w"> </span><span class="m">12</span>.0<span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--metric<span class="w"> </span>GC<span class="o">[</span><span class="w"> </span>fixed.nii,<span class="w"> </span>moving.nii,<span class="w"> </span><span class="m">1</span>,<span class="w"> </span><span class="m">3</span>,<span class="w"> </span>Random,<span class="w"> </span><span class="m">0</span>.4<span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--convergence<span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="m">20</span>,<span class="w"> </span>1e-06,<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--smoothing-sigmas<span class="w"> </span><span class="m">2</span>.71vox<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--shrink-factors<span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--use-histogram-matching<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--masks<span class="w"> </span><span class="o">[</span><span class="w"> </span>mask.nii,<span class="w"> </span>NULL<span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--transform<span class="w"> </span>Rigid<span class="o">[</span><span class="w"> </span><span class="m">1</span>.96<span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--metric<span class="w"> </span>GC<span class="o">[</span><span class="w"> </span>fixed.nii,<span class="w"> </span>moving.nii,<span class="w"> </span><span class="m">1</span>,<span class="w"> </span><span class="m">4</span>,<span class="w"> </span>Random,<span class="w"> </span><span class="m">0</span>.18<span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--convergence<span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="m">10</span>,<span class="w"> </span>1e-07,<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--smoothing-sigmas<span class="w"> </span><span class="m">0</span>.0vox<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--shrink-factors<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--use-histogram-matching<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--masks<span class="w"> </span><span class="o">[</span><span class="w"> </span>mask.nii,<span class="w"> </span>NULL<span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-v<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--winsorize-image-intensities<span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="m">0</span>.063,<span class="w"> </span><span class="m">0</span>.991<span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--write-composite-transform<span class="w"> </span><span class="m">0</span>
+</pre></div>
+</div>
+<p>The command runs two stages, one after the other, each estimating a rigid
+transform; the second starts from the result of the first.
+The descriptions follow <code class="docutils literal notranslate"><span class="pre">antsRegistration</span> <span class="pre">--help</span></code> (ANTs 2.4.4).</p>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 12.0%" />
+<col style="width: 12.0%" />
+<col style="width: 56.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Option</p></th>
+<th class="head"><p>Stage 1</p></th>
+<th class="head"><p>Stage 2 (last)</p></th>
+<th class="head"><p>What it sets</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--transform</span> <span class="pre">Rigid[</span> <span class="pre">step</span> <span class="pre">]</span></code></p></td>
+<td><p>12.0</p></td>
+<td><p>1.96</p></td>
+<td><p>A rigid transform, and the gradient step of its optimizer.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--metric</span> <span class="pre">GC[</span> <span class="pre">fixed,</span> <span class="pre">moving,</span> <span class="pre">1,</span> <span class="pre">r,</span> <span class="pre">Random,</span> <span class="pre">p</span> <span class="pre">]</span></code></p></td>
+<td><p><em>p</em> = 0.4</p></td>
+<td><p><em>p</em> = 0.18</p></td>
+<td><p>The similarity: global correlation (GC), the correlation of the two images’
+intensities over a set of points. GC does not use the radius <em>r</em>.
+<code class="docutils literal notranslate"><span class="pre">Random</span></code> draws a fraction <em>p</em> of the grid’s points, on “a random lattice of
+points slightly perturbed to minimize aliasing artifacts”; the alternative,
+<code class="docutils literal notranslate"><span class="pre">None</span></code>, is “a dense sampling of one sample per voxel”.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--convergence</span> <span class="pre">[</span> <span class="pre">n,</span> <span class="pre">threshold,</span> <span class="pre">window</span> <span class="pre">]</span></code></p></td>
+<td><p>[ 20, 1e-06, 4 ]</p></td>
+<td><p>[ 10, 1e-07, 2 ]</p></td>
+<td><p>At most <em>n</em> iterations. The stage stops earlier when a line fitted to the
+similarity over the last <em>window</em> iterations has a slope below
+<em>threshold</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--smoothing-sigmas</span></code></p></td>
+<td><p>2.71 voxels</p></td>
+<td><p>0 (none)</p></td>
+<td><p>Gaussian smoothing of the images before the stage.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--shrink-factors</span></code></p></td>
+<td><p>3</p></td>
+<td><p>2</p></td>
+<td><p>The shrink factor of “the virtual domain (typically the fixed image)”: the
+grid on which the similarity is computed.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--masks</span> <span class="pre">[</span> <span class="pre">fixed,</span> <span class="pre">moving</span> <span class="pre">]</span></code></p></td>
+<td><p>brain mask, none</p></td>
+<td><p>brain mask, none</p></td>
+<td><p>The points where the similarity is computed must fall inside the fixed
+image’s mask.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Both stages match the two images’ histograms and clip their intensities to the
+quantiles 0.063 and 0.991 (<code class="docutils literal notranslate"><span class="pre">--use-histogram-matching</span> <span class="pre">1</span></code>,
+<code class="docutils literal notranslate"><span class="pre">--winsorize-image-intensities</span></code>).
+The random sampling uses the same seed in every registration
+(<code class="docutils literal notranslate"><span class="pre">ANTS_RANDOM_SEED=12345</span></code>).</p>
+<p>The variants change only the second stage, or the images given to ANTs:</p>
+<div class="table-wrapper colwidths-auto docutils container" id="id3">
+<table class="docutils align-default" id="id3">
+<caption><span class="caption-number">Table 7 </span><span class="caption-text">The nine variants, and the second-stage options in which each differs
+from A, as ANTs receives them. Noise and the coding of the inputs are not ANTs
+options.</span><a class="headerlink" href="#id3" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Variant</p></th>
+<th class="head"><p>Shrink factor</p></th>
+<th class="head"><p>Noise</p></th>
+<th class="head"><p>Optimization</p></th>
+<th class="head"><p>Sampled voxels</p></th>
+<th class="head"><p>Inputs</p></th>
+<th class="head"><p>Second-stage options that differ from A</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>A</p></td>
+<td><p>2</p></td>
+<td><p>yes</p></td>
+<td><p>default</p></td>
+<td><p>random 18%</p></td>
+<td><p>12-bit</p></td>
+<td><p>(none)</p></td>
+</tr>
+<tr class="row-odd"><td><p>B</p></td>
+<td><p>2</p></td>
+<td><p>no</p></td>
+<td><p>default</p></td>
+<td><p>random 18%</p></td>
+<td><p>12-bit</p></td>
+<td><p>(none)</p></td>
+</tr>
+<tr class="row-even"><td><p>C</p></td>
+<td><p>1</p></td>
+<td><p>yes</p></td>
+<td><p>default</p></td>
+<td><p>random 18%</p></td>
+<td><p>12-bit</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">--shrink-factors</span> <span class="pre">1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>D</p></td>
+<td><p>1</p></td>
+<td><p>no</p></td>
+<td><p>default</p></td>
+<td><p>random 18%</p></td>
+<td><p>12-bit</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">--shrink-factors</span> <span class="pre">1</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>E</p></td>
+<td><p>2</p></td>
+<td><p>yes</p></td>
+<td><p>longer</p></td>
+<td><p>random 18%</p></td>
+<td><p>12-bit</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">--transform</span> <span class="pre">Rigid[</span> <span class="pre">0.25</span> <span class="pre">]</span></code> <code class="docutils literal notranslate"><span class="pre">--convergence</span> <span class="pre">[</span> <span class="pre">100,</span> <span class="pre">1e-08,</span> <span class="pre">10</span> <span class="pre">]</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>F</p></td>
+<td><p>1</p></td>
+<td><p>yes</p></td>
+<td><p>longer</p></td>
+<td><p>random 18%</p></td>
+<td><p>12-bit</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">--transform</span> <span class="pre">Rigid[</span> <span class="pre">0.25</span> <span class="pre">]</span></code> <code class="docutils literal notranslate"><span class="pre">--convergence</span> <span class="pre">[</span> <span class="pre">100,</span> <span class="pre">1e-08,</span> <span class="pre">10</span> <span class="pre">]</span></code> <code class="docutils literal notranslate"><span class="pre">--shrink-factors</span> <span class="pre">1</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>G</p></td>
+<td><p>1</p></td>
+<td><p>no</p></td>
+<td><p>longer</p></td>
+<td><p>random 18%</p></td>
+<td><p>12-bit</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">--transform</span> <span class="pre">Rigid[</span> <span class="pre">0.25</span> <span class="pre">]</span></code> <code class="docutils literal notranslate"><span class="pre">--convergence</span> <span class="pre">[</span> <span class="pre">100,</span> <span class="pre">1e-08,</span> <span class="pre">10</span> <span class="pre">]</span></code> <code class="docutils literal notranslate"><span class="pre">--shrink-factors</span> <span class="pre">1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>H</p></td>
+<td><p>2</p></td>
+<td><p>yes</p></td>
+<td><p>longer</p></td>
+<td><p>every voxel</p></td>
+<td><p>12-bit</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">--transform</span> <span class="pre">Rigid[</span> <span class="pre">0.25</span> <span class="pre">]</span></code> <code class="docutils literal notranslate"><span class="pre">--metric</span> <span class="pre">GC[</span> <span class="pre">fixed.nii,</span> <span class="pre">moving.nii,</span> <span class="pre">1,</span> <span class="pre">4,</span> <span class="pre">None,</span> <span class="pre">1</span> <span class="pre">]</span></code> <code class="docutils literal notranslate"><span class="pre">--convergence</span> <span class="pre">[</span> <span class="pre">100,</span> <span class="pre">1e-08,</span> <span class="pre">10</span> <span class="pre">]</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>I</p></td>
+<td><p>1</p></td>
+<td><p>yes</p></td>
+<td><p>default</p></td>
+<td><p>random 18%</p></td>
+<td><p>float32</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">--shrink-factors</span> <span class="pre">1</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<ul class="simple">
+<li><p><strong>A</strong> is the benchmark’s setting.</p></li>
+<li><p><strong>B</strong>, <strong>C</strong> and <strong>D</strong> cross the shrink factor (2 or 1) with the noise (with or
+without).</p></li>
+<li><p><strong>E</strong>, <strong>F</strong> and <strong>G</strong> run a longer optimization: a gradient step of 0.25 instead
+of 1.96, up to 100 iterations instead of 10, and a stricter convergence (a slope
+below 1e-8 over 10 iterations). The smaller step makes smaller updates, so the
+optimizer can settle closer to the best transform instead of stepping over it;
+the extra iterations let it travel as far as the default does. ANTs does not
+document the unit of the step. If the default optimization stopped before the
+best transform, these variants should be more accurate than A, C and D.</p></li>
+<li><p><strong>H</strong> computes the similarity at every voxel of the grid (<code class="docutils literal notranslate"><span class="pre">None,</span> <span class="pre">1</span></code>) instead of
+a random 18%. It also has the longer optimization, so H differs from E only by its
+sampling.</p></li>
+<li><p><strong>I</strong> gives ANTs the images in float32, neither clipped to the window nor
+rounded, at full resolution and with noise. It differs from C in both the
+clipping and the rounding, so it tests the two together.</p></li>
+</ul>
+<p>The script ran each registration on one thread, four at a time, on two physical
+cores (four hardware threads), with ANTs 2.4.4.
+The seconds compare the variants with each other, not with other machines.</p>
+</section>
+<section id="results">
+<h3>Results<a class="headerlink" href="#results" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper colwidths-auto docutils container" id="id4">
+<table class="docutils align-default" id="id4">
+<caption><span class="caption-number">Table 8 </span><span class="caption-text">Mean displacement error within the brain (mm), median and p95 over
+64 volumes at each motion size, and the median seconds per registration.</span><a class="headerlink" href="#id4" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Variant</p></th>
+<th class="head"><p>Change from A</p></th>
+<th class="head"><p>1° and 1 mm: median</p></th>
+<th class="head"><p>1° and 1 mm: p95</p></th>
+<th class="head"><p>4° and 4 mm: median</p></th>
+<th class="head"><p>4° and 4 mm: p95</p></th>
+<th class="head"><p>Seconds (median)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>(none)</p></td>
+<td><p>no registration: the true motion</p></td>
+<td><p>1.214</p></td>
+<td><p>1.276</p></td>
+<td><p>4.855</p></td>
+<td><p>5.105</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>A</p></td>
+<td><p>none: the estimator’s default, with noise</p></td>
+<td><p>0.223</p></td>
+<td><p>0.449</p></td>
+<td><p>0.225</p></td>
+<td><p>0.428</p></td>
+<td><p>2.0</p></td>
+</tr>
+<tr class="row-even"><td><p>B</p></td>
+<td><p>no noise</p></td>
+<td><p>0.040</p></td>
+<td><p>0.076</p></td>
+<td><p>0.043</p></td>
+<td><p>0.099</p></td>
+<td><p>1.5</p></td>
+</tr>
+<tr class="row-odd"><td><p>C</p></td>
+<td><p>shrink factor 1</p></td>
+<td><p>0.105</p></td>
+<td><p>0.231</p></td>
+<td><p>0.096</p></td>
+<td><p>0.223</p></td>
+<td><p>3.5</p></td>
+</tr>
+<tr class="row-even"><td><p>D</p></td>
+<td><p>shrink factor 1, no noise</p></td>
+<td><p>0.029</p></td>
+<td><p>0.071</p></td>
+<td><p>0.034</p></td>
+<td><p>0.081</p></td>
+<td><p>2.9</p></td>
+</tr>
+<tr class="row-odd"><td><p>E</p></td>
+<td><p>longer optimization</p></td>
+<td><p>0.217</p></td>
+<td><p>0.435</p></td>
+<td><p>0.225</p></td>
+<td><p>0.377</p></td>
+<td><p>3.4</p></td>
+</tr>
+<tr class="row-even"><td><p>F</p></td>
+<td><p>shrink factor 1, longer optimization</p></td>
+<td><p>0.112</p></td>
+<td><p>0.216</p></td>
+<td><p>0.091</p></td>
+<td><p>0.212</p></td>
+<td><p>16.6</p></td>
+</tr>
+<tr class="row-odd"><td><p>G</p></td>
+<td><p>shrink factor 1, no noise, longer optimization</p></td>
+<td><p>0.029</p></td>
+<td><p>0.069</p></td>
+<td><p>0.031</p></td>
+<td><p>0.074</p></td>
+<td><p>16.3</p></td>
+</tr>
+<tr class="row-even"><td><p>H</p></td>
+<td><p>longer optimization, every voxel sampled</p></td>
+<td><p>0.610</p></td>
+<td><p>1.038</p></td>
+<td><p>0.163</p></td>
+<td><p>0.501</p></td>
+<td><p>16.7</p></td>
+</tr>
+<tr class="row-odd"><td><p>I</p></td>
+<td><p>shrink factor 1, float32 inputs</p></td>
+<td><p>0.130</p></td>
+<td><p>0.225</p></td>
+<td><p>0.102</p></td>
+<td><p>0.164</p></td>
+<td><p>2.9</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<figure class="align-default" id="id5">
+<a class="reference internal image-reference" href="_images/floor-errors.png"><img alt="_images/floor-errors.png" src="_images/floor-errors.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 7 </span><span class="caption-text">The error of every registration. Each point is one volume, colored by its shell
+(note the logarithmic scale). Black lines mark the medians, whose values are
+printed above the points. The dashed line is the median error of not
+registering at all. Below each letter, the variant’s settings, in bold where they
+differ from A.</span><a class="headerlink" href="#id5" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<div class="table-wrapper colwidths-auto docutils container" id="id6">
+<table class="docutils align-default" id="id6">
+<caption><span class="caption-number">Table 9 </span><span class="caption-text">Median error per shell (mm), with both motion sizes together.</span><a class="headerlink" href="#id6" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Variant</p></th>
+<th class="head"><p>b=1000</p></th>
+<th class="head"><p>b=2000</p></th>
+<th class="head"><p>b=3500</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>A</p></td>
+<td><p>0.196</p></td>
+<td><p>0.205</p></td>
+<td><p>0.304</p></td>
+</tr>
+<tr class="row-odd"><td><p>B</p></td>
+<td><p>0.033</p></td>
+<td><p>0.039</p></td>
+<td><p>0.068</p></td>
+</tr>
+<tr class="row-even"><td><p>C</p></td>
+<td><p>0.080</p></td>
+<td><p>0.095</p></td>
+<td><p>0.139</p></td>
+</tr>
+<tr class="row-odd"><td><p>D</p></td>
+<td><p>0.023</p></td>
+<td><p>0.031</p></td>
+<td><p>0.051</p></td>
+</tr>
+<tr class="row-even"><td><p>E</p></td>
+<td><p>0.191</p></td>
+<td><p>0.207</p></td>
+<td><p>0.306</p></td>
+</tr>
+<tr class="row-odd"><td><p>F</p></td>
+<td><p>0.077</p></td>
+<td><p>0.097</p></td>
+<td><p>0.143</p></td>
+</tr>
+<tr class="row-even"><td><p>G</p></td>
+<td><p>0.021</p></td>
+<td><p>0.031</p></td>
+<td><p>0.052</p></td>
+</tr>
+<tr class="row-odd"><td><p>H</p></td>
+<td><p>0.327</p></td>
+<td><p>0.378</p></td>
+<td><p>0.502</p></td>
+</tr>
+<tr class="row-even"><td><p>I</p></td>
+<td><p>0.104</p></td>
+<td><p>0.103</p></td>
+<td><p>0.144</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<figure class="align-default" id="id7">
+<a class="reference internal image-reference" href="_images/floor-residuals.png"><img alt="_images/floor-residuals.png" src="_images/floor-residuals.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 8 </span><span class="caption-text">Where each estimate misplaces the center of the brain: the residual displacement
+of the brain’s centroid (estimate minus truth), along x and y. The text gives the
+mean and standard deviation (SD) of the residual along x, y and z, over both
+motion sizes. A bias would shift a cloud away from the origin; noise spreads it.</span><a class="headerlink" href="#id7" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="what-the-results-show">
+<h3>What the results show<a class="headerlink" href="#what-the-results-show" title="Link to this heading">¶</a></h3>
+<p><strong>Noise accounts for most of the error.</strong>
+Without noise (B), the default settings miss by 0.04 mm; with noise (A), by 0.22
+mm.
+A and B differ only in the moving image, with or without noise, and in the
+intensity window computed from it.
+The noise-free error is not zero, but it is small: the moving volume is simulated
+again after the motion, so its diffusion contrast also changes as the fibers turn
+relative to the gradient (<a class="reference internal" href="phantoms.html"><span class="doc">Synthetic reference data</span></a>), and no rigid transform of the oracle
+matches it exactly.
+That mismatch, and interpolation, may account for the error that remains without
+noise: 0.04 mm at shrink factor 2 (B) and 0.03 mm at full resolution (D and G).</p>
+<p><strong>With noise, full resolution halves the error.</strong>
+With noise, shrink factor 1 (C) lowers the median error from 0.22 to 0.10 mm, and
+the p95 from 0.45 to 0.23 mm, at 1°; at 4°, the median goes from 0.22 to 0.10 mm.
+Without noise, the shrink factor hardly matters (B and D: 0.04 and 0.03 mm).
+So the coarse grid costs accuracy only through the noise.
+A likely reason is the number of points over which the similarity averages the
+noise.
+At shrink factor 2, the grid has one eighth of the voxels, so the 18% sample has
+about 3,850 points inside the brain, against about 30,800 at full resolution.
+This experiment does not separate the resolution itself from the number of points
+(see the open question below).
+Full resolution costs about 1.8 times the time per registration (3.5 against 2.0
+seconds).</p>
+<p><strong>The longer optimization gives the same error as the default one.</strong>
+At 1°, 0.22 mm for
+both A and E, and 0.11 against 0.10 mm for F and C; at 4°, 0.23 against 0.22 mm
+(E and A) and 0.09 against 0.10 mm (F and C).
+The default’s 10 iterations therefore reach the same accuracy as 100 smaller steps
+do; the noise, not the optimizer, keeps the estimate from the truth.
+The longer optimization costs 1.7 times the time at shrink factor 2 and 4.7 times
+at full resolution.</p>
+<p><strong>Sampling every voxel makes the error depend on the motion.</strong>
+H differs from E only by sampling every voxel instead of a random 18%.
+At 1°, its median error is 0.61 mm, against 0.22 mm for E, and one of its 64
+registrations (volume 183, at b=3500) ends 1.67 mm from the truth, farther than that
+volume’s motion: it is the one point above the dashed line in the figure.
+At 4°, its median is lower than E’s (0.16 against 0.23 mm), but its p95 is higher
+(0.50 against 0.38 mm).
+In the figure of residuals, H’s wide cloud is almost all registrations at 1°.
+ANTs perturbs its random points “to minimize aliasing artifacts”, and sampling
+every voxel center gives up that protection.
+A plausible mechanism, which this experiment does not test, is that with noise and
+linear interpolation the similarity depends on where the sample points fall between
+the voxels of the moving image, which can pull the estimate by a fraction of a
+voxel.
+This experiment does not explain why the smaller motion suffers more.</p>
+<p><strong>The coding of the inputs is not a source of error.</strong>
+Without the clipping and the rounding (I), the median error is 0.13 mm at 1° and
+0.10 mm at 4°, against 0.10 and 0.10 mm with them (C).
+The p95 is similar at 1° (0.225 against 0.231 mm) and lower at 4° (0.16 against
+0.22 mm).
+Neither setting is better at both sizes.
+Because I removes the clipping and the rounding together, this experiment cannot
+tell their effects apart; it shows that together they change the error little.</p>
+<p><strong>There is no bias.</strong>
+The table below gives, for each variant, the mean residual over its 128
+registrations: the mean shift of the brain’s centroid stays within 0.05 mm of zero
+along each axis, and the mean rotation within 0.04° of zero about each axis.
+A wrong sign, swapped axes, or any other mismatch between the conventions of the
+phantom’s true transforms and of the transforms read back from ANTs would leave
+residuals as large as the motion, or clouds of residuals away from the origin.
+Neither appears: the clouds in the figure of residuals are centered on the origin,
+and the remaining error is scatter.</p>
+<div class="table-wrapper colwidths-auto docutils container" id="id8">
+<table class="docutils align-default" id="id8">
+<caption><span class="caption-number">Table 10 </span><span class="caption-text">Mean residual of each variant over its 128 registrations: the shift of
+the brain’s centroid (estimate minus truth) and the rotation of the estimate
+relative to the truth, about each axis.</span><a class="headerlink" href="#id8" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Variant</p></th>
+<th class="head"><p>Mean shift along x (mm)</p></th>
+<th class="head"><p>Mean shift along y (mm)</p></th>
+<th class="head"><p>Mean shift along z (mm)</p></th>
+<th class="head"><p>Mean rotation about x (°)</p></th>
+<th class="head"><p>Mean rotation about y (°)</p></th>
+<th class="head"><p>Mean rotation about z (°)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>A</p></td>
+<td><p>-0.012</p></td>
+<td><p>+0.032</p></td>
+<td><p>+0.000</p></td>
+<td><p>-0.038</p></td>
+<td><p>+0.004</p></td>
+<td><p>-0.033</p></td>
+</tr>
+<tr class="row-odd"><td><p>B</p></td>
+<td><p>-0.005</p></td>
+<td><p>+0.003</p></td>
+<td><p>-0.012</p></td>
+<td><p>+0.004</p></td>
+<td><p>-0.015</p></td>
+<td><p>+0.005</p></td>
+</tr>
+<tr class="row-even"><td><p>C</p></td>
+<td><p>-0.003</p></td>
+<td><p>+0.015</p></td>
+<td><p>-0.016</p></td>
+<td><p>-0.013</p></td>
+<td><p>-0.009</p></td>
+<td><p>-0.015</p></td>
+</tr>
+<tr class="row-odd"><td><p>D</p></td>
+<td><p>+0.005</p></td>
+<td><p>-0.001</p></td>
+<td><p>-0.009</p></td>
+<td><p>-0.001</p></td>
+<td><p>-0.001</p></td>
+<td><p>-0.003</p></td>
+</tr>
+<tr class="row-even"><td><p>E</p></td>
+<td><p>-0.011</p></td>
+<td><p>+0.030</p></td>
+<td><p>+0.002</p></td>
+<td><p>-0.023</p></td>
+<td><p>-0.012</p></td>
+<td><p>-0.024</p></td>
+</tr>
+<tr class="row-odd"><td><p>F</p></td>
+<td><p>-0.001</p></td>
+<td><p>+0.016</p></td>
+<td><p>-0.016</p></td>
+<td><p>-0.006</p></td>
+<td><p>-0.009</p></td>
+<td><p>-0.014</p></td>
+</tr>
+<tr class="row-even"><td><p>G</p></td>
+<td><p>+0.006</p></td>
+<td><p>-0.001</p></td>
+<td><p>-0.009</p></td>
+<td><p>-0.002</p></td>
+<td><p>-0.001</p></td>
+<td><p>-0.003</p></td>
+</tr>
+<tr class="row-odd"><td><p>H</p></td>
+<td><p>+0.045</p></td>
+<td><p>+0.015</p></td>
+<td><p>-0.016</p></td>
+<td><p>-0.003</p></td>
+<td><p>-0.013</p></td>
+<td><p>-0.024</p></td>
+</tr>
+<tr class="row-even"><td><p>I</p></td>
+<td><p>-0.013</p></td>
+<td><p>-0.003</p></td>
+<td><p>-0.018</p></td>
+<td><p>-0.013</p></td>
+<td><p>-0.008</p></td>
+<td><p>-0.011</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>The b=3500 shell has the largest error, with and without noise.</strong>
+Without noise, its median error is about twice the other shells’ (B: 0.068 against
+0.033 and 0.039 mm at b=1000 and b=2000), possibly because its contrast changes the
+most as the fibers turn with the head.
+With noise, its weaker signal widens the gap (A: 0.30 against 0.20 and 0.21 mm).
+Full resolution lowers it to 0.14 mm (C).</p>
+</section>
+<section id="consequences">
+<h3>Consequences<a class="headerlink" href="#consequences" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>The benchmark’s oracle error of about 0.2 mm is a property of the default settings
+on noisy data, not a limit of registration: at full resolution, the same command
+reaches 0.10 mm, and other settings may do better.</p></li>
+<li><p>For the tuning of registration settings
+(<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/593">#593</a>, and the subsampling
+question of <a class="reference external" href="https://github.com/nipreps/nifreeze/issues/11">#11</a>), running the
+last stage at full resolution is the first change to evaluate, at about 1.8 times
+the time per registration. A longer optimization costs time without gain, and
+dense sampling should be avoided.</p></li>
+<li><p>In a real run, the fixed image is a model’s prediction from the moved data, not
+the oracle. In the benchmark, with the Gaussian-process model’s prediction from
+the moved data as the fixed image, the median error is 0.31 mm at 0.5° and 2.00
+mm at 4° (the tables <code class="docutils literal notranslate"><span class="pre">derivatives/registration/sherbrooke/desc-m*_model-gp-loo.tsv</span></code>
+of the phantom dataset), well above the oracle’s 0.2 mm. The oracle’s error
+becomes the limit only once the data the model learns from are mostly realigned,
+so that its prediction approaches the oracle.</p></li>
+</ul>
+</section>
+<section id="open-question">
+<h3>Open question<a class="headerlink" href="#open-question" title="Link to this heading">¶</a></h3>
+<p>Full resolution may help because of the resolution itself or because the similarity
+averages eight times as many points.
+Sweeping the sampling fraction at both shrink factors (for example, a random 18%,
+50% and 100%) would separate the two, and would tell whether a cheaper setting, such
+as a larger sample at shrink factor 2 or smoothing before shrinking, reaches 0.1 mm.</p>
+</section>
+<section id="reproducing">
+<h3>Reproducing<a class="headerlink" href="#reproducing" title="Link to this heading">¶</a></h3>
+<p>The results live in the phantom dataset (<a class="reference internal" href="phantoms.html"><span class="doc">Synthetic reference data</span></a>), under
+<code class="docutils literal notranslate"><span class="pre">derivatives/registration/floor</span></code>: <code class="docutils literal notranslate"><span class="pre">sherbrooke.tsv</span></code> has one row per
+registration, and <code class="docutils literal notranslate"><span class="pre">sherbrooke.json</span></code> records the variants with their full ANTs
+settings, the ANTs version (2.4.4.post40-gec7048b) and the <em>NiFreeze</em> commit the
+script ran with (2906d29c).
+The dataset’s <code class="docutils literal notranslate"><span class="pre">datalad</span> <span class="pre">run</span></code> record (commit 5746d33) ran <code class="docutils literal notranslate"><span class="pre">tools/registration/floor.py</span></code>
+from a copy in the dataset’s <code class="docutils literal notranslate"><span class="pre">code/</span></code> folder, which differs from it only in its
+docstrings and in the type annotation of <code class="docutils literal notranslate"><span class="pre">VARIANTS</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">uv</span> <span class="n">run</span> <span class="n">tools</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">floor</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">dataset</span> <span class="o">&lt;</span><span class="n">dataset</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">protocol</span> <span class="n">sherbrooke</span> \
+    <span class="o">--</span><span class="n">out</span> <span class="o">&lt;</span><span class="n">dataset</span><span class="o">&gt;/</span><span class="n">derivatives</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">floor</span> <span class="o">--</span><span class="n">jobs</span> <span class="mi">4</span> <span class="o">--</span><span class="n">threads</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p>The figures and tables of this section come from:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">tools</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">floor_figures</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">dataset</span> <span class="o">&lt;</span><span class="n">dataset</span><span class="o">&gt;</span> \
+    <span class="o">--</span><span class="n">out</span> <span class="n">docs</span><span class="o">/</span><span class="n">_static</span><span class="o">/</span><span class="n">registration</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="changes.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">What’s new?</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="phantoms.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Synthetic reference data</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; Copyright 2024, The NiFreeze developers
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Registration accuracy</a><ul>
+<li><a class="reference internal" href="#what-limits-registration-to-a-perfect-target">What limits registration to a perfect target</a><ul>
+<li><a class="reference internal" href="#the-question">The question</a></li>
+<li><a class="reference internal" href="#data">Data</a></li>
+<li><a class="reference internal" href="#how-the-error-is-measured">How the error is measured</a></li>
+<li><a class="reference internal" href="#the-ants-settings">The ANTs settings</a></li>
+<li><a class="reference internal" href="#results">Results</a></li>
+<li><a class="reference internal" href="#what-the-results-show">What the results show</a></li>
+<li><a class="reference internal" href="#consequences">Consequences</a></li>
+<li><a class="reference internal" href="#open-question">Open question</a></li>
+<li><a class="reference internal" href="#reproducing">Reproducing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=915be5d4"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/furo.js?v=46bd48cc"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/version-switch.js?v=8028bf13"></script>
+    </body>
+</html>
