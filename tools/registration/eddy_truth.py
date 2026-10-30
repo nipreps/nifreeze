@@ -40,14 +40,18 @@ Q1, readout
     as TRXScan's readout forms it, which should reproduce TRXScan's volume;
 Q2, warp
     by resampling at the displaced points and scaling by the Jacobian, as a
-    correction by warping would undo it.
+    correction by warping would undo it;
+Q2b, inverse warp (post hoc)
+    as Q2, by the coefficients of the warp that undoes the readout. The readout takes
+    the displacement at the source point, a warp at the destination, so for a linear
+    field of slope :math:`s` along phase encoding that warp is :math:`d / (1 - s)`.
 
-Both are compared with TRXScan's volume within the brain, relative to the volume's
+All are compared with TRXScan's volume within the brain, relative to the volume's
 maximum. On the development volumes of a few copies (Q3), the four coefficients that
 best map the undistorted volume onto TRXScan's under the warp model are fitted by
-least squares, without any registration, and their displacement is compared with
-the sidecar's within the brain, in voxels. All volumes are noise-free. Runs in
-NiFreeze's environment::
+least squares, without any registration, and their displacement is compared within
+the brain, in voxels, with the sidecar's and (Q3b, post hoc) with the inverse warp's.
+All volumes are noise-free. Runs in NiFreeze's environment::
 
     uv run tools/registration/eddy_truth.py --dataset <dataset> --protocol sherbrooke \\
         --out <dataset>/derivatives/registration/eddy-truth
@@ -75,6 +79,9 @@ FIT_COLUMNS = (
     "fit_mean_vox",
     "fit_p95_vox",
     "fit_max_vox",
+    "fit_inverse_mean_vox",
+    "fit_inverse_p95_vox",
+    "fit_inverse_max_vox",
     "fit_residual_max",
     "fit_evaluations",
     *(f"fit_c{k}" for k in range(4)),
@@ -106,6 +113,8 @@ def _evaluate(index: int) -> dict[str, Any]:
     undistorted = np.asarray(_SHARED["undistorted"][index], dtype=float)
     distorted = np.asarray(_SHARED["distorted"][index], dtype=float)
     coefficients = readout.coefficients[index]
+    # The warp that undoes the readout, for a linear field (see Q2b)
+    inverse = coefficients / (1.0 - coefficients @ _SHARED["slopes"])
     scale = distorted.max()
     voxel = float(np.linalg.norm(affine[:3, readout.axis]))
 
@@ -115,9 +124,14 @@ def _evaluate(index: int) -> dict[str, Any]:
         "shell": _SHARED["shells"][index],
         "truth_max_vox": float(np.abs(coefficients @ _SHARED["values"]).max() / voxel),
         **dict.fromkeys(FIT_COLUMNS),
+        **{f"inverse_c{k}": float(v) for k, v in enumerate(inverse)},
     }
-    for label, model in (("readout", readout), ("warp", warp)):
-        residual = np.abs(model.distort(undistorted, affine, coefficients) - distorted)[mask]
+    for label, model, terms in (
+        ("readout", readout, coefficients),
+        ("warp", warp, coefficients),
+        ("inverse", warp, inverse),
+    ):
+        residual = np.abs(model.distort(undistorted, affine, terms) - distorted)[mask]
         row[f"{label}_max"] = float(residual.max() / scale)
         row[f"{label}_p99"] = float(np.percentile(residual, 99) / scale)
 
@@ -134,10 +148,14 @@ def _evaluate(index: int) -> dict[str, Any]:
 
         solution = least_squares(residuals, np.zeros(len(coefficients)), method="lm")
         error = np.abs((solution.x - coefficients) @ _SHARED["values"]) / voxel
+        against = np.abs((solution.x - inverse) @ _SHARED["values"]) / voxel
         row |= {
             "fit_mean_vox": float(error.mean()),
             "fit_p95_vox": float(np.percentile(error, 95)),
             "fit_max_vox": float(error.max()),
+            "fit_inverse_mean_vox": float(against.mean()),
+            "fit_inverse_p95_vox": float(np.percentile(against, 95)),
+            "fit_inverse_max_vox": float(against.max()),
             "fit_residual_max": float(np.abs(solution.fun).max()),
             "fit_evaluations": int(solution.nfev),
             **{f"fit_c{k}": float(v) for k, v in enumerate(solution.x)},
@@ -179,12 +197,14 @@ def main(argv: list[str] | None = None) -> int:
     rows: list[dict[str, Any]] = []
     for key in sorted(eddies):
         name, perturbation, readout, load = eddies[key]
+        if readout.degree != 1:
+            raise NotImplementedError("The inverse warp is closed-form only for linear fields.")
         undistorted = (
             clean
             if perturbation.magnitude == 0
             else motion_only[(perturbation.magnitude, perturbation.seed)]()
         )
-        values, _ = readout.basis(world)
+        values, derivatives = readout.basis(world)
 
         # The warp model is fitted where the displaced signal may land
         voxel = float(np.linalg.norm(affine[:3, readout.axis]))
@@ -201,6 +221,8 @@ def main(argv: list[str] | None = None) -> int:
             affine=affine,
             mask=mask,
             values=values,
+            # The slope of each term along phase encoding, the same at every point
+            slopes=derivatives[:, 0],
             shells=np.round(clean.gradients[:, -1], -2).tolist(),
             undistorted=undistorted.dataobj,
             distorted=load().dataobj,
