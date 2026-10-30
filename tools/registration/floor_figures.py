@@ -284,11 +284,11 @@ def orientations_animation(
                 f'<text x="{left - 10}" y="{middle + dy + 5:.0f}" text-anchor="end" '
                 f'fill="#f0efec">{line}</text>'
             )
-    for k, (index, shell, data) in enumerate(frames):
+    for k, (index, shell, payload) in enumerate(frames):
         svg.append(
             f'<g class="frame" style="animation-delay: {k * seconds:g}s">'
             f'<image x="{left}" y="{top}" width="{scale * width}" height="{scale * height}" '
-            f'xlink:href="data:{mime};base64,{data}"/>'
+            f'xlink:href="data:{mime};base64,{payload}"/>'
             f'<text x="{left}" y="18" fill="#f0efec">Volume {index} of {len(clean)}, '
             f"b={shell:g} s/mm²</text></g>"
         )

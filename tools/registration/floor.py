@@ -71,6 +71,7 @@ from concurrent.futures import ThreadPoolExecutor
 from itertools import product
 from pathlib import Path
 from time import perf_counter
+from typing import Any
 
 import nibabel as nb
 import nitransforms as nt
@@ -97,7 +98,7 @@ LONGER = {
 DENSE = {"sampling_strategy": "None", "sampling_percentage": 1.0}
 """Every voxel as the finest level's metric samples."""
 DEFAULT = {"optimizer": "default", "sampling": "random", "encoding": "int12"}
-VARIANTS = [
+VARIANTS: list[dict[str, Any]] = [
     {"shrink": shrink, "noise": noise, **DEFAULT}
     for shrink, noise in product((2, 1), (True, False))
 ] + [

@@ -375,7 +375,7 @@ settings, the ANTs version (2.4.4.post40-gec7048b) and the *NiFreeze* commit the
 script ran with (2906d29c).
 The dataset's ``datalad run`` record (commit 5746d33) ran ``tools/registration/floor.py``
 from a copy in the dataset's ``code/`` folder, which differs from it only in its
-docstrings::
+docstrings and in the type annotation of ``VARIANTS``::
 
     uv run tools/registration/floor.py --dataset <dataset> --protocol sherbrooke \
         --out <dataset>/derivatives/registration/floor --jobs 4 --threads 1
