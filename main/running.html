@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="How to cite" href="citation.html"><link rel="prev" title="How to Use" href="usage.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>Running NiFreeze - nifreeze 26.0.0.dev39 documentation</title>
+        <title>Running NiFreeze - nifreeze 26.0.0.dev41 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev39 documentation</div></a>
+      <a href="index.html"><div class="brand">nifreeze 26.0.0.dev41 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev39</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev41</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev39</span>
+  <span class="sidebar-brand-text">26.0.0.dev41</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -361,7 +361,7 @@
 <dd><p>Path to a brain mask in NIfTI format.</p>
 </dd>
 <dt><kbd>--align-config</kbd></dt>
-<dd><p>Path to the yaml file containing the parameters to configure the image registration process, at every level of the cascade: ‘ants_config’ names a configuration of nifreeze/registration/config, and the other keys override its settings.</p>
+<dd><p>Path to the yaml file containing the parameters to configure the image registration process, at every level of the cascade: ‘ants_config’ names a configuration of nifreeze/registration/config or a file of settings, and the other keys override its settings.</p>
 </dd>
 <dt><kbd>--models</kbd></dt>
 <dd><p>Select the data model(s) used to generate registration targets; multiple models run as a cascade. By default each model runs in Leave-One-Volume-Out mode (refit per held-out volume). Prefix a model name with ‘single’ (e.g. ‘singledti’) to run it in single-fit mode: fit once on all volumes and reuse that locked fit (still predicting per volume from it). Single-fit is faster but leaks the queried volume into its own target (biasing motion toward zero); use it for development, testing, or coarse initialization only, not for accuracy-critical estimation. The closed-form LOVO models (‘gp-loo’, ‘gqi-krr’) predict every held-out volume exactly from one matrix, so the ‘single’ prefix makes no difference for them.</p>
@@ -494,7 +494,7 @@
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=4eb9cc7c"></script>
+</div><script src="_static/documentation_options.js?v=8834c8ee"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

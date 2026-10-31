@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.registration.ants - nifreeze 26.0.0.dev39 documentation</title>
+        <title>nifreeze.registration.ants - nifreeze 26.0.0.dev41 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev39 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev41 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev39</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev41</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev39</span>
+  <span class="sidebar-brand-text">26.0.0.dev41</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -551,14 +551,15 @@
     <span class="k">return</span> <span class="n">predicted_path</span><span class="p">,</span> <span class="n">sample_path</span><span class="p">,</span> <span class="n">init_path</span>
 
 
-<span class="k">def</span> <span class="nf">_get_ants_settings</span><span class="p">(</span><span class="n">settings</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;b0-to-b0_level0&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="k">def</span> <span class="nf">_get_ants_settings</span><span class="p">(</span><span class="n">settings</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">=</span> <span class="s2">&quot;b0-to-b0_level0&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Retrieve the path to ANTs settings configuration file.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    settings : :obj:`str`, optional</span>
-<span class="sd">        Name of the settings configuration.</span>
+<span class="sd">    settings : :obj:`str` or :obj:`os.pathlike`, optional</span>
+<span class="sd">        A file of settings, or the name of a configuration of</span>
+<span class="sd">        ``nifreeze/registration/config`` (with or without ``.json``).</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -573,8 +574,14 @@
 <span class="sd">    &gt;&gt;&gt; _get_ants_settings(&quot;dwi-to-dwi_level1&quot;)</span>
 <span class="sd">    PosixPath(&#39;.../config/dwi-to-dwi_level1.json&#39;)</span>
 
+<span class="sd">    &gt;&gt;&gt; _get_ants_settings(&quot;dwi-to-dwi_level1.json&quot;)</span>
+<span class="sd">    PosixPath(&#39;.../config/dwi-to-dwi_level1.json&#39;)</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">files</span><span class="p">(</span><span class="s2">&quot;nifreeze.registration&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;config/</span><span class="si">{</span><span class="n">settings</span><span class="si">}</span><span class="s2">.json&quot;</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">path</span> <span class="o">:=</span> <span class="n">Path</span><span class="p">(</span><span class="n">settings</span><span class="p">))</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">path</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span><span class="o">.</span><span class="n">removesuffix</span><span class="p">(</span><span class="s2">&quot;.json&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">files</span><span class="p">(</span><span class="s2">&quot;nifreeze.registration&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;config/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.json&quot;</span><span class="p">)))</span>
 
 
 <span class="k">def</span> <span class="nf">_massage_mask_path</span><span class="p">(</span><span class="n">mask_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">nlevels</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
@@ -623,7 +630,7 @@
     <span class="n">fixedmask_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">movingmask_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">init_affine</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">default</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;b0-to-b0_level0&quot;</span><span class="p">,</span>
+    <span class="n">default</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">=</span> <span class="s2">&quot;b0-to-b0_level0&quot;</span><span class="p">,</span>
     <span class="n">terminal_output</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">num_threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">environ</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -644,8 +651,9 @@
 <span class="sd">        Path to the moving image mask.</span>
 <span class="sd">    init_affine : :obj:`os.pathlike`, optional</span>
 <span class="sd">        Initial affine transformation.</span>
-<span class="sd">    default : :obj:`str`, optional</span>
-<span class="sd">        Default settings configuration.</span>
+<span class="sd">    default : :obj:`str` or :obj:`os.pathlike`, optional</span>
+<span class="sd">        Default settings configuration: a file, or the name of a packaged one</span>
+<span class="sd">        (see :func:`_get_ants_settings`).</span>
 <span class="sd">    terminal_output : :obj:`str`, optional</span>
 <span class="sd">        Redirect terminal output (Nipype configuration)</span>
 <span class="sd">    environ : :obj:`dict`, optional</span>
@@ -871,7 +879,7 @@
         <span class="n">environ</span><span class="p">[</span><span class="s2">&quot;ANTS_RANDOM_SEED&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="s2">&quot;ants_config&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
-        <span class="n">align_kwargs</span><span class="p">[</span><span class="s2">&quot;default&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">align_kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;ants_config&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;.json&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">align_kwargs</span><span class="p">[</span><span class="s2">&quot;default&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">align_kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;ants_config&quot;</span><span class="p">)</span>
 
     <span class="n">registration</span> <span class="o">=</span> <span class="n">generate_command</span><span class="p">(</span>
         <span class="n">fixed_path</span><span class="p">,</span>
@@ -927,7 +935,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=4eb9cc7c"></script>
+</div><script src="../../../_static/documentation_options.js?v=8834c8ee"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
