@@ -23,12 +23,32 @@
 """NiFreeze runner."""
 
 import json
+import shutil
+import subprocess
 from pathlib import Path
 
 from nifreeze.cli.parser import parse_args
 from nifreeze.data import BaseDataset, load
 from nifreeze.estimator import Estimator
-from nifreeze.registration.ants import ants_version
+
+
+def ants_version() -> str | None:
+    """
+    The version of the ``antsRegistration`` found on ``PATH``.
+
+    Returns
+    -------
+    version : :obj:`str` or :obj:`None`
+        The first line of its ``--version`` output, or :obj:`None` if there is none
+        on ``PATH``.
+
+    """
+    path = shutil.which("antsRegistration")
+    if path is None:
+        return None
+    output = subprocess.run([path, "--version"], capture_output=True, text=True).stdout
+    lines = output.strip().splitlines()
+    return lines[0] if lines else None
 
 
 def main(argv: list[str] | None = None) -> None:

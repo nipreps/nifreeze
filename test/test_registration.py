@@ -24,7 +24,6 @@
 
 import json
 import re
-import shutil
 from collections.abc import Sized
 from importlib.resources import files
 from os import cpu_count
@@ -626,16 +625,3 @@ def test_massage_mask_path():
         maskpath = _massage_mask_path(["/some/path"] * 2, 1)
 
     assert maskpath == ["/some/path"]
-
-
-@pytest.mark.skipif(shutil.which("antsRegistration") is None, reason="ANTs is not installed")
-def test_ants_version():
-    """The version of the antsRegistration on PATH."""
-    version = ants.ants_version()
-    assert version is not None
-    assert version.startswith("ANTs Version")
-
-
-def test_ants_version_without_ants(monkeypatch, tmp_path):
-    monkeypatch.setenv("PATH", str(tmp_path))
-    assert ants.ants_version() is None

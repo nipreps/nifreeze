@@ -41,6 +41,18 @@ class _Estimator:
         return dataset
 
 
+def test_ants_version():
+    """The version of the antsRegistration on PATH."""
+    version = run.ants_version()
+    assert version is not None
+    assert version.startswith("ANTs Version")
+
+
+def test_ants_version_without_ants(monkeypatch, tmp_path):
+    monkeypatch.setenv("PATH", str(tmp_path))
+    assert run.ants_version() is None
+
+
 def test_main_records_ants_version(monkeypatch, tmp_path):
     """The run writes the ANTs version into a sidecar beside its output."""
     monkeypatch.setattr(run, "load", lambda *args, **kwargs: _Dataset())
