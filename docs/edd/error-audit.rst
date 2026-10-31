@@ -52,7 +52,7 @@ points.**
 :func:`~nifreeze.registration.utils.displacements_within_mask` takes the center *x*
 of every voxel of the reference's brain mask, in world coordinates, and returns
 the distance between the estimate's image of *x* and the truth's.
-R1, the registration floor and the harness report the mean and the largest of these
+R1 and the registration floor report the mean and the largest of these
 distances per volume; the end-to-end gates use the largest.
 The points are those of the fixed image, the domain of both maps, and the mask is
 where the brain lies in the fixed image.
@@ -66,7 +66,7 @@ These use it:
 - the gates of ``test/test_e2e_motion.py``, which also remove the transform shared
   by all the estimates, composed before the truth (the estimate is the truth
   applied after that shared transform);
-- ``errors`` in ``tools/registration/harness.py``, for every experiment from here on.
+- every experiment from here on, which calls it directly.
 
 **The sensitivity ladder uses no transform.**
 :func:`~nifreeze.analysis.sensitivity.sensitivity` compares each held-out
@@ -317,9 +317,6 @@ Consequences
   R1 did not, and kept no matrices from which it could be removed now.
   Later experiments need to keep each estimate's matrix, so the shared transform can
   be removed as the end-to-end gates remove it.
-  The residual shift and rotation that the harness (``tools/registration/harness.py``)
-  records are taken in the moving frame, so they do not give the shared transform
-  directly.
 - **The eddy-current truth is corrected** (:doc:`eddy-truth`).
   E0b and the experiments on eddy currents score a correction against the sidecar's
   map at the points of the reference's brain: *x* - *d*\ (*x*) *u*, or
