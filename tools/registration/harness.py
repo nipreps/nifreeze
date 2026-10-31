@@ -20,19 +20,14 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""The shared harness of the registration experiments on the phantoms (#615).
+"""The bookkeeping shared by the registration experiments on the phantoms (#615).
 
 Each experiment of nipreps/nifreeze#614 is a script beside this module, which it
-imports (``from harness import register``). The harness changes nothing in
-*NiFreeze*: the estimator's path runs through its own functions, and the variants an
-experiment compares are built from the estimator's default settings.
+imports (``from harness import subset``). Experiments register through *NiFreeze*
+itself (:class:`~nifreeze.analysis.registration.AntsRegistration`) and measure the
+error with :func:`~nifreeze.registration.utils.displacements_within_mask`; this
+module only designs and records them.
 
-Registration
-    :func:`settings_from` derives settings from a configuration of
-    ``nifreeze/registration/config``, and :func:`register` runs one
-    ``antsRegistration`` with them, on inputs written by :func:`write_inputs`.
-    With the default settings and :data:`TODAY`'s representation, the command is
-    the estimator's.
 Volumes
     :func:`subset` gives the development and confirmation volumes of a protocol,
     so that settings tuned on some volumes are confirmed on others.
@@ -41,7 +36,7 @@ Comparison
     :func:`holm` adjusts the p values of several comparisons.
 Records
     :func:`provenance` describes what ran, and :func:`write_results` writes it
-    with each table.
+    with each table; :func:`run_tasks` runs the tasks of an experiment.
 """
 
 from __future__ import annotations
@@ -50,34 +45,19 @@ import csv
 import json
 import os
 import platform
-import shutil
 import subprocess
 from collections.abc import Callable, Iterable, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from copy import deepcopy
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from time import perf_counter
 from typing import Any, TypeVar
 
-import nibabel as nb
-import nitransforms as nt
 import numpy as np
-from nipype.interfaces.ants.registration import Registration
 from scipy import stats
-from scipy.spatial.transform import Rotation
 
 import nifreeze
-from nifreeze.data.filtering import robust_window
-from nifreeze.registration.ants import _get_ants_settings, _prepare_registration_data
-from nifreeze.registration.utils import displacements_within_mask
+from nifreeze.registration.ants import ants_version
 
-CLIPS = ("moving", "each", "none")
-"""Intensity windows: the moving volume's for both images, one per image, or none."""
-CODINGS = {"int12": 4095, "uint16": 65535, "float32": None}
-"""How intensities are stored, with the highest code of the integer codings."""
-TODAY = ("moving", "int12")
-"""The estimator's representation of the registration inputs."""
 SUBSETS = {
     "sherbrooke": {"dev": (3, 0), "confirm": (3, 1)},
     "hcpya": {"dev": (9, 0), "confirm": (9, 4)},
@@ -96,262 +76,6 @@ VERDICTS = ("better", "worse", "not worse", "inconclusive")
 
 T = TypeVar("T")
 R = TypeVar("R")
-
-
-def settings_from(name: str = "b0-to-b0_level0", **overrides: Any) -> dict[str, Any]:
-    """
-    Settings of ``antsRegistration``, derived from one of the estimator's configurations.
-
-    Parameters
-    ----------
-    name : :obj:`str`
-        The configuration (a file of ``nifreeze/registration/config``).
-    **overrides
-        New values. A :obj:`dict` maps levels (indices, negative from the last) to
-        their new values; any other value replaces the setting at every level.
-
-    Returns
-    -------
-    :obj:`dict`
-        The settings, as the estimator passes them to nipype's ``Registration``.
-
-    Examples
-    --------
-    >>> settings_from(shrink_factors={-1: [1]})["shrink_factors"]
-    [[3], [1]]
-    >>> settings_from(metric=["MI", "MI"])["metric"]
-    ['MI', 'MI']
-
-    """
-    settings = json.loads(_get_ants_settings(name).read_text())
-    if unknown := sorted(set(overrides) - set(settings)):
-        raise KeyError(f"settings not in {name}: {', '.join(unknown)}")
-    for key, value in overrides.items():
-        if isinstance(value, dict):
-            for level, level_value in value.items():
-                settings[key][level] = deepcopy(level_value)
-        else:
-            settings[key] = deepcopy(value)
-    return settings
-
-
-def _code(
-    data: np.ndarray,
-    affine: np.ndarray,
-    path: Path,
-    window: tuple[float, float] | None,
-    coding: str,
-) -> None:
-    """Write ``data`` as ``nifreeze.registration.ants._to_nifti`` does, with any coding."""
-    data = np.squeeze(data)
-    levels = CODINGS[coding]
-    slope_inter = None
-    if levels is None:
-        if window is not None:
-            data = np.clip(data, *window)
-        data = data.astype("float32")
-    else:
-        a_min, a_max = window if window is not None else (float(data.min()), float(data.max()))
-        step = (a_max - a_min) / levels
-        dtype = np.int16 if levels < 2**15 else np.uint16
-        data = np.round((np.clip(data, a_min, a_max) - a_min) / step).astype(dtype)
-        slope_inter = (step, a_min)
-
-    nii = nb.Nifti1Image(data, affine, None)
-    if slope_inter is not None:
-        nii.header.set_slope_inter(*slope_inter)
-    nii.header.set_sform(affine, code=1)
-    nii.header.set_qform(affine, code=1)
-    nii.to_filename(path)
-
-
-def write_inputs(
-    fixed: np.ndarray,
-    moving: np.ndarray,
-    affine: np.ndarray,
-    mask: np.ndarray,
-    workdir: Path,
-    index: int = 0,
-    clip: str = TODAY[0],
-    coding: str = TODAY[1],
-) -> tuple[Path, Path]:
-    """
-    Write the fixed and moving images as ``antsRegistration`` reads them.
-
-    The estimator's representation (:data:`TODAY`), and float32 without clipping, are
-    written by the estimator's own ``_prepare_registration_data``.
-
-    Parameters
-    ----------
-    fixed, moving : :obj:`~numpy.ndarray`
-        The images.
-    affine : :obj:`~numpy.ndarray`
-        Their shared affine.
-    mask : :obj:`~numpy.ndarray`
-        The brain mask, within which the intensity windows are computed.
-    workdir : :obj:`~pathlib.Path`
-        Where the images are written.
-    index : :obj:`int`
-        The volume's index, in the file names.
-    clip : :obj:`str`
-        One of :data:`CLIPS`.
-    coding : :obj:`str`
-        One of :data:`CODINGS`.
-
-    Returns
-    -------
-    fixed_path, moving_path : :obj:`~pathlib.Path`
-        The images written.
-
-    """
-    if clip not in CLIPS or coding not in CODINGS:
-        raise ValueError(f"unknown representation: {clip}, {coding}")
-
-    if (clip, coding) == TODAY:
-        # The estimator's window: the moving volume's, within the mask (estimator.py)
-        fixed_path, moving_path, _ = _prepare_registration_data(
-            moving, fixed, affine, index, workdir, clip="both", window=robust_window(moving, mask)
-        )
-        return fixed_path, moving_path
-    if (clip, coding) == ("none", "float32"):
-        fixed_path, moving_path, _ = _prepare_registration_data(
-            np.asarray(moving, dtype="float32"),
-            np.asarray(fixed, dtype="float32"),
-            affine,
-            index,
-            workdir,
-        )
-        return fixed_path, moving_path
-
-    windows: dict[str, tuple[float, float] | None] = {"fixed": None, "moving": None}
-    if clip == "moving":
-        windows["fixed"] = windows["moving"] = robust_window(moving, mask)
-    elif clip == "each":
-        windows = {"fixed": robust_window(fixed, mask), "moving": robust_window(moving, mask)}
-
-    # The estimator's file names, so that commands differ only in their settings
-    fixed_path = workdir / f"predicted_{index:05d}.nii"
-    moving_path = workdir / f"sample_{index:05d}.nii"
-    _code(fixed, affine, fixed_path, windows["fixed"], coding)
-    _code(moving, affine, moving_path, windows["moving"], coding)
-    return fixed_path, moving_path
-
-
-def write_mask(mask: np.ndarray, affine: np.ndarray, path: Path) -> Path:
-    """Write the brain mask as the estimator does (``Estimator.run``)."""
-    nb.Nifti1Image(np.asanyarray(mask).astype(np.uint8), affine, None).to_filename(path)
-    return path
-
-
-def command(
-    settings: dict[str, Any],
-    fixed_path: Path,
-    moving_path: Path,
-    mask_path: Path | None,
-    prefix: str,
-) -> str:
-    """
-    The ``antsRegistration`` command line, as the estimator builds it.
-
-    The estimator's ``generate_command`` gives the same line for its default settings,
-    with these paths and ``output_transform_prefix=prefix``.
-    """
-    masks = {}
-    if mask_path is not None:
-        masks["fixed_image_masks"] = [str(mask_path)] * len(settings["metric"])
-    return Registration(
-        fixed_image=str(Path(fixed_path).absolute()),
-        moving_image=str(Path(moving_path).absolute()),
-        output_transform_prefix=prefix,
-        **masks,
-        **settings,
-    ).cmdline
-
-
-def register(
-    fixed: np.ndarray,
-    moving: np.ndarray,
-    affine: np.ndarray,
-    mask: np.ndarray,
-    mask_path: Path | None,
-    workdir: Path,
-    settings: dict[str, Any] | None = None,
-    *,
-    index: int = 0,
-    clip: str = TODAY[0],
-    coding: str = TODAY[1],
-    seed: int | None = 12345,
-    threads: int = 1,
-) -> tuple[np.ndarray, float]:
-    """
-    Register ``moving`` to ``fixed`` with one ``antsRegistration`` process.
-
-    Parameters
-    ----------
-    fixed, moving, affine, mask
-        As in :func:`write_inputs`.
-    mask_path : :obj:`~pathlib.Path` or :obj:`None`
-        The brain mask written by :func:`write_mask`, for the fixed image.
-    workdir : :obj:`~pathlib.Path`
-        A new directory, for this registration alone.
-    settings : :obj:`dict`, optional
-        The settings (see :func:`settings_from`); the estimator's default if not given.
-    index : :obj:`int`
-        The volume's index, in the file names.
-    clip, coding : :obj:`str`
-        The representation of the inputs (see :func:`write_inputs`).
-    seed : :obj:`int` or :obj:`None`
-        Seed of ANTs' random sampling (``ANTS_RANDOM_SEED``).
-    threads : :obj:`int`
-        ANTs' threads (``ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS``).
-
-    Returns
-    -------
-    matrix : :obj:`~numpy.ndarray`
-        The estimated transform, fixed to moving, in RAS (as the estimator reads it).
-    seconds : :obj:`float`
-        The time, including writing the inputs and reading the output.
-
-    """
-    start = perf_counter()
-    workdir.mkdir(parents=True)
-    fixed_path, moving_path = write_inputs(
-        fixed, moving, affine, mask, workdir, index=index, clip=clip, coding=coding
-    )
-    prefix = f"ants-{index:05d}"
-    line = command(settings or settings_from(), fixed_path, moving_path, mask_path, prefix)
-    environ = os.environ | {"ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS": str(threads)}
-    if seed is not None:
-        environ["ANTS_RANDOM_SEED"] = str(seed)
-    subprocess.run(line, shell=True, check=True, cwd=workdir, env=environ, capture_output=True)
-    itk = nt.io.itk.ITKLinearTransform.from_filename(workdir / f"{prefix}0GenericAffine.mat")
-    matrix = np.asarray(itk.to_ras(reference=fixed_path, moving=moving_path))
-    return matrix, perf_counter() - start
-
-
-def errors(mask_img: nb.Nifti1Image, estimated: np.ndarray, expected: np.ndarray) -> dict:
-    """
-    How far the estimate is from the truth, within the mask and at its centroid.
-
-    Returns the ``max`` and ``mean`` displacement (mm) between the two transforms
-    within the mask, the residual displacement of the mask's centroid (``tx``,
-    ``ty``, ``tz``, mm) and the residual rotation vector (``rx``, ``ry``, ``rz``,
-    degrees), to show any bias.
-    """
-    displacements = displacements_within_mask(
-        mask_img, nt.linear.Affine(estimated), nt.linear.Affine(expected)
-    )
-    mask = np.asanyarray(mask_img.dataobj) > 0
-    centroid = nb.affines.apply_affine(mask_img.affine, np.argwhere(mask).mean(axis=0))
-    shift = estimated[:3, :3] @ centroid + estimated[:3, 3]
-    shift -= expected[:3, :3] @ centroid + expected[:3, 3]
-    rotation = Rotation.from_matrix(estimated[:3, :3] @ expected[:3, :3].T)
-    return {
-        "max": float(displacements.max()),
-        "mean": float(displacements.mean()),
-        **dict(zip(("tx", "ty", "tz"), shift.tolist(), strict=True)),
-        **dict(zip(("rx", "ry", "rz"), rotation.as_rotvec(degrees=True).tolist(), strict=True)),
-    }
 
 
 def subset(protocol: str, which: str, n: int) -> list[int]:
@@ -496,12 +220,7 @@ def provenance(settings: dict[str, Any] | None = None) -> dict[str, Any]:
     ``code/nifreeze`` subdataset), and ``NiFreezeDirty`` says whether its tracked
     files had changes.
     """
-    ants = shutil.which("antsRegistration")
-    ants_version = None
-    if ants is not None:
-        ants_version = subprocess.run(
-            [ants, "--version"], capture_output=True, text=True
-        ).stdout.strip()
+    ants, ants_release = ants_version()
     status = _git("status", "--porcelain", "--untracked-files=no")
     cpu = None
     if Path("/proc/cpuinfo").exists():
@@ -511,7 +230,7 @@ def provenance(settings: dict[str, Any] | None = None) -> dict[str, Any]:
                 break
     record: dict[str, Any] = {
         "AntsPath": ants,
-        "AntsVersion": ants_version,
+        "AntsVersion": ants_release,
         "NiFreezeCommit": _git("rev-parse", "HEAD"),
         "NiFreezeDirty": None if status is None else bool(status),
         "NiFreezeVersion": nifreeze.__version__,
