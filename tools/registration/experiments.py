@@ -23,7 +23,7 @@
 """The bookkeeping shared by the registration experiments on the phantoms (#615).
 
 Each experiment of nipreps/nifreeze#614 is a script beside this module, which it
-imports (``from harness import subset``). Experiments register through *NiFreeze*
+imports (``from experiments import subset``). Experiments register through *NiFreeze*
 itself (:class:`~nifreeze.analysis.registration.AntsRegistration`) and measure the
 error with :func:`~nifreeze.registration.utils.displacements_within_mask`; this
 module only designs and records them.
