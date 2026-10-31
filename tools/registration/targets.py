@@ -30,7 +30,7 @@
 """The fixed model targets of the registration experiments (#617).
 
 Each model's held-out prediction of each volume of the development and confirmation
-subsets (``harness.subset``) is written once, so that every experiment registers
+subsets (``experiments.subset``) is written once, so that every experiment registers
 to the same fixed images
 (:func:`~nifreeze.analysis.sensitivity.held_out_predictions`). The copies are the
 noisy reference (``unmoved``) and the perturbed copies of :data:`COPIES`, with the
@@ -52,7 +52,7 @@ from typing import Any
 
 import h5py
 import numpy as np
-from harness import provenance, subset, write_results
+from experiments import provenance, subset, write_results
 
 from nifreeze.analysis.phantoms import load_phantom
 from nifreeze.analysis.sensitivity import held_out_predictions
