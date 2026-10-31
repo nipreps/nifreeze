@@ -630,14 +630,12 @@ def test_massage_mask_path():
 
 @pytest.mark.skipif(shutil.which("antsRegistration") is None, reason="ANTs is not installed")
 def test_ants_version():
-    """The antsRegistration on PATH, and its version."""
-    path, version = ants.ants_version()
-    assert path is not None
-    assert Path(path).is_file()
+    """The version of the antsRegistration on PATH."""
+    version = ants.ants_version()
     assert version is not None
     assert version.startswith("ANTs Version")
 
 
 def test_ants_version_without_ants(monkeypatch, tmp_path):
     monkeypatch.setenv("PATH", str(tmp_path))
-    assert ants.ants_version() == (None, None)
+    assert ants.ants_version() is None

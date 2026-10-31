@@ -227,24 +227,23 @@ def _prepare_registration_data(
     return predicted_path, sample_path, init_path
 
 
-def ants_version() -> tuple[str | None, str | None]:
+def ants_version() -> str | None:
     """
-    Which ``antsRegistration`` runs: the first found on ``PATH``, and its version.
+    The version of the ``antsRegistration`` found on ``PATH``.
 
     Returns
     -------
-    path : :obj:`str` or :obj:`None`
-        The executable, or :obj:`None` if there is none on ``PATH``.
     version : :obj:`str` or :obj:`None`
-        The first line of its ``--version`` output.
+        The first line of its ``--version`` output, or :obj:`None` if there is none
+        on ``PATH``.
 
     """
     path = shutil.which("antsRegistration")
     if path is None:
-        return None, None
+        return None
     output = subprocess.run([path, "--version"], capture_output=True, text=True).stdout
     lines = output.strip().splitlines()
-    return path, lines[0] if lines else None
+    return lines[0] if lines else None
 
 
 def _get_ants_settings(settings: str = "b0-to-b0_level0") -> Path:

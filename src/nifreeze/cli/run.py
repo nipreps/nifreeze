@@ -22,11 +22,13 @@
 #
 """NiFreeze runner."""
 
+import json
 from pathlib import Path
 
 from nifreeze.cli.parser import parse_args
 from nifreeze.data import BaseDataset, load
 from nifreeze.estimator import Estimator
+from nifreeze.registration.ants import ants_version
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -85,6 +87,11 @@ def main(argv: list[str] | None = None) -> None:
         dataset.to_filename(output_h5_path)
 
     dataset.to_nifti(output_path, write_hmxfms=True)
+
+    # Record which ANTs estimated the motion
+    output_json_filename = Path(Path(args.input_file).name).stem + ".json"
+    output_json_path: Path = Path(args.output_dir) / output_json_filename
+    output_json_path.write_text(json.dumps({"ANTsVersion": ants_version()}, indent=2))
 
 
 if __name__ == "__main__":
