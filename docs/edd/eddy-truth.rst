@@ -331,8 +331,6 @@ Consequences
   The fit estimates the inverse of the sidecar's map, so its coefficients differ
   from the sidecar's wherever the field changes along phase encoding.
   The rule failed for that reason, not because the sidecar is wrong.
-  The decision on the truth is left to review
-  (`#618 <https://github.com/nipreps/nifreeze/issues/618>`__).
 - **The mapping on a combined copy has the opposite sign from the one
   registered.**
   The phantom moves first, so a reference point *x* lands at *y* = *M* *x* in the
@@ -389,9 +387,9 @@ Deviations from the registration
   displacement plus one voxel, where the registration said within the mask.
   Both runs did so.
 - The registered rule, when it fails, makes the fit the truth.
-  This report instead proposes the sidecar's coefficients as they are, for scoring
-  corrections that map the reference into the distorted volume, and leaves the
-  choice to review.
+  The fit estimates the inverse map, so corrections that map the reference into the
+  distorted volume are scored against the sidecar's coefficients as they are
+  instead.
 - The registration called Q2's gap the floor of a correction by warping.
   This report gives Q2's and Q2b's gaps as measures of how well a warp imitates the
   readout, and takes the floor of a correction from the audit.
