@@ -170,9 +170,10 @@ def _strips(ax, groups: list[str], series: dict[str, tuple[str, str]], values) -
                 linewidth=1,
             )
     ax.set_yscale("log")
-    ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter("%g"))
-    ax.yaxis.set_minor_formatter(mpl.ticker.FormatStrFormatter("%g"))
-    ax.tick_params(axis="y", which="minor", labelsize=6)
+    low, high = ax.get_ylim()
+    ticks = [t for t in (0.02, 0.03, 0.05, 0.1, 0.2, 0.3, 0.5, 1.0) if low <= t <= high]
+    ax.set_yticks(ticks, [f"{t:g}" for t in ticks])
+    ax.yaxis.set_minor_formatter(mpl.ticker.NullFormatter())
     ax.set_xticks(range(len(groups)), groups, rotation=45, ha="right")
     ax.grid(axis="y", color=RULE, linewidth=0.5)
 
