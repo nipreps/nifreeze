@@ -45,6 +45,7 @@ from nifreeze.registration.ants import (
     _prepare_registration_data,
     _run_registration,
     _write_aligned,
+    ants_version,
 )
 from nifreeze.utils import iterators
 
@@ -260,6 +261,8 @@ class Estimator:
         print(f"Dataset size: {num_voxels}x{len(dataset)}.")
         print(f"Parallel execution: {fit_pred_kwargs}.")
         print(f"Model: {model}.")
+        ants_path, ants = ants_version()
+        print(f"ANTs: {ants} <{ants_path}>.")
 
         if self._single_fit:
             print("Fitting 'single' model started ...")
