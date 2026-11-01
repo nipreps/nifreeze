@@ -441,9 +441,6 @@ def test_only_the_fixed_image_is_masked(tmp_path):
     assert all((Path(fixed).name, moving) == ("mask.nii", "NULL") for fixed, moving in masks)
 
 
-@pytest.mark.xfail(
-    strict=True, reason="nipreps/nifreeze#621: nipype exports only NSLOTS, which ITK reads last"
-)
 def test_the_callers_threads_hold_over_the_environment(tmp_path, monkeypatch):
     """CI sets ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS for every job (``test.yml``)."""
     monkeypatch.setenv("ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS", "4")
