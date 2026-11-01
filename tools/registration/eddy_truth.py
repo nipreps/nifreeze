@@ -66,7 +66,7 @@ from typing import Any
 
 import attrs
 import numpy as np
-from harness import provenance, subset, write_results
+from experiments import provenance, subset, write_results
 from scipy import ndimage
 from scipy.optimize import least_squares
 

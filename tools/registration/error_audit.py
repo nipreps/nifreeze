@@ -63,7 +63,7 @@ from typing import Any
 
 import attrs
 import numpy as np
-from harness import provenance, write_results
+from experiments import provenance, write_results
 from scipy import ndimage
 
 from nifreeze.analysis.phantoms import load_phantom

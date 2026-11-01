@@ -6,9 +6,21 @@ This experiment (`#618 <https://github.com/nipreps/nifreeze/issues/618>`__) asks
 whether the displacement given in the sidecar of each eddy-current copy of the
 phantoms can serve as the truth for scoring eddy-current correction, at the
 phantoms' native resolution.
-It also measures how close a correction by warping can get to the volumes that
-TRXScan forms.
+It also measures how closely a warp of the undistorted volume can imitate the
+volumes that TRXScan forms.
 It involves no registration.
+
+.. important::
+
+   This report's first version concluded that scoring a correction needs the
+   sidecar's coefficients divided by 1 - *s*.
+   That holds only for a model that warps the reference onto the distorted grid,
+   as this experiment's fit does.
+   *NiFreeze* corrects in the other direction, and the audit of
+   :doc:`error-audit` (`#626 <https://github.com/nipreps/nifreeze/issues/626>`__)
+   shows, by the 99th percentile of the residuals, that its truth is the sidecar's
+   coefficients as they are.
+   `Consequences`_ gives the corrected conclusions.
 
 The question
 ------------
@@ -25,11 +37,15 @@ The coefficients are in mm, and *c*\ :sub:`0` is zero.
 TRXScan does not form the distorted volumes by moving voxels.
 It forms them as an EPI readout does: each phase-encoding line accrues the phase
 of the off-resonance field at the time the line is acquired.
-A correction by registration works differently: it warps the volume, resampling
-it at displaced points.
-Every registration backend that *NiFreeze* could use corrects in this way.
-The warp model of this experiment also scales the intensity by the Jacobian of the
-displacement, so that no signal is created or lost, which not every backend does.
+A warp works differently: it resamples a volume at displaced points.
+The warp model of this experiment forms each distorted volume by warping the
+undistorted one, so it maps each point of the distorted grid to a point of the
+undistorted volume.
+It also scales the intensity by the Jacobian of the displacement, so that no
+signal is created or lost.
+A correction by registration warps in the opposite direction: it samples the
+distorted volume at the points of the reference's grid that the distortion moved
+(:doc:`error-audit`).
 
 Three questions were registered before the run:
 
@@ -127,6 +143,7 @@ Results
 On every volume of every copy of both protocols, its largest residual within the
 brain is at most 7.3 × 10⁻⁶ of the volume's maximum (the table below, row
 *Readout*, column *Largest, worst*).
+The same holds over the whole volume (check C of :doc:`error-audit`).
 
 **Warped by the sidecar's coefficients, the volumes are far from TRXScan's (Q2).**
 The largest residual within the brain has a median of 0.13 to 0.16 of the
@@ -195,7 +212,7 @@ In the volume shown above, for example, the sidecar's coefficients are 0, -0.080
 -0.3556 and -0.0717 mm, and the fitted ones are -0.0021, -0.0681, -0.3017 and
 -0.0609 mm: the linear terms are about 0.85 times the sidecar's.
 
-**The two models take the displacement at different points.**
+**The fit estimates the inverse of the sidecar's map.**
 This explanation was posted on the issue
 (`comment <https://github.com/nipreps/nifreeze/issues/618#issuecomment-6522680697>`__)
 before the second run, so the analysis that follows is post hoc.
@@ -203,21 +220,25 @@ Let *d* be the sidecar's displacement, and *u* the world direction of the
 phase-encoding voxel axis
 (:attr:`~nifreeze.analysis.sensitivity.Distortion.direction`).
 
-- The readout model takes the displacement at the source.
-  The signal from a point *p* accrues the phase of the field at *p*, so it appears
-  at *q* = *p* - *d*\ (*p*) *u*.
-- The warp model takes the displacement at the destination.
+- The readout model maps each point *p* of the undistorted volume to where its
+  signal appears.
+  The signal from *p* accrues the phase of the field at *p*, so it appears at
+  *q* = *p* - *d*\ (*p*) *u*.
+  This is the sidecar's map.
+- The warp model maps the other way, from each point *q* of the distorted grid
+  back to the undistorted volume.
   The warped volume shows at each point *q* what lies at *q* + *d*\ :sub:`w`\ (*q*) *u*.
 
-For the warp to undo the readout, *q* + *d*\ :sub:`w`\ (*q*) *u* must be the source
-*p* of every point *q*, so *d*\ :sub:`w`\ (*q*) = *d*\ (*p*).
+For the warp to imitate the readout, its map must be the inverse of the
+readout's: *q* + *d*\ :sub:`w`\ (*q*) *u* must be the source *p* of every point
+*q*, so *d*\ :sub:`w`\ (*q*) = *d*\ (*p*).
 Let *s* be the slope of *d* along phase encoding, in mm per mm, which is the same
 everywhere for a field of degree 1.
 Then *d*\ (*p*) = *d*\ (*q*) + *s* *d*\ (*p*), because *p* lies *d*\ (*p*) further
 along phase encoding than *q*.
 Solving gives *d*\ :sub:`w`\ (*q*) = *d*\ (*q*) / (1 - *s*).
-The warp that undoes the readout therefore has the sidecar's coefficients divided
-by 1 - *s*.
+The warp that imitates the readout therefore has the sidecar's coefficients
+divided by 1 - *s*: the coefficients of the inverse map.
 This report calls them the *inverted coefficients*.
 In the shown volume, *s* = -0.178, so the inverted coefficients are the
 sidecar's times 1 / 1.178 = 0.849.
@@ -265,6 +286,20 @@ The median of the largest residual barely changes, though: it is 0.13 to 0.14 at
 every magnitude, as at 2 voxels, where the two warps give nearly the same
 residuals.
 The median p99 is 0.021 to 0.027.
+These residuals are taken within the brain mask, while the distorted brain reaches
+beyond it along phase encoding.
+Within the mask grown by the largest displacement plus one voxel, the median of the
+largest residual over all the copies is 0.15 on both protocols, rather than 0.13 on
+Sherbrooke and 0.14 on HCP-YA, and its worst value is the same, 0.33 and 0.40
+(check C of :doc:`error-audit`):
+
+.. csv-table:: Q1 and Q2b within the brain mask, within the mask grown by the copy's
+   largest displacement plus one voxel, and over the whole volume, over every volume
+   of every eddy-current copy (check C of :doc:`error-audit`).
+   :file: ../_static/registration/error-audit/error-audit-domain.csv
+   :header-rows: 1
+   :widths: auto
+
 That part of the gap comes neither from the displacement, which is now the right
 one, nor from the scaling of the intensity, which matches the readout's (above).
 It is a difference between forming a volume by the readout and warping it.
@@ -276,16 +311,26 @@ which is consistent with that explanation but does not test it.
 
 Consequences
 ------------
-- **The sidecar is the truth of how TRXScan formed the volumes (Q1), with its
-  displacement taken at the source point.**
-  A correction by warping estimates a displacement at the destination.
-  Scoring such a correction against the sidecar therefore needs one of the two
-  converted first: for these fields of degree 1, the sidecar's coefficients
-  divided by 1 - *s*.
-  The registered rule compared the two conventions directly.
-  It failed for that reason, not because the sidecar is wrong.
-  Which truth the following experiments use is decided on review of this report
-  (`#618 <https://github.com/nipreps/nifreeze/issues/618>`__).
+- **The sidecar is the truth of how TRXScan formed the volumes (Q1).**
+  Its coefficients give the readout's map, from each point of the reference to
+  where its signal lands: *x* to *x* - *d*\ (*x*) *u*.
+- **The truth for scoring a correction is the sidecar's coefficients as they
+  are.**
+  *NiFreeze* registers each volume (moving) to a prediction (fixed) on the
+  reference's grid, so its estimate maps each point of the reference into the
+  distorted volume, as the sidecar's map does.
+  Sampling each distorted copy at *x* - *d*\ (*x*) *u*, with the Jacobian,
+  reproduces the undistorted volume more closely than the inverted coefficients or
+  the opposite sign do, by the 99th percentile of the residual (check B of
+  :doc:`error-audit`).
+  For these linear fields, no conversion is needed; for a field of higher degree, the
+  readout's map has the same form, but that is not tested.
+  The inverted coefficients are the truth only for a model that warps the reference
+  onto the distorted grid, as Q2 and the fit of Q3 do.
+- **The registered rule compared maps that point in opposite directions.**
+  The fit estimates the inverse of the sidecar's map, so its coefficients differ
+  from the sidecar's wherever the field changes along phase encoding.
+  The rule failed for that reason, not because the sidecar is wrong.
 - **The mapping on a combined copy has the opposite sign from the one
   registered.**
   The phantom moves first, so a reference point *x* lands at *y* = *M* *x* in the
@@ -297,38 +342,41 @@ Consequences
   The sign follows from the derivation above, which holds for every copy: with the
   opposite sign, the fitted coefficients would be the sidecar's divided by
   -(1 + *s*), and they are not.
-- **The gap that a correction by warping leaves with the right displacement is
-  that of Q2b, not that of Q2.**
-  Q2 also includes the error of warping with the wrong convention.
+  Check B of the audit confirms both the sign and the map on every combined copy.
+- **Q2 and Q2b measure how well a warp imitates the readout, not the floor of a
+  correction.**
   The registration called Q2's gap the floor of a correction by warping.
-  Neither gap is strictly a lower bound: a warp by a slightly different
-  displacement might leave a smaller residual, and the fit, whose residuals are
-  taken over a grown mask, does not settle that.
+  A correction samples the distorted volume rather than the undistorted one, so the
+  corresponding residual for a correction is the one left by sampling each copy at
+  the sidecar's points, which check B of the audit measures.
+  Neither is strictly a lower bound: a slightly different map might leave a smaller
+  residual, as the fit of Q3 shows for the warp model.
 - **The inverse of a displacement of degree 2 is not a polynomial of degree 2.**
-  It cannot be written as the coefficients of a
-  :class:`~nifreeze.analysis.sensitivity.Distortion`.
-  Experiments that distort with degree 2, as planned to test the robustness of
-  eddy-current models, need to invert the displacement point by point: along each
-  phase-encoding line, that means solving a quadratic equation.
-- **The docstring of** :class:`~nifreeze.analysis.sensitivity.Distortion` says
-  that a distorted volume shows at each point what lies *d* mm further along phase
-  encoding.
-  That holds for the warp model; in the readout model, the displacement is that of
-  the source.
-  Correcting that docstring belongs in a pull request of its own.
+  That matters only where a warp imitates a distortion.
+  A volume distorted by warping (:class:`~nifreeze.analysis.sensitivity.Distortion`
+  without a readout), as planned to test the robustness of eddy-current models, has
+  the inverse of its displacement as the truth of a correction, which must be
+  computed point by point: along each phase-encoding line, that means solving a
+  quadratic equation.
+  A volume distorted through the readout keeps the polynomial itself as that truth.
+- **The docstring of** :class:`~nifreeze.analysis.sensitivity.Distortion`
+  described only the warp model
+  (`#624 <https://github.com/nipreps/nifreeze/issues/624>`__).
+  `#625 <https://github.com/nipreps/nifreeze/pull/625>`__ corrects it.
 
 Open questions
 --------------
 - What makes the gap that the inverted warp leaves (Q2b)?
   Warping with band-limited interpolation along phase encoding, instead of cubic
   B-splines, would show whether the interpolation accounts for it.
-- Does that gap bias a registration's estimate of the displacement?
-  The fit of Q3 is itself a least-squares match over the brain, and the gap leaves
-  it within 0.012 voxel of the inverted displacement (Q3b's worst p95), with a
-  constant term of up to 0.006 mm that the inverted displacement does not have.
-  A registration matches the images with another metric and other sampling, so
-  whether its estimate is biased as little is for the experiments that register
-  eddy-current copies (E0b and E3a in
+- Does the residual a correction leaves bias a registration's estimate of the
+  displacement?
+  The fit of Q3 is itself a least-squares match over the brain, and the gap of Q2b
+  leaves it within 0.012 voxel of the inverted displacement (Q3b's worst p95), with
+  a constant term of up to 0.006 mm that the inverted displacement does not have.
+  A registration matches the images in the other direction, with another metric and
+  other sampling, so whether its estimate is biased as little is for the
+  experiments that register eddy-current copies (E0b and E3a in
   `#614 <https://github.com/nipreps/nifreeze/issues/614>`__).
 
 Deviations from the registration
@@ -339,10 +387,16 @@ Deviations from the registration
   displacement plus one voxel, where the registration said within the mask.
   Both runs did so.
 - The registered rule, when it fails, makes the fit the truth.
-  This report instead proposes the sidecar, with its displacement taken at the
-  source point, and leaves the choice to review, as the comment announced.
-- The registration called Q2's gap the floor of a correction by warping; this
-  report gives Q2's gap and argues for Q2b's, as the comment announced.
+  The fit estimates the inverse map, so corrections that map the reference into the
+  distorted volume are scored against the sidecar's coefficients as they are
+  instead.
+- The registration called Q2's gap the floor of a correction by warping.
+  This report gives Q2's and Q2b's gaps as measures of how well a warp imitates the
+  readout, and takes the floor of a correction from the audit.
+- The first version of this report concluded that scoring a correction needs the
+  inverted coefficients.
+  The audit (`#626 <https://github.com/nipreps/nifreeze/issues/626>`__) showed
+  that this holds only in the warp model's direction, and this version corrects it.
 - The registered mapping on combined copies had the opposite sign
   (`Consequences`_).
 - The runs used 12 processes, where the registration planned six, on the same

@@ -29,3 +29,4 @@ approach.
    :maxdepth: 2
 
    eddy-truth
+   error-audit
