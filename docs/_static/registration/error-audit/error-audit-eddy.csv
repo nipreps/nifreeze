@@ -1,0 +1,7 @@
+Protocol,Eddy currents (voxels),Volumes,No correction: median p99,x - d(x) u: median p99,x - d_w(x) u: median p99,x + d(x) u: median p99,x - d(x) u: worst p99,x - d(x) u: worst largest,x - d_w(x) u: worst p99,x - d_w(x) u: worst largest,Volumes where the two differ by > 0.1 voxel
+Sherbrooke (2 mm),2,960,0.181,0.031,0.031,0.305,0.060,0.315,0.061,0.320,0
+Sherbrooke (2 mm),4,960,0.314,0.034,0.036,0.427,0.062,0.373,0.107,0.382,260
+Sherbrooke (2 mm),8,960,0.429,0.035,0.045,0.548,0.083,0.341,0.386,0.925,580
+HCP-YA (1.25 mm),2,1350,0.171,0.028,0.028,0.285,0.054,0.413,0.055,0.415,0
+HCP-YA (1.25 mm),4,1350,0.293,0.029,0.030,0.408,0.044,0.495,0.053,0.485,250
+HCP-YA (1.25 mm),8,1350,0.411,0.029,0.034,0.536,0.053,0.432,0.139,0.625,720
