@@ -231,12 +231,25 @@ def test_itk_reads_the_mask_on_the_images_grid(volume, tmp_path, kind):
 
 
 # 3. Reading transforms back
+#
+# OVERLAPS WITH NITRANSFORMS' OWN TESTS. nitransforms' test_apply_linear_transform, in
+# its "itk" cases, writes an Affine with to_filename(fmt="itk"), applies it with
+# antsApplyTransforms, and compares the result with nitransforms.resampling.apply, on
+# RAS, LAS, LPS (the phantom's frame) and oblique images:
+# https://github.com/nipy/nitransforms/blob/25.1.0/nitransforms/tests/test_resampling.py#L68-L163
+# test_ITKLinearTransform checks that the .mat writer keeps the same parameters:
+# https://github.com/nipy/nitransforms/blob/25.1.0/nitransforms/tests/test_io_itk.py#L61-L65
+# The test below repeats that check on the file _prepare_registration_data writes, which
+# passes init_affine unchanged to the same writer.
 
 
 @pytest.mark.skipif(NO_ANTS, reason="ANTs is not installed")
 @pytest.mark.parametrize("kind", AFFINES)
 def test_ants_applies_the_written_transform_as_nitransforms(volume, tmp_path, kind):
-    """The initial transform written for ANTs means to ANTs what it means to nitransforms."""
+    """The initial transform written for ANTs means to ANTs what it means to nitransforms.
+
+    Overlaps with nitransforms' test_apply_linear_transform (see the note above).
+    """
     data, _ = volume
     affine = _affine(kind)
     matrix = _motion()
