@@ -507,6 +507,8 @@ def generate_command(
     )
     if num_threads:
         reg_iface.inputs.num_threads = num_threads
+        # nipype exports only NSLOTS, which ITK reads only when this is unset
+        reg_iface.inputs.environ["ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS"] = str(num_threads)
 
     return reg_iface
 

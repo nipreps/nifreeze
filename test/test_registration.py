@@ -23,6 +23,7 @@
 """Unit tests exercising the estimator."""
 
 import json
+import os
 import re
 from collections.abc import Sized
 from importlib.resources import files
@@ -416,6 +417,22 @@ def test_generate_command_with_masks_init_and_threads(tmp_path, random_nifti_fil
     # At minimum, the mask path should appear in the list (exact
     # repetition/count depends on settings file)
     assert str(mask) in fim or str(mask.absolute()) in fim
+
+
+def test_generate_command_threads_hold_over_the_environment(tmp_path, monkeypatch):
+    """A thread count set for every process (as CI does) does not override the caller's."""
+    monkeypatch.setenv("ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS", "4")
+    fixed = tmp_path / "fixed.nii"
+    moving = tmp_path / "moving.nii"
+    fixed.touch()
+    moving.touch()
+
+    reg = generate_command(fixed, moving, num_threads=1)
+
+    # nipype runs ANTs with the process's environment, updated by the interface's
+    environ = dict(os.environ) | dict(reg.inputs.environ)
+    # ITK reads ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS first, and NSLOTS only without it
+    assert environ["ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS"] == "1"
 
 
 @pytest.mark.parametrize(
