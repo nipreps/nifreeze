@@ -1,0 +1,17 @@
+Check,Protocol,Residual,Volumes that pass,Rule met,Failures: median excess,Failures: largest excess
+A: M x below M⁻¹ x and x,Sherbrooke (2 mm),p99,768 of 768,yes,,
+A: M x below M⁻¹ x and x,Sherbrooke (2 mm),largest,510 of 768,no,0.109,0.429
+B: sidecar's below the opposite sign,Sherbrooke (2 mm),p99,2880 of 2880,yes,,
+"B: sidecar's below the inverted, where they differ by > 0.1 voxel",Sherbrooke (2 mm),p99,840 of 840,yes,,
+"(Not in the rule) sidecar's below the inverted, where they differ by 0.1 voxel or less",Sherbrooke (2 mm),p99,1540 of 2040,no,0.000,0.001
+B: sidecar's below the opposite sign,Sherbrooke (2 mm),largest,2880 of 2880,yes,,
+"B: sidecar's below the inverted, where they differ by > 0.1 voxel",Sherbrooke (2 mm),largest,732 of 840,no,0.010,0.041
+"(Not in the rule) sidecar's below the inverted, where they differ by 0.1 voxel or less",Sherbrooke (2 mm),largest,1187 of 2040,no,0.002,0.018
+A: M x below M⁻¹ x and x,HCP-YA (1.25 mm),p99,1080 of 1080,yes,,
+A: M x below M⁻¹ x and x,HCP-YA (1.25 mm),largest,1041 of 1080,no,0.023,0.093
+B: sidecar's below the opposite sign,HCP-YA (1.25 mm),p99,4050 of 4050,yes,,
+"B: sidecar's below the inverted, where they differ by > 0.1 voxel",HCP-YA (1.25 mm),p99,970 of 970,yes,,
+"(Not in the rule) sidecar's below the inverted, where they differ by 0.1 voxel or less",HCP-YA (1.25 mm),p99,2099 of 3080,no,0.000,0.001
+B: sidecar's below the opposite sign,HCP-YA (1.25 mm),largest,4050 of 4050,yes,,
+"B: sidecar's below the inverted, where they differ by > 0.1 voxel",HCP-YA (1.25 mm),largest,802 of 970,no,0.010,0.048
+"(Not in the rule) sidecar's below the inverted, where they differ by 0.1 voxel or less",HCP-YA (1.25 mm),largest,1670 of 3080,no,0.001,0.026

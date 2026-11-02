@@ -1,0 +1,3 @@
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 RAYON_NUM_THREADS=1 /usr/bin/time -v -o logs/eddy-truth-sherbrooke.time taskset -c 0-5,18-23 uv run code/nifreeze/tools/registration/eddy_truth.py --dataset . --protocol sherbrooke --out derivatives/registration/eddy-truth --jobs 12 > logs/eddy-truth-sherbrooke.log 2>&1
+
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 RAYON_NUM_THREADS=1 /usr/bin/time -v -o logs/eddy-truth-hcpya.time taskset -c 0-5,18-23 uv run code/nifreeze/tools/registration/eddy_truth.py --dataset . --protocol hcpya --out derivatives/registration/eddy-truth --jobs 12 > logs/eddy-truth-hcpya.log 2>&1
