@@ -1,0 +1,1486 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="The error audit" href="error-audit.html"><link rel="prev" title="Experiment-driven development" href="index.html">
+
+    <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
+        <title>The eddy-current truth - nifreeze 26.0.0.dev60 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/version-switch.css?v=45d66e8a" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev60 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+    <span class="sidebar-brand-text">nifreeze</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev60</span>
+</a>
+
+<!-- Versions dropdown -->
+<div id="version-menu" class="version-tree">
+  <ul>
+  <li class="toctree-l1 has-children">
+  <span class="sidebar-brand-text">26.0.0.dev60</span>
+  <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
+  <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
+  <ul id="v-tags"></ul>
+  </ul>
+</div><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design.html">Design Principles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design.html#extending-nifreeze">Extending <em>NiFreeze</em></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design.html#contributing-to-nifreeze">Contributing to NiFreeze</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../models.html">Model implementation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../gallery.html">Prediction gallery</a><input aria-label="Toggle navigation of Prediction gallery" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../gallery/ds000206.html">Legacy DTI (ds000206)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gallery/ds000114.html">Single-shell HARDI (ds000114)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gallery/ds003138.html">Multi-shell (ds003138)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gallery/ds004737.html">DSI (ds004737)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">How to Use</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../running.html">Running <em>NiFreeze</em></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../citation.html">How to cite</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../developers.html">For developers</a><input aria-label="Toggle navigation of For developers" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/nifreeze.analysis.html">nifreeze.analysis package</a><input aria-label="Toggle navigation of nifreeze.analysis package" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.analysis.filtering.html">nifreeze.analysis.filtering module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.analysis.measure_agreement.html">nifreeze.analysis.measure_agreement module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.analysis.motion.html">nifreeze.analysis.motion module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.analysis.phantoms.html">nifreeze.analysis.phantoms module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.analysis.registration.html">nifreeze.analysis.registration module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.analysis.sensitivity.html">nifreeze.analysis.sensitivity module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.analysis.similarity.html">nifreeze.analysis.similarity module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/nifreeze.cli.html">nifreeze.cli package</a><input aria-label="Toggle navigation of nifreeze.cli package" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.cli.parser.html">nifreeze.cli.parser module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.cli.run.html">nifreeze.cli.run module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/nifreeze.data.html">nifreeze.data package</a><input aria-label="Toggle navigation of nifreeze.data package" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../api/nifreeze.data.dmri.html">nifreeze.data.dmri package</a><input aria-label="Toggle navigation of nifreeze.data.dmri package" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../api/nifreeze.data.dmri.base.html">nifreeze.data.dmri.base module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/nifreeze.data.dmri.io.html">nifreeze.data.dmri.io module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/nifreeze.data.dmri.utils.html">nifreeze.data.dmri.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../api/nifreeze.data.pet.html">nifreeze.data.pet package</a><input aria-label="Toggle navigation of nifreeze.data.pet package" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../api/nifreeze.data.pet.base.html">nifreeze.data.pet.base module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/nifreeze.data.pet.io.html">nifreeze.data.pet.io module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/nifreeze.data.pet.utils.html">nifreeze.data.pet.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.data.base.html">nifreeze.data.base module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.data.filtering.html">nifreeze.data.filtering module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.data.splitting.html">nifreeze.data.splitting module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.data.utils.html">nifreeze.data.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/nifreeze.estimator.html">nifreeze.estimator module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/nifreeze.exceptions.html">nifreeze.exceptions module</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/nifreeze.model.html">nifreeze.model package</a><input aria-label="Toggle navigation of nifreeze.model package" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.model.base.html">nifreeze.model.base module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.model.dki.html">nifreeze.model.dki module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.model.dmri.html">nifreeze.model.dmri module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.model.gpr.html">nifreeze.model.gpr module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.model.gqi.html">nifreeze.model.gqi module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.model.lovo.html">nifreeze.model.lovo module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.model.pet.html">nifreeze.model.pet module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/nifreeze.registration.html">nifreeze.registration package</a><input aria-label="Toggle navigation of nifreeze.registration package" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.registration.ants.html">nifreeze.registration.ants module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.registration.utils.html">nifreeze.registration.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/nifreeze.testing.html">nifreeze.testing package</a><input aria-label="Toggle navigation of nifreeze.testing package" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.testing.perturbations.html">nifreeze.testing.perturbations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.testing.phantoms.html">nifreeze.testing.phantoms module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.testing.simulations.html">nifreeze.testing.simulations module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/nifreeze.utils.html">nifreeze.utils package</a><input aria-label="Toggle navigation of nifreeze.utils package" class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.utils.iterators.html">nifreeze.utils.iterators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.utils.ndimage.html">nifreeze.utils.ndimage module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/nifreeze.viz.html">nifreeze.viz package</a><input aria-label="Toggle navigation of nifreeze.viz package" class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.viz.bland_altman.html">nifreeze.viz.bland_altman module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.viz.motion_viz.html">nifreeze.viz.motion_viz module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.viz.signals.html">nifreeze.viz.signals module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../phantoms.html">Synthetic reference data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../registration.html">Registration accuracy</a></li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Experiment-driven development</a><input aria-label="Toggle navigation of Experiment-driven development" checked="" class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" role="switch" type="checkbox"/><label for="toctree-checkbox-13"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">The eddy-current truth</a></li>
+<li class="toctree-l2"><a class="reference internal" href="error-audit.html">The error audit</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../changes.html">What’s new?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">References</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/edd/eddy-truth.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="the-eddy-current-truth">
+<h1>The eddy-current truth<a class="headerlink" href="#the-eddy-current-truth" title="Link to this heading">¶</a></h1>
+<p>This experiment (<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/618">#618</a>) asks
+whether the displacement given in the sidecar of each eddy-current copy of the
+phantoms can serve as the truth for scoring eddy-current correction, at the
+phantoms’ native resolution.
+It also measures how closely a warp of the undistorted volume can imitate the
+volumes that TRXScan forms.
+It involves no registration.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>This report’s first version concluded that scoring a correction needs the
+sidecar’s coefficients divided by 1 - <em>s</em>.
+That holds only for a model that warps the reference onto the distorted grid,
+as this experiment’s fit does.
+<em>NiFreeze</em> corrects in the other direction, and the audit of
+<a class="reference internal" href="error-audit.html"><span class="doc">The error audit</span></a> (<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/626">#626</a>)
+shows, by the 99th percentile of the residuals, that its truth is the sidecar’s
+coefficients as they are.
+<a class="reference internal" href="#consequences">Consequences</a> gives the corrected conclusions.</p>
+</div>
+<section id="the-question">
+<h2>The question<a class="headerlink" href="#the-question" title="Link to this heading">¶</a></h2>
+<p>Each eddy-current copy of a phantom (<a class="reference internal" href="../phantoms.html"><span class="doc">Synthetic reference data</span></a>) comes with the
+displacement of every volume along phase encoding, in closed form
+(<a class="reference internal" href="../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Distortion" title="nifreeze.analysis.sensitivity.Distortion"><code class="xref py py-class docutils literal notranslate"><span class="pre">Distortion</span></code></a>).
+The displacement is a polynomial of degree 1,
+<em>d</em> = <em>c</em><sub>0</sub> + <em>c</em><sub>1</sub> <em>x</em> + <em>c</em><sub>2</sub> <em>y</em> + <em>c</em><sub>3</sub> <em>z</em>.
+Here <em>x</em>, <em>y</em> and <em>z</em> are the coordinates along the voxel axes, measured from the
+field’s center and divided by its radius.
+In these phantoms the radius is the voxel size, so <em>x</em>, <em>y</em> and <em>z</em> count voxels
+from the center.
+The coefficients are in mm, and <em>c</em><sub>0</sub> is zero.
+TRXScan does not form the distorted volumes by moving voxels.
+It forms them as an EPI readout does: each phase-encoding line accrues the phase
+of the off-resonance field at the time the line is acquired.
+A warp works differently: it resamples a volume at displaced points.
+The warp model of this experiment forms each distorted volume by warping the
+undistorted one, so it maps each point of the distorted grid to a point of the
+undistorted volume.
+It also scales the intensity by the Jacobian of the displacement, so that no
+signal is created or lost.
+A correction by registration warps in the opposite direction: it samples the
+distorted volume at the points of the reference’s grid that the distortion moved
+(<a class="reference internal" href="error-audit.html"><span class="doc">The error audit</span></a>).</p>
+<p>Three questions were registered before the run:</p>
+<dl class="simple">
+<dt>Q1, the readout model</dt><dd><p>Does <a class="reference internal" href="../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Distortion" title="nifreeze.analysis.sensitivity.Distortion"><code class="xref py py-class docutils literal notranslate"><span class="pre">Distortion</span></code></a>, forming each volume as
+the readout does from the sidecar’s coefficients, reproduce TRXScan’s volumes?
+This had been checked on the 4 mm phantom of continuous integration, within
+10⁻⁴ of the volume’s maximum, but not at native resolution.</p>
+</dd>
+<dt>Q2, the warp model</dt><dd><p>How far from TRXScan’s volume is the undistorted volume, warped by the
+sidecar’s displacement?
+This gap was registered as the floor of any correction by warping.</p>
+</dd>
+<dt>Q3, a fit without registration</dt><dd><p>Which four coefficients bring the warped undistorted volume closest to
+TRXScan’s volume, by least squares?
+How far is their displacement from the sidecar’s?</p>
+</dd>
+</dl>
+<p>The registered decision rule is as follows.
+If the fit’s displacement is within 0.05 voxel of the sidecar’s on every fitted
+volume of every copy, the sidecar’s polynomial is the truth for scoring eddy
+currents.
+Within 0.05 voxel means that the 95th percentile of the difference over the brain
+is below 0.05 voxel.
+Otherwise, the fit is the truth, and the report says why.</p>
+</section>
+<section id="data">
+<h2>Data<a class="headerlink" href="#data" title="Link to this heading">¶</a></h2>
+<p>Both protocols of the phantom dataset are used, without noise: Sherbrooke, with
+voxels of 2 mm, and HCP-YA, with voxels of 1.25 mm.
+Phase encoding runs along the second voxel axis.
+Each distorted copy is compared with an undistorted counterpart:</p>
+<ul class="simple">
+<li><p>The eddy-only copies <code class="docutils literal notranslate"><span class="pre">e2</span></code>, <code class="docutils literal notranslate"><span class="pre">e4</span></code> and <code class="docutils literal notranslate"><span class="pre">e8</span></code> are compared with the clean
+reference.</p></li>
+<li><p>The combined copies <code class="docutils literal notranslate"><span class="pre">m&lt;m&gt;s0e&lt;e&gt;</span></code> are compared with the motion-only copy
+<code class="docutils literal notranslate"><span class="pre">m&lt;m&gt;s0</span></code>, which has the same motions.
+The combined copies cover motions of <em>m</em> = 0.5, 1, 2 and 4 (a rotation of <em>m</em>
+degrees and a translation of <em>m</em> mm), and eddy currents of <em>e</em> = 2, 4 and 8
+voxels.
+TRXScan distorts each volume after moving it, in the scanner’s frame, so the
+motion-only volume is the undistorted one.</p></li>
+</ul>
+<p>Q1 and Q2 use every diffusion-weighted volume of the 15 copies.
+Q3 uses the development volumes of five copies (<code class="docutils literal notranslate"><span class="pre">e2</span></code>, <code class="docutils literal notranslate"><span class="pre">e4</span></code>, <code class="docutils literal notranslate"><span class="pre">e8</span></code>, <code class="docutils literal notranslate"><span class="pre">m1s0e4</span></code>
+and <code class="docutils literal notranslate"><span class="pre">m4s0e4</span></code>).
+These are every third volume on Sherbrooke and every ninth on HCP-YA, starting from
+the first.
+On HCP-YA, every ninth volume misses the shell at b = 2000:</p>
+<div class="table-wrapper colwidths-auto docutils container" id="id1">
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-number">Table 11 </span><span class="caption-text">The diffusion-weighted volumes of each copy, and those fitted in Q3,
+per shell.</span><a class="headerlink" href="#id1" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Protocol</p></th>
+<th class="head"><p>b-value</p></th>
+<th class="head"><p>Volumes per copy</p></th>
+<th class="head"><p>Fitted volumes per copy</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>1000</p></td>
+<td><p>64</p></td>
+<td><p>22</p></td>
+</tr>
+<tr class="row-odd"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>2000</p></td>
+<td><p>64</p></td>
+<td><p>21</p></td>
+</tr>
+<tr class="row-even"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>3500</p></td>
+<td><p>64</p></td>
+<td><p>21</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>1000</p></td>
+<td><p>90</p></td>
+<td><p>23</p></td>
+</tr>
+<tr class="row-even"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>2000</p></td>
+<td><p>90</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>3000</p></td>
+<td><p>90</p></td>
+<td><p>7</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<figure class="align-default" id="id2">
+<a class="reference internal image-reference" href="../_images/eddy-truth-inputs.png"><img alt="../_images/eddy-truth-inputs.png" src="../_images/eddy-truth-inputs.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 9 </span><span class="caption-text">The Sherbrooke volume of <code class="docutils literal notranslate"><span class="pre">e8</span></code> with the largest displacement (volume
+153, at b = 3500), on the axial slice through the center of the brain,
+in anterior-up orientation.
+Phase encoding runs from top to bottom.
+The first two panels share an intensity window.
+The next three show each model’s absolute difference from TRXScan’s volume,
+divided by its maximum, saturating at 0.1; the corner gives the largest value in
+the brain, over the whole volume.
+The readout model’s difference is too small to show.
+The last panel is the sidecar’s displacement in voxels, with the brain outlined.
+The <em>inverted</em> coefficients are introduced in <a class="reference internal" href="#what-the-results-show">What the results show</a>.</span><a class="headerlink" href="#id2" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="how-the-errors-are-measured">
+<h2>How the errors are measured<a class="headerlink" href="#how-the-errors-are-measured" title="Link to this heading">¶</a></h2>
+<p>For Q1 and Q2, the model forms each volume from its undistorted counterpart.
+The warp model resamples with cubic B-splines.
+The formed volume is compared with TRXScan’s volume, voxel by voxel, within the
+brain mask.
+Each absolute difference is divided by the largest intensity of TRXScan’s volume.
+Each volume reports the largest of these residuals and their 99th percentile (p99).</p>
+<p>For Q3, the four coefficients of a volume are fitted by
+<a class="reference external" href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.least_squares.html#scipy.optimize.least_squares" title="(in SciPy v1.18.0)"><code class="xref py py-func docutils literal notranslate"><span class="pre">scipy.optimize.least_squares()</span></code></a>, with the Levenberg-Marquardt method,
+starting from zero.
+The residuals are the differences between the warped undistorted volume and
+TRXScan’s volume, divided by its largest intensity.
+They are taken over the brain mask grown by as many voxels as the copy’s largest
+displacement, plus one, so that the fit also sees where the displaced signal lands.
+The error of the fit is the difference between its displacement and the sidecar’s,
+at every voxel of the brain, in voxels along phase encoding.
+Each volume reports the mean of that error, its 95th percentile (p95) and its
+largest value.</p>
+</section>
+<section id="results">
+<h2>Results<a class="headerlink" href="#results" title="Link to this heading">¶</a></h2>
+<p><strong>The readout model reproduces TRXScan’s volumes (Q1).</strong>
+On every volume of every copy of both protocols, its largest residual within the
+brain is at most 7.3 × 10⁻⁶ of the volume’s maximum (the table below, row
+<em>Readout</em>, column <em>Largest, worst</em>).
+The same holds over the whole volume (check C of <a class="reference internal" href="error-audit.html"><span class="doc">The error audit</span></a>).</p>
+<p><strong>Warped by the sidecar’s coefficients, the volumes are far from TRXScan’s (Q2).</strong>
+The largest residual within the brain has a median of 0.13 to 0.16 of the
+volume’s maximum, depending on the protocol and the magnitude.
+Its worst value grows with the eddy currents: at 2 voxels it is 0.29 on Sherbrooke
+and 0.36 on HCP-YA, and at 8 voxels it is 0.91 and 0.57.</p>
+<div class="table-wrapper colwidths-auto docutils container" id="id3">
+<table class="docutils align-default" id="id3">
+<caption><span class="caption-number">Table 12 </span><span class="caption-text">Residuals of each model within the brain, relative to the volume’s
+maximum: the median and the worst over the volumes, of each volume’s largest
+residual and of its 99th percentile (p99). Each row pools the five copies with
+the same eddy currents (with and without motion). The rows of the inverted
+coefficients are post hoc (<a class="reference internal" href="#what-the-results-show">What the results show</a>).</span><a class="headerlink" href="#id3" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Protocol</p></th>
+<th class="head"><p>Eddy currents (voxels)</p></th>
+<th class="head"><p>Model</p></th>
+<th class="head"><p>Volumes</p></th>
+<th class="head"><p>Largest, median</p></th>
+<th class="head"><p>Largest, worst</p></th>
+<th class="head"><p>p99, median</p></th>
+<th class="head"><p>p99, worst</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>2</p></td>
+<td><p>Readout (as TRXScan forms the volume)</p></td>
+<td><p>960</p></td>
+<td><p>1.8e-07</p></td>
+<td><p>6.6e-06</p></td>
+<td><p>7.8e-08</p></td>
+<td><p>2.2e-07</p></td>
+</tr>
+<tr class="row-odd"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>2</p></td>
+<td><p>Warp by the sidecar’s coefficients</p></td>
+<td><p>960</p></td>
+<td><p>0.13</p></td>
+<td><p>0.29</p></td>
+<td><p>0.025</p></td>
+<td><p>0.052</p></td>
+</tr>
+<tr class="row-even"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>2</p></td>
+<td><p>Warp by the inverted coefficients</p></td>
+<td><p>960</p></td>
+<td><p>0.13</p></td>
+<td><p>0.29</p></td>
+<td><p>0.025</p></td>
+<td><p>0.052</p></td>
+</tr>
+<tr class="row-odd"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>4</p></td>
+<td><p>Readout (as TRXScan forms the volume)</p></td>
+<td><p>960</p></td>
+<td><p>2.8e-07</p></td>
+<td><p>6.9e-06</p></td>
+<td><p>8.6e-08</p></td>
+<td><p>4.5e-07</p></td>
+</tr>
+<tr class="row-even"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>4</p></td>
+<td><p>Warp by the sidecar’s coefficients</p></td>
+<td><p>960</p></td>
+<td><p>0.13</p></td>
+<td><p>0.33</p></td>
+<td><p>0.027</p></td>
+<td><p>0.081</p></td>
+</tr>
+<tr class="row-odd"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>4</p></td>
+<td><p>Warp by the inverted coefficients</p></td>
+<td><p>960</p></td>
+<td><p>0.13</p></td>
+<td><p>0.33</p></td>
+<td><p>0.026</p></td>
+<td><p>0.043</p></td>
+</tr>
+<tr class="row-even"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>8</p></td>
+<td><p>Readout (as TRXScan forms the volume)</p></td>
+<td><p>960</p></td>
+<td><p>5.5e-07</p></td>
+<td><p>7.3e-06</p></td>
+<td><p>1.3e-07</p></td>
+<td><p>9.2e-07</p></td>
+</tr>
+<tr class="row-odd"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>8</p></td>
+<td><p>Warp by the sidecar’s coefficients</p></td>
+<td><p>960</p></td>
+<td><p>0.15</p></td>
+<td><p>0.91</p></td>
+<td><p>0.038</p></td>
+<td><p>0.26</p></td>
+</tr>
+<tr class="row-even"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>8</p></td>
+<td><p>Warp by the inverted coefficients</p></td>
+<td><p>960</p></td>
+<td><p>0.14</p></td>
+<td><p>0.32</p></td>
+<td><p>0.027</p></td>
+<td><p>0.052</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>2</p></td>
+<td><p>Readout (as TRXScan forms the volume)</p></td>
+<td><p>1350</p></td>
+<td><p>4.2e-06</p></td>
+<td><p>6e-06</p></td>
+<td><p>7.6e-08</p></td>
+<td><p>2e-07</p></td>
+</tr>
+<tr class="row-even"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>2</p></td>
+<td><p>Warp by the sidecar’s coefficients</p></td>
+<td><p>1350</p></td>
+<td><p>0.13</p></td>
+<td><p>0.36</p></td>
+<td><p>0.021</p></td>
+<td><p>0.047</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>2</p></td>
+<td><p>Warp by the inverted coefficients</p></td>
+<td><p>1350</p></td>
+<td><p>0.13</p></td>
+<td><p>0.36</p></td>
+<td><p>0.021</p></td>
+<td><p>0.047</p></td>
+</tr>
+<tr class="row-even"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>4</p></td>
+<td><p>Readout (as TRXScan forms the volume)</p></td>
+<td><p>1350</p></td>
+<td><p>4.1e-06</p></td>
+<td><p>6.1e-06</p></td>
+<td><p>8.1e-08</p></td>
+<td><p>3.8e-07</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>4</p></td>
+<td><p>Warp by the sidecar’s coefficients</p></td>
+<td><p>1350</p></td>
+<td><p>0.13</p></td>
+<td><p>0.4</p></td>
+<td><p>0.022</p></td>
+<td><p>0.035</p></td>
+</tr>
+<tr class="row-even"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>4</p></td>
+<td><p>Warp by the inverted coefficients</p></td>
+<td><p>1350</p></td>
+<td><p>0.13</p></td>
+<td><p>0.4</p></td>
+<td><p>0.021</p></td>
+<td><p>0.032</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>8</p></td>
+<td><p>Readout (as TRXScan forms the volume)</p></td>
+<td><p>1350</p></td>
+<td><p>3.9e-06</p></td>
+<td><p>6.4e-06</p></td>
+<td><p>1.3e-07</p></td>
+<td><p>7.6e-07</p></td>
+</tr>
+<tr class="row-even"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>8</p></td>
+<td><p>Warp by the sidecar’s coefficients</p></td>
+<td><p>1350</p></td>
+<td><p>0.16</p></td>
+<td><p>0.57</p></td>
+<td><p>0.028</p></td>
+<td><p>0.1</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>8</p></td>
+<td><p>Warp by the inverted coefficients</p></td>
+<td><p>1350</p></td>
+<td><p>0.14</p></td>
+<td><p>0.38</p></td>
+<td><p>0.022</p></td>
+<td><p>0.038</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<figure class="align-default" id="id4">
+<a class="reference internal image-reference" href="../_images/eddy-truth-models.png"><img alt="../_images/eddy-truth-models.png" src="../_images/eddy-truth-models.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 10 </span><span class="caption-text">The largest residual within the brain of every volume of every copy, by model
+(note the logarithmic scale). Black lines mark the medians.</span><a class="headerlink" href="#id4" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<p><strong>The fit does not find the sidecar’s displacement (Q3), and the registered rule
+fails.</strong>
+The 95th percentile of the fit’s error is above 0.05 voxel on 131 of the 320 fitted
+volumes of Sherbrooke and on 22 of the 150 of HCP-YA (the decision table below).
+The error grows with the size of the displacement, and is largest at the highest
+shell, whose volumes TRXScan distorts the most.</p>
+<div class="table-wrapper colwidths-auto docutils container" id="id5">
+<table class="docutils align-default" id="id5">
+<caption><span class="caption-number">Table 13 </span><span class="caption-text">The fit’s error, in voxels along phase encoding, per copy: the median
+and the worst over the fitted volumes of each volume’s p95, how many volumes have
+a p95 above 0.05 voxel, and the largest difference between the fitted
+coefficients and those they are compared with, for the linear terms and for the
+constant term. The rows against the inverted coefficients are
+post hoc (<a class="reference internal" href="#what-the-results-show">What the results show</a>).</span><a class="headerlink" href="#id5" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Protocol</p></th>
+<th class="head"><p>Copy</p></th>
+<th class="head"><p>Against the</p></th>
+<th class="head"><p>Volumes</p></th>
+<th class="head"><p>p95, median</p></th>
+<th class="head"><p>p95, worst</p></th>
+<th class="head"><p>p95 above 0.05</p></th>
+<th class="head"><p>Largest difference, linear terms (mm)</p></th>
+<th class="head"><p>Largest difference, constant term (mm)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>e2</p></td>
+<td><p>sidecar’s</p></td>
+<td><p>64</p></td>
+<td><p>0.012</p></td>
+<td><p>0.08</p></td>
+<td><p>9</p></td>
+<td><p>0.0047</p></td>
+<td><p>0.006</p></td>
+</tr>
+<tr class="row-odd"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>e2</p></td>
+<td><p>inverted</p></td>
+<td><p>64</p></td>
+<td><p>0.0032</p></td>
+<td><p>0.012</p></td>
+<td><p>0</p></td>
+<td><p>0.00069</p></td>
+<td><p>0.006</p></td>
+</tr>
+<tr class="row-even"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>e4</p></td>
+<td><p>sidecar’s</p></td>
+<td><p>64</p></td>
+<td><p>0.034</p></td>
+<td><p>0.32</p></td>
+<td><p>25</p></td>
+<td><p>0.019</p></td>
+<td><p>0.0022</p></td>
+</tr>
+<tr class="row-odd"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>e4</p></td>
+<td><p>inverted</p></td>
+<td><p>64</p></td>
+<td><p>0.0022</p></td>
+<td><p>0.0052</p></td>
+<td><p>0</p></td>
+<td><p>0.00027</p></td>
+<td><p>0.0022</p></td>
+</tr>
+<tr class="row-even"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>e8</p></td>
+<td><p>sidecar’s</p></td>
+<td><p>64</p></td>
+<td><p>0.14</p></td>
+<td><p>1.4</p></td>
+<td><p>46</p></td>
+<td><p>0.085</p></td>
+<td><p>0.0041</p></td>
+</tr>
+<tr class="row-odd"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>e8</p></td>
+<td><p>inverted</p></td>
+<td><p>64</p></td>
+<td><p>0.0018</p></td>
+<td><p>0.0072</p></td>
+<td><p>0</p></td>
+<td><p>0.0003</p></td>
+<td><p>0.0041</p></td>
+</tr>
+<tr class="row-even"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>m1s0e4</p></td>
+<td><p>sidecar’s</p></td>
+<td><p>64</p></td>
+<td><p>0.034</p></td>
+<td><p>0.32</p></td>
+<td><p>25</p></td>
+<td><p>0.019</p></td>
+<td><p>0.0027</p></td>
+</tr>
+<tr class="row-odd"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>m1s0e4</p></td>
+<td><p>inverted</p></td>
+<td><p>64</p></td>
+<td><p>0.0021</p></td>
+<td><p>0.0058</p></td>
+<td><p>0</p></td>
+<td><p>0.00028</p></td>
+<td><p>0.0027</p></td>
+</tr>
+<tr class="row-even"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>m4s0e4</p></td>
+<td><p>sidecar’s</p></td>
+<td><p>64</p></td>
+<td><p>0.034</p></td>
+<td><p>0.32</p></td>
+<td><p>26</p></td>
+<td><p>0.019</p></td>
+<td><p>0.0035</p></td>
+</tr>
+<tr class="row-odd"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>m4s0e4</p></td>
+<td><p>inverted</p></td>
+<td><p>64</p></td>
+<td><p>0.0021</p></td>
+<td><p>0.0062</p></td>
+<td><p>0</p></td>
+<td><p>0.00032</p></td>
+<td><p>0.0035</p></td>
+</tr>
+<tr class="row-even"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>e2</p></td>
+<td><p>sidecar’s</p></td>
+<td><p>30</p></td>
+<td><p>0.008</p></td>
+<td><p>0.036</p></td>
+<td><p>0</p></td>
+<td><p>0.00089</p></td>
+<td><p>0.0017</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>e2</p></td>
+<td><p>inverted</p></td>
+<td><p>30</p></td>
+<td><p>0.0046</p></td>
+<td><p>0.012</p></td>
+<td><p>0</p></td>
+<td><p>0.00023</p></td>
+<td><p>0.0017</p></td>
+</tr>
+<tr class="row-even"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>e4</p></td>
+<td><p>sidecar’s</p></td>
+<td><p>30</p></td>
+<td><p>0.0096</p></td>
+<td><p>0.14</p></td>
+<td><p>3</p></td>
+<td><p>0.0036</p></td>
+<td><p>0.00095</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>e4</p></td>
+<td><p>inverted</p></td>
+<td><p>30</p></td>
+<td><p>0.002</p></td>
+<td><p>0.0059</p></td>
+<td><p>0</p></td>
+<td><p>0.00012</p></td>
+<td><p>0.00095</p></td>
+</tr>
+<tr class="row-even"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>e8</p></td>
+<td><p>sidecar’s</p></td>
+<td><p>30</p></td>
+<td><p>0.048</p></td>
+<td><p>0.6</p></td>
+<td><p>13</p></td>
+<td><p>0.015</p></td>
+<td><p>0.001</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>e8</p></td>
+<td><p>inverted</p></td>
+<td><p>30</p></td>
+<td><p>0.0017</p></td>
+<td><p>0.0039</p></td>
+<td><p>0</p></td>
+<td><p>8.7e-05</p></td>
+<td><p>0.001</p></td>
+</tr>
+<tr class="row-even"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>m1s0e4</p></td>
+<td><p>sidecar’s</p></td>
+<td><p>30</p></td>
+<td><p>0.0088</p></td>
+<td><p>0.14</p></td>
+<td><p>3</p></td>
+<td><p>0.0036</p></td>
+<td><p>0.0013</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>m1s0e4</p></td>
+<td><p>inverted</p></td>
+<td><p>30</p></td>
+<td><p>0.0025</p></td>
+<td><p>0.0069</p></td>
+<td><p>0</p></td>
+<td><p>0.00013</p></td>
+<td><p>0.0013</p></td>
+</tr>
+<tr class="row-even"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>m4s0e4</p></td>
+<td><p>sidecar’s</p></td>
+<td><p>30</p></td>
+<td><p>0.0092</p></td>
+<td><p>0.14</p></td>
+<td><p>3</p></td>
+<td><p>0.0036</p></td>
+<td><p>0.0017</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>m4s0e4</p></td>
+<td><p>inverted</p></td>
+<td><p>30</p></td>
+<td><p>0.0026</p></td>
+<td><p>0.0064</p></td>
+<td><p>0</p></td>
+<td><p>0.00013</p></td>
+<td><p>0.0017</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrapper colwidths-auto docutils container" id="id6">
+<table class="docutils align-default" id="id6">
+<caption><span class="caption-number">Table 14 </span><span class="caption-text">The decision rule, as registered (Q3) and applied post hoc to the
+inverted coefficients (Q3b).</span><a class="headerlink" href="#id6" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Comparison</p></th>
+<th class="head"><p>Protocol</p></th>
+<th class="head"><p>Fitted volumes</p></th>
+<th class="head"><p>p95 above 0.05 voxel</p></th>
+<th class="head"><p>Rule holds</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Q3, as pre-registered: against the sidecar’s coefficients</p></td>
+<td><p>Sherbrooke (2 mm)</p></td>
+<td><p>320</p></td>
+<td><p>131</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p>Q3, as pre-registered: against the sidecar’s coefficients</p></td>
+<td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>150</p></td>
+<td><p>22</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-even"><td><p>Q3b, post hoc: against the inverted coefficients</p></td>
+<td><p>Sherbrooke (2 mm)</p></td>
+<td><p>320</p></td>
+<td><p>0</p></td>
+<td><p>yes</p></td>
+</tr>
+<tr class="row-odd"><td><p>Q3b, post hoc: against the inverted coefficients</p></td>
+<td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>150</p></td>
+<td><p>0</p></td>
+<td><p>yes</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<figure class="align-default" id="id7">
+<a class="reference internal image-reference" href="../_images/eddy-truth-fit.png"><img alt="../_images/eddy-truth-fit.png" src="../_images/eddy-truth-fit.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 11 </span><span class="caption-text">The p95 of the fit’s error in every fitted volume, against the largest true
+displacement of that volume in the brain, colored by shell (note the
+logarithmic scale). Left: against the sidecar’s coefficients, as registered.
+Right: against the inverted coefficients, post hoc. The dashed line is the
+threshold of the decision rule.</span><a class="headerlink" href="#id7" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="what-the-results-show">
+<h2>What the results show<a class="headerlink" href="#what-the-results-show" title="Link to this heading">¶</a></h2>
+<p><strong>The sidecar’s coefficients and the best warp’s differ by one factor per
+volume.</strong>
+Q1 shows that the sidecar describes TRXScan’s volumes, within 7.3 × 10⁻⁶ of the
+volume’s maximum, yet the warp that best matches them does not use the sidecar’s
+coefficients (Q3).
+Looking at the fitted coefficients after the run, each volume’s three fitted
+linear coefficients were the sidecar’s multiplied by one common factor, which
+changed from volume to volume, and the fitted constant term was near zero.
+In the volume shown above, for example, the sidecar’s coefficients are 0, -0.0802,
+-0.3556 and -0.0717 mm, and the fitted ones are -0.0021, -0.0681, -0.3017 and
+-0.0609 mm: the linear terms are about 0.85 times the sidecar’s.</p>
+<p><strong>The fit estimates the inverse of the sidecar’s map.</strong>
+This explanation was posted on the issue
+(<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/618#issuecomment-6522680697">comment</a>)
+before the second run, so the analysis that follows is post hoc.
+Let <em>d</em> be the sidecar’s displacement, and <em>u</em> the world direction of the
+phase-encoding voxel axis
+(<a class="reference internal" href="../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Distortion.direction" title="nifreeze.analysis.sensitivity.Distortion.direction"><code class="xref py py-attr docutils literal notranslate"><span class="pre">direction</span></code></a>).</p>
+<ul class="simple">
+<li><p>The readout model maps each point <em>p</em> of the undistorted volume to where its
+signal appears.
+The signal from <em>p</em> accrues the phase of the field at <em>p</em>, so it appears at
+<em>q</em> = <em>p</em> - <em>d</em>(<em>p</em>) <em>u</em>.
+This is the sidecar’s map.</p></li>
+<li><p>The warp model maps the other way, from each point <em>q</em> of the distorted grid
+back to the undistorted volume.
+The warped volume shows at each point <em>q</em> what lies at <em>q</em> + <em>d</em><sub>w</sub>(<em>q</em>) <em>u</em>.</p></li>
+</ul>
+<p>For the warp to imitate the readout, its map must be the inverse of the
+readout’s: <em>q</em> + <em>d</em><sub>w</sub>(<em>q</em>) <em>u</em> must be the source <em>p</em> of every point
+<em>q</em>, so <em>d</em><sub>w</sub>(<em>q</em>) = <em>d</em>(<em>p</em>).
+Let <em>s</em> be the slope of <em>d</em> along phase encoding, in mm per mm, which is the same
+everywhere for a field of degree 1.
+Then <em>d</em>(<em>p</em>) = <em>d</em>(<em>q</em>) + <em>s</em> <em>d</em>(<em>p</em>), because <em>p</em> lies <em>d</em>(<em>p</em>) further
+along phase encoding than <em>q</em>.
+Solving gives <em>d</em><sub>w</sub>(<em>q</em>) = <em>d</em>(<em>q</em>) / (1 - <em>s</em>).
+The warp that imitates the readout therefore has the sidecar’s coefficients
+divided by 1 - <em>s</em>: the coefficients of the inverse map.
+This report calls them the <em>inverted coefficients</em>.
+In the shown volume, <em>s</em> = -0.178, so the inverted coefficients are the
+sidecar’s times 1 / 1.178 = 0.849.</p>
+<p>The intensities match as well.
+The readout spreads the signal of a length along phase encoding over 1 - <em>s</em> times
+that length, so it scales the intensity by 1 / (1 - <em>s</em>).
+The warp scales it by its Jacobian, 1 + <em>s</em> / (1 - <em>s</em>), which is the same.</p>
+<p>The comment already reported that the first run’s fits matched the inverted
+coefficients.
+The second run computed the inverted coefficients of every volume and added two
+comparisons:</p>
+<dl class="simple">
+<dt>Q2b, the inverted warp</dt><dd><p>The undistorted volume, warped by the inverted coefficients, compared with
+TRXScan’s volume as in Q2.</p>
+</dd>
+<dt>Q3b, the fit against the inverted coefficients</dt><dd><p>The fit’s displacement compared with the inverted one, as in Q3.</p>
+</dd>
+</dl>
+<p>It also recomputed Q1, Q2 and Q3, which match the first run exactly: the largest
+difference over every column the first run wrote is zero (the table in
+<a class="reference internal" href="#reproducing">Reproducing</a>).</p>
+<p><strong>Against the inverted coefficients, the fit is within the threshold on every
+volume (Q3b).</strong>
+The worst p95 of the fit’s error is 0.012 voxel on both protocols; measured from
+the sidecar’s coefficients, it was 1.4 voxels on Sherbrooke and 0.6 on HCP-YA (the
+fit table).
+The fitted linear coefficients differ from the inverted ones by at most 0.00069 mm
+on Sherbrooke and 0.00023 mm on HCP-YA, against up to 0.085 and 0.015 mm from the
+sidecar’s.
+The fit’s constant term, which neither the sidecar’s nor the inverted coefficients
+have, reaches 0.006 mm and 0.0017 mm.
+Q3b is not an independent test of the explanation: its fits are those of the first
+run, which suggested the explanation.
+It confirms on every fitted volume what the comment reported.</p>
+<p><strong>The inverted warp still leaves a gap to TRXScan’s volumes (Q2b).</strong>
+Q2b is the comparison that the first run had not made.
+Inverting the coefficients removes most of the growth of the warp’s worst residual
+with the eddy currents: at 8 voxels, it drops from 0.91 to 0.32 on Sherbrooke, and
+from 0.57 to 0.38 on HCP-YA, close to its values at 2 voxels (0.29 and 0.36).
+The median of the largest residual barely changes, though: it is 0.13 to 0.14 at
+every magnitude, as at 2 voxels, where the two warps give nearly the same
+residuals.
+The median p99 is 0.021 to 0.027.
+These residuals are taken within the brain mask, while the distorted brain reaches
+beyond it along phase encoding.
+Within the mask grown by the largest displacement plus one voxel, the median of the
+largest residual over all the copies is 0.15 on both protocols, rather than 0.13 on
+Sherbrooke and 0.14 on HCP-YA, and its worst value is the same, 0.33 and 0.40
+(check C of <a class="reference internal" href="error-audit.html"><span class="doc">The error audit</span></a>):</p>
+<div class="table-wrapper colwidths-auto docutils container" id="id8">
+<table class="docutils align-default" id="id8">
+<caption><span class="caption-number">Table 15 </span><span class="caption-text">Q1 and Q2b within the brain mask, within the mask grown by the copy’s
+largest displacement plus one voxel, and over the whole volume, over every volume
+of every eddy-current copy (check C of <a class="reference internal" href="error-audit.html"><span class="doc">The error audit</span></a>).</span><a class="headerlink" href="#id8" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Protocol</p></th>
+<th class="head"><p>Model</p></th>
+<th class="head"><p>Domain</p></th>
+<th class="head"><p>Largest, median</p></th>
+<th class="head"><p>Largest, worst</p></th>
+<th class="head"><p>p99, median</p></th>
+<th class="head"><p>p99, worst</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>Q1, readout</p></td>
+<td><p>Brain mask</p></td>
+<td><p>3.3e-07</p></td>
+<td><p>7.3e-06</p></td>
+<td><p>8.5e-08</p></td>
+<td><p>9.2e-07</p></td>
+</tr>
+<tr class="row-odd"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>Q1, readout</p></td>
+<td><p>Grown mask</p></td>
+<td><p>5.1e-06</p></td>
+<td><p>7.3e-06</p></td>
+<td><p>8.4e-08</p></td>
+<td><p>1.4e-06</p></td>
+</tr>
+<tr class="row-even"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>Q1, readout</p></td>
+<td><p>Whole volume</p></td>
+<td><p>5.3e-06</p></td>
+<td><p>7.3e-06</p></td>
+<td><p>6.7e-08</p></td>
+<td><p>8.9e-07</p></td>
+</tr>
+<tr class="row-odd"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>Q2b, inverted warp</p></td>
+<td><p>Brain mask</p></td>
+<td><p>0.13</p></td>
+<td><p>0.33</p></td>
+<td><p>0.026</p></td>
+<td><p>0.052</p></td>
+</tr>
+<tr class="row-even"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>Q2b, inverted warp</p></td>
+<td><p>Grown mask</p></td>
+<td><p>0.15</p></td>
+<td><p>0.33</p></td>
+<td><p>0.026</p></td>
+<td><p>0.055</p></td>
+</tr>
+<tr class="row-odd"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>Q2b, inverted warp</p></td>
+<td><p>Whole volume</p></td>
+<td><p>0.15</p></td>
+<td><p>0.33</p></td>
+<td><p>0.016</p></td>
+<td><p>0.027</p></td>
+</tr>
+<tr class="row-even"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>Q1, readout</p></td>
+<td><p>Brain mask</p></td>
+<td><p>4.1e-06</p></td>
+<td><p>6.4e-06</p></td>
+<td><p>8.1e-08</p></td>
+<td><p>7.6e-07</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>Q1, readout</p></td>
+<td><p>Grown mask</p></td>
+<td><p>4.8e-06</p></td>
+<td><p>6.4e-06</p></td>
+<td><p>8e-08</p></td>
+<td><p>1.3e-06</p></td>
+</tr>
+<tr class="row-even"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>Q1, readout</p></td>
+<td><p>Whole volume</p></td>
+<td><p>4.9e-06</p></td>
+<td><p>6.4e-06</p></td>
+<td><p>8e-08</p></td>
+<td><p>3e-06</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>Q2b, inverted warp</p></td>
+<td><p>Brain mask</p></td>
+<td><p>0.14</p></td>
+<td><p>0.4</p></td>
+<td><p>0.021</p></td>
+<td><p>0.047</p></td>
+</tr>
+<tr class="row-even"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>Q2b, inverted warp</p></td>
+<td><p>Grown mask</p></td>
+<td><p>0.15</p></td>
+<td><p>0.4</p></td>
+<td><p>0.022</p></td>
+<td><p>0.054</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>Q2b, inverted warp</p></td>
+<td><p>Whole volume</p></td>
+<td><p>0.15</p></td>
+<td><p>0.4</p></td>
+<td><p>0.015</p></td>
+<td><p>0.02</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>That part of the gap comes neither from the displacement, which is now the right
+one, nor from the scaling of the intensity, which matches the readout’s (above).
+It is a difference between forming a volume by the readout and warping it.
+One explanation, not tested here, is that the readout forms the volume in k-space,
+line by line, while the warp interpolates with cubic B-splines; the two differ most
+where the phantom’s intensity changes sharply.
+The residuals in the figure of the inputs run in stripes along phase encoding,
+which is consistent with that explanation but does not test it.</p>
+</section>
+<section id="consequences">
+<h2>Consequences<a class="headerlink" href="#consequences" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><strong>The sidecar is the truth of how TRXScan formed the volumes (Q1).</strong>
+Its coefficients give the readout’s map, from each point of the reference to
+where its signal lands: <em>x</em> to <em>x</em> - <em>d</em>(<em>x</em>) <em>u</em>.</p></li>
+<li><p><strong>The truth for scoring a correction is the sidecar’s coefficients as they
+are.</strong>
+<em>NiFreeze</em> registers each volume (moving) to a prediction (fixed) on the
+reference’s grid, so its estimate maps each point of the reference into the
+distorted volume, as the sidecar’s map does.
+Sampling each distorted copy at <em>x</em> - <em>d</em>(<em>x</em>) <em>u</em>, with the Jacobian,
+reproduces the undistorted volume more closely than the inverted coefficients or
+the opposite sign do, by the 99th percentile of the residual (check B of
+<a class="reference internal" href="error-audit.html"><span class="doc">The error audit</span></a>).
+For these linear fields, no conversion is needed; for a field of higher degree, the
+readout’s map has the same form, but that is not tested.
+The inverted coefficients are the truth only for a model that warps the reference
+onto the distorted grid, as Q2 and the fit of Q3 do.</p></li>
+<li><p><strong>The registered rule compared maps that point in opposite directions.</strong>
+The fit estimates the inverse of the sidecar’s map, so its coefficients differ
+from the sidecar’s wherever the field changes along phase encoding.
+The rule failed for that reason, not because the sidecar is wrong.</p></li>
+<li><p><strong>The mapping on a combined copy has the opposite sign from the one
+registered.</strong>
+The phantom moves first, so a reference point <em>x</em> lands at <em>y</em> = <em>M</em> <em>x</em> in the
+scanner.
+The field acts at <em>y</em>, in the scanner’s frame: Q1 shows it on the combined
+copies, where the readout of the motion-only volume reproduces TRXScan’s.
+The readout then shows the point at <em>T</em>(<em>x</em>) = <em>y</em> - <em>d</em>(<em>y</em>) <em>u</em>.
+The issue had written <em>y</em> + <em>d</em>(<em>y</em>) <em>u</em>.
+The sign follows from the derivation above, which holds for every copy: with the
+opposite sign, the fitted coefficients would be the sidecar’s divided by
+-(1 + <em>s</em>), and they are not.
+Check B of the audit confirms both the sign and the map on every combined copy.</p></li>
+<li><p><strong>Q2 and Q2b measure how well a warp imitates the readout, not the floor of a
+correction.</strong>
+The registration called Q2’s gap the floor of a correction by warping.
+A correction samples the distorted volume rather than the undistorted one, so the
+corresponding residual for a correction is the one left by sampling each copy at
+the sidecar’s points, which check B of the audit measures.
+Neither is strictly a lower bound: a slightly different map might leave a smaller
+residual, as the fit of Q3 shows for the warp model.</p></li>
+<li><p><strong>The inverse of a displacement of degree 2 is not a polynomial of degree 2.</strong>
+That matters only where a warp imitates a distortion.
+A volume distorted by warping (<a class="reference internal" href="../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Distortion" title="nifreeze.analysis.sensitivity.Distortion"><code class="xref py py-class docutils literal notranslate"><span class="pre">Distortion</span></code></a>
+without a readout), as planned to test the robustness of eddy-current models, has
+the inverse of its displacement as the truth of a correction, which must be
+computed point by point: along each phase-encoding line, that means solving a
+quadratic equation.
+A volume distorted through the readout keeps the polynomial itself as that truth.</p></li>
+<li><p><strong>The docstring of</strong> <a class="reference internal" href="../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Distortion" title="nifreeze.analysis.sensitivity.Distortion"><code class="xref py py-class docutils literal notranslate"><span class="pre">Distortion</span></code></a>
+described only the warp model
+(<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/624">#624</a>).
+<a class="reference external" href="https://github.com/nipreps/nifreeze/pull/625">#625</a> corrects it.</p></li>
+</ul>
+</section>
+<section id="open-questions">
+<h2>Open questions<a class="headerlink" href="#open-questions" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>What makes the gap that the inverted warp leaves (Q2b)?
+Warping with band-limited interpolation along phase encoding, instead of cubic
+B-splines, would show whether the interpolation accounts for it.</p></li>
+<li><p>Does the residual a correction leaves bias a registration’s estimate of the
+displacement?
+The fit of Q3 is itself a least-squares match over the brain, and the gap of Q2b
+leaves it within 0.012 voxel of the inverted displacement (Q3b’s worst p95), with
+a constant term of up to 0.006 mm that the inverted displacement does not have.
+A registration matches the images in the other direction, with another metric and
+other sampling, so whether its estimate is biased as little is for the
+experiments that register eddy-current copies (E0b and E3a in
+<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/614">#614</a>).</p></li>
+</ul>
+</section>
+<section id="deviations-from-the-registration">
+<h2>Deviations from the registration<a class="headerlink" href="#deviations-from-the-registration" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Q2b and Q3b were added after the first run, as described above.
+They were posted on the issue before the second run.</p></li>
+<li><p>The fit’s residuals are taken over the brain mask grown by the copy’s largest
+displacement plus one voxel, where the registration said within the mask.
+Both runs did so.</p></li>
+<li><p>The registered rule, when it fails, makes the fit the truth.
+The fit estimates the inverse map, so corrections that map the reference into the
+distorted volume are scored against the sidecar’s coefficients as they are
+instead.</p></li>
+<li><p>The registration called Q2’s gap the floor of a correction by warping.
+This report gives Q2’s and Q2b’s gaps as measures of how well a warp imitates the
+readout, and takes the floor of a correction from the audit.</p></li>
+<li><p>The first version of this report concluded that scoring a correction needs the
+inverted coefficients.
+The audit (<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/626">#626</a>) showed
+that this holds only in the warp model’s direction, and this version corrects it.</p></li>
+<li><p>The registered mapping on combined copies had the opposite sign
+(<a class="reference internal" href="#consequences">Consequences</a>).</p></li>
+<li><p>The runs used 12 processes, where the registration planned six, on the same
+CPUs: six physical cores and their hyper-threaded siblings.
+The volumes of one copy at a time were spread over the processes.</p></li>
+<li><p>HCP-YA needed more memory than registered: its largest process alone held
+20.9 GB (the table of the runs below), where the registration expected the run
+to stay under 12 GB.</p></li>
+</ul>
+</section>
+<section id="reproducing">
+<h2>Reproducing<a class="headerlink" href="#reproducing" title="Link to this heading">¶</a></h2>
+<p>The results are in the phantom dataset (<a class="reference internal" href="../phantoms.html"><span class="doc">Synthetic reference data</span></a>), under
+<code class="docutils literal notranslate"><span class="pre">derivatives/registration/eddy-truth</span></code>.
+<code class="docutils literal notranslate"><span class="pre">&lt;protocol&gt;.tsv</span></code> has one row per volume of each copy, and <code class="docutils literal notranslate"><span class="pre">&lt;protocol&gt;.json</span></code>
+records the copies, the fitted volumes and the provenance of the run.
+Each protocol ran twice, both times as a <code class="docutils literal notranslate"><span class="pre">datalad</span> <span class="pre">run</span></code> record of
+<code class="docutils literal notranslate"><span class="pre">tools/registration/eddy_truth.py</span></code>, from the dataset’s copy of <em>NiFreeze</em>.
+The first run is the registered one.
+The second, from the amended script, wrote the results this page reports, and
+reproduces the first in every column the first wrote:</p>
+<div class="table-wrapper colwidths-auto docutils container" id="id9">
+<table class="docutils align-default" id="id9">
+<caption><span class="caption-number">Table 16 </span><span class="caption-text">The first and the last run of each protocol (the dataset’s commits),
+and the largest difference between their results.</span><a class="headerlink" href="#id9" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Protocol</p></th>
+<th class="head"><p>First run</p></th>
+<th class="head"><p>Last run</p></th>
+<th class="head"><p>Rows</p></th>
+<th class="head"><p>Columns compared</p></th>
+<th class="head"><p>Largest difference</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>a3979b6</p></td>
+<td><p>c96805a</p></td>
+<td><p>2880</p></td>
+<td><p>19</p></td>
+<td><p>0.0e+00</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>b13f7e1</p></td>
+<td><p>fd9de84</p></td>
+<td><p>4050</p></td>
+<td><p>19</p></td>
+<td><p>0.0e+00</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrapper colwidths-auto docutils container" id="id10">
+<table class="docutils align-default" id="id10">
+<caption><span class="caption-number">Table 17 </span><span class="caption-text">The last run of each protocol: its run record, the <em>NiFreeze</em> commit
+it ran, its processes, its wall time, and the largest memory any of its
+processes held.</span><a class="headerlink" href="#id10" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Protocol</p></th>
+<th class="head"><p>Run record</p></th>
+<th class="head"><p>NiFreeze commit</p></th>
+<th class="head"><p>Jobs</p></th>
+<th class="head"><p>Wall time (h:mm:ss)</p></th>
+<th class="head"><p>Largest memory of one process (GB)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Sherbrooke (2 mm)</p></td>
+<td><p>c96805a</p></td>
+<td><p>ce2278db</p></td>
+<td><p>12</p></td>
+<td><p>21:04.61</p></td>
+<td><p>5.6</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCP-YA (1.25 mm)</p></td>
+<td><p>fd9de84</p></td>
+<td><p>ce2278db</p></td>
+<td><p>12</p></td>
+<td><p>1:36:35</p></td>
+<td><p>20.9</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The commands of the last runs:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">OPENBLAS_NUM_THREADS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">MKL_NUM_THREADS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">RAYON_NUM_THREADS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>/usr/bin/time<span class="w"> </span>-v<span class="w"> </span>-o<span class="w"> </span>logs/eddy-truth-sherbrooke.time<span class="w"> </span>taskset<span class="w"> </span>-c<span class="w"> </span><span class="m">0</span>-5,18-23<span class="w"> </span>uv<span class="w"> </span>run<span class="w"> </span>code/nifreeze/tools/registration/eddy_truth.py<span class="w"> </span>--dataset<span class="w"> </span>.<span class="w"> </span>--protocol<span class="w"> </span>sherbrooke<span class="w"> </span>--out<span class="w"> </span>derivatives/registration/eddy-truth<span class="w"> </span>--jobs<span class="w"> </span><span class="m">12</span><span class="w"> </span>&gt;<span class="w"> </span>logs/eddy-truth-sherbrooke.log<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span>
+
+<span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">OPENBLAS_NUM_THREADS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">MKL_NUM_THREADS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">RAYON_NUM_THREADS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>/usr/bin/time<span class="w"> </span>-v<span class="w"> </span>-o<span class="w"> </span>logs/eddy-truth-hcpya.time<span class="w"> </span>taskset<span class="w"> </span>-c<span class="w"> </span><span class="m">0</span>-5,18-23<span class="w"> </span>uv<span class="w"> </span>run<span class="w"> </span>code/nifreeze/tools/registration/eddy_truth.py<span class="w"> </span>--dataset<span class="w"> </span>.<span class="w"> </span>--protocol<span class="w"> </span>hcpya<span class="w"> </span>--out<span class="w"> </span>derivatives/registration/eddy-truth<span class="w"> </span>--jobs<span class="w"> </span><span class="m">12</span><span class="w"> </span>&gt;<span class="w"> </span>logs/eddy-truth-hcpya.log<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span>
+</pre></div>
+</div>
+<p>The figures and tables of this page come from:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">uv</span> <span class="n">run</span> <span class="n">tools</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">eddy_truth_figures</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">dataset</span> <span class="o">&lt;</span><span class="n">dataset</span><span class="o">&gt;</span> \
+    <span class="o">--</span><span class="n">out</span> <span class="n">docs</span><span class="o">/</span><span class="n">_static</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">eddy</span><span class="o">-</span><span class="n">truth</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="error-audit.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">The error audit</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="index.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Experiment-driven development</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; Copyright 2024, The NiFreeze developers
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">The eddy-current truth</a><ul>
+<li><a class="reference internal" href="#the-question">The question</a></li>
+<li><a class="reference internal" href="#data">Data</a></li>
+<li><a class="reference internal" href="#how-the-errors-are-measured">How the errors are measured</a></li>
+<li><a class="reference internal" href="#results">Results</a></li>
+<li><a class="reference internal" href="#what-the-results-show">What the results show</a></li>
+<li><a class="reference internal" href="#consequences">Consequences</a></li>
+<li><a class="reference internal" href="#open-questions">Open questions</a></li>
+<li><a class="reference internal" href="#deviations-from-the-registration">Deviations from the registration</a></li>
+<li><a class="reference internal" href="#reproducing">Reproducing</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=e5d3ec7f"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/version-switch.js?v=8028bf13"></script>
+    </body>
+</html>
