@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.analysis.similarity module" href="nifreeze.analysis.similarity.html"><link rel="prev" title="nifreeze.analysis.registration module" href="nifreeze.analysis.registration.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.analysis.sensitivity module - nifreeze 26.0.0.dev60 documentation</title>
+        <title>nifreeze.analysis.sensitivity module - nifreeze 26.0.0.dev63 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev60 documentation</div></a>
+      <a href="../index.html"><div class="brand">nifreeze 26.0.0.dev63 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -183,14 +183,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev60</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev63</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev60</span>
+  <span class="sidebar-brand-text">26.0.0.dev63</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -358,17 +358,21 @@ its intensity window are not involved.</p>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nifreeze.analysis.sensitivity.</span></span><span class="sig-name descname"><span class="pre">Distortion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">magnitude</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int</span> <span class="pre">|</span> <span class="pre">None'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">degree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coefficients</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">readout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'np.ndarray</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">readout_time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/analysis/sensitivity.html#Distortion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.analysis.sensitivity.Distortion" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Displacements along the phase-encoding axis, polynomial in space, one per volume.</p>
-<p>Volume <code class="docutils literal notranslate"><span class="pre">i</span></code> shows at each point what lies <span class="math notranslate nohighlight">\(d_i\)</span> mm further along the
-phase-encoding axis. <span class="math notranslate nohighlight">\(d_i\)</span> is a polynomial of the voxel-axis
+<p>The displacement <span class="math notranslate nohighlight">\(d_i\)</span> (mm) of volume <code class="docutils literal notranslate"><span class="pre">i</span></code> is a polynomial of the voxel-axis
 coordinates, centered on <code class="docutils literal notranslate"><span class="pre">center</span></code> and divided by <code class="docutils literal notranslate"><span class="pre">radius</span></code> along each axis.</p>
-<p>Without <code class="docutils literal notranslate"><span class="pre">readout</span></code>, a distorted volume is resampled at the displaced points,
-with its intensity scaled by the Jacobian
+<p>Without <code class="docutils literal notranslate"><span class="pre">readout</span></code>, volume <code class="docutils literal notranslate"><span class="pre">i</span></code> shows at each point <span class="math notranslate nohighlight">\(x\)</span> what lies
+<span class="math notranslate nohighlight">\(d_i(x)\)</span> mm further along the phase-encoding axis: it is resampled at the
+displaced points, with its intensity scaled by the Jacobian
 <span class="math notranslate nohighlight">\(1 + \partial d_i / \partial x_{PE}\)</span> so that no signal is created or lost.
 With it, the volume is formed as an EPI readout forms it, which is how TRXScan
 simulates eddy currents: the displacement is that of an off-resonance field
 <span class="math notranslate nohighlight">\(f_i = d_i / (T \, \delta)\)</span> (Hz), with <span class="math notranslate nohighlight">\(T\)</span> the total readout time
 and <span class="math notranslate nohighlight">\(\delta\)</span> the voxel size along phase encoding, and each
-phase-encoding line accrues the field’s phase at the time it is acquired.</p>
+phase-encoding line accrues the field’s phase at the time it is acquired.
+The signal from each point <span class="math notranslate nohighlight">\(p\)</span> then appears <span class="math notranslate nohighlight">\(d_i(p)\)</span> mm back along the
+phase-encoding axis. The readout takes the displacement where the signal comes
+from, and resampling where it lands, so the two give different volumes for the
+same coefficients.</p>
 <p>Method generated by attrs for class Distortion.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="nifreeze.analysis.sensitivity.Distortion.axis">
@@ -765,7 +769,7 @@ magnitude of the <code class="docutils literal notranslate"><span class="pre">di
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=e5d3ec7f"></script>
+</div><script src="../_static/documentation_options.js?v=d22b6615"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

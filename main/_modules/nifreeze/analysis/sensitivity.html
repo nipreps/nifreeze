@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.analysis.sensitivity - nifreeze 26.0.0.dev60 documentation</title>
+        <title>nifreeze.analysis.sensitivity - nifreeze 26.0.0.dev63 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev60 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev63 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev60</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev63</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev60</span>
+  <span class="sidebar-brand-text">26.0.0.dev63</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -391,18 +391,22 @@
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Displacements along the phase-encoding axis, polynomial in space, one per volume.</span>
 
-<span class="sd">    Volume ``i`` shows at each point what lies :math:`d_i` mm further along the</span>
-<span class="sd">    phase-encoding axis. :math:`d_i` is a polynomial of the voxel-axis</span>
+<span class="sd">    The displacement :math:`d_i` (mm) of volume ``i`` is a polynomial of the voxel-axis</span>
 <span class="sd">    coordinates, centered on ``center`` and divided by ``radius`` along each axis.</span>
 
-<span class="sd">    Without ``readout``, a distorted volume is resampled at the displaced points,</span>
-<span class="sd">    with its intensity scaled by the Jacobian</span>
+<span class="sd">    Without ``readout``, volume ``i`` shows at each point :math:`x` what lies</span>
+<span class="sd">    :math:`d_i(x)` mm further along the phase-encoding axis: it is resampled at the</span>
+<span class="sd">    displaced points, with its intensity scaled by the Jacobian</span>
 <span class="sd">    :math:`1 + \partial d_i / \partial x_{PE}` so that no signal is created or lost.</span>
 <span class="sd">    With it, the volume is formed as an EPI readout forms it, which is how TRXScan</span>
 <span class="sd">    simulates eddy currents: the displacement is that of an off-resonance field</span>
 <span class="sd">    :math:`f_i = d_i / (T \, \delta)` (Hz), with :math:`T` the total readout time</span>
 <span class="sd">    and :math:`\delta` the voxel size along phase encoding, and each</span>
 <span class="sd">    phase-encoding line accrues the field&#39;s phase at the time it is acquired.</span>
+<span class="sd">    The signal from each point :math:`p` then appears :math:`d_i(p)` mm back along the</span>
+<span class="sd">    phase-encoding axis. The readout takes the displacement where the signal comes</span>
+<span class="sd">    from, and resampling where it lands, so the two give different volumes for the</span>
+<span class="sd">    same coefficients.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">magnitude</span><span class="p">:</span> <span class="nb">float</span>
@@ -908,7 +912,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=e5d3ec7f"></script>
+</div><script src="../../../_static/documentation_options.js?v=d22b6615"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
