@@ -23,6 +23,7 @@
 """Unit tests exercising the estimator."""
 
 import json
+import os
 import re
 from collections.abc import Sized
 from importlib.resources import files
@@ -315,6 +316,59 @@ def test_generate_command_unknown_settings(tmp_path, random_nifti_file):
         )
 
 
+def test_get_ants_settings_from_a_file(tmp_path):
+    """A file of settings is used as it is; packaged names resolve with or without .json."""
+    packaged = ants._get_ants_settings()
+    assert packaged.name == "b0-to-b0_level0.json"
+    assert packaged.is_file()
+    assert ants._get_ants_settings("b0-to-b0_level0.json") == packaged
+
+    # The same name, in another folder
+    copied = tmp_path / "b0-to-b0_level0.json"
+    copied.write_text(packaged.read_text())
+    assert ants._get_ants_settings(copied) == copied
+    assert ants._get_ants_settings(str(copied)) == copied
+
+
+def test_generate_command_from_a_settings_file(tmp_path, random_nifti_file):
+    """A file of settings sets every level, and how many there are."""
+    fixed = random_nifti_file(tmp_path / "fixed.nii.gz")
+    moving = random_nifti_file(tmp_path / "moving.nii.gz")
+
+    # A third level, at full resolution
+    settings = json.loads(ants._get_ants_settings().read_text())
+    for value in settings.values():
+        if isinstance(value, list):
+            value.append(value[-1])
+    settings["shrink_factors"][-1] = [1]
+    settings_file = tmp_path / "three-levels.json"
+    settings_file.write_text(json.dumps(settings))
+
+    cmdline = generate_command(fixed, moving, default=settings_file).cmdline
+    assert cmdline.count("--transform Rigid") == 3
+    assert "--shrink-factors 3 " in cmdline
+    assert "--shrink-factors 2 " in cmdline
+    assert "--shrink-factors 1 " in cmdline
+
+
+def test_run_registration_passes_a_settings_file(tmp_path, monkeypatch):
+    """``ants_config`` reaches generate_command as given, so a path is not mangled."""
+    received = {}
+
+    class Stop(Exception):
+        pass
+
+    def capture(*args, **kwargs):
+        received.update(kwargs)
+        raise Stop
+
+    monkeypatch.setattr(ants, "generate_command", capture)
+    settings_file = str(tmp_path / "settings.json" / "variant.json")
+    with pytest.raises(Stop):
+        ants._run_registration("fixed.nii", "moving.nii", 0, tmp_path, ants_config=settings_file)
+    assert received["default"] == settings_file
+
+
 def test_generate_command_with_masks_init_and_threads(tmp_path, random_nifti_file):
     """Ensure generate_command accepts masks, an initial transform path, and
     num_threads, and exposes them on the returned Registration.inputs.
@@ -363,6 +417,22 @@ def test_generate_command_with_masks_init_and_threads(tmp_path, random_nifti_fil
     # At minimum, the mask path should appear in the list (exact
     # repetition/count depends on settings file)
     assert str(mask) in fim or str(mask.absolute()) in fim
+
+
+def test_generate_command_threads_hold_over_the_environment(tmp_path, monkeypatch):
+    """A thread count set for every process (as CI does) does not override the caller's."""
+    monkeypatch.setenv("ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS", "4")
+    fixed = tmp_path / "fixed.nii"
+    moving = tmp_path / "moving.nii"
+    fixed.touch()
+    moving.touch()
+
+    reg = generate_command(fixed, moving, num_threads=1)
+
+    # nipype runs ANTs with the process's environment, updated by the interface's
+    environ = dict(os.environ) | dict(reg.inputs.environ)
+    # ITK reads ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS first, and NSLOTS only without it
+    assert environ["ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS"] == "1"
 
 
 @pytest.mark.parametrize(
