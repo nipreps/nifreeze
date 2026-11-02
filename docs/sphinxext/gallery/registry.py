@@ -34,8 +34,15 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
-from gallery.datasets import SCHEMES
-from nifreeze.data.dmri import DWI
+from gallery.datasets import (
+    DMRI_SCHEMES,
+    MULTI_SHELL,
+    PET_SCHEME,
+    SCHEMES,
+    SHELLED_SCHEMES,
+    SINGLE_SHELL,
+)
+from nifreeze.data.base import BaseDataset
 from nifreeze.model.base import BaseModel, ModelFactory
 from nifreeze.model.dmri import (
     AverageDWIModel,
@@ -46,6 +53,7 @@ from nifreeze.model.dmri import (
     GQIKRRModel,
     GQIModel,
 )
+from nifreeze.model.pet import BSplinePETModel
 
 #: Every acquisition scheme — the default for a model without ``applicable_schemes``.
 ANY_SCHEME = frozenset(SCHEMES)
@@ -82,17 +90,29 @@ class ModelSpec:
 #: The models the gallery attempts, per issue #458. Applicability is resolved by
 #: capability filtering, so this list is the *superset* of what may be shown.
 GALLERY_MODELS: list[ModelSpec] = [
-    ModelSpec("average", "Average DWI (shell)", "avgdwi", AverageDWIModel),
-    ModelSpec("dti", "DTI", "dti", DTIModel),
-    ModelSpec("dki", "DKI", "dki", DKIModel),
-    ModelSpec("gqi", "GQI", "gqi", GQIModel),
+    ModelSpec(
+        "average",
+        "Average DWI (shell)",
+        "avgdwi",
+        AverageDWIModel,
+        scheme_override=frozenset(DMRI_SCHEMES),
+    ),
+    ModelSpec(
+        "dti",
+        "DTI",
+        "dti",
+        DTIModel,
+        scheme_override=frozenset(SHELLED_SCHEMES),
+    ),
+    ModelSpec("dki", "DKI", "dki", DKIModel, scheme_override=frozenset({MULTI_SHELL})),
+    ModelSpec("gqi", "GQI", "gqi", GQIModel, scheme_override=frozenset(DMRI_SCHEMES)),
     ModelSpec(
         "gp-spherical",
         "GP (spherical)",
         "gp",
         GPModel,
         {"kernel_model": "spherical"},
-        frozenset({"single-shell"}),
+        frozenset({SINGLE_SHELL}),
     ),
     ModelSpec(
         "gp-multishell",
@@ -100,7 +120,14 @@ GALLERY_MODELS: list[ModelSpec] = [
         "gp",
         GPModel,
         {"kernel_model": "multishell"},
-        frozenset({"multi-shell"}),
+        frozenset({MULTI_SHELL}),
+    ),
+    ModelSpec(
+        "bspline",
+        "B-Spline (PET)",
+        "pet",
+        BSplinePETModel,
+        scheme_override=frozenset({PET_SCHEME}),
     ),
     ModelSpec("gqi-krr", "GQI-KRR (closed-form LOVO)", "gqi-krr", GQIKRRModel),
     ModelSpec(
@@ -142,6 +169,14 @@ def check_mode(spec: ModelSpec, mode: str) -> tuple[bool, str | None]:
     return True, None
 
 
-def build_model(spec: ModelSpec, dwi: DWI) -> BaseModel:
-    """Instantiate the model for ``spec`` on ``dwi`` via the factory."""
-    return ModelFactory.init(spec.factory_name, dataset=dwi, **dict(spec.kwargs))
+def build_model(spec: ModelSpec, dataset: BaseDataset) -> BaseModel:
+    """Instantiate the model for ``spec`` on ``dataset`` via the factory.
+
+    Parameters
+    ----------
+    spec : :obj:`ModelSpec`
+        Gallery model specification.
+    dataset : :obj:`~nifreeze.data.base.BaseDataset`
+        Dataset object.
+    """
+    return ModelFactory.init(spec.factory_name, dataset=dataset, **dict(spec.kwargs))
