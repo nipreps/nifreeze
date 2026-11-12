@@ -122,7 +122,8 @@ jobs:
       !(startsWith(github.head_ref, 'doc/') || startsWith(github.head_ref, 'docs/')
       || startsWith(github.event.pull_request.title, 'DOC:'))
     # Unit tests only on Linux/Python 3.12
-    runs-on: 'ubuntu-latest'
+    # ubuntu-latest (26.04) has no Miniconda to install ANTs from (#638)
+    runs-on: 'ubuntu-24.04'
     needs: ['cache-test-data']
     strategy:
       matrix:
