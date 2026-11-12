@@ -48,7 +48,10 @@ clean: no motion, eddy currents, susceptibility distortion, readout relaxation
 or noise; T2 contrast comes from per-tissue S0 at the protocol's echo time. It
 writes the noise-free magnitude, one noisy realization at the protocol's SNR,
 the brain mask, the gradients, the truth maps and a JSON sidecar, under
-``<dataset>/sub-60501/dwi``.
+``<dataset>/sub-60501/dwi``. ``--directions`` keeps the first b=0 and that many
+directions of each shell (``spread``), and ``--oversample`` simulates the signal
+on a grid that many times finer per side than the acquisition's (1 by default;
+TRXScan's own default is 2).
 
 ``cells`` simulates the perturbed copies of that reference: diffusion-weighted
 volumes moved by rigid motions (re-simulated from the moved phantom), distorted
@@ -120,11 +123,12 @@ FIXTURE: dict[str, Any] = {
 """The dataset that CI simulates, small enough for every pull request."""
 
 
-def acquisition(name: str, voxel: float | None = None) -> Any:
+def acquisition(name: str, voxel: float | None = None, oversample: int = 1) -> Any:
     """The protocol of a catalog entry as a clean TRXScan acquisition.
 
     With ``voxel``, the voxels are isotropic of that size and the matrix keeps
-    the field of view.
+    the field of view. ``oversample`` subdivides each voxel side of the grid the
+    signal is simulated on (TRXScan's default is 2).
     """
     entry = CATALOG[name]
     voxels = np.asarray(entry["voxel_mm"], dtype=float)
@@ -145,7 +149,7 @@ def acquisition(name: str, voxel: float | None = None) -> Any:
         te_ms=te_ms,
         # T2 contrast without the readout's T2 weighting, which blurs along phase encoding
         tissue_s0=tuple(math.exp(-te_ms / t2) for t2 in ts.Tissue.ADULT.t2_ms),
-        oversample=1,
+        oversample=oversample,
         phase_model="none",
         partial_fourier=1.0,
         coils=1,
@@ -215,9 +219,10 @@ def simulate(
     volumes: list[int] | None = None,
     chunk: int | None = 8,
     truth: bool = True,
+    oversample: int = 1,
 ) -> dict[str, Any]:
     """Simulate the clean reference of one protocol."""
-    protocol = acquisition(name, voxel)
+    protocol = acquisition(name, voxel, oversample)
     table, gtab = gradients(name, volumes)
     source = phantom(streamlines)
     grid = source.grid(protocol)
@@ -306,13 +311,16 @@ def write_reference(
     voxel: float | None = None,
     chunk: int | None = 8,
     volumes: list[int] | None = None,
+    oversample: int = 1,
 ) -> Path:
     """Write the clean and noisy datasets of one protocol, with their truth.
 
     With ``volumes``, the datasets keep only those volumes of the protocol.
     """
     entry = CATALOG[name]
-    result = simulate(name, streamlines, voxel=voxel, volumes=volumes, chunk=chunk)
+    result = simulate(
+        name, streamlines, voxel=voxel, volumes=volumes, chunk=chunk, oversample=oversample
+    )
     dwi, affine, table = result["dwi"], result["affine"], result["table"]
     bzero = dwi[..., table[:, 3] < 50].mean(axis=-1)
     white = result["white_matter"] & result["mask"]
@@ -351,7 +359,7 @@ def write_reference(
             "Keying": "numpy default_rng([seed, volume index])",
             "WhiteMatterVoxels": int(white.sum()),
         },
-        "GeneratedBy": _provenance(streamlines),
+        "GeneratedBy": _provenance(streamlines, oversample),
     }
     Path(f"{stem}_dwi.json").write_text(json.dumps(sidecar, indent=2) + "\n")
     return folder
@@ -390,10 +398,15 @@ _WORKER: dict[str, Any] = {}
 
 
 def _start_worker(
-    name: str, streamlines: int, voxel: float | None, volumes: list[int] | None, threads: int
+    name: str,
+    streamlines: int,
+    voxel: float | None,
+    volumes: list[int] | None,
+    oversample: int,
+    threads: int,
 ) -> None:
     ts.set_threads(threads)
-    protocol = acquisition(name, voxel)
+    protocol = acquisition(name, voxel, oversample)
     source = phantom(streamlines)
     _WORKER.update(
         source=source,
@@ -413,7 +426,12 @@ def _simulate_in_worker(
 
 @contextmanager
 def _workers(
-    jobs: int, name: str, streamlines: int, voxel: float | None, volumes: list[int] | None
+    jobs: int,
+    name: str,
+    streamlines: int,
+    voxel: float | None,
+    volumes: list[int] | None,
+    oversample: int = 1,
 ) -> Iterator[ProcessPoolExecutor | None]:
     """Processes that simulate moved volumes, or none for ``jobs=1``.
 
@@ -428,7 +446,7 @@ def _workers(
         jobs,
         mp_context=multiprocessing.get_context("spawn"),
         initializer=_start_worker,
-        initargs=(name, streamlines, voxel, volumes, max(1, budget // jobs)),
+        initargs=(name, streamlines, voxel, volumes, oversample, max(1, budget // jobs)),
     ) as pool:
         yield pool
 
@@ -445,6 +463,7 @@ def write_cells(
     chunk: int | None = 8,
     volumes: list[int] | None = None,
     jobs: int = 1,
+    oversample: int = 1,
 ) -> Path:
     """Write the perturbed copies of one protocol's reference, with their ground truth.
 
@@ -462,7 +481,7 @@ def write_cells(
     the same.
     """
     entry = CATALOG[name]
-    protocol = acquisition(name, voxel)
+    protocol = acquisition(name, voxel, oversample)
     table, gtab = gradients(name, volumes)
     source = phantom(streamlines)
     grid = source.grid(protocol)
@@ -509,7 +528,7 @@ def write_cells(
             "Reference": reference,
             "SourceVolumes": [int(v) for v in sources],
             **sidecar,
-            "GeneratedBy": _provenance(streamlines),
+            "GeneratedBy": _provenance(streamlines, oversample),
         }
         Path(f"{stem}.json").write_text(json.dumps(sidecar, indent=2) + "\n")
 
@@ -526,7 +545,7 @@ def write_cells(
         for j, matrix in zip(perturbation.moved, perturbation.motions, strict=True)
     ]
     levels = [strengths[e] for e in eddies]
-    with _workers(jobs, name, streamlines, voxel, volumes) as pool:
+    with _workers(jobs, name, streamlines, voxel, volumes, oversample) as pool:
         # Every moved volume, in the order of the plan; the workers start on them at once
         results: Iterator[list[np.ndarray]] = (
             (simulate_moved(source, protocol, grid, table, v, m, levels, chunk) for v, m in units)
@@ -586,7 +605,7 @@ def write_fixture(out: Path) -> Path:
     return out
 
 
-def _provenance(streamlines: int) -> dict[str, Any]:
+def _provenance(streamlines: int, oversample: int) -> dict[str, Any]:
     return {
         "Name": "nifreeze tools/phantoms/phantom.py",
         "NiFreezeVersion": version("nifreeze"),
@@ -595,6 +614,7 @@ def _provenance(streamlines: int) -> dict[str, Any]:
         "Phantom": f"sub-{SUBJECT}",
         "Streamlines": streamlines,
         "StreamlineSeed": PHANTOM_SEED,
+        "Oversample": oversample,
     }
 
 
@@ -709,7 +729,7 @@ def _verify_workers(name: str, voxel: float, streamlines: int, picks: list[int])
 
 
 def _floats(text: str) -> list[float]:
-    return [float(value) for value in text.split(",")]
+    return [float(value) for value in text.split(",") if value]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -722,6 +742,8 @@ def main(argv: list[str] | None = None) -> int:
     reference.add_argument("--seed", type=int, default=0, help="seed of the noise")
     reference.add_argument("--voxel", type=float, help="isotropic voxel size (mm), same FOV")
     reference.add_argument("--chunk", type=int, default=8, help="slices per simulated slab")
+    reference.add_argument("--oversample", type=int, default=1, help="finer simulation grid")
+    reference.add_argument("--directions", type=int, help="directions per shell (all)")
     cells = commands.add_parser("cells", help="simulate the perturbed copies")
     cells.add_argument("--protocol", required=True, choices=sorted(CATALOG))
     cells.add_argument("--out", type=Path, required=True, help="dataset root")
@@ -730,13 +752,15 @@ def main(argv: list[str] | None = None) -> int:
         "--eddies",
         type=_floats,
         default=[2.0, 4.0, 8.0],
-        help="largest eddy-current displacements, in voxels along phase encoding",
+        help="largest eddy-current displacements, in voxels along phase encoding ('' for none)",
     )
     cells.add_argument("--seeds", type=lambda text: [int(v) for v in text.split(",")], default=[0])
     cells.add_argument("--count", type=int, help="moved volumes (all by default)")
     cells.add_argument("--streamlines", type=int, default=400_000)
     cells.add_argument("--voxel", type=float, help="isotropic voxel size (mm), same FOV")
     cells.add_argument("--chunk", type=int, default=8, help="slices per simulated slab")
+    cells.add_argument("--oversample", type=int, default=1, help="finer simulation grid")
+    cells.add_argument("--directions", type=int, help="directions per shell (all)")
     cells.add_argument(
         "--jobs",
         type=int,
@@ -749,9 +773,19 @@ def main(argv: list[str] | None = None) -> int:
     fixture.add_argument("--out", type=Path, required=True, help="dataset root")
     args = parser.parse_args(argv)
 
+    volumes = None
+    if args.command in ("reference", "cells") and args.directions is not None:
+        volumes = spread(args.protocol, args.directions)
     if args.command == "reference":
         folder = write_reference(
-            args.protocol, args.out, args.streamlines, args.seed, args.voxel, args.chunk
+            args.protocol,
+            args.out,
+            args.streamlines,
+            args.seed,
+            args.voxel,
+            args.chunk,
+            volumes=volumes,
+            oversample=args.oversample,
         )
         print(f"wrote {folder}")
         return 0
@@ -766,7 +800,9 @@ def main(argv: list[str] | None = None) -> int:
             args.streamlines,
             args.voxel,
             args.chunk,
+            volumes=volumes,
             jobs=args.jobs,
+            oversample=args.oversample,
         )
         print(f"wrote {folder}")
         return 0
