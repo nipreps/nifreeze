@@ -5,8 +5,8 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.registration.utils - nifreeze 26.0.0.dev69 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
+        <title>nifreeze.registration.utils - nifreeze 26.0.0.dev71 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/css/version-switch.css?v=45d66e8a" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev69 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev71 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev69</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev71</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev69</span>
+  <span class="sidebar-brand-text">26.0.0.dev71</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -360,14 +360,14 @@
 
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">product</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">itertools</span><span class="w"> </span><span class="kn">import</span> <span class="n">product</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tuple</span>
 
-<span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nb</span>
-<span class="kn">import</span> <span class="nn">nitransforms</span> <span class="k">as</span> <span class="nn">nt</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">nibabel</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nb</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">nitransforms</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 <span class="n">RADIUS</span> <span class="o">=</span> <span class="mf">50.0</span>
 <span class="sd">&quot;&quot;&quot;Typical radius (in mm) of a sphere mimicking the size of a typical human brain.&quot;&quot;&quot;</span>
@@ -375,7 +375,7 @@
 
 <div class="viewcode-block" id="displacements_within_mask">
 <a class="viewcode-back" href="../../../api/nifreeze.registration.utils.html#nifreeze.registration.utils.displacements_within_mask">[docs]</a>
-<span class="k">def</span> <span class="nf">displacements_within_mask</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">displacements_within_mask</span><span class="p">(</span>
     <span class="n">mask_img</span><span class="p">:</span> <span class="n">nb</span><span class="o">.</span><span class="n">spatialimages</span><span class="o">.</span><span class="n">SpatialImage</span><span class="p">,</span>
     <span class="n">test_xfm</span><span class="p">:</span> <span class="n">nt</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">TransformBase</span><span class="p">,</span>
     <span class="n">reference_xfm</span><span class="p">:</span> <span class="n">nt</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">TransformBase</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -419,7 +419,7 @@
 
 <div class="viewcode-block" id="compute_fd_from_transform">
 <a class="viewcode-back" href="../../../api/nifreeze.registration.utils.html#nifreeze.registration.utils.compute_fd_from_transform">[docs]</a>
-<span class="k">def</span> <span class="nf">compute_fd_from_transform</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_fd_from_transform</span><span class="p">(</span>
     <span class="n">img</span><span class="p">:</span> <span class="n">nb</span><span class="o">.</span><span class="n">spatialimages</span><span class="o">.</span><span class="n">SpatialImage</span><span class="p">,</span>
     <span class="n">test_xfm</span><span class="p">:</span> <span class="n">nt</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">TransformBase</span><span class="p">,</span>
     <span class="n">radius</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">RADIUS</span><span class="p">,</span>
@@ -456,7 +456,7 @@
 
 <div class="viewcode-block" id="compute_fd_from_motion">
 <a class="viewcode-back" href="../../../api/nifreeze.registration.utils.html#nifreeze.registration.utils.compute_fd_from_motion">[docs]</a>
-<span class="k">def</span> <span class="nf">compute_fd_from_motion</span><span class="p">(</span><span class="n">motion_parameters</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">radius</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">RADIUS</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_fd_from_motion</span><span class="p">(</span><span class="n">motion_parameters</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">radius</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">RADIUS</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute framewise displacement (FD) from motion parameters.</span>
 
 <span class="sd">    Each row in the motion parameters represents one frame, and columns</span>
@@ -495,7 +495,7 @@
 
 <div class="viewcode-block" id="extract_motion_parameters">
 <a class="viewcode-back" href="../../../api/nifreeze.registration.utils.html#nifreeze.registration.utils.extract_motion_parameters">[docs]</a>
-<span class="k">def</span> <span class="nf">extract_motion_parameters</span><span class="p">(</span><span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">extract_motion_parameters</span><span class="p">(</span><span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract translation (mm) and rotation (degrees) parameters from an affine matrix.</span>
 
 <span class="sd">    Parameters</span>
@@ -548,7 +548,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=62385b69"></script>
+</div><script src="../../../_static/documentation_options.js?v=2564b822"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

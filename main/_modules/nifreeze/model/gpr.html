@@ -5,8 +5,8 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.gpr - nifreeze 26.0.0.dev69 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
+        <title>nifreeze.model.gpr - nifreeze 26.0.0.dev71 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/css/version-switch.css?v=45d66e8a" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev69 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev71 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev69</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev71</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev69</span>
+  <span class="sidebar-brand-text">26.0.0.dev71</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -353,24 +353,24 @@
 <span class="c1">#</span>
 <span class="sd">&quot;&quot;&quot;Derivations from scikit-learn for Gaussian Processes.&quot;&quot;&quot;</span>
 
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">from</span> <span class="nn">numbers</span> <span class="kn">import</span> <span class="n">Integral</span><span class="p">,</span> <span class="n">Real</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numbers</span><span class="w"> </span><span class="kn">import</span> <span class="n">Integral</span><span class="p">,</span> <span class="n">Real</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">numpy.typing</span> <span class="k">as</span> <span class="nn">npt</span>
-<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
-<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">Bounds</span>
-<span class="kn">from</span> <span class="nn">sklearn.gaussian_process</span> <span class="kn">import</span> <span class="n">GaussianProcessRegressor</span>
-<span class="kn">from</span> <span class="nn">sklearn.gaussian_process.kernels</span> <span class="kn">import</span> <span class="p">(</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">npt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">optimize</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bounds</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.gaussian_process</span><span class="w"> </span><span class="kn">import</span> <span class="n">GaussianProcessRegressor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.gaussian_process.kernels</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">RBF</span><span class="p">,</span>
     <span class="n">Hyperparameter</span><span class="p">,</span>
     <span class="n">Kernel</span><span class="p">,</span>
     <span class="n">KernelOperator</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span> <span class="nn">sklearn.metrics.pairwise</span> <span class="kn">import</span> <span class="n">cosine_similarity</span>
-<span class="kn">from</span> <span class="nn">sklearn.utils._param_validation</span> <span class="kn">import</span> <span class="n">Interval</span><span class="p">,</span> <span class="n">StrOptions</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics.pairwise</span><span class="w"> </span><span class="kn">import</span> <span class="n">cosine_similarity</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.utils._param_validation</span><span class="w"> </span><span class="kn">import</span> <span class="n">Interval</span><span class="p">,</span> <span class="n">StrOptions</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">&quot;DiffusionGPR&quot;</span><span class="p">,</span>
@@ -429,7 +429,7 @@
 
 <div class="viewcode-block" id="DiffusionGPR">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gpr.html#nifreeze.model.gpr.DiffusionGPR">[docs]</a>
-<span class="k">class</span> <span class="nc">DiffusionGPR</span><span class="p">(</span><span class="n">GaussianProcessRegressor</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DiffusionGPR</span><span class="p">(</span><span class="n">GaussianProcessRegressor</span><span class="p">):</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A Gaussian process (GP) regressor specialized for nifreeze.</span>
 
@@ -529,7 +529,7 @@
         <span class="s2">&quot;random_state&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;random_state&quot;</span><span class="p">],</span>
     <span class="p">}</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">kernel</span><span class="p">:</span> <span class="n">Kernel</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
@@ -569,7 +569,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">adaptive</span> <span class="o">=</span> <span class="n">adaptive</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fatol</span> <span class="o">=</span> <span class="n">fatol</span>
 
-    <span class="k">def</span> <span class="nf">_constrained_optimization</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_constrained_optimization</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">obj_func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
         <span class="n">initial_theta</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
@@ -577,7 +577,7 @@
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
         <span class="n">options</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">==</span> <span class="s2">&quot;fmin_l_bfgs_b&quot;</span><span class="p">:</span>
-            <span class="kn">from</span> <span class="nn">sklearn.utils.optimize</span> <span class="kn">import</span> <span class="n">_check_optimize_result</span>  <span class="c1"># type: ignore</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.utils.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">_check_optimize_result</span>  <span class="c1"># type: ignore</span>
 
             <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">LBFGS_CONFIGURABLE_OPTIONS</span><span class="p">:</span>
                 <span class="k">if</span> <span class="p">(</span><span class="n">value</span> <span class="o">:=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -591,7 +591,7 @@
             <span class="c1"># Keep the (absolute) projected-gradient tolerance in unscaled units</span>
             <span class="n">options</span><span class="p">[</span><span class="s2">&quot;gtol&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gtol&quot;</span><span class="p">,</span> <span class="n">LBFGS_DEFAULT_GTOL</span><span class="p">)</span> <span class="o">*</span> <span class="n">scale</span>
 
-            <span class="k">def</span> <span class="nf">scaled_obj_func</span><span class="p">(</span><span class="n">theta</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">eval_gradient</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">scaled_obj_func</span><span class="p">(</span><span class="n">theta</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">eval_gradient</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">eval_gradient</span><span class="p">:</span>
                     <span class="n">value</span><span class="p">,</span> <span class="n">gradient</span> <span class="o">=</span> <span class="n">obj_func</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">eval_gradient</span><span class="p">)</span>
                     <span class="k">return</span> <span class="n">value</span> <span class="o">*</span> <span class="n">scale</span><span class="p">,</span> <span class="n">gradient</span> <span class="o">*</span> <span class="n">scale</span>
@@ -636,10 +636,10 @@
 
 <div class="viewcode-block" id="ExponentialKriging">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gpr.html#nifreeze.model.gpr.ExponentialKriging">[docs]</a>
-<span class="k">class</span> <span class="nc">ExponentialKriging</span><span class="p">(</span><span class="n">Kernel</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ExponentialKriging</span><span class="p">(</span><span class="n">Kernel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A scikit-learn&#39;s kernel for DWI signals.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">beta_a</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
         <span class="n">beta_l</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">,</span>
@@ -666,16 +666,16 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">l_bounds</span> <span class="o">=</span> <span class="n">l_bounds</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">hyperparameter_a</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Hyperparameter</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">hyperparameter_a</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Hyperparameter</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">Hyperparameter</span><span class="p">(</span><span class="s2">&quot;beta_a&quot;</span><span class="p">,</span> <span class="s2">&quot;numeric&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_bounds</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">hyperparameter_l</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Hyperparameter</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">hyperparameter_l</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Hyperparameter</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">Hyperparameter</span><span class="p">(</span><span class="s2">&quot;beta_l&quot;</span><span class="p">,</span> <span class="s2">&quot;numeric&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">l_bounds</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 
 <div class="viewcode-block" id="ExponentialKriging.__call__">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gpr.html#nifreeze.model.gpr.ExponentialKriging.__call__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">Y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">eval_gradient</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -720,7 +720,7 @@
 
 <div class="viewcode-block" id="ExponentialKriging.diag">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gpr.html#nifreeze.model.gpr.ExponentialKriging.diag">[docs]</a>
-    <span class="k">def</span> <span class="nf">diag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">diag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the diagonal of the kernel k(X, X).</span>
 
 <span class="sd">        The result of this method is identical to np.diag(self(X)); however,</span>
@@ -742,22 +742,22 @@
 
 <div class="viewcode-block" id="ExponentialKriging.is_stationary">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gpr.html#nifreeze.model.gpr.ExponentialKriging.is_stationary">[docs]</a>
-    <span class="k">def</span> <span class="nf">is_stationary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_stationary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns whether the kernel is stationary.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="kc">True</span></div>
 
 
-    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;ExponentialKriging (a=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">beta_a</span><span class="si">}</span><span class="s2">, λ=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">beta_l</span><span class="si">}</span><span class="s2">)&quot;</span></div>
 
 
 
 <div class="viewcode-block" id="SphericalKriging">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gpr.html#nifreeze.model.gpr.SphericalKriging">[docs]</a>
-<span class="k">class</span> <span class="nc">SphericalKriging</span><span class="p">(</span><span class="n">Kernel</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SphericalKriging</span><span class="p">(</span><span class="n">Kernel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A scikit-learn&#39;s kernel for DWI signals.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">beta_a</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.38</span><span class="p">,</span>
         <span class="n">beta_l</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
@@ -784,16 +784,16 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">l_bounds</span> <span class="o">=</span> <span class="n">l_bounds</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">hyperparameter_a</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Hyperparameter</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">hyperparameter_a</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Hyperparameter</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">Hyperparameter</span><span class="p">(</span><span class="s2">&quot;beta_a&quot;</span><span class="p">,</span> <span class="s2">&quot;numeric&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_bounds</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">hyperparameter_l</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Hyperparameter</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">hyperparameter_l</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Hyperparameter</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">Hyperparameter</span><span class="p">(</span><span class="s2">&quot;beta_l&quot;</span><span class="p">,</span> <span class="s2">&quot;numeric&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">l_bounds</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 
 <div class="viewcode-block" id="SphericalKriging.__call__">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gpr.html#nifreeze.model.gpr.SphericalKriging.__call__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">Y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">eval_gradient</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -843,7 +843,7 @@
 
 <div class="viewcode-block" id="SphericalKriging.diag">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gpr.html#nifreeze.model.gpr.SphericalKriging.diag">[docs]</a>
-    <span class="k">def</span> <span class="nf">diag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">diag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the diagonal of the kernel k(X, X).</span>
 
 <span class="sd">        The result of this method is identical to np.diag(self(X)); however,</span>
@@ -865,19 +865,19 @@
 
 <div class="viewcode-block" id="SphericalKriging.is_stationary">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gpr.html#nifreeze.model.gpr.SphericalKriging.is_stationary">[docs]</a>
-    <span class="k">def</span> <span class="nf">is_stationary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_stationary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns whether the kernel is stationary.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="kc">True</span></div>
 
 
-    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;SphericalKriging (a=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">beta_a</span><span class="si">}</span><span class="s2">, λ=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">beta_l</span><span class="si">}</span><span class="s2">)&quot;</span></div>
 
 
 
 <div class="viewcode-block" id="MultiShellKernel">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gpr.html#nifreeze.model.gpr.MultiShellKernel">[docs]</a>
-<span class="k">class</span> <span class="nc">MultiShellKernel</span><span class="p">(</span><span class="n">KernelOperator</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MultiShellKernel</span><span class="p">(</span><span class="n">KernelOperator</span><span class="p">):</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Composite kernel for multi-shell diffusion data.</span>
 
 <span class="sd">    Implements the multi-shell covariance of :footcite:p:`andersson_non-parametric_2015`</span>
@@ -906,7 +906,7 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">orientation_kernel</span><span class="p">:</span> <span class="n">Kernel</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">radial_kernel</span><span class="p">:</span> <span class="n">Kernel</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -923,31 +923,31 @@
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orientation_kernel</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">radial_kernel</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_get_k1</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Kernel</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_k1</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Kernel</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;:class:`~sklearn.gaussian_process.kernels.Kernel`: First base kernel</span>
 <span class="sd">        (set by :class:`~sklearn.gaussian_process.kernels.KernelOperator` initialization).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k1</span>
 
-    <span class="k">def</span> <span class="nf">_set_k1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Kernel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_set_k1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Kernel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_k1</span> <span class="o">=</span> <span class="n">value</span>
 
     <span class="n">k1</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">_get_k1</span><span class="p">,</span> <span class="n">_set_k1</span><span class="p">)</span>  <span class="c1"># type: ignore[assignment]</span>
 
-    <span class="k">def</span> <span class="nf">_get_k2</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Kernel</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_k2</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Kernel</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;:class:`~sklearn.gaussian_process.kernels.Kernel`: Second base kernel</span>
 <span class="sd">        (set by :class:`~sklearn.gaussian_process.kernels.KernelOperator` initialization).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k2</span>
 
-    <span class="k">def</span> <span class="nf">_set_k2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Kernel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_set_k2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Kernel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_k2</span> <span class="o">=</span> <span class="n">value</span>
 
     <span class="n">k2</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">_get_k2</span><span class="p">,</span> <span class="n">_set_k2</span><span class="p">)</span>  <span class="c1"># type: ignore[assignment]</span>
 
 <div class="viewcode-block" id="MultiShellKernel.get_params">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gpr.html#nifreeze.model.gpr.MultiShellKernel.get_params">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">deep</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">deep</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
         <span class="c1"># ``clone()`` calls ``get_params(deep=False)`` and re-invokes ``__init__``,</span>
         <span class="c1"># so the shallow keys must match the constructor signature (not the</span>
         <span class="c1"># inherited ``k1``/``k2``). With ``deep=True`` we also surface the</span>
@@ -971,7 +971,7 @@
 
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">hyperparameters</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Hyperparameter</span><span class="p">]:</span>  <span class="c1"># type: ignore[override]</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">hyperparameters</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Hyperparameter</span><span class="p">]:</span>  <span class="c1"># type: ignore[override]</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Expose sub-kernel hyperparameters under the constructor&#39;s names.&quot;&quot;&quot;</span>
         <span class="n">r</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">kernel</span> <span class="ow">in</span> <span class="p">(</span>
@@ -984,7 +984,7 @@
                 <span class="n">r</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hp</span><span class="o">.</span><span class="n">_replace</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">hp</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">r</span>
 
-    <span class="k">def</span> <span class="nf">_split</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_split</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
         <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
         <span class="n">bvals</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bval_index</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">bvals</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
@@ -995,7 +995,7 @@
 
 <div class="viewcode-block" id="MultiShellKernel.__call__">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gpr.html#nifreeze.model.gpr.MultiShellKernel.__call__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
         <span class="n">Y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1020,17 +1020,17 @@
 
 <div class="viewcode-block" id="MultiShellKernel.diag">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gpr.html#nifreeze.model.gpr.MultiShellKernel.diag">[docs]</a>
-    <span class="k">def</span> <span class="nf">diag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">diag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
         <span class="n">X_o</span><span class="p">,</span> <span class="n">X_b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_split</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">k1</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">X_o</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">k2</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">X_b</span><span class="p">)</span></div>
 
 
-    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;MultiShellKernel(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">k1</span><span class="si">}</span><span class="s2"> * </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">k2</span><span class="si">}</span><span class="s2">)&quot;</span></div>
 
 
 
-<span class="k">def</span> <span class="nf">uses_bvalue</span><span class="p">(</span><span class="n">kernel</span><span class="p">:</span> <span class="n">Kernel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">uses_bvalue</span><span class="p">(</span><span class="n">kernel</span><span class="p">:</span> <span class="n">Kernel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether ``kernel`` (possibly composite) consumes the b-value column.</span>
 
 <span class="sd">    Examples</span>
@@ -1053,7 +1053,7 @@
 
 <div class="viewcode-block" id="exponential_covariance">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gpr.html#nifreeze.model.gpr.exponential_covariance">[docs]</a>
-<span class="k">def</span> <span class="nf">exponential_covariance</span><span class="p">(</span><span class="n">theta</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">exponential_covariance</span><span class="p">(</span><span class="n">theta</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Compute the exponential covariance for given distances and scale parameter.</span>
 
@@ -1093,7 +1093,7 @@
 
 <div class="viewcode-block" id="spherical_covariance">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gpr.html#nifreeze.model.gpr.spherical_covariance">[docs]</a>
-<span class="k">def</span> <span class="nf">spherical_covariance</span><span class="p">(</span><span class="n">theta</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">spherical_covariance</span><span class="p">(</span><span class="n">theta</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Compute the spherical covariance for given distances and scale parameter.</span>
 
@@ -1137,7 +1137,7 @@
 
 <div class="viewcode-block" id="compute_pairwise_angles">
 <a class="viewcode-back" href="../../../api/nifreeze.model.gpr.html#nifreeze.model.gpr.compute_pairwise_angles">[docs]</a>
-<span class="k">def</span> <span class="nf">compute_pairwise_angles</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_pairwise_angles</span><span class="p">(</span>
     <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">Y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">closest_polarity</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
@@ -1234,7 +1234,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=62385b69"></script>
+</div><script src="../../../_static/documentation_options.js?v=2564b822"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

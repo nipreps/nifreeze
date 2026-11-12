@@ -5,8 +5,8 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.testing.perturbations - nifreeze 26.0.0.dev69 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
+        <title>nifreeze.testing.perturbations - nifreeze 26.0.0.dev71 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/css/version-switch.css?v=45d66e8a" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev69 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev71 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev69</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev71</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev69</span>
+  <span class="sidebar-brand-text">26.0.0.dev71</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -363,24 +363,24 @@
 
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Sequence</span>
-<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">copy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
-<span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nb</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">numpy.typing</span> <span class="kn">import</span> <span class="n">ArrayLike</span>
-<span class="kn">from</span> <span class="nn">scipy.ndimage</span> <span class="kn">import</span> <span class="n">map_coordinates</span>
-<span class="kn">from</span> <span class="nn">scipy.spatial.transform</span> <span class="kn">import</span> <span class="n">Rotation</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">nibabel</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nb</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArrayLike</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.ndimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">map_coordinates</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.spatial.transform</span><span class="w"> </span><span class="kn">import</span> <span class="n">Rotation</span>
 
-<span class="kn">from</span> <span class="nn">nifreeze.analysis.sensitivity</span> <span class="kn">import</span> <span class="n">Distortion</span><span class="p">,</span> <span class="n">Perturbation</span><span class="p">,</span> <span class="n">_monomials</span><span class="p">,</span> <span class="n">_resolve_mask</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">nifreeze.analysis.sensitivity</span><span class="w"> </span><span class="kn">import</span> <span class="n">Distortion</span><span class="p">,</span> <span class="n">Perturbation</span><span class="p">,</span> <span class="n">_monomials</span><span class="p">,</span> <span class="n">_resolve_mask</span>
 
 
 <div class="viewcode-block" id="rigid_motion">
 <a class="viewcode-back" href="../../../api/nifreeze.testing.perturbations.html#nifreeze.testing.perturbations.rigid_motion">[docs]</a>
-<span class="k">def</span> <span class="nf">rigid_motion</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">rigid_motion</span><span class="p">(</span>
     <span class="n">magnitude</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">axis</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
     <span class="n">direction</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
@@ -430,7 +430,7 @@
 
 <div class="viewcode-block" id="mask_centroid">
 <a class="viewcode-back" href="../../../api/nifreeze.testing.perturbations.html#nifreeze.testing.perturbations.mask_centroid">[docs]</a>
-<span class="k">def</span> <span class="nf">mask_centroid</span><span class="p">(</span><span class="n">dataset</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">mask_centroid</span><span class="p">(</span><span class="n">dataset</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    World coordinates of the centroid of a mask (the brain mask by default).</span>
 
@@ -455,7 +455,7 @@
 
 <div class="viewcode-block" id="perturbation_plan">
 <a class="viewcode-back" href="../../../api/nifreeze.testing.perturbations.html#nifreeze.testing.perturbations.perturbation_plan">[docs]</a>
-<span class="k">def</span> <span class="nf">perturbation_plan</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">perturbation_plan</span><span class="p">(</span>
     <span class="n">n_volumes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">magnitudes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
     <span class="n">counts</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
@@ -529,7 +529,7 @@
 
 <div class="viewcode-block" id="one_at_a_time">
 <a class="viewcode-back" href="../../../api/nifreeze.testing.perturbations.html#nifreeze.testing.perturbations.one_at_a_time">[docs]</a>
-<span class="k">def</span> <span class="nf">one_at_a_time</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">one_at_a_time</span><span class="p">(</span>
     <span class="n">volumes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
     <span class="n">magnitude</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
@@ -573,7 +573,7 @@
 
 <div class="viewcode-block" id="eddy_distortion">
 <a class="viewcode-back" href="../../../api/nifreeze.testing.perturbations.html#nifreeze.testing.perturbations.eddy_distortion">[docs]</a>
-<span class="k">def</span> <span class="nf">eddy_distortion</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">eddy_distortion</span><span class="p">(</span>
     <span class="n">dataset</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
     <span class="n">magnitude</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -645,7 +645,7 @@
 
 <div class="viewcode-block" id="perturb">
 <a class="viewcode-back" href="../../../api/nifreeze.testing.perturbations.html#nifreeze.testing.perturbations.perturb">[docs]</a>
-<span class="k">def</span> <span class="nf">perturb</span><span class="p">(</span><span class="n">dataset</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">perturbation</span><span class="p">:</span> <span class="n">Perturbation</span><span class="p">,</span> <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">perturb</span><span class="p">(</span><span class="n">dataset</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">perturbation</span><span class="p">:</span> <span class="n">Perturbation</span><span class="p">,</span> <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Copy a dataset with some of its volumes moved or distorted.</span>
 
@@ -696,7 +696,7 @@
 
 
 
-<span class="k">def</span> <span class="nf">_displace</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_displace</span><span class="p">(</span>
     <span class="n">dataset</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
     <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">affine</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
@@ -756,7 +756,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=62385b69"></script>
+</div><script src="../../../_static/documentation_options.js?v=2564b822"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

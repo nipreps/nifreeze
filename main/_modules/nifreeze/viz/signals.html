@@ -5,8 +5,8 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.viz.signals - nifreeze 26.0.0.dev69 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
+        <title>nifreeze.viz.signals - nifreeze 26.0.0.dev71 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/css/version-switch.css?v=45d66e8a" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev69 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev71 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev69</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev71</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev69</span>
+  <span class="sidebar-brand-text">26.0.0.dev71</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -353,17 +353,17 @@
 <span class="c1">#</span>
 <span class="sd">&quot;&quot;&quot;Visualizing signals and intermediate aspects of models.&quot;&quot;&quot;</span>
 
-<span class="kn">import</span> <span class="nn">matplotlib.gridspec</span> <span class="k">as</span> <span class="nn">gridspec</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
-<span class="kn">from</span> <span class="nn">matplotlib.figure</span> <span class="kn">import</span> <span class="n">Figure</span>
-<span class="kn">from</span> <span class="nn">scipy.spatial</span> <span class="kn">import</span> <span class="n">ConvexHull</span><span class="p">,</span> <span class="n">KDTree</span>
-<span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">pearsonr</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.gridspec</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">gridspec</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib.figure</span><span class="w"> </span><span class="kn">import</span> <span class="n">Figure</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConvexHull</span><span class="p">,</span> <span class="n">KDTree</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">pearsonr</span>
 
 
 <div class="viewcode-block" id="plot_error">
 <a class="viewcode-back" href="../../../api/nifreeze.viz.signals.html#nifreeze.viz.signals.plot_error">[docs]</a>
-<span class="k">def</span> <span class="nf">plot_error</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_error</span><span class="p">(</span>
     <span class="n">kfolds</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
     <span class="n">mean</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">std_dev</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
@@ -417,9 +417,9 @@
 
 <div class="viewcode-block" id="plot_estimation_carpet">
 <a class="viewcode-back" href="../../../api/nifreeze.viz.signals.html#nifreeze.viz.signals.plot_estimation_carpet">[docs]</a>
-<span class="k">def</span> <span class="nf">plot_estimation_carpet</span><span class="p">(</span><span class="n">gt_nii</span><span class="p">,</span> <span class="n">gp_nii</span><span class="p">,</span> <span class="n">gtab</span><span class="p">,</span> <span class="n">suptitle</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="kn">from</span> <span class="nn">nireports.reportlets.modality.dwi</span> <span class="kn">import</span> <span class="n">nii_to_carpetplot_data</span>
-    <span class="kn">from</span> <span class="nn">nireports.reportlets.nuisance</span> <span class="kn">import</span> <span class="n">plot_carpet</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_estimation_carpet</span><span class="p">(</span><span class="n">gt_nii</span><span class="p">,</span> <span class="n">gp_nii</span><span class="p">,</span> <span class="n">gtab</span><span class="p">,</span> <span class="n">suptitle</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">nireports.reportlets.modality.dwi</span><span class="w"> </span><span class="kn">import</span> <span class="n">nii_to_carpetplot_data</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">nireports.reportlets.nuisance</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_carpet</span>
 
     <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">layout</span><span class="o">=</span><span class="s2">&quot;tight&quot;</span><span class="p">)</span>
     <span class="n">gs</span> <span class="o">=</span> <span class="n">gridspec</span><span class="o">.</span><span class="n">GridSpec</span><span class="p">(</span><span class="n">ncols</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nrows</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">figure</span><span class="o">=</span><span class="n">fig</span><span class="p">)</span>
@@ -442,7 +442,7 @@
 
 <div class="viewcode-block" id="plot_correlation">
 <a class="viewcode-back" href="../../../api/nifreeze.viz.signals.html#nifreeze.viz.signals.plot_correlation">[docs]</a>
-<span class="k">def</span> <span class="nf">plot_correlation</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">title</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_correlation</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">title</span><span class="p">):</span>
     <span class="n">r</span> <span class="o">=</span> <span class="n">pearsonr</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
 
     <span class="c1"># Fit a linear curve and estimate its y-values and their error</span>
@@ -469,7 +469,7 @@
 
 <div class="viewcode-block" id="calculate_sphere_pts">
 <a class="viewcode-back" href="../../../api/nifreeze.viz.signals.html#nifreeze.viz.signals.calculate_sphere_pts">[docs]</a>
-<span class="k">def</span> <span class="nf">calculate_sphere_pts</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">center</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">calculate_sphere_pts</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">center</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate the location of each point when it is expanded out to the sphere.&quot;&quot;&quot;</span>
 
     <span class="n">kdtree</span> <span class="o">=</span> <span class="n">KDTree</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>  <span class="c1"># tree of nearest points</span>
@@ -489,7 +489,7 @@
 
 <div class="viewcode-block" id="compute_dmri_convex_hull">
 <a class="viewcode-back" href="../../../api/nifreeze.viz.signals.html#nifreeze.viz.signals.compute_dmri_convex_hull">[docs]</a>
-<span class="k">def</span> <span class="nf">compute_dmri_convex_hull</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">dirs</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_dmri_convex_hull</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">dirs</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the convex hull of the dMRI signal s.&quot;&quot;&quot;</span>
 
     <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -514,7 +514,7 @@
 
 <div class="viewcode-block" id="plot_surface">
 <a class="viewcode-back" href="../../../api/nifreeze.viz.signals.html#nifreeze.viz.signals.plot_surface">[docs]</a>
-<span class="k">def</span> <span class="nf">plot_surface</span><span class="p">(</span><span class="n">scaled_vecs</span><span class="p">,</span> <span class="n">sphere_idx</span><span class="p">,</span> <span class="n">triang_idx</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">cmap</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_surface</span><span class="p">(</span><span class="n">scaled_vecs</span><span class="p">,</span> <span class="n">sphere_idx</span><span class="p">,</span> <span class="n">triang_idx</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">cmap</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot a surface.&quot;&quot;&quot;</span>
 
     <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
@@ -543,7 +543,7 @@
 
 <div class="viewcode-block" id="plot_signal_data">
 <a class="viewcode-back" href="../../../api/nifreeze.viz.signals.html#nifreeze.viz.signals.plot_signal_data">[docs]</a>
-<span class="k">def</span> <span class="nf">plot_signal_data</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">ax</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_signal_data</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">ax</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot the data provided as a scatter plot&quot;&quot;&quot;</span>
 
     <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span>
@@ -554,7 +554,7 @@
 
 <div class="viewcode-block" id="plot_prediction_surface">
 <a class="viewcode-back" href="../../../api/nifreeze.viz.signals.html#nifreeze.viz.signals.plot_prediction_surface">[docs]</a>
-<span class="k">def</span> <span class="nf">plot_prediction_surface</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">S0</span><span class="p">,</span> <span class="n">y_dirs</span><span class="p">,</span> <span class="n">y_pred_dirs</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">cmap</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_prediction_surface</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">S0</span><span class="p">,</span> <span class="n">y_dirs</span><span class="p">,</span> <span class="n">y_pred_dirs</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">cmap</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot the prediction surface obtained by computing the convex hull of the</span>
 <span class="sd">    predicted signal data, and plot the true data as a scatter plot.&quot;&quot;&quot;</span>
 
@@ -607,7 +607,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=62385b69"></script>
+</div><script src="../../../_static/documentation_options.js?v=2564b822"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

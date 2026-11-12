@@ -5,8 +5,8 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.analysis.measure_agreement - nifreeze 26.0.0.dev69 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
+        <title>nifreeze.analysis.measure_agreement - nifreeze 26.0.0.dev71 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/css/version-switch.css?v=45d66e8a" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev69 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev71 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev69</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev71</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev69</span>
+  <span class="sidebar-brand-text">26.0.0.dev71</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -353,15 +353,15 @@
 <span class="c1">#</span>
 <span class="sd">&quot;&quot;&quot;Measure agreement computation.&quot;&quot;&quot;</span>
 
-<span class="kn">import</span> <span class="nn">enum</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">enum</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">scipy.stats</span> <span class="k">as</span> <span class="nn">stats</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">stats</span>
 
 
 <div class="viewcode-block" id="BASalientEntity">
 <a class="viewcode-back" href="../../../api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.BASalientEntity">[docs]</a>
-<span class="k">class</span> <span class="nc">BASalientEntity</span><span class="p">(</span><span class="n">enum</span><span class="o">.</span><span class="n">Enum</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">BASalientEntity</span><span class="p">(</span><span class="n">enum</span><span class="o">.</span><span class="n">Enum</span><span class="p">):</span>
     <span class="n">RELIABILITY_INDICES</span> <span class="o">=</span> <span class="s2">&quot;reliability_indices&quot;</span>
     <span class="n">RELIABILITY_MASK</span> <span class="o">=</span> <span class="s2">&quot;reliability_mask&quot;</span>
     <span class="n">LEFT_INDICES</span> <span class="o">=</span> <span class="s2">&quot;left_indices&quot;</span>
@@ -371,7 +371,7 @@
 
 
 
-<span class="k">def</span> <span class="nf">_check_ci</span><span class="p">(</span><span class="n">ci</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_ci</span><span class="p">(</span><span class="n">ci</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Check that the confidence interval size is in the [0, 1] range.</span>
 
 <span class="sd">    Parameters</span>
@@ -384,7 +384,7 @@
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Confidence interval size must be between 0 and 1&quot;</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">_check_bland_altman_data</span><span class="p">(</span><span class="n">data1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_bland_altman_data</span><span class="p">(</span><span class="n">data1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Check that the data for the Bland-Altman agreement analysis are compliant.</span>
 
 <span class="sd">    Checks that</span>
@@ -410,7 +410,7 @@
 
 <div class="viewcode-block" id="compute_z_score">
 <a class="viewcode-back" href="../../../api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.compute_z_score">[docs]</a>
-<span class="k">def</span> <span class="nf">compute_z_score</span><span class="p">(</span><span class="n">ci</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_z_score</span><span class="p">(</span><span class="n">ci</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the critical z-score for being outside a confidence interval.</span>
 
 <span class="sd">    Parameters</span>
@@ -435,7 +435,7 @@
 
 <div class="viewcode-block" id="compute_bland_altman_features">
 <a class="viewcode-back" href="../../../api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.compute_bland_altman_features">[docs]</a>
-<span class="k">def</span> <span class="nf">compute_bland_altman_features</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_bland_altman_features</span><span class="p">(</span>
     <span class="n">data1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">ci</span><span class="p">:</span> <span class="nb">float</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute quantities of interest for the Bland-Altman plot.</span>
@@ -515,7 +515,7 @@
 
 <div class="viewcode-block" id="get_reliability_mask">
 <a class="viewcode-back" href="../../../api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.get_reliability_mask">[docs]</a>
-<span class="k">def</span> <span class="nf">get_reliability_mask</span><span class="p">(</span><span class="n">diff</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">loa_lower</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">loa_upper</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_reliability_mask</span><span class="p">(</span><span class="n">diff</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">loa_lower</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">loa_upper</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Get reliability mask as the data within the lower and upper limits of</span>
 <span class="sd">    agreement.</span>
 
@@ -542,7 +542,7 @@
 
 <div class="viewcode-block" id="identify_bland_altman_salient_data">
 <a class="viewcode-back" href="../../../api/nifreeze.analysis.measure_agreement.html#nifreeze.analysis.measure_agreement.identify_bland_altman_salient_data">[docs]</a>
-<span class="k">def</span> <span class="nf">identify_bland_altman_salient_data</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">identify_bland_altman_salient_data</span><span class="p">(</span>
     <span class="n">data1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">ci</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">top_n</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">percentile</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.75</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Identify the Bland-Altman (BA) plot salient data.</span>
@@ -681,7 +681,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=62385b69"></script>
+</div><script src="../../../_static/documentation_options.js?v=2564b822"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

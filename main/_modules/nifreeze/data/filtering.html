@@ -5,8 +5,8 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.data.filtering - nifreeze 26.0.0.dev69 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
+        <title>nifreeze.data.filtering - nifreeze 26.0.0.dev71 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/css/version-switch.css?v=45d66e8a" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev69 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev71 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev69</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev71</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev69</span>
+  <span class="sidebar-brand-text">26.0.0.dev71</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -353,11 +353,11 @@
 <span class="c1">#</span>
 <span class="sd">&quot;&quot;&quot;Filtering data.&quot;&quot;&quot;</span>
 
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">scipy.ndimage</span> <span class="kn">import</span> <span class="n">median_filter</span>
-<span class="kn">from</span> <span class="nn">skimage.morphology</span> <span class="kn">import</span> <span class="n">ball</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.ndimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">median_filter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">skimage.morphology</span><span class="w"> </span><span class="kn">import</span> <span class="n">ball</span>
 
 <span class="n">DEFAULT_CLIP_PERCENTILE</span> <span class="o">=</span> <span class="mi">75</span>
 <span class="sd">&quot;&quot;&quot;Upper percentile threshold for intensity clipping.&quot;&quot;&quot;</span>
@@ -390,14 +390,14 @@
 
 <div class="viewcode-block" id="ClippingValueError">
 <a class="viewcode-back" href="../../../api/nifreeze.data.filtering.html#nifreeze.data.filtering.ClippingValueError">[docs]</a>
-<span class="k">class</span> <span class="nc">ClippingValueError</span><span class="p">(</span><span class="ne">RuntimeError</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ClippingValueError</span><span class="p">(</span><span class="ne">RuntimeError</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Raised when clipping cannot compute a valid clipping/scaling.&quot;&quot;&quot;</span></div>
 
 
 
 <div class="viewcode-block" id="robust_window">
 <a class="viewcode-back" href="../../../api/nifreeze.data.filtering.html#nifreeze.data.filtering.robust_window">[docs]</a>
-<span class="k">def</span> <span class="nf">robust_window</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">robust_window</span><span class="p">(</span>
     <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">p_min</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -488,7 +488,7 @@
 
 <div class="viewcode-block" id="advanced_clip">
 <a class="viewcode-back" href="../../../api/nifreeze.data.filtering.html#nifreeze.data.filtering.advanced_clip">[docs]</a>
-<span class="k">def</span> <span class="nf">advanced_clip</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">advanced_clip</span><span class="p">(</span>
     <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">p_min</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">35.0</span><span class="p">,</span>
     <span class="n">p_max</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">99.98</span><span class="p">,</span>
@@ -582,7 +582,7 @@
 
 <div class="viewcode-block" id="robust_minmax_normalization">
 <a class="viewcode-back" href="../../../api/nifreeze.data.filtering.html#nifreeze.data.filtering.robust_minmax_normalization">[docs]</a>
-<span class="k">def</span> <span class="nf">robust_minmax_normalization</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">robust_minmax_normalization</span><span class="p">(</span>
     <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">p_min</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span><span class="p">,</span>
@@ -643,7 +643,7 @@
 
 <div class="viewcode-block" id="grand_mean_normalization">
 <a class="viewcode-back" href="../../../api/nifreeze.data.filtering.html#nifreeze.data.filtering.grand_mean_normalization">[docs]</a>
-<span class="k">def</span> <span class="nf">grand_mean_normalization</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">grand_mean_normalization</span><span class="p">(</span>
     <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">center</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_CLIP_PERCENTILE</span><span class="p">,</span>
@@ -694,7 +694,7 @@
 
 <div class="viewcode-block" id="dwi_select_shells">
 <a class="viewcode-back" href="../../../api/nifreeze.data.filtering.html#nifreeze.data.filtering.dwi_select_shells">[docs]</a>
-<span class="k">def</span> <span class="nf">dwi_select_shells</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">dwi_select_shells</span><span class="p">(</span>
     <span class="n">gradients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">atol_low</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -779,7 +779,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=62385b69"></script>
+</div><script src="../../../_static/documentation_options.js?v=2564b822"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

@@ -5,8 +5,8 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
-        <title>nifreeze.model.dmri - nifreeze 26.0.0.dev69 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=acfd86a5" />
+        <title>nifreeze.model.dmri - nifreeze 26.0.0.dev71 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/css/version-switch.css?v=45d66e8a" />
@@ -161,7 +161,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev69 documentation</div></a>
+      <a href="../../../index.html"><div class="brand">nifreeze 26.0.0.dev71 documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -182,14 +182,14 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
     <span class="sidebar-brand-text">nifreeze</span>
-    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev69</span>
+    <span id="version-slug" class="sidebar-brand-text">26.0.0.dev71</span>
 </a>
 
 <!-- Versions dropdown -->
 <div id="version-menu" class="version-tree">
   <ul>
   <li class="toctree-l1 has-children">
-  <span class="sidebar-brand-text">26.0.0.dev69</span>
+  <span class="sidebar-brand-text">26.0.0.dev71</span>
   <input class="toctree-checkbox" id="toctree-checkbox-v" name="toctree-checkbox-v" role="switch" type="checkbox">
   <label for="toctree-checkbox-v"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label>
   <ul id="v-tags"></ul>
@@ -352,28 +352,28 @@
 <span class="c1">#     https://www.nipreps.org/community/licensing/</span>
 <span class="c1">#</span>
 
-<span class="kn">from</span> <span class="nn">importlib</span> <span class="kn">import</span> <span class="n">import_module</span>
-<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">importlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">import_module</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">dipy.core.gradients</span> <span class="kn">import</span> <span class="n">check_multi_b</span><span class="p">,</span> <span class="n">gradient_table_from_bvals_bvecs</span>
-<span class="kn">from</span> <span class="nn">joblib</span> <span class="kn">import</span> <span class="n">Parallel</span><span class="p">,</span> <span class="n">delayed</span>
-<span class="kn">from</span> <span class="nn">sklearn.gaussian_process.kernels</span> <span class="kn">import</span> <span class="n">Kernel</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dipy.core.gradients</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_multi_b</span><span class="p">,</span> <span class="n">gradient_table_from_bvals_bvecs</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">joblib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Parallel</span><span class="p">,</span> <span class="n">delayed</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.gaussian_process.kernels</span><span class="w"> </span><span class="kn">import</span> <span class="n">Kernel</span>
 
-<span class="kn">from</span> <span class="nn">nifreeze.data.dmri</span> <span class="kn">import</span> <span class="n">DWI</span>
-<span class="kn">from</span> <span class="nn">nifreeze.data.dmri.utils</span> <span class="kn">import</span> <span class="p">(</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">nifreeze.data.dmri</span><span class="w"> </span><span class="kn">import</span> <span class="n">DWI</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">nifreeze.data.dmri.utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">DEFAULT_LOWB_THRESHOLD</span><span class="p">,</span>
     <span class="n">DEFAULT_MIN_S0</span><span class="p">,</span>
     <span class="n">DTI_MIN_ORIENTATIONS</span><span class="p">,</span>
     <span class="n">find_shelling_scheme</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span> <span class="nn">nifreeze.data.filtering</span> <span class="kn">import</span> <span class="n">BVAL_ATOL</span><span class="p">,</span> <span class="n">dwi_select_shells</span><span class="p">,</span> <span class="n">grand_mean_normalization</span>
-<span class="kn">from</span> <span class="nn">nifreeze.model._dipy</span> <span class="kn">import</span> <span class="n">GP_JITTER</span><span class="p">,</span> <span class="n">GaussianProcessModel</span>
-<span class="kn">from</span> <span class="nn">nifreeze.model.base</span> <span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ExpectationModel</span>
-<span class="kn">from</span> <span class="nn">nifreeze.model.gpr</span> <span class="kn">import</span> <span class="n">uses_bvalue</span>
-<span class="kn">from</span> <span class="nn">nifreeze.model.gqi</span> <span class="kn">import</span> <span class="n">DEFAULT_RIDGE</span>
-<span class="kn">from</span> <span class="nn">nifreeze.model.lovo</span> <span class="kn">import</span> <span class="p">(</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">nifreeze.data.filtering</span><span class="w"> </span><span class="kn">import</span> <span class="n">BVAL_ATOL</span><span class="p">,</span> <span class="n">dwi_select_shells</span><span class="p">,</span> <span class="n">grand_mean_normalization</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">nifreeze.model._dipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">GP_JITTER</span><span class="p">,</span> <span class="n">GaussianProcessModel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">nifreeze.model.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ExpectationModel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">nifreeze.model.gpr</span><span class="w"> </span><span class="kn">import</span> <span class="n">uses_bvalue</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">nifreeze.model.gqi</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_RIDGE</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">nifreeze.model.lovo</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">DEFAULT_KRR_LAMBDA_GRID</span><span class="p">,</span>
     <span class="n">ClosedFormLOVOMixin</span><span class="p">,</span>
     <span class="n">fit_pooled_hyperparameters</span><span class="p">,</span>
@@ -395,16 +395,16 @@
 <span class="sd">&quot;&quot;&quot;dMRI dataset DKI model insufficient shells error message.&quot;&quot;&quot;</span>
 
 
-<span class="k">def</span> <span class="nf">_exec_fit</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">chunk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_exec_fit</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">chunk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">),</span> <span class="n">chunk</span>
 
 
-<span class="k">def</span> <span class="nf">_exec_predict</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">chunk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_exec_predict</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">chunk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Propagate model parameters and call predict.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)),</span> <span class="n">chunk</span>
 
 
-<span class="k">def</span> <span class="nf">_compute_data_mask</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_compute_data_mask</span><span class="p">(</span>
     <span class="n">shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span>
     <span class="n">brainmask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">bzero</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -445,7 +445,7 @@
     <span class="k">return</span> <span class="n">data_mask</span>
 
 
-<span class="k">def</span> <span class="nf">_compute_S0</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_compute_S0</span><span class="p">(</span>
     <span class="n">dwi_dataobj</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">data_mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">bzero</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -492,7 +492,7 @@
     <span class="k">return</span> <span class="n">S0</span>
 
 
-<span class="k">def</span> <span class="nf">_masked_volumes</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_masked_volumes</span><span class="p">(</span>
     <span class="n">dataobj</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">volumes</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">voxels</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Gather volumes at the selected voxels into a voxels-by-volumes array.</span>
@@ -527,7 +527,7 @@
     <span class="k">return</span> <span class="n">out</span>
 
 
-<span class="k">def</span> <span class="nf">_append_bzero</span><span class="p">(</span><span class="n">dataobj</span><span class="p">,</span> <span class="n">gtab</span><span class="p">,</span> <span class="n">bzero</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_append_bzero</span><span class="p">(</span><span class="n">dataobj</span><span class="p">,</span> <span class="n">gtab</span><span class="p">,</span> <span class="n">bzero</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Append a b-zero volume to diffusion data and update the gradient table.</span>
 
 <span class="sd">    If provided, appends a b-zero (non-diffusion-weighted) volume to the</span>
@@ -574,7 +574,7 @@
 
 <div class="viewcode-block" id="BaseDWIModel">
 <a class="viewcode-back" href="../../../api/nifreeze.model.dmri.html#nifreeze.model.BaseDWIModel">[docs]</a>
-<span class="k">class</span> <span class="nc">BaseDWIModel</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">BaseDWIModel</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Interface and default methods for DWI models.&quot;&quot;&quot;</span>
 
     <span class="n">applicable_schemes</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;single-shell&quot;</span><span class="p">,</span> <span class="s2">&quot;multi-shell&quot;</span><span class="p">,</span> <span class="s2">&quot;DSI&quot;</span><span class="p">})</span>
@@ -595,7 +595,7 @@
         <span class="s2">&quot;_models&quot;</span><span class="p">:</span> <span class="s2">&quot;List with one or more (if parallel execution) model instances&quot;</span><span class="p">,</span>
     <span class="p">}</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">DWI</span><span class="p">,</span> <span class="n">max_b</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">DWI</span><span class="p">,</span> <span class="n">max_b</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialization.</span>
 
 <span class="sd">        Parameters</span>
@@ -659,7 +659,7 @@
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Fit the model chunk-by-chunk asynchronously&quot;&quot;&quot;</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -731,7 +731,7 @@
 
 <div class="viewcode-block" id="BaseDWIModel.fit_predict">
 <a class="viewcode-back" href="../../../api/nifreeze.model.dmri.html#nifreeze.model.BaseDWIModel.fit_predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Predict asynchronously chunk-by-chunk the diffusion signal.</span>
 
@@ -796,12 +796,12 @@
 
 <div class="viewcode-block" id="AverageDWIModel">
 <a class="viewcode-back" href="../../../api/nifreeze.model.dmri.html#nifreeze.model.AverageDWIModel">[docs]</a>
-<span class="k">class</span> <span class="nc">AverageDWIModel</span><span class="p">(</span><span class="n">ExpectationModel</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">AverageDWIModel</span><span class="p">(</span><span class="n">ExpectationModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A trivial model that returns an average DWI volume.&quot;&quot;&quot;</span>
 
     <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;_atol_low&quot;</span><span class="p">,</span> <span class="s2">&quot;_atol_high&quot;</span><span class="p">,</span> <span class="s2">&quot;_detrend&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">dataset</span><span class="p">:</span> <span class="n">DWI</span><span class="p">,</span>
         <span class="n">stat</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;median&quot;</span><span class="p">,</span>
@@ -839,7 +839,7 @@
 
 <div class="viewcode-block" id="AverageDWIModel.fit_predict">
 <a class="viewcode-back" href="../../../api/nifreeze.model.dmri.html#nifreeze.model.AverageDWIModel.fit_predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the average map.&quot;&quot;&quot;</span>
 
         <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -869,7 +869,7 @@
 
 <div class="viewcode-block" id="DTIModel">
 <a class="viewcode-back" href="../../../api/nifreeze.model.dmri.html#nifreeze.model.DTIModel">[docs]</a>
-<span class="k">class</span> <span class="nc">DTIModel</span><span class="p">(</span><span class="n">BaseDWIModel</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DTIModel</span><span class="p">(</span><span class="n">BaseDWIModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A wrapper of :obj:`dipy.reconst.dti.TensorModel`.&quot;&quot;&quot;</span>
 
     <span class="n">applicable_schemes</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;single-shell&quot;</span><span class="p">,</span> <span class="s2">&quot;multi-shell&quot;</span><span class="p">})</span>
@@ -888,7 +888,7 @@
 
 <div class="viewcode-block" id="DKIModel">
 <a class="viewcode-back" href="../../../api/nifreeze.model.dmri.html#nifreeze.model.DKIModel">[docs]</a>
-<span class="k">class</span> <span class="nc">DKIModel</span><span class="p">(</span><span class="n">BaseDWIModel</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DKIModel</span><span class="p">(</span><span class="n">BaseDWIModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A wrapper of :obj:`~nifreeze.model.dki.DiffusionKurtosisModel`.&quot;&quot;&quot;</span>
 
     <span class="n">requires_multishell</span> <span class="o">=</span> <span class="kc">True</span>
@@ -901,7 +901,7 @@
 
 <div class="viewcode-block" id="GQIModel">
 <a class="viewcode-back" href="../../../api/nifreeze.model.dmri.html#nifreeze.model.GQIModel">[docs]</a>
-<span class="k">class</span> <span class="nc">GQIModel</span><span class="p">(</span><span class="n">BaseDWIModel</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GQIModel</span><span class="p">(</span><span class="n">BaseDWIModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A wrapper of :obj:`nifreeze.model.gqi.GeneralizedQSamplingModel`.&quot;&quot;&quot;</span>
 
     <span class="c1"># GQI fitting/prediction drops b=0 volumes (see :mod:`nifreeze.model.gqi`).</span>
@@ -922,7 +922,7 @@
 
 <div class="viewcode-block" id="GPModel">
 <a class="viewcode-back" href="../../../api/nifreeze.model.dmri.html#nifreeze.model.GPModel">[docs]</a>
-<span class="k">class</span> <span class="nc">GPModel</span><span class="p">(</span><span class="n">BaseDWIModel</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GPModel</span><span class="p">(</span><span class="n">BaseDWIModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A wrapper of :obj:`~nifreeze.model.dipy.GaussianProcessModel`.</span>
 
 <span class="sd">    The Gaussian process does not follow the DIPY ``Model(gtab).fit(data)``</span>
@@ -940,7 +940,7 @@
     <span class="n">_modelargs</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;kernel_model&quot;</span><span class="p">,</span> <span class="s2">&quot;beta_l&quot;</span><span class="p">,</span> <span class="s2">&quot;beta_a&quot;</span><span class="p">,</span> <span class="s2">&quot;sigma_sq&quot;</span><span class="p">,</span> <span class="s2">&quot;ell&quot;</span><span class="p">,</span> <span class="s2">&quot;nvox_prefit&quot;</span><span class="p">)</span>
     <span class="n">_model_class</span> <span class="o">=</span> <span class="s2">&quot;nifreeze.model._dipy.GaussianProcessModel&quot;</span>
 
-    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Fit a single Gaussian process over all masked voxels.&quot;&quot;&quot;</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_locked_fit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -968,7 +968,7 @@
 
 <div class="viewcode-block" id="GPModel.fit_predict">
 <a class="viewcode-back" href="../../../api/nifreeze.model.dmri.html#nifreeze.model.GPModel.fit_predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Fit the GP (LOVO or single-fit) and predict the held-out orientation.&quot;&quot;&quot;</span>
 
         <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;omp_nthreads&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
@@ -991,7 +991,7 @@
 
 <div class="viewcode-block" id="GPLOOModel">
 <a class="viewcode-back" href="../../../api/nifreeze.model.dmri.html#nifreeze.model.GPLOOModel">[docs]</a>
-<span class="k">class</span> <span class="nc">GPLOOModel</span><span class="p">(</span><span class="n">ClosedFormLOVOMixin</span><span class="p">,</span> <span class="n">GPModel</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GPLOOModel</span><span class="p">(</span><span class="n">ClosedFormLOVOMixin</span><span class="p">,</span> <span class="n">GPModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A Gaussian process with exact, closed-form leave-one-volume-out prediction.</span>
 
 <span class="sd">    With hyperparameters held fixed across folds, the GP posterior mean is a</span>
@@ -1004,7 +1004,7 @@
 
     <span class="n">_center</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># ``DiffusionGPR`` normalizes the targets (``normalize_y=True``)</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">dataset</span><span class="p">:</span> <span class="n">DWI</span><span class="p">,</span>
         <span class="n">hyperparameters</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1032,7 +1032,7 @@
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_kernel</span><span class="p">:</span> <span class="n">Kernel</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
-    <span class="k">def</span> <span class="nf">_resolve_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gradients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Kernel</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gradients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Kernel</span><span class="p">:</span>
         <span class="n">record</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hyperparameters</span>
         <span class="n">kernel_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model_kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kernel_model&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">record</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -1056,7 +1056,7 @@
             <span class="n">kernel</span><span class="p">,</span> <span class="p">[</span><span class="n">_gp_design</span><span class="p">(</span><span class="n">gradients</span><span class="p">,</span> <span class="n">kernel</span><span class="p">)],</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_hyperparameter_signals</span><span class="p">()]</span>
         <span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_covariance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gradients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_covariance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gradients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_kernel</span><span class="p">(</span><span class="n">gradients</span><span class="p">)</span>
         <span class="n">covariance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel</span><span class="p">(</span><span class="n">_gp_design</span><span class="p">(</span><span class="n">gradients</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel</span><span class="p">))</span>
@@ -1067,7 +1067,7 @@
 
 <div class="viewcode-block" id="GQIKRRModel">
 <a class="viewcode-back" href="../../../api/nifreeze.model.dmri.html#nifreeze.model.GQIKRRModel">[docs]</a>
-<span class="k">class</span> <span class="nc">GQIKRRModel</span><span class="p">(</span><span class="n">ClosedFormLOVOMixin</span><span class="p">,</span> <span class="n">GQIModel</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GQIKRRModel</span><span class="p">(</span><span class="n">ClosedFormLOVOMixin</span><span class="p">,</span> <span class="n">GQIModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;GQI with closed-form leave-one-volume-out prediction.</span>
 
 <span class="sd">    The prediction of :class:`GQIModel` is kernel ridge regression on the GQI</span>
@@ -1078,7 +1078,7 @@
 <span class="sd">    one fit per volume. Both models share their default ridge.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">dataset</span><span class="p">:</span> <span class="n">DWI</span><span class="p">,</span>
         <span class="n">krr_lambda</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DEFAULT_RIDGE</span><span class="p">,</span>
@@ -1111,8 +1111,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_krr_lambda</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model_kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ridge&quot;</span><span class="p">,</span> <span class="n">krr_lambda</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_krr_lambda_grid</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">krr_lambda_grid</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_covariance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gradients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-        <span class="kn">from</span> <span class="nn">nifreeze.model.gqi</span> <span class="kn">import</span> <span class="n">GeneralizedQSamplingModel</span><span class="p">,</span> <span class="n">sphere_gram</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_covariance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gradients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">nifreeze.model.gqi</span><span class="w"> </span><span class="kn">import</span> <span class="n">GeneralizedQSamplingModel</span><span class="p">,</span> <span class="n">sphere_gram</span>
 
         <span class="n">gtab</span> <span class="o">=</span> <span class="n">gradient_table_from_bvals_bvecs</span><span class="p">(</span><span class="n">gradients</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">gradients</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
         <span class="n">gram</span> <span class="o">=</span> <span class="n">sphere_gram</span><span class="p">(</span><span class="n">GeneralizedQSamplingModel</span><span class="p">(</span><span class="n">gtab</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_model_kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">kernel</span><span class="p">)</span>
@@ -1125,18 +1125,18 @@
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">gram</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_krr_lambda</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">gram</span><span class="p">))</span>
 
-    <span class="k">def</span> <span class="nf">_shells</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gradients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-        <span class="kn">from</span> <span class="nn">nifreeze.model.gqi</span> <span class="kn">import</span> <span class="n">shell_bvalues</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_shells</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gradients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">nifreeze.model.gqi</span><span class="w"> </span><span class="kn">import</span> <span class="n">shell_bvalues</span>
 
         <span class="k">return</span> <span class="n">shell_bvalues</span><span class="p">(</span><span class="n">gradients</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">])</span>
 
-    <span class="k">def</span> <span class="nf">_postprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">predicted</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_postprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">predicted</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
         <span class="c1"># Diffusion signals are non-negative (as in GQI&#39;s own prediction)</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">predicted</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span></div>
 
 
 
-<span class="k">def</span> <span class="nf">_gp_design</span><span class="p">(</span><span class="n">gradients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">kernel</span><span class="p">:</span> <span class="n">Kernel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_gp_design</span><span class="p">(</span><span class="n">gradients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">kernel</span><span class="p">:</span> <span class="n">Kernel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the GP design matrix (the b-value column is kept only for multi-shell).&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">gradients</span> <span class="k">if</span> <span class="n">uses_bvalue</span><span class="p">(</span><span class="n">kernel</span><span class="p">)</span> <span class="k">else</span> <span class="n">gradients</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span>
 </pre></div>
@@ -1171,7 +1171,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=62385b69"></script>
+</div><script src="../../../_static/documentation_options.js?v=2564b822"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
