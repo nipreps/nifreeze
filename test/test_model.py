@@ -119,7 +119,7 @@ def test_trivial_model(request, use_mask):
     gradients = np.hstack((bvecs, bvals))
 
     data = DWI(
-        dataobj=rng.normal(size=(*_S0.shape, n_vols)),
+        dataobj=rng.normal(size=(n_vols, *_S0.shape)),
         affine=np.eye(4),
         bzero=_clipped_S0,
         brainmask=mask,
@@ -137,13 +137,13 @@ def test_trivial_model(request, use_mask):
 def test_expectation_model(request):
     class DummySequenceDataset:
         def __init__(self, data, brainmask):
-            # data_4d shape is (x,y,z,t)
+            # data_4d shape is (t,x,y,z)
             self.data = data
             self.brainmask = brainmask
 
         def __len__(self):
             # pretend T timepoints
-            return self.data.shape[-1]
+            return self.data.shape[0]
 
         def __getitem__(self, index):
             # When index is boolean mask, emulate the original dataset behavior:
@@ -151,15 +151,15 @@ def test_expectation_model(request):
             if isinstance(index, (list, tuple, np.ndarray)):
                 # Boolean indexing along time axis
                 sel = np.asarray(index, dtype=bool)
-                # Create subset along last axis and return as first element in tuple
-                return (self.data[..., sel],)
+                # Create subset along first axis and return as first element in tuple
+                return (self.data[sel],)
             # Other cases: forward slice/index to the timepoint
-            return (self.data[..., index],)
+            return (self.data[index],)
 
     # Create a dataset with a single voxel and 4 timepoints
     vals = np.array([1.0, 2.0, 3.0, 4.0], dtype=float)
-    _data = vals.reshape((1, 1, 1, -1))
-    _brainmask = request.node.rng.choice([True, False], size=_data.shape[:3])
+    _data = vals.reshape((-1, 1, 1, 1))
+    _brainmask = request.node.rng.choice([True, False], size=_data.shape[1:])
     dataset = DummySequenceDataset(_data, _brainmask)
 
     stat = "mean"
@@ -173,13 +173,13 @@ def test_expectation_model(request):
     index_mask = np.ones(len(dataset), dtype=bool)
     index_mask[_index] = False
     pred = em_model.fit_predict(index=1)
-    assert np.allclose(pred, avg_func(dataset[index_mask][0], axis=-1))
+    assert np.allclose(pred, avg_func(dataset[index_mask][0], axis=0))
 
     # First call with index=None should compute and lock the fit
     pred = em_model.fit_predict(index=None)
     assert em_model._locked_fit is not None
     assert np.allclose(pred, em_model._locked_fit)
-    assert np.allclose(pred, avg_func(_data, axis=-1))
+    assert np.allclose(pred, avg_func(_data, axis=0))
     # Calling again returns the locked fit
     pred2 = em_model.fit_predict(index=None)
     assert pred2 is pred
@@ -249,7 +249,7 @@ def test_factory_variants(name, expected_cls, setup_random_base_data, particular
                 brainmask,
                 motion_affines,
                 datahdr,
-                reference=np.zeros(dataobj.shape[:3]),
+                reference=np.zeros(dataobj.shape[1:]),
             )
         elif particular_case == "bzero":
             dataset = BaseDatasetBzero(
@@ -258,10 +258,10 @@ def test_factory_variants(name, expected_cls, setup_random_base_data, particular
                 brainmask,
                 motion_affines,
                 datahdr,
-                bzero=np.zeros(dataobj.shape[:3]),
+                bzero=np.zeros(dataobj.shape[1:]),
             )
         elif particular_case == "predicted":
-            _kwargs = {"predicted": np.zeros(dataobj.shape[:3])}
+            _kwargs = {"predicted": np.zeros(dataobj.shape[1:])}
 
     model_instance = model.ModelFactory.init(name, dataset=dataset, **_kwargs)
     assert isinstance(model_instance, expected_cls)
@@ -415,7 +415,7 @@ def test_gpmodel_fit_predict(setup_random_dwi_data):
     gp = model.dmri.GPModel(dwi, kernel_model="spherical")
     predicted = gp.fit_predict(0)
     assert predicted is not None
-    assert predicted.shape == dwi_dataobj.shape[:-1]
+    assert predicted.shape == dwi_dataobj.shape[1:]
     assert np.all(np.isfinite(predicted))
 
     # Single-fit: locks the fit (returns None), then predicts from the locked fit.
@@ -426,7 +426,7 @@ def test_gpmodel_fit_predict(setup_random_dwi_data):
     assert gp2._locked_fit is True
     predicted2 = gp2.fit_predict(0)
     assert predicted2 is not None
-    assert predicted2.shape == dwi_dataobj.shape[:-1]
+    assert predicted2.shape == dwi_dataobj.shape[1:]
 
 
 @pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")

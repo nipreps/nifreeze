@@ -24,7 +24,7 @@
 
 from pathlib import Path
 
-from nifreeze.data.base import NFDH5_EXT, BaseDataset
+from nifreeze.data.base import NFHDF5_EXT, BaseDataset
 from nifreeze.data.dmri import DWI
 from nifreeze.data.pet import PET
 
@@ -62,10 +62,11 @@ def load(
     import numpy as np
     from nibabel.spatialimages import SpatialImage
 
+    from nifreeze.data.utils import to_time_first
     from nifreeze.utils.ndimage import load_api
 
     filename = Path(filename)
-    if filename.name.endswith(NFDH5_EXT):
+    if filename.name.endswith(NFHDF5_EXT):
         for dataclass in (BaseDataset, PET, DWI):
             with suppress(TypeError):
                 return dataclass.from_filename(filename)
@@ -82,7 +83,9 @@ def load(
         return pet_from_nii(filename, brainmask_file=brainmask_file, **kwargs)
 
     img = load_api(filename, SpatialImage)
-    retval: BaseDataset = BaseDataset(dataobj=np.asanyarray(img.dataobj), affine=img.affine)
+    retval: BaseDataset = BaseDataset(
+        dataobj=to_time_first(np.asanyarray(img.dataobj)), affine=img.affine
+    )
 
     if brainmask_file:
         mask = load_api(brainmask_file, SpatialImage)

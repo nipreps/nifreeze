@@ -86,7 +86,7 @@ def test_petmodel_init_dataset_error(setup_random_pet_data, monkeypatch):
             self.dataobj = dataobj
             self.affine = affine
             self.brainmask = brainmask
-            self.midframe = np.ones_like(dataobj.shape[-1])
+            self.midframe = np.ones_like(dataobj.shape[0])
 
     # Monkeypatch the PET dataset
     monkeypatch.setattr("nifreeze.data.pet.PET", MidframePETDataset)
@@ -104,7 +104,7 @@ def test_petmodel_init_dataset_error(setup_random_pet_data, monkeypatch):
             self.dataobj = dataobj
             self.affine = affine
             self.brainmask = brainmask
-            self.total_duration = np.ones_like(dataobj.shape[-1])
+            self.total_duration = np.ones_like(dataobj.shape[0])
 
     # Monkeypatch the PET dataset
     monkeypatch.setattr("nifreeze.data.pet.PET", TotalDurationPETDataset)
@@ -307,7 +307,7 @@ def test_petmodel_simulated_correlation_motion_free(request, outdir, n_ctrl, min
     total_duration = float(n_timepoints)
 
     pet_obj = PET(
-        dataobj=dataobj,
+        dataobj=np.moveaxis(dataobj, -1, 0),  # built volumes last; PET takes them first
         affine=np.eye(4),
         brainmask=np.ones(shape, dtype=bool),
         midframe=midframe,
@@ -425,7 +425,7 @@ def test_petmodel_simulated_correlation_motion_free_srtm(
     total_duration = float(np.sum(dt))
 
     pet_obj = PET(
-        dataobj=dataobj,
+        dataobj=np.moveaxis(dataobj, -1, 0),  # built volumes last; PET takes them first
         affine=np.eye(4),
         brainmask=np.ones(shape, dtype=bool),
         midframe=midframe,
@@ -513,7 +513,7 @@ def test_petmodel_fit_predict_no_brainmask():
     midframe = np.arange(n_tp, dtype="float32")
 
     pet_obj = PET(
-        dataobj=dataobj,
+        dataobj=np.moveaxis(dataobj, -1, 0),  # built volumes last; PET takes them first
         affine=np.eye(4),
         brainmask=None,
         midframe=midframe,

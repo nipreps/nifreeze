@@ -39,7 +39,7 @@ def _raise_type(*args, **kwargs):
 
 
 def test_load_hdf5_error(monkeypatch, tmp_path):
-    fname = tmp_path / ("dataset" + data.NFDH5_EXT)
+    fname = tmp_path / ("dataset" + data.NFHDF5_EXT)
 
     # All three dataclasses raise TypeError: load should raise TypeError
     monkeypatch.setattr(
@@ -68,7 +68,7 @@ def test_load_hdf5_error(monkeypatch, tmp_path):
     ],
 )
 def test_load_hdf5_sentinel(monkeypatch, tmp_path, target, prior_failures):
-    fname = tmp_path / ("dataset" + data.NFDH5_EXT)
+    fname = tmp_path / ("dataset" + data.NFHDF5_EXT)
 
     sentinel = object()
 
@@ -109,7 +109,7 @@ def test_load_hdf5_data(request, tmp_path, monkeypatch, target, prior_failures, 
     _affine = np.eye(4).astype(np.float64)
     _brainmask_dataobj = rng.choice([True, False], size=_dataobj.shape[:3]).astype(np.uint8)
 
-    fname = tmp_path / ("dataset" + data.NFDH5_EXT)
+    fname = tmp_path / ("dataset" + data.NFHDF5_EXT)
 
     # Write a minimal HDF5 layout that our patched reader will understand
     with h5py.File(fname, "w") as f:
@@ -177,6 +177,32 @@ def test_load_hdf5_data(request, tmp_path, monkeypatch, target, prior_failures, 
     assert np.array_equal(retval.brainmask, _brainmask_dataobj)
 
 
+@pytest.mark.parametrize("dataclass", [data.BaseDataset, data.PET, data.DWI])
+def test_load_hdf5_dataclass(request, tmp_path, dataclass):
+    """``load`` returns the class that wrote the HDF5 file, with its data."""
+    rng = request.node.rng
+    n_volumes = 8
+    fields = {
+        "dataobj": rng.random((n_volumes, 4, 5, 6), dtype=np.float32),
+        "affine": np.eye(4),
+    }
+    if dataclass is data.PET:
+        fields["midframe"] = np.arange(n_volumes, dtype=np.float32) + 0.5
+        fields["total_duration"] = float(n_volumes)
+    elif dataclass is data.DWI:
+        bvecs = rng.standard_normal((n_volumes, 3))
+        bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+        fields["gradients"] = np.column_stack((bvecs, np.full(n_volumes, 1000.0)))
+
+    fname = tmp_path / ("dataset" + data.NFHDF5_EXT)
+    dataclass(**fields).to_filename(fname)
+    loaded = data.load(fname)
+
+    assert type(loaded) is dataclass
+    for name, value in fields.items():
+        assert np.allclose(getattr(loaded, name), value)
+
+
 @pytest.mark.random_uniform_spatial_data((5, 2, 4), 0.0, 1.0)
 @pytest.mark.random_uniform_spatial_data((2, 2, 2, 4), 0.0, 1.0)
 @pytest.mark.parametrize(
@@ -221,7 +247,8 @@ def test_load_base_nifti(
     assert hasattr(retval, "affine")
 
     assert retval.dataobj is not None
-    assert np.allclose(retval.dataobj, dataobj)
+    # NIfTI stores the volumes last; datasets store them first
+    assert np.allclose(retval.dataobj, np.moveaxis(dataobj, -1, 0))
 
     assert retval.affine is not None
     assert np.allclose(retval.affine, affine)

@@ -23,15 +23,72 @@
 """py.test configuration."""
 
 import os
+import sys
 from pathlib import Path
 
 import nibabel as nb
 import numpy as np
 import pytest
 
+try:
+    import resource  # POSIX only
+except ImportError:  # pragma: no cover - Windows
+    resource = None  # type: ignore[assignment]
+
+
+def peak_rss_mb(fn, *args, **kwargs) -> float:
+    """Peak *incremental* resident memory (MB) of running ``fn`` in a child.
+
+    The callable runs in a ``fork``-ed child so closures and lambdas execute
+    without pickling. The child measures its own ``ru_maxrss`` high-water delta
+    (from just after the fork to just after ``fn`` returns) and returns it
+    through a pipe, making the measurement immune to the parent's resident
+    footprint or to high-water pollution from earlier tests. POSIX only.
+
+    ``ru_maxrss`` is reported in KiB on Linux and in bytes on macOS.
+    """
+    if resource is None or not hasattr(os, "fork"):
+        pytest.skip("peak-RSS probe requires os.fork and the resource module (POSIX)")
+
+    read_fd, write_fd = os.pipe()
+    pid = os.fork()
+    if pid == 0:  # pragma: no cover - child process
+        code = 0
+        try:
+            os.close(read_fd)
+            start = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            fn(*args, **kwargs)
+            peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            os.write(write_fd, str(peak - start).encode())
+        except BaseException:
+            code = 1
+        finally:
+            os.close(write_fd)
+            os._exit(code)
+
+    os.close(write_fd)
+    payload = b""
+    while chunk := os.read(read_fd, 4096):
+        payload += chunk
+    os.close(read_fd)
+    _, status = os.waitpid(pid, 0)
+    if os.waitstatus_to_exitcode(status) != 0:
+        raise RuntimeError("peak-RSS child process raised while running the probe target")
+
+    units = 1024.0 if sys.platform != "darwin" else 1024.0 * 1024.0  # ru_maxrss -> MB
+    return int(payload) / units
+
+
+@pytest.fixture
+def peak_rss():
+    """Return the :func:`peak_rss_mb` probe as a fixture."""
+    return peak_rss_mb
+
+
 test_data_env = os.getenv("TEST_DATA_HOME", str(Path.home() / "nifreeze-tests"))
 test_output_dir = os.getenv("TEST_OUTPUT_DIR")
 test_workdir = os.getenv("TEST_WORK_DIR")
+phantoms_env = os.getenv("NIFREEZE_PHANTOMS")
 
 _datadir = (Path(__file__).parent / "data").absolute()
 
@@ -41,6 +98,7 @@ def pytest_report_header(config):
 TEST_DATA_HOME: {test_data_env}.
 TEST_OUTPUT_DIR: {test_output_dir or "<unset> (output files will be discarded)"}.
 TEST_WORK_DIR: {test_workdir or "<unset> (intermediate files will be discarded)"}.
+NIFREEZE_PHANTOMS: {phantoms_env or "<unset> (the phantom tests are skipped)"}.
 """
 
 
@@ -64,6 +122,14 @@ def outdir():
 def datadir():
     """Return a data path outside the package's structure (i.e., large datasets)."""
     return Path(test_data_env)
+
+
+@pytest.fixture(scope="session")
+def phantoms():
+    """Root of the CI phantom (``tools/phantoms/phantom.py fixture``); skip without it."""
+    if not phantoms_env or not Path(phantoms_env).is_dir():
+        pytest.skip("NIFREEZE_PHANTOMS does not point to a phantom dataset")
+    return Path(phantoms_env)
 
 
 @pytest.fixture(scope="session")
@@ -115,6 +181,15 @@ def _generate_random_uniform_nd_data(request, size, a=0.0, b=1.0):
     rng = request.node.rng
     data = rng.random(size=size).astype(np.float32)
     return (b - a) * data + a
+
+
+def volumes_first(data: np.ndarray) -> np.ndarray:
+    """Move the volumes of a NIfTI-ordered ``(X, Y, Z, N)`` array to the first axis.
+
+    Datasets store ``(N, X, Y, Z)``; drawing random data in NIfTI order and then
+    moving the axis keeps the drawn values identical to the volumes-last layout.
+    """
+    return np.ascontiguousarray(np.moveaxis(data, -1, 0))
 
 
 def _generate_random_uniform_spatial_data(request, size, a, b):
@@ -272,6 +347,7 @@ def setup_random_base_data(request):
     base_dataobj, affine = _generate_random_uniform_spatial_data(
         request, (*vol_size, volumes), 0.0, 1.0
     )
+    base_dataobj = volumes_first(base_dataobj)
     brainmask_dataobj = rng.choice([True, False], size=vol_size).astype(bool)
     motion_affines = rng.random((volumes, 4, 4))
     datahdr = None
@@ -322,6 +398,7 @@ def setup_random_dwi_data(request, setup_random_gtab_data):
     dwi_dataobj, affine = _generate_random_uniform_spatial_data(
         request, (*vol_size, volumes), 0.0, 1.0
     )
+    dwi_dataobj = volumes_first(dwi_dataobj)
     brainmask_dataobj = rng.choice([True, False], size=vol_size).astype(bool)
     gradients = np.column_stack((bvecs, bvals)).astype("float32")
 
@@ -361,6 +438,7 @@ def setup_random_pet_data(request):
     pet_dataobj, affine = _generate_random_uniform_spatial_data(
         request, (*vol_size, n_frames), 0.0, 1.0
     )
+    pet_dataobj = volumes_first(pet_dataobj)
     brainmask_dataobj = rng.choice([True, False], size=vol_size).astype(bool)
 
     return (

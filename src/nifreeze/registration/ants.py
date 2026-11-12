@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from collections import namedtuple
 from importlib.resources import files
+from io import BytesIO
 from json import loads
 from pathlib import Path
 from warnings import warn
@@ -35,7 +36,6 @@ import nitransforms as nt
 import numpy as np
 from nipype.interfaces.ants.registration import Registration
 from nitransforms.linear import Affine
-from nitransforms.resampling import apply
 
 PARAMETERS_SINGLE_VALUE = {
     "collapse_output_transforms",
@@ -61,12 +61,32 @@ PARAMETERS_DOUBLE_LIST = {"shrink_factors", "smoothing_sigmas", "transform_param
 REGISTRATION_MALFORMED_SETTINGS_ERROR_MSG = "Malformed settings file (levels: {levels})"
 """Registration malformed settings error message."""
 
+REGISTRATION_UNKNOWN_SETTINGS_ERROR_MSG = "Unknown registration settings: {keys}"
+"""Unknown registration settings error message."""
+
+REGISTRATION_INIT_WITHOUT_COLLAPSE_ERROR_MSG = (
+    "An initial transform requires 'collapse_output_transforms': otherwise the first "
+    "output transform is the initialization, not the estimate."
+)
+"""Initial transform without collapsed outputs error message."""
+
+WINDOW_LEVELS = 4095
+"""Highest code of the 12-bit encoding of floating-point registration inputs."""
+
 
 def _to_nifti(
-    data: np.ndarray, affine: np.ndarray, filename: str | Path, clip: bool = True
+    data: np.ndarray,
+    affine: np.ndarray,
+    filename: str | Path,
+    window: tuple[float, float] | None = None,
 ) -> None:
     """
-    Save data as a NIfTI file, optionally applying clipping.
+    Save data as a NIfTI file, optionally clipped to an intensity window.
+
+    Clipping works on a copy (``data`` may be a view into the dataset) and keeps
+    the original units. Integer data keep their type and values within the
+    window. Floating-point data are stored as 12-bit codes (int16), and the
+    ``scl_slope`` and ``scl_inter`` header fields map them back to the window.
 
     Parameters
     ----------
@@ -76,24 +96,59 @@ def _to_nifti(
         The affine transformation matrix.
     filename : :obj:`os.pathlike`
         The file path where the NIfTI file will be saved.
-    clip : :obj:`bool`, optional
-        Whether to apply clipping to the data before saving.
+    window : :obj:`tuple` of :obj:`float`, optional
+        The intensity window ``(a_min, a_max)`` to clip to. If :obj:`None`,
+        the data are saved as they are.
 
     """
     data = np.squeeze(data)
-    if clip:
-        from nifreeze.data.filtering import advanced_clip
-
-        advanced_clip(data, inplace=True)
+    slope_inter = None
+    if window is not None:
+        a_min, a_max = window
+        if np.issubdtype(data.dtype, np.integer):
+            data = np.clip(data, int(np.ceil(a_min)), int(np.floor(a_max)))
+        else:
+            step = (a_max - a_min) / WINDOW_LEVELS
+            data = np.round((np.clip(data, a_min, a_max) - a_min) / step).astype(np.int16)
+            slope_inter = (step, a_min)
 
     nii = nb.Nifti1Image(
         data,
         affine,
         None,
     )
+    if slope_inter is not None:
+        nii.header.set_slope_inter(*slope_inter)
     nii.header.set_sform(affine, code=1)
     nii.header.set_qform(affine, code=1)
     nii.to_filename(filename)
+
+
+def _write_aligned(moving_path: str | Path, matrix: np.ndarray, out_path: str | Path) -> None:
+    """
+    Write the moving image aligned to the fixed image, without resampling.
+
+    The voxel data are copied byte for byte, and the affine is premultiplied by
+    the inverse of the estimated transform, so that a viewer displays the image
+    on top of the fixed one.
+
+    Parameters
+    ----------
+    moving_path : :obj:`os.pathlike`
+        The moving image, an uncompressed NIfTI-1 file.
+    matrix : :obj:`~numpy.ndarray`
+        The estimated transform (fixed-to-moving, in world coordinates).
+    out_path : :obj:`os.pathlike`
+        The output (uncompressed NIfTI-1) file path.
+
+    """
+    raw = Path(moving_path).read_bytes()
+    # Parse the header from the file itself: a loaded image's header has its scaling reset
+    header = nb.Nifti1Header.from_fileobj(BytesIO(raw))
+    aligned = np.linalg.inv(matrix) @ header.get_best_affine()
+    header.set_sform(aligned, code=1)
+    header.set_qform(aligned, code=1)
+    Path(out_path).write_bytes(header.binaryblock + raw[header.sizeof_hdr :])
 
 
 def _prepare_registration_data(
@@ -104,9 +159,13 @@ def _prepare_registration_data(
     dirname: Path | str,
     clip: str | bool | None = None,
     init_affine: np.ndarray | None = None,
+    window: tuple[float, float] | None = None,
 ) -> tuple[Path, Path, Path | None]:
     """
     Prepare the registration data: save the moving and predicted (fixed) images to disk.
+
+    Both images are clipped (as ``clip`` selects) to the same intensity window,
+    so that they reach the registration with the same intensity mapping.
 
     Parameters
     ----------
@@ -125,6 +184,10 @@ def _prepare_registration_data(
         or ``"none"`` of the images.
     init_affine : :obj:`~numpy.ndarray`, optional
         Initial affine transform.
+    window : :obj:`tuple` of :obj:`float`, optional
+        The intensity window ``(a_min, a_max)``. If :obj:`None` and clipping is
+        requested, it is estimated from ``sample`` with
+        :obj:`~nifreeze.data.filtering.robust_window`.
 
     Returns
     -------
@@ -137,21 +200,19 @@ def _prepare_registration_data(
 
     """
 
-    predicted_path = Path(dirname) / f"predicted_{vol_idx:05d}.nii.gz"
-    sample_path = Path(dirname) / f"sample_{vol_idx:05d}.nii.gz"
+    predicted_path = Path(dirname) / f"predicted_{vol_idx:05d}.nii"
+    sample_path = Path(dirname) / f"sample_{vol_idx:05d}.nii"
 
-    _to_nifti(
-        sample,
-        affine,
-        sample_path,
-        clip=str(clip).lower() in ("sample", "both", "true"),
-    )
-    _to_nifti(
-        predicted,
-        affine,
-        predicted_path,
-        clip=str(clip).lower() in ("predicted", "both", "true"),
-    )
+    clip = str(clip).lower()
+    clip_sample = clip in ("sample", "both", "true")
+    clip_predicted = clip in ("predicted", "both", "true")
+    if window is None and (clip_sample or clip_predicted):
+        from nifreeze.data.filtering import robust_window
+
+        window = robust_window(sample)
+
+    _to_nifti(sample, affine, sample_path, window=window if clip_sample else None)
+    _to_nifti(predicted, affine, predicted_path, window=window if clip_predicted else None)
 
     init_path = None
     if init_affine is not None:
@@ -164,14 +225,15 @@ def _prepare_registration_data(
     return predicted_path, sample_path, init_path
 
 
-def _get_ants_settings(settings: str = "b0-to-b0_level0") -> Path:
+def _get_ants_settings(settings: str | Path = "b0-to-b0_level0") -> Path:
     """
     Retrieve the path to ANTs settings configuration file.
 
     Parameters
     ----------
-    settings : :obj:`str`, optional
-        Name of the settings configuration.
+    settings : :obj:`str` or :obj:`os.pathlike`, optional
+        A file of settings, or the name of a configuration of
+        ``nifreeze/registration/config`` (with or without ``.json``).
 
     Returns
     -------
@@ -183,11 +245,17 @@ def _get_ants_settings(settings: str = "b0-to-b0_level0") -> Path:
     >>> _get_ants_settings()
     PosixPath('.../config/b0-to-b0_level0.json')
 
-    >>> _get_ants_settings("b0-to-b0_level1")
-    PosixPath('.../config/b0-to-b0_level1.json')
+    >>> _get_ants_settings("dwi-to-dwi_level1")
+    PosixPath('.../config/dwi-to-dwi_level1.json')
+
+    >>> _get_ants_settings("dwi-to-dwi_level1.json")
+    PosixPath('.../config/dwi-to-dwi_level1.json')
 
     """
-    return Path(str(files("nifreeze.registration").joinpath(f"config/{settings}.json")))
+    if (path := Path(settings)).is_file():
+        return path
+    name = str(settings).removesuffix(".json")
+    return Path(str(files("nifreeze.registration").joinpath(f"config/{name}.json")))
 
 
 def _massage_mask_path(mask_path: str | Path | list[str], nlevels: int) -> list[str]:
@@ -234,7 +302,7 @@ def generate_command(
     fixedmask_path: str | Path | list[str] | None = None,
     movingmask_path: str | Path | list[str] | None = None,
     init_affine: str | Path | None = None,
-    default: str = "b0-to-b0_level0",
+    default: str | Path = "b0-to-b0_level0",
     terminal_output: str | None = None,
     num_threads: int | None = None,
     environ: dict | None = None,
@@ -255,8 +323,9 @@ def generate_command(
         Path to the moving image mask.
     init_affine : :obj:`os.pathlike`, optional
         Initial affine transformation.
-    default : :obj:`str`, optional
-        Default settings configuration.
+    default : :obj:`str` or :obj:`os.pathlike`, optional
+        Default settings configuration: a file, or the name of a packaged one
+        (see :func:`_get_ants_settings`).
     terminal_output : :obj:`str`, optional
         Redirect terminal output (Nipype configuration)
     environ : :obj:`dict`, optional
@@ -389,6 +458,8 @@ def generate_command(
     settings = loads(_get_ants_settings(default).read_text()) | {
         k: kwargs.pop(k) for k in PARAMETERS_SINGLE_VALUE if k in kwargs
     }
+    if unknown := sorted(set(kwargs) - PARAMETERS_SINGLE_LIST - PARAMETERS_DOUBLE_LIST):
+        raise TypeError(REGISTRATION_UNKNOWN_SETTINGS_ERROR_MSG.format(keys=", ".join(unknown)))
 
     # Determine number of levels and assert consistency of levels
     levels = {len(settings[p]) for p in PARAMETERS_SINGLE_LIST if p in settings}
@@ -400,8 +471,6 @@ def generate_command(
     for key, value in kwargs.items():
         if key in PARAMETERS_DOUBLE_LIST:
             value = [value]
-        elif key not in PARAMETERS_SINGLE_LIST:
-            continue
 
         if nlevels == 1:
             settings[key] = [value]
@@ -422,6 +491,10 @@ def generate_command(
 
     # Set initializing affine if provided
     if init_affine is not None:
+        # The output is read back as the absolute estimate, which holds only
+        # when ANTs collapses the initialization into the estimated transform
+        if not settings.get("collapse_output_transforms", False):
+            raise ValueError(REGISTRATION_INIT_WITHOUT_COLLAPSE_ERROR_MSG)
         settings["initial_moving_transform"] = str(init_affine)
 
     # Generate command line with nipype and return
@@ -434,6 +507,8 @@ def generate_command(
     )
     if num_threads:
         reg_iface.inputs.num_threads = num_threads
+        # nipype exports only NSLOTS, which ITK reads only when this is unset
+        reg_iface.inputs.environ["ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS"] = str(num_threads)
 
     return reg_iface
 
@@ -477,7 +552,7 @@ def _run_registration(
         environ["ANTS_RANDOM_SEED"] = str(seed)
 
     if "ants_config" in kwargs:
-        align_kwargs["default"] = align_kwargs.pop("ants_config").replace(".json", "")
+        align_kwargs["default"] = align_kwargs.pop("ants_config")
 
     registration = generate_command(
         fixed_path,
@@ -498,10 +573,6 @@ def _run_registration(
         nt.io.itk.ITKLinearTransform.from_filename(result.forward_transforms[0]).to_ras(
             reference=fixed_path, moving=moving_path
         ),
-    )
-    # debugging: generate aligned file for testing
-    apply(xform, moving_path, reference=fixed_path).to_filename(
-        dirname / f"dbg_{vol_idx:05d}.nii.gz"
     )
 
     return xform

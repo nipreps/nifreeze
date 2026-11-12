@@ -62,9 +62,32 @@ followed by bullets. See [`schema.md`](schema.md) for the format contract
 - wired `index.md` (4 concepts + a DIPY tool-page subsection + 4 synthesis + a DIPY refs group) and `_MAP.md` (28 edges, legal enum only; `implements`/`depends_on`/`informs`/`replicates`/`critiques`); facet→umbrella grouping via prose + index (no illegal `part_of`)
 - cache maintenance: each tool page carries `refresh_needed_if: "DIPY pin in pyproject.toml advances past 2ecd3655"` (suppresses W001) and `source_urls` embedding the SHA; no new `/wiki-*` skill
 
+## 2026-07-15 — wiki-expansion — data-layer storage backend (issues #347/#171)
+- grew the KB to ground the memory-mapped, checkpointable data-layer refactor (memmap working array + HDF5 container); decision confirmed with the maintainer over live-zarr/live-h5py/backend-protocol alternatives
+- wrote 2 **concept** pages (`namespace: rr`, internal): [[concept-memory-mapped-io]] (demand paging, page cache, read-only/CoW/r+ maps, why volume-wise access fits) and [[concept-checkpoint-restart]] (persisted-state contract, idempotent resume, flush-per-volume, checkpoint outlives process)
+- wrote 4 **tool** pages (dependency API surfaces): [[tool-numpy-memmap]] (numpy 2.3.5 — memmap is an ndarray subclass = zero consumer rewrites; open_memmap; pickling-materializes hazard), [[tool-hdf5-storage-layout]] (h5py 3.12.1/HDF5 1.14.4 — contiguous vs chunked/compact, `get_offset()` direct-mmap + `_is_directly_mappable` guard, `read_direct` streaming fallback, NFDH5 format), [[tool-nibabel-arrayproxy]] (nibabel 5.3.2 — lazy proxy nifreeze currently defeats with `np.asanyarray`; scaling caveat), [[tool-zarr-array-store]] (deferred: not an ndarray subclass → would break every model consumer; pattern doesn't exercise chunk/cloud strengths)
+- wrote 1 **synthesis** decision record [[storage-backend-decision-memmap-hdf5]] integrating the above; empirical-validation status = peak-RSS tests (child-process `ru_maxrss`) + interrupt/resume test
+- wired `index.md` (2 concepts + a storage/memory tool-page subsection + 1 synthesis) and `_MAP.md` (12 edges; `implements`/`depends_on`/`informs`/`critiques`)
+
 ## 2026-10-19 — DIPY sync — pin 2ecd3655→floor 1.12.1
 - `pyproject.toml` now requires `dipy>=1.12.1`: PyPI refuses the `dipy @ git+…@2ecd3655` URL dependency, so every package upload failed since 2026-07-09 (nifreeze#504)
 - ran the sync procedure of [[dipy-version-pin-fragility]] backwards (`git diff 1.12.1 2ecd3655` over the consumed files): no consumed signature differs; changes are docstrings, string literals and refactors that keep behavior, except `dipy/reconst/multi_voxel.py` (dipy/dipy#4054, unreleased)
 - re-keyed the 6 tool pages and [[vendored-gqi-lineage]] to `1.12.1` (`source_urls`, `refresh_needed_if`, prose) and bumped `last_verified`; reworded the pin prose in [[tool-dipy]], [[dipy-version-pin-fragility]], `schema.md`, `index.md`, `_MAP.md` and `refs/garyfallidis-2014-dipy.md`
 - [[tool-dipy-reconst-models]]: documented the 1.12.1 orchestration-kwarg leak (dipy/dipy#4053; nifreeze backports #4054 for DKI) and a boolean-`weights` drop in DIPY's parallel worker at both 1.12.1 and 2ecd3655 (OLS/LS/CLS DKI fits come out weighted with `n_jobs>1`; reproduced)
 - sync procedure now keys on the floor, adds `multi_voxel.py` to the diff list, and names `test_dipy_orchestration_backport_still_needed` as a trigger
+
+## 2026-10-20 — data-layer — volumes-first API and cache lifecycle (nifreeze#461)
+- [[storage-backend-decision-memmap-hdf5]]: recorded the volumes-first decision (`dataobj` is C-contiguous `(N, X, Y, Z)`; `dataset[i]` is `dataobj[i]`), the lifecycle rules for temporary caches, and the safe `to_filename`; corrected the consumer list and the claim that the direct map is writable (it is copy-on-write)
+- [[tool-numpy-memmap]]: added the dirty-pages-count-toward-RSS gotcha (measured +145 MB vs +8 MB) and the cache ownership rule (`weakref.finalize`, `.base` keeps the map alive, pid guard)
+- [[tool-hdf5-storage-layout]]: documented the file-write cache fill and the x-slab read of version-1 files
+- follow-up issues: nifreeze#513 (masked, time-first cache and block-wise fits), nifreeze#514 (in-place mutation of dataset arrays)
+
+## 2026-10-20: data-layer: name the HDF5 layout nfHDF5 (nifreeze#461)
+- renamed the container from NFDH5 to *nfHDF5* (HDF5 shaped for nifreeze) in [[tool-hdf5-storage-layout]], [[concept-checkpoint-restart]], [[tool-nibabel-arrayproxy]], [[tool-numpy-memmap]], [[storage-backend-decision-memmap-hdf5]] and `_MAP.md`, after review on nifreeze#461; version-2 files write `Format="nfHDF5"` (PET included), version-1 files keep `"NFDH5"` or `"EMC/PET"`
+- [[tool-hdf5-storage-layout]]: corrected the `Type` attrs (`/0` says `"base dataset"` or `"pet"`; DWI adds a file attr `Type="dmri"`) and recorded that the loader keys on `volume_axis`, not on `Format`
+- user-facing description added to `docs/design.rst` (label `nfhdf5`)
+
+## 2026-10-20: tool page: asv 0.6.6 behavior behind the benchmark CI (nifreeze#517)
+- wrote [[tool-asv]] from the source of asv 0.6.6 and asv_runner 0.2.5 to 0.3.2: the working-tree suite runs against every commit; discovery uses the first commit; `NotImplementedError` skips; one process per benchmark, parameters and round; a `setup` without arguments runs before `setup_cache`; `--quick` and the factor-only compare; `mem_` is a shallow-copy size and `peakmem_` the lifetime RSS; `asv publish` empties `html_dir` and drops results of other benchmark versions
+- recorded how to count CPU time across loky workers (`process_time` + `RUSAGE_CHILDREN` + live `psutil` children) and what `tracemalloc` sees
+- `index.md`: new "Benchmark tooling" subsection; `schema.md`: the dependency clause names asv next to DIPY

@@ -23,6 +23,7 @@
 """Unit tests exercising the estimator."""
 
 import json
+import os
 import re
 from collections.abc import Sized
 from importlib.resources import files
@@ -35,13 +36,18 @@ import nitransforms as nt
 import numpy as np
 import pytest
 from nibabel.affines import from_matvec
+from nibabel.arrayproxy import ArrayProxy
 from nibabel.eulerangles import euler2mat
 from nipype.interfaces.ants.registration import Registration
 from nipype.interfaces.base import Undefined
+from nitransforms.resampling import apply
 
+from nifreeze.data.filtering import robust_window
 from nifreeze.registration import ants
 from nifreeze.registration.ants import (
+    REGISTRATION_INIT_WITHOUT_COLLAPSE_ERROR_MSG,
     REGISTRATION_MALFORMED_SETTINGS_ERROR_MSG,
+    REGISTRATION_UNKNOWN_SETTINGS_ERROR_MSG,
     _massage_mask_path,
     _prepare_registration_data,
     generate_command,
@@ -144,6 +150,99 @@ def test_prepare_registration_data(tmp_path, init_affine, expect_init_file):
         assert not init_file_expected_path.exists(), "Unexpected init file found on disk"
 
 
+@pytest.mark.parametrize("window", [None, (200.0, 800.0)])
+@pytest.mark.parametrize("dtype", ["float32", "int16"])
+def test_prepare_registration_data_clip(request, tmp_path, dtype, window):
+    """Both images are clipped to one window, in their units, and the inputs are unchanged."""
+    rng = request.node.rng
+    sample = (rng.random((16, 16, 16)) * 1000).astype(dtype)
+    predicted = (rng.random((16, 16, 16)) * 1000).astype(dtype)
+    originals = (sample.copy(), predicted.copy())
+
+    predicted_path, sample_path, _ = _prepare_registration_data(
+        sample=sample,
+        predicted=predicted,
+        affine=np.eye(4),
+        vol_idx=0,
+        dirname=tmp_path,
+        clip="both",
+        window=window,
+    )
+
+    assert np.array_equal(sample, originals[0])
+    assert np.array_equal(predicted, originals[1])
+
+    # Without a window, the sample sets it
+    a_min, a_max = window or robust_window(sample)
+    step = (a_max - a_min) / ants.WINDOW_LEVELS
+    for path, original in zip((sample_path, predicted_path), originals, strict=True):
+        assert path.suffix == ".nii"
+        img = load_api(str(path), nb.Nifti1Image)
+        assert img.get_data_dtype() == np.int16
+        if dtype == "int16":
+            # Integers keep their values within the window
+            expected = np.clip(original, np.ceil(a_min), np.floor(a_max))
+            assert np.array_equal(img.get_fdata(), expected)
+        else:
+            # Floats are stored as 12-bit codes that map back to the window
+            assert isinstance(img.dataobj, ArrayProxy)
+            codes = np.asanyarray(img.dataobj.get_unscaled())
+            assert codes.min() >= 0
+            assert codes.max() <= ants.WINDOW_LEVELS
+            expected = np.clip(original, a_min, a_max)
+            assert np.allclose(img.get_fdata(), expected, rtol=0, atol=0.51 * step)
+
+
+def test_prepare_registration_data_clip_sample(tmp_path):
+    """With ``clip="sample"``, the prediction is written as it is."""
+    sample = np.linspace(0.0, 1000.0, 16**3, dtype="float32").reshape((16, 16, 16))
+    predicted = 2.0 * sample
+
+    predicted_path, sample_path, _ = _prepare_registration_data(
+        sample=sample,
+        predicted=predicted,
+        affine=np.eye(4),
+        vol_idx=0,
+        dirname=tmp_path,
+        clip="sample",
+        window=(100.0, 900.0),
+    )
+
+    assert np.array_equal(load_api(str(predicted_path), nb.Nifti1Image).get_fdata(), predicted)
+    written = load_api(str(sample_path), nb.Nifti1Image).get_fdata()
+    assert np.allclose([written.min(), written.max()], [100.0, 900.0])
+
+
+def test_write_aligned(tmp_path):
+    """The aligned trace shows the moving image where resampling would put it."""
+    affine = from_matvec(np.diag([2.0, 2.0, 2.5]), [-20.0, -22.0, -18.0])
+    grid = np.indices((20, 22, 16)).astype("float32")
+    blob = 1000.0 * np.exp(-((grid[0] - 9) ** 2 + (grid[1] - 12) ** 2 + (grid[2] - 7) ** 2) / 18)
+    fixed_path = tmp_path / "fixed.nii"
+    moving_path = tmp_path / "moving.nii"
+    ants._to_nifti(blob, affine, fixed_path)
+    # The 12-bit encoding ANTs receives
+    ants._to_nifti(blob, affine, moving_path, window=(0.0, 1000.0))
+    # Fixed-to-moving transform in world coordinates, as `_run_registration` returns it
+    matrix = from_matvec(euler2mat(0.05, -0.03, 0.08), [1.5, -2.0, 0.8])
+    aligned_path = tmp_path / "aligned.nii"
+
+    ants._write_aligned(moving_path, matrix, aligned_path)
+
+    moving = load_api(str(moving_path), nb.Nifti1Image)
+    aligned = load_api(str(aligned_path), nb.Nifti1Image)
+    assert isinstance(moving.dataobj, ArrayProxy)
+    assert isinstance(aligned.dataobj, ArrayProxy)
+    # The data are copied as they are, scaling included
+    assert np.array_equal(aligned.dataobj.get_unscaled(), moving.dataobj.get_unscaled())
+    assert np.array_equal(aligned.get_fdata(), moving.get_fdata())
+    assert np.allclose(aligned.affine, np.linalg.inv(matrix) @ moving.affine)
+    # Seen on the fixed grid, the trace matches the moving image resampled through the transform
+    resampled = apply(nt.linear.Affine(matrix), moving_path, reference=fixed_path)
+    viewed = apply(nt.linear.Affine(np.eye(4)), aligned_path, reference=fixed_path)
+    assert np.allclose(np.asanyarray(viewed.dataobj), np.asanyarray(resampled.dataobj), atol=1e-3)
+
+
 def test_generate_command_malformed_settings(tmp_path, monkeypatch, random_nifti_file, json_file):
     fixed = random_nifti_file(tmp_path / "fixed.nii.gz")
     moving = random_nifti_file(tmp_path / "moving.nii.gz")
@@ -200,6 +299,76 @@ def test_generate_command_basic(tmp_path, random_nifti_file):
     assert reg.inputs.moving_image[0] == str(Path(moving).absolute())
 
 
+def test_generate_command_unknown_settings(tmp_path, random_nifti_file):
+    """A setting that generate_command does not know raises instead of being dropped."""
+    fixed = random_nifti_file(tmp_path / "fixed.nii.gz")
+    moving = random_nifti_file(tmp_path / "moving.nii.gz")
+
+    message = REGISTRATION_UNKNOWN_SETTINGS_ERROR_MSG.format(
+        keys="align_kwargs, convergence_threshold"
+    )
+    with pytest.raises(TypeError, match=re.escape(message)):
+        generate_command(
+            fixed_path=fixed,
+            moving_path=moving,
+            align_kwargs={"metric": "GC"},
+            convergence_threshold=[1e-6],
+        )
+
+
+def test_get_ants_settings_from_a_file(tmp_path):
+    """A file of settings is used as it is; packaged names resolve with or without .json."""
+    packaged = ants._get_ants_settings()
+    assert packaged.name == "b0-to-b0_level0.json"
+    assert packaged.is_file()
+    assert ants._get_ants_settings("b0-to-b0_level0.json") == packaged
+
+    # The same name, in another folder
+    copied = tmp_path / "b0-to-b0_level0.json"
+    copied.write_text(packaged.read_text())
+    assert ants._get_ants_settings(copied) == copied
+    assert ants._get_ants_settings(str(copied)) == copied
+
+
+def test_generate_command_from_a_settings_file(tmp_path, random_nifti_file):
+    """A file of settings sets every level, and how many there are."""
+    fixed = random_nifti_file(tmp_path / "fixed.nii.gz")
+    moving = random_nifti_file(tmp_path / "moving.nii.gz")
+
+    # A third level, at full resolution
+    settings = json.loads(ants._get_ants_settings().read_text())
+    for value in settings.values():
+        if isinstance(value, list):
+            value.append(value[-1])
+    settings["shrink_factors"][-1] = [1]
+    settings_file = tmp_path / "three-levels.json"
+    settings_file.write_text(json.dumps(settings))
+
+    cmdline = generate_command(fixed, moving, default=settings_file).cmdline
+    assert cmdline.count("--transform Rigid") == 3
+    assert "--shrink-factors 3 " in cmdline
+    assert "--shrink-factors 2 " in cmdline
+    assert "--shrink-factors 1 " in cmdline
+
+
+def test_run_registration_passes_a_settings_file(tmp_path, monkeypatch):
+    """``ants_config`` reaches generate_command as given, so a path is not mangled."""
+    received = {}
+
+    class Stop(Exception):
+        pass
+
+    def capture(*args, **kwargs):
+        received.update(kwargs)
+        raise Stop
+
+    monkeypatch.setattr(ants, "generate_command", capture)
+    settings_file = str(tmp_path / "settings.json" / "variant.json")
+    with pytest.raises(Stop):
+        ants._run_registration("fixed.nii", "moving.nii", 0, tmp_path, ants_config=settings_file)
+    assert received["default"] == settings_file
+
+
 def test_generate_command_with_masks_init_and_threads(tmp_path, random_nifti_file):
     """Ensure generate_command accepts masks, an initial transform path, and
     num_threads, and exposes them on the returned Registration.inputs.
@@ -248,6 +417,22 @@ def test_generate_command_with_masks_init_and_threads(tmp_path, random_nifti_fil
     # At minimum, the mask path should appear in the list (exact
     # repetition/count depends on settings file)
     assert str(mask) in fim or str(mask.absolute()) in fim
+
+
+def test_generate_command_threads_hold_over_the_environment(tmp_path, monkeypatch):
+    """A thread count set for every process (as CI does) does not override the caller's."""
+    monkeypatch.setenv("ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS", "4")
+    fixed = tmp_path / "fixed.nii"
+    moving = tmp_path / "moving.nii"
+    fixed.touch()
+    moving.touch()
+
+    reg = generate_command(fixed, moving, num_threads=1)
+
+    # nipype runs ANTs with the process's environment, updated by the interface's
+    environ = dict(os.environ) | dict(reg.inputs.environ)
+    # ITK reads ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS first, and NSLOTS only without it
+    assert environ["ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS"] == "1"
 
 
 @pytest.mark.parametrize(
@@ -330,6 +515,36 @@ def test_generate_command_override_nested_list_parameters(
     # Assert the resulting Registration.inputs reflect the expected overrides
     assert reg.inputs.shrink_factors[:] == expected_shrink
     assert reg.inputs.metric[:] == expected_metric
+
+
+def test_generate_command_init_requires_collapse(
+    tmp_path, monkeypatch, random_nifti_file, json_file
+):
+    """An initial transform is only read back correctly if ANTs collapses the output."""
+    fixed = random_nifti_file(tmp_path / "fixed.nii.gz")
+    moving = random_nifti_file(tmp_path / "moving.nii.gz")
+    settings_file = json_file(
+        {
+            "shrink_factors": [[2]],
+            "metric": ["Mattes"],
+            "collapse_output_transforms": False,
+            "dimension": 3,
+            "interpolation": "Linear",
+            "output_transform_prefix": "transform",
+            "write_composite_transform": False,
+        },
+        tmp_path / "settings.json",
+    )
+    monkeypatch.setattr(ants, "_get_ants_settings", lambda settings="": Path(settings_file))
+    init_path = tmp_path / "init.mat"
+    init_path.write_text("ITK transform placeholder")
+
+    # Without an initial transform, these settings are accepted
+    generate_command(fixed_path=fixed, moving_path=moving, default="unused")
+    with pytest.raises(ValueError, match=re.escape(REGISTRATION_INIT_WITHOUT_COLLAPSE_ERROR_MSG)):
+        generate_command(
+            fixed_path=fixed, moving_path=moving, default="unused", init_affine=init_path
+        )
 
 
 @pytest.mark.parametrize(

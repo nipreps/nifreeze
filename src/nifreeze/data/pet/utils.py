@@ -97,7 +97,7 @@ def compute_temporal_markers(frame_time: np.ndarray) -> Tuple[np.ndarray, float]
 def compute_uptake_statistic(data: np.ndarray, stat_func: Callable[..., np.ndarray] = np.sum):
     """Compute a statistic over all voxels for each frame on a PET sequence.
 
-    Assumes the last dimension corresponds to the number of frames in the
+    Assumes the first dimension corresponds to the number of frames in the
     sequence.
 
     Parameters
@@ -114,4 +114,4 @@ def compute_uptake_statistic(data: np.ndarray, stat_func: Callable[..., np.ndarr
         1D array of statistic values for each frame.
     """
 
-    return stat_func(data.reshape(-1, data.shape[-1]), axis=0)
+    return stat_func(data.reshape(data.shape[0], -1), axis=1)

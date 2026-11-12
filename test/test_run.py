@@ -59,6 +59,8 @@ def test_run_call(tmp_path, monkeypatch, write_hdf5):
         str(input_file),
         "--models",
         "dti",
+        "--debug-dir",
+        str(tmp_path / "debug"),
     ]
 
     if write_hdf5:
@@ -74,6 +76,8 @@ def test_run_call(tmp_path, monkeypatch, write_hdf5):
             cli_run.main(argv)
 
     assert Path(tmp_path / out_filename).is_file()
+    assert called["kwargs"]["debug_dir"] == tmp_path / "debug"
+    assert called["kwargs"]["instant_update"] is True
     if called["dataset"].motion_affines is not None:
         assert Path(tmp_path / out_filename).is_file()
         out_bval_filename = Path(Path(input_file).name).stem + ".bval"

@@ -1,0 +1,61 @@
+name: Synthetic phantom fixture
+description: >-
+  Restore the small synthetic dataset of ``tools/phantoms/phantom.py fixture`` from the
+  cache, or simulate it, and export its location as NIFREEZE_PHANTOMS.
+
+inputs:
+  path:
+    description: Directory of the dataset
+    required: false
+    default: ~/nifreeze-phantoms
+
+outputs:
+  path:
+    description: Absolute path of the dataset
+    value: ${{ steps.locate.outputs.path }}
+  cache-hit:
+    description: Whether the dataset came from the cache
+    value: ${{ steps.restore.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Locate the dataset
+      id: locate
+      shell: bash
+      env:
+        DATASET: ${{ inputs.path }}
+      run: |
+        DATASET="${DATASET/#\~/$HOME}"
+        echo "path=$DATASET" >> "$GITHUB_OUTPUT"
+        echo "NIFREEZE_PHANTOMS=$DATASET" >> "$GITHUB_ENV"
+
+    - name: Restore the dataset
+      id: restore
+      uses: actions/cache/restore@v5
+      with:
+        path: ${{ steps.locate.outputs.path }}
+        # What the dataset depends on: the generator and its environment, the protocol,
+        # and the NiFreeze code it calls (the noise, and the motions of the plan)
+        key: phantom-fixture-v1-${{ hashFiles('tools/phantoms/phantom.py', 'tools/phantoms/phantom.py.lock', 'tools/phantoms/protocols.toml', 'tools/phantoms/protocols/sherbrooke.b', 'src/nifreeze/testing/phantoms.py', 'src/nifreeze/testing/perturbations.py', 'src/nifreeze/analysis/sensitivity.py') }}
+
+    - name: Install uv
+      if: steps.restore.outputs.cache-hit != 'true'
+      uses: astral-sh/setup-uv@v7
+      with:
+        enable-cache: true
+        # TRXScan is built from its pinned commit; uv's cache keeps the build
+        cache-dependency-glob: tools/phantoms/phantom.py.lock
+        cache-suffix: phantoms
+
+    - name: Simulate the dataset
+      if: steps.restore.outputs.cache-hit != 'true'
+      shell: bash
+      run: uv run tools/phantoms/phantom.py fixture --out "$NIFREEZE_PHANTOMS"
+
+    - name: Save the dataset
+      if: steps.restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v5
+      with:
+        path: ${{ steps.locate.outputs.path }}
+        key: ${{ steps.restore.outputs.cache-primary-key }}

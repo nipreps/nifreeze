@@ -47,7 +47,7 @@ SIZE_KEYS = (SIZE_KWARG,) + MODALITY_SPECIFIC_SIZE_KEYS
 """Keys that may be used to infer the number of volumes in a dataset. When the
 size of the structure to iterate over is not given explicitly, these keys
 correspond to properties that distinguish one imaging modality from another, and
-are part of the 4th axis (e.g. diffusion gradients in DWI or uptake in PET)."""
+index the volume axis (e.g. diffusion gradients in DWI or uptake in PET)."""
 
 DOMAIN_KEYS_DOC = f"""
 size : :obj:`int`, optional

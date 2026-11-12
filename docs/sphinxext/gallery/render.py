@@ -31,6 +31,9 @@ handles image orientation) with four rows for a held-out (or held-in) volume:
    volume is intensity-matched to the observed one by linear regression so the
    two are on a comparable range), which makes mismatches pop as block seams,
 4. **difference** — observed minus the matched prediction.
+
+Matching hides the prediction's amplitude, so the predicted row's label gives the
+ratio of its raw mean to the observed mean within the mask.
 """
 
 from __future__ import annotations
@@ -197,6 +200,7 @@ def save_slice_panel(
     checker = _checkerboard(observed, matched)
 
     m = np.asarray(mask, dtype=bool) if mask is not None else np.ones(observed.shape, dtype=bool)
+    amplitude = float(predicted[m].mean() / observed[m].mean())
     finite = observed[np.isfinite(observed)]
     vmax = float(np.percentile(finite, 99)) if finite.size else 1.0
 
@@ -214,7 +218,11 @@ def save_slice_panel(
 
     rows = [
         ("observed", observed, {"cmap": "gray", "vmin": 0.0, "vmax": vmax, "colorbar": False}),
-        ("predicted", matched, {"cmap": "gray", "vmin": 0.0, "vmax": vmax, "colorbar": False}),
+        (
+            f"predicted (matched; raw mean ×{amplitude:.2f} of observed)",
+            matched,
+            {"cmap": "gray", "vmin": 0.0, "vmax": vmax, "colorbar": False},
+        ),
         ("checkerboard", checker, {"cmap": "gray", "vmin": 0.0, "vmax": vmax, "colorbar": False}),
         (
             "difference (relative)",

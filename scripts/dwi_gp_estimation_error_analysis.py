@@ -68,8 +68,8 @@ def cross_validate(
 
     Returns
     -------
-    :obj:`dict`
-        Data for the predicted signal and its error.
+    :obj:`~numpy.ndarray`
+        The score of each fold (negative root mean squared error).
 
     """
 
@@ -214,7 +214,8 @@ def main() -> None:
         scores: dict[str, list] = defaultdict(list, {})
         for n in args.kfold:
             for i in range(args.repeats):
-                cv_scores = -1.0 * cross_validate(X, y.T, n, i, gpr)
+                # One k-fold split per repeat
+                cv_scores = -1.0 * cross_validate(X, y.T, n, 1, gpr)
                 scores["rmse"] += cv_scores.tolist()
                 scores["repeat"] += [i] * len(cv_scores)
                 scores["n_folds"] += [n] * len(cv_scores)

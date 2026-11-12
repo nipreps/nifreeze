@@ -35,7 +35,7 @@ from nifreeze.data.dmri import DWI
 from nifreeze.model import lovo
 from nifreeze.model._dipy import GP_JITTER
 from nifreeze.model.gpr import DiffusionGPR, MultiShellKernel, SphericalKriging, uses_bvalue
-from nifreeze.model.gqi import GeneralizedQSamplingModel
+from nifreeze.model.gqi import GeneralizedQSamplingModel, shell_bvalues, sphere_gram
 from nifreeze.testing import simulations as _sim
 
 
@@ -63,7 +63,7 @@ def _crossing_dwi(n_dirs=40, side=6, seed=1234):
     )
     dataobj = np.asarray(signal)[: side**2].reshape(side, side, 1, -1).astype(np.float32)
     return DWI(
-        dataobj=dataobj,
+        dataobj=np.moveaxis(dataobj, -1, 0),  # simulated volumes last; datasets take them first
         affine=np.eye(4),
         brainmask=np.ones(dataobj.shape[:3], dtype=bool),
         gradients=np.column_stack([gtab.bvecs, gtab.bvals]),
@@ -290,19 +290,19 @@ def test_hyperparameters_roundtrip(tmp_path):
 def test_masked_signal_matrix_memmap(tmp_path, request):
     """Signals are gathered volume by volume, also from memory-mapped data."""
     rng = request.node.rng
-    data = np.memmap(tmp_path / "data.dat", dtype=np.float32, mode="w+", shape=(3, 4, 5, 6))
-    data[:] = rng.random((3, 4, 5, 6))
+    data = np.memmap(tmp_path / "data.dat", dtype=np.float32, mode="w+", shape=(6, 3, 4, 5))
+    data[:] = rng.random((6, 3, 4, 5))
     mask = rng.random((3, 4, 5)) > 0.5
 
     class _Dataset:
         dataobj = data
 
         def __len__(self):
-            return data.shape[-1]
+            return data.shape[0]
 
     signals = lovo.masked_signal_matrix(_Dataset(), mask)
     assert signals.shape == (6, mask.sum())
-    assert np.allclose(signals, np.asarray(data)[mask].T)
+    assert np.allclose(signals, np.asarray(data)[:, mask])
 
 
 @pytest.mark.parametrize(
@@ -329,7 +329,7 @@ def test_gploo_matches_fixed_hyperparameter_refits(setup_random_dwi_data):
 
     mask = gp._data_mask
     X = np.asarray(dwi.gradients)[:, :3]
-    signals = np.moveaxis(np.asarray(dwi.dataobj), -1, 0)[:, mask].astype(float)
+    signals = np.asarray(dwi.dataobj)[:, mask].astype(float)
     for index in (0, len(dwi) // 2):
         train = np.ones(len(dwi), dtype=bool)
         train[index] = False
@@ -343,7 +343,7 @@ def test_gploo_matches_fixed_hyperparameter_refits(setup_random_dwi_data):
 
         predicted = gp.fit_predict(index)
         assert predicted is not None
-        assert predicted.shape == dwi.dataobj.shape[:-1]
+        assert predicted.shape == dwi.shape3d
         assert np.allclose(predicted[mask], expected, rtol=1e-4, atol=1e-5)
         assert np.all(predicted[~mask] == 0)
 
@@ -417,7 +417,7 @@ def test_gploo_multishell_auto_kernel(request):
     bvecs = np.concatenate([gtabs[0].bvecs, gtabs[1].bvecs[1:]])
     dataobj = (rng.random((3, 3, 2, len(bvals))) + 0.5).astype(np.float32)
     dwi = DWI(
-        dataobj=dataobj,
+        dataobj=np.moveaxis(dataobj, -1, 0),  # drawn volumes last; datasets take them first
         affine=np.eye(4),
         brainmask=np.ones(dataobj.shape[:3], dtype=bool),
         gradients=np.column_stack([bvecs, bvals]),
@@ -428,44 +428,90 @@ def test_gploo_multishell_auto_kernel(request):
     assert uses_bvalue(gp._kernel)
 
 
-def test_gqikrr_matches_explicit_ridge(setup_random_dwi_data):
-    """``GQIKRRModel`` rows equal kernel ridge regression on the other volumes."""
-    dwi = _random_dwi(setup_random_dwi_data)
-    krr = model.dmri.GQIKRRModel(dwi, krr_lambda=0.1)
+@pytest.mark.parametrize("ridge", [1e-3, 0.1, 10.0])
+def test_gqi_closed_form_matches_refits(ridge):
+    """Each row of the smoother holds the weights of GQI refit without that volume.
 
-    gradients = np.asarray(dwi.gradients, dtype=float)
+    ``GeneralizedQSamplingFit.predict`` is linear in the data above its clamp at
+    zero, so a fit on an offset identity matrix gives its weights, one voxel per
+    training volume. The last volume is alone in its shell: refit, it is
+    predicted around the mean of the nearest shell, and so is it in closed form.
+    """
+    rng = np.random.default_rng(1234)
+    bvals = np.repeat([1000.0, 2000.0, 3000.0], [12, 12, 1])
+    bvecs = rng.standard_normal((len(bvals), 3))
+    gradients = np.column_stack([bvecs / np.linalg.norm(bvecs, axis=1, keepdims=True), bvals])
     gtab = gradient_table_from_bvals_bvecs(gradients[:, -1], gradients[:, :-1])
-    basis = GeneralizedQSamplingModel(gtab).kernel
-    gram = basis @ basis.T
-    gram /= np.trace(gram) / len(gram)
+    gram = sphere_gram(GeneralizedQSamplingModel(gtab).kernel)
+    smoother = lovo.lovo_smoother(
+        gram + ridge * np.eye(len(gram)), shells=shell_bvalues(gradients[:, -1])
+    )
 
-    mask = krr._data_mask
-    signals = np.moveaxis(np.asarray(dwi.dataobj), -1, 0)[:, mask].astype(float)
-    for index in (0, len(dwi) // 2):
-        train = np.ones(len(dwi), dtype=bool)
-        train[index] = False
-        ridge = gram[np.ix_(train, train)] + 0.1 * np.eye(train.sum())
-        expected = gram[index, train] @ np.linalg.solve(ridge, signals[train])
+    offset = 100.0  # Keeps every prediction above the clamp at zero
+    for index in (0, 12, len(gradients) - 1):
+        train = np.arange(len(gradients)) != index
+        fit = GeneralizedQSamplingModel(
+            gradient_table_from_bvals_bvecs(gradients[train, -1], gradients[train, :-1]),
+            ridge=ridge,
+        ).fit(offset + np.eye(train.sum()))
+        target = gradient_table_from_bvals_bvecs(gradients[[index], -1], gradients[[index], :-1])
+        weights = fit.predict(target)[:, 0] - offset
+        assert np.allclose(smoother[index, train], weights, rtol=0, atol=1e-10)
+        assert smoother[index, index] == 0.0
+
+
+@pytest.mark.parametrize("kwargs", [{}, {"ridge": 0.1}], ids=["default", "ridge"])
+def test_gqikrr_matches_gqi_refits(kwargs):
+    """With the same ridge, GQI-KRR predicts as GQI refit on the other volumes."""
+    dwi = _crossing_dwi()
+    krr = model.dmri.GQIKRRModel(dwi, **kwargs)
+    gqi = model.dmri.GQIModel(dwi, **kwargs)
+    for index in (0, 10, 20, 30):
+        closed_form, refit = krr.fit_predict(index), gqi.fit_predict(index)
+        assert closed_form is not None and refit is not None
+        assert np.allclose(closed_form, refit, rtol=1e-5, atol=1e-3)
+
+
+def test_gqikrr_selects_ridge():
+    """Asked to, GQI-KRR chooses its ridge from the grid and predicts the signal."""
+    dwi = _crossing_dwi()
+    mask = np.ones(dwi.shape3d, dtype=bool)
+    krr = model.dmri.GQIKRRModel(dwi, krr_lambda=None)
+    assert krr._krr_lambda is None
+
+    errors, observed = [], []
+    for index in (0, 10, 20, 30):
         predicted = krr.fit_predict(index)
         assert predicted is not None
-        assert np.allclose(predicted[mask], np.maximum(expected, 0), rtol=1e-4, atol=1e-5)
-
-
-def test_gqikrr_fixes_gqi_amplitude():
-    """Unlike the one-row GQI prediction, GQI-KRR predicts the signal amplitude."""
-    dwi = _crossing_dwi()
-    mask = np.ones(dwi.dataobj.shape[:3], dtype=bool)
-    krr = model.dmri.GQIKRRModel(dwi)
-    gqi = model.dmri.GQIModel(dwi)
-
-    def nrmse(_model):
-        errors, observed = [], []
-        for index in (0, 10, 20, 30):
-            errors.append(_model.fit_predict(index)[mask] - dwi.dataobj[..., index][mask])
-            observed.append(dwi.dataobj[..., index][mask])
-        return np.sqrt(np.mean(np.square(errors))) / np.mean(observed)
-
-    assert krr._krr_lambda is None
-    assert nrmse(krr) < 0.2
+        errors.append(predicted[mask] - dwi.dataobj[index][mask])
+        observed.append(dwi.dataobj[index][mask])
+    assert np.sqrt(np.mean(np.square(errors))) / np.mean(observed) < 0.2
     assert krr._krr_lambda in lovo.DEFAULT_KRR_LAMBDA_GRID
-    assert nrmse(krr) < 0.5 * nrmse(gqi)
+
+
+@pytest.mark.parametrize(
+    ("name", "kwargs"),
+    [
+        (
+            "GPLOOModel",
+            {"hyperparameters": _hyperparameter_record(_fixed_gp_kernel(), "spherical")},
+        ),
+        ("GQIKRRModel", {"krr_lambda": 0.1}),
+    ],
+)
+def test_closed_form_update_refreshes_a_volume(setup_random_dwi_data, name, kwargs):
+    """After ``update``, a closed-form model predicts like a fresh model of the updated view."""
+    dwi = _random_dwi(setup_random_dwi_data)
+    view = dwi.realigned()
+    closed_form = getattr(model.dmri, name)(view, **kwargs)
+    closed_form.fit_predict(0)  # Builds the signal matrix and the smoother
+
+    shift = np.eye(4)
+    shift[:3, 3] = (1.0, -0.5, 0.25)
+    dwi.set_transform(3, shift)
+    dwi.realign_into(view, 3)
+    closed_form.update(3)
+
+    fresh = getattr(model.dmri, name)(view, **kwargs)
+    for index in (0, len(dwi) // 2):
+        assert np.allclose(closed_form.fit_predict(index), fresh.fit_predict(index))

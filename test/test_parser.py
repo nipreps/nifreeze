@@ -255,6 +255,30 @@ def test_parser_closed_form_lovo_options(tmp_path):
     assert model_kwargs["nvox_prefit"] == 500
 
 
+def test_parser_debug_dir(tmp_path):
+    """``--debug-dir`` is off by default and parsed as a path."""
+    input_file = tmp_path / "dwi.h5"
+    input_file.touch()
+
+    args, *_ = parse_args([str(input_file)])
+    assert args.debug_dir is None
+
+    args, *_ = parse_args([str(input_file), "--debug-dir", str(tmp_path / "debug")])
+    assert args.debug_dir == tmp_path / "debug"
+
+
+def test_parser_no_instant_update(tmp_path):
+    """The instant update is on by default; ``--no-instant-update`` turns it off."""
+    input_file = tmp_path / "dwi.h5"
+    input_file.touch()
+
+    args, *_ = parse_args([str(input_file)])
+    assert args.instant_update is True
+
+    args, *_ = parse_args([str(input_file), "--no-instant-update"])
+    assert args.instant_update is False
+
+
 @pytest.mark.parametrize(
     "models",
     [

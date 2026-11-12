@@ -39,6 +39,7 @@ from nifreeze.data.filtering import (
     dwi_select_shells,
     grand_mean_normalization,
     robust_minmax_normalization,
+    robust_window,
 )
 
 
@@ -115,6 +116,47 @@ def test_advanced_clip_degenerate_range(monkeypatch):
     # After our fake clip: data is constant 0.5; subtract min: all zeros; den == 0.0
     expected = CLIPPING_DEGENERATE_RANGE_ERROR_MSG.format(
         den=0.0, a_min=0.0, a_max=1.0, nonnegative=True, data_finite=True, unique=1
+    )
+    assert str(exc.value) == expected
+
+
+@pytest.mark.random_uniform_ndim_data((24, 24, 24), -0.5, 2.0)
+def test_robust_window(setup_random_uniform_ndim_data):
+    """Without a mask, the window comes from the nonnegative denoised voxels."""
+    data = setup_random_uniform_ndim_data
+
+    denoised = median_filter(data, footprint=ball(3))
+    sel = denoised[denoised >= 0]
+    expected = (float(np.percentile(sel, 35.0)), float(np.percentile(sel, 99.98)))
+
+    assert robust_window(data) == pytest.approx(expected)
+
+
+@pytest.mark.random_uniform_ndim_data((24, 24, 24), 0.0, 2.0)
+def test_robust_window_mask(setup_random_uniform_ndim_data):
+    """With a mask, the voxels inside it set the window, denoised as in the whole image."""
+    data = setup_random_uniform_ndim_data
+    # A box touching the image's edges, so that the bounding box is clipped
+    mask = np.zeros(data.shape, dtype=bool)
+    mask[:10, 5:15, 12:] = True
+
+    denoised = median_filter(data, footprint=ball(3))[mask]
+    expected = (float(np.percentile(denoised, 1.0)), float(np.percentile(denoised, 99.98)))
+
+    assert robust_window(data, mask) == pytest.approx(expected)
+    assert robust_window(data, mask, p_min=35.0) == pytest.approx(
+        (float(np.percentile(denoised, 35.0)), expected[1])
+    )
+
+
+def test_robust_window_empty_mask():
+    data = np.ones((5, 5, 5), dtype=np.float32)
+
+    with pytest.raises(ClippingValueError) as exc:
+        robust_window(data, np.zeros(data.shape, dtype=bool))
+
+    expected = CLIPPING_EMPTY_SELECTION_ERROR_MSG.format(
+        constraints="nonnegative constraint and ", p_min=1.0, p_max=99.98
     )
     assert str(exc.value) == expected
 
@@ -241,14 +283,21 @@ def test_grand_mean_normalization(setup_random_uniform_ndim_data, use_mask, cent
     drift = reference / centers
     expected_output[..., _mask] = volumes * drift
 
-    normalized_data = grand_mean_normalization(data, mask=mask, center=center, inplace=inplace)
+    # The reference above is computed volumes-last; the function takes volumes first
+    normalized_data = grand_mean_normalization(
+        np.moveaxis(data, -1, 0), mask=mask, center=center, inplace=inplace
+    )
 
     assert (normalized_data is None) if inplace else isinstance(normalized_data, np.ndarray)
     assert not np.shares_memory(normalized_data, data) if not inplace else True
     assert (
         np.allclose(data, expected_output, atol=1e-6)
         if inplace
-        else np.allclose(normalized_data, expected_output, atol=1e-6)  # type: ignore[arg-type]
+        else np.allclose(
+            normalized_data,  # type: ignore[arg-type]
+            np.moveaxis(expected_output, -1, 0),
+            atol=1e-6,
+        )
     )
 
 
@@ -284,8 +333,9 @@ def test_robust_minmax_normalization(
     p5_mean = np.mean(p5)
     expected_output[..., _mask] = (volumes - p5) * p_mean / p_range + p5_mean
 
+    # The reference above is computed volumes-last; the function takes volumes first
     normalized_data = robust_minmax_normalization(
-        data, mask=mask, p_min=p_min, p_max=p_max, inplace=inplace
+        np.moveaxis(data, -1, 0), mask=mask, p_min=p_min, p_max=p_max, inplace=inplace
     )
 
     assert (normalized_data is None) if inplace else isinstance(normalized_data, np.ndarray)
@@ -293,5 +343,9 @@ def test_robust_minmax_normalization(
     assert (
         np.allclose(data, expected_output, atol=1e-6)
         if inplace
-        else np.allclose(normalized_data, expected_output, atol=1e-6)  # type: ignore[arg-type]
+        else np.allclose(
+            normalized_data,  # type: ignore[arg-type]
+            np.moveaxis(expected_output, -1, 0),
+            atol=1e-6,
+        )
     )

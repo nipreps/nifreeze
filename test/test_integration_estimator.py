@@ -24,18 +24,23 @@
 import re
 from typing import Union
 
+import nibabel as nb
 import numpy as np
 import pytest
 
 import nifreeze.estimator
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.dmri.utils import DEFAULT_LOWB_THRESHOLD
+from nifreeze.data.filtering import ClippingValueError
+from nifreeze.data.pet import PET
 from nifreeze.data.pet.utils import compute_uptake_statistic
 from nifreeze.estimator import Estimator
-from nifreeze.model.base import BaseModel
+from nifreeze.model.base import BaseModel, ExpectationModel
+from nifreeze.model.pet import BSplinePETModel
 from nifreeze.utils import iterators
+from nifreeze.utils.ndimage import load_api
 
-DATAOBJ_SIZE = (5, 5, 5, 7)
+DATAOBJ_SIZE = (7, 5, 5, 5)
 
 
 class DummyInsiderModel(BaseModel):
@@ -44,21 +49,24 @@ class DummyInsiderModel(BaseModel):
 
     def fit_predict(self, index: int | None = None, **kwargs):
         # Return the indexed volume
-        return self._dataset.dataobj[..., index]
+        return self._dataset.dataobj[index]
 
 
 class DummyDataset(BaseDataset):
     def __init__(self, rng):
-        self.dataobj = rng.uniform(0.0, 1.0, DATAOBJ_SIZE)  # np.ones(DATAOBJ_SIZE)
-        self.brainmask = rng.choice([True, False], size=self.dataobj.shape[:-1]).astype(bool)
-        self.affine = np.eye(4)
+        dataobj = rng.uniform(0.0, 1.0, DATAOBJ_SIZE)  # np.ones(DATAOBJ_SIZE)
+        super().__init__(
+            dataobj=dataobj,
+            affine=np.eye(4),
+            brainmask=rng.choice([True, False], size=dataobj.shape[1:]).astype(bool),
+        )
 
     def __len__(self):
-        return self.dataobj.shape[-1]
+        return self.dataobj.shape[0]
 
     def __getitem__(self, idx):
         # Return the indexed volume and a dummy value
-        return self.dataobj[..., idx], None
+        return self.dataobj[idx], None
 
     def set_transform(self, idx, matrix):
         pass
@@ -66,32 +74,28 @@ class DummyDataset(BaseDataset):
 
 class DummyDWIDataset(BaseDataset):
     def __init__(self, dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients):
-        self.dataobj = dwi_dataobj
-        self.affine = affine
-        self.brainmask = brainmask_dataobj
+        super().__init__(dataobj=dwi_dataobj, affine=affine, brainmask=brainmask_dataobj)
         self.bzero = b0_dataobj
         self.gradients = gradients
 
     def __len__(self):
-        return self.dataobj.shape[-1]
+        return self.dataobj.shape[0]
 
     def __getitem__(self, idx):
-        return self.dataobj[..., idx], None, self.gradients[idx, ...]
+        return self.dataobj[idx], None, self.gradients[idx, ...]
 
 
 class DummyPETDataset(BaseDataset):
     def __init__(self, pet_dataobj, affine, brainmask_dataobj, midframe, total_duration):
-        self.dataobj = pet_dataobj
-        self.affine = affine
-        self.brainmask = brainmask_dataobj
+        super().__init__(dataobj=pet_dataobj, affine=affine, brainmask=brainmask_dataobj)
         self.midframe = midframe
         self.total_duration = total_duration
 
     def __len__(self):
-        return self.dataobj.shape[-1]
+        return self.dataobj.shape[0]
 
     def __getitem__(self, idx):
-        return self.dataobj[..., idx], None, self.midframe[idx]
+        return self.dataobj[idx], None, self.midframe[idx]
 
 
 def test_estimator_invalid_start_index(request):
@@ -162,6 +166,310 @@ def test_estimator_start_index(request, monkeypatch):
     assert recorded_indices == [3, 4, 5, 6]
 
 
+def test_estimator_clip_reaches_every_volume(request, monkeypatch):
+    """A ``clip`` setting applies to every volume, not only the first."""
+    recorded_clips = []
+
+    dataset = DummyDataset(rng=request.node.rng)
+
+    def fake_prepare(*args, clip=None, **kwargs):
+        recorded_clips.append(args[5] if len(args) > 5 else clip)
+        return None, None, None
+
+    class DummyXForm:
+        matrix = np.eye(4)
+
+    monkeypatch.setattr(nifreeze.estimator, "_prepare_registration_data", fake_prepare)
+    monkeypatch.setattr(nifreeze.estimator, "_run_registration", lambda *a, **k: DummyXForm())
+
+    model = DummyInsiderModel(dataset=dataset)
+    Estimator(model, strategy="linear", clip="none").run(dataset)
+
+    assert recorded_clips == ["none"] * len(dataset)
+
+
+def test_estimator_clip_windows_cached(request, monkeypatch):
+    """Each window is estimated once and reused by the next estimator of the chain."""
+    dataset = DummyDataset(rng=request.node.rng)
+    estimated = []
+    received = []
+
+    def fake_window(volume, mask=None):
+        estimated.append(volume)
+        return float(len(estimated)), float(len(estimated)) + 1.0
+
+    def fake_prepare(*args, window=None, **kwargs):
+        received.append((args[3], window))
+        return None, None, None
+
+    class DummyXForm:
+        matrix = np.eye(4)
+
+    monkeypatch.setattr(nifreeze.estimator, "robust_window", fake_window)
+    monkeypatch.setattr(nifreeze.estimator, "_prepare_registration_data", fake_prepare)
+    monkeypatch.setattr(nifreeze.estimator, "_run_registration", lambda *a, **k: DummyXForm())
+
+    first = Estimator(DummyInsiderModel(dataset=dataset), strategy="linear")
+    Estimator(DummyInsiderModel(dataset=dataset), strategy="linear", prev=first).run(dataset)
+
+    n = len(dataset)
+    assert len(estimated) == n
+    assert [index for index, _ in received] == list(range(n)) * 2
+    assert received[:n] == received[n:]
+
+
+@pytest.mark.parametrize(("num_threads", "expected"), [(None, 5), (3, 3)])
+def test_estimator_registration_settings(request, monkeypatch, num_threads, expected):
+    """The run's settings reach every estimator of a chain, under each estimator's own."""
+    dataset = DummyDataset(rng=request.node.rng)
+    received = []
+
+    class DummyXForm:
+        matrix = np.eye(4)
+
+    def fake_registration(*args, **kwargs):
+        received.append(kwargs)
+        return DummyXForm()
+
+    monkeypatch.setattr(
+        nifreeze.estimator, "_prepare_registration_data", lambda *a, **k: (None, None, None)
+    )
+    monkeypatch.setattr(nifreeze.estimator, "_run_registration", fake_registration)
+
+    first = Estimator(DummyInsiderModel(dataset=dataset), strategy="linear")
+    second = Estimator(
+        DummyInsiderModel(dataset=dataset), strategy="linear", prev=first, metric="GC"
+    )
+    threads = {} if num_threads is None else {"num_threads": num_threads}
+    second.run(
+        dataset,
+        align_kwargs={"ants_config": "dwi-to-dwi_level1", "metric": "Mattes"},
+        omp_nthreads=5,
+        **threads,
+    )
+
+    n = len(dataset)
+    assert len(received) == 2 * n
+    assert all("align_kwargs" not in kwargs for kwargs in received)
+    assert all(kwargs["ants_config"] == "dwi-to-dwi_level1" for kwargs in received)
+    assert all(kwargs["num_threads"] == expected for kwargs in received)
+    assert [kwargs["metric"] for kwargs in received] == ["Mattes"] * n + ["GC"] * n
+
+
+def test_estimator_debug_dir(request, monkeypatch, tmp_path):
+    """With ``debug_dir``, each pass keeps its inputs and an aligned trace per volume."""
+    dataset = DummyDataset(rng=request.node.rng)
+    shift = np.eye(4)
+    shift[:3, 3] = [1.0, -2.0, 0.5]
+
+    class DummyXForm:
+        matrix = shift
+
+    workdirs = set()
+
+    def fake_registration(fixed_path, moving_path, vol_idx, dirname, **kwargs):
+        workdirs.add(dirname)
+        return DummyXForm()
+
+    monkeypatch.setattr(nifreeze.estimator, "_run_registration", fake_registration)
+    # A relative debug_dir must reach the registration as an absolute path,
+    # because nipype runs ANTs from within the working directory
+    monkeypatch.chdir(tmp_path)
+
+    first = Estimator(DummyInsiderModel(dataset=dataset), strategy="linear")
+    Estimator(DummyInsiderModel(dataset=dataset), strategy="linear", prev=first).run(
+        dataset, clip="none", debug_dir="debug"
+    )
+
+    pass_dirs = [tmp_path / "debug" / f"{n:02d}-dummyinsidermodel" for n in range(2)]
+    assert workdirs == set(pass_dirs)
+    for pass_dir in pass_dirs:
+        for i in range(len(dataset)):
+            sample = load_api(pass_dir / f"sample_{i:05d}.nii", nb.Nifti1Image)
+            aligned = load_api(pass_dir / f"aligned_{i:05d}.nii", nb.Nifti1Image)
+            assert np.allclose(aligned.affine, np.linalg.inv(shift) @ sample.affine)
+
+
+def _smooth_dataset() -> BaseDataset:
+    """Smooth volumes, so that sub-voxel shifts change them."""
+    grid = np.indices(DATAOBJ_SIZE[1:]).astype("float32")
+    volumes = [
+        100.0
+        * np.exp(-((grid[0] - 2 - 0.1 * k) ** 2 + (grid[1] - 2) ** 2 + (grid[2] - 2) ** 2) / 4)
+        for k in range(DATAOBJ_SIZE[0])
+    ]
+    return BaseDataset(
+        dataobj=np.stack(volumes).astype("float32"),
+        affine=np.eye(4),
+        brainmask=np.ones(DATAOBJ_SIZE[1:], dtype=bool),
+    )
+
+
+def _shifting_registration(monkeypatch, n_volumes: int) -> list:
+    """Make each registration return a growing shift; collect the predictions."""
+    predictions: list = []
+    shifts = iter(np.linspace(0.2, 0.8, n_volumes))
+
+    def fake_prepare(sample, predicted, *args, **kwargs):
+        predictions.append(np.copy(predicted))
+        return None, None, None
+
+    class DummyXForm:
+        def __init__(self, shift):
+            self.matrix = np.eye(4)
+            self.matrix[1, 3] = shift
+
+    monkeypatch.setattr(nifreeze.estimator, "_prepare_registration_data", fake_prepare)
+    monkeypatch.setattr(
+        nifreeze.estimator, "_run_registration", lambda *a, **k: DummyXForm(next(shifts))
+    )
+    return predictions
+
+
+@pytest.mark.parametrize("given", ["name", "instance"])
+@pytest.mark.parametrize("instant_update", [True, False])
+def test_estimator_instant_update(monkeypatch, instant_update, given):
+    """With the instant update, models train on volumes realigned as soon as they are."""
+    dataset = _smooth_dataset()
+    original = np.copy(dataset.dataobj)
+    predictions = _shifting_registration(monkeypatch, len(dataset))
+    model = "avg" if given == "name" else ExpectationModel(dataset)
+
+    views: dict = {}
+    Estimator(model, strategy="linear").run(
+        dataset, clip="none", instant_update=instant_update, realigned=views
+    )
+
+    assert np.array_equal(dataset.dataobj, original)
+    if not instant_update:
+        assert views == {}
+        # Every volume is predicted from the raw volumes
+        assert np.allclose(predictions[-1], np.median(original[:-1], axis=0))
+        return
+
+    (view,) = views.values()
+    # The view holds every volume realigned once, from the original
+    assert np.allclose(view.dataobj, dataset.realigned().dataobj)
+    # The last volume is predicted from all the others, already realigned
+    assert np.allclose(predictions[-1], np.median(view.dataobj[:-1], axis=0))
+    assert not np.allclose(predictions[-1], np.median(original[:-1], axis=0))
+    if given == "instance":
+        # The instance now reads the realigned view
+        assert isinstance(model, ExpectationModel)
+        assert model._dataset is view
+
+
+def test_estimator_instance_of_another_dataset(monkeypatch):
+    """A model instance built on another dataset keeps reading it."""
+    dataset = _smooth_dataset()
+    other = _smooth_dataset()
+    predictions = _shifting_registration(monkeypatch, len(dataset))
+    model = ExpectationModel(other)
+
+    views: dict = {}
+    Estimator(model, strategy="linear").run(dataset, clip="none", realigned=views)
+
+    assert views == {}
+    assert model._dataset is other
+    assert np.allclose(predictions[-1], np.median(other.dataobj[:-1], axis=0))
+
+
+@pytest.mark.random_pet_data(5, (4, 4, 4), np.asarray([10.0, 20.0, 30.0, 40.0, 50.0]))
+def test_estimator_instant_update_pet(monkeypatch, setup_random_pet_data):
+    """PET models train on realigned frames, while the frames themselves stay original."""
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+    dataset = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+    original = np.copy(dataset.dataobj)
+    _shifting_registration(monkeypatch, len(dataset))
+    model = BSplinePETModel(dataset=dataset)
+
+    views: dict = {}
+    Estimator(model, strategy="linear").run(dataset, clip="none", realigned=views)
+
+    (view,) = views.values()
+    assert model._dataset is view
+    assert np.array_equal(dataset.dataobj, original)
+    assert np.allclose(view.dataobj, dataset.realigned().dataobj)
+    assert not np.allclose(view.dataobj, original)
+
+
+@pytest.mark.parametrize("modality", ["base", "pet"])
+def test_estimator_chain_initializes_from_previous_estimate(request, monkeypatch, modality):
+    """The second estimator of a chain starts each registration at the first one's estimate."""
+    dataobj = request.node.rng.uniform(0.0, 1.0, DATAOBJ_SIZE).astype("float32")
+    brainmask = np.ones(DATAOBJ_SIZE[1:], dtype=bool)
+    dataset: BaseDataset
+    if modality == "pet":
+        dataset = PET(
+            dataobj=dataobj,
+            affine=np.eye(4),
+            brainmask=brainmask,
+            midframe=10.0 * np.arange(DATAOBJ_SIZE[0]) + 5.0,
+            total_duration=10.0 * DATAOBJ_SIZE[0],
+        )
+    else:
+        dataset = BaseDataset(dataobj=dataobj, affine=np.eye(4), brainmask=brainmask)
+    inits: list[np.ndarray | None] = []
+    shifts = iter(range(1, 2 * DATAOBJ_SIZE[0] + 1))
+
+    def fake_prepare(*args, init_affine=None, **kwargs):
+        inits.append(None if init_affine is None else np.array(init_affine))
+        return None, None, None
+
+    class DummyXForm:
+        def __init__(self, shift):
+            self.matrix = np.eye(4)
+            self.matrix[0, 3] = shift
+
+    monkeypatch.setattr(nifreeze.estimator, "_prepare_registration_data", fake_prepare)
+    monkeypatch.setattr(
+        nifreeze.estimator, "_run_registration", lambda *a, **k: DummyXForm(next(shifts))
+    )
+
+    first = Estimator(DummyInsiderModel(dataset=dataset), strategy="linear")
+    Estimator(DummyInsiderModel(dataset=dataset), strategy="linear", prev=first).run(
+        dataset, clip="none"
+    )
+
+    n = len(dataset)
+    # The first pass starts from the identity
+    assert all(init is None for init in inits[:n])
+    # The second pass starts from the transform the first pass estimated for each volume
+    second = [init for init in inits[n:] if init is not None]
+    assert [init[0, 3] for init in second] == list(range(1, n + 1))
+
+
+def test_estimator_clip_degenerate_window(request, monkeypatch):
+    """A volume whose window cannot be estimated is registered without clipping."""
+    dataset = DummyDataset(rng=request.node.rng)
+    received = []
+
+    def fake_window(volume, mask=None):
+        raise ClippingValueError("degenerate")
+
+    def fake_prepare(*args, clip=None, window=None, **kwargs):
+        received.append((clip, window))
+        return None, None, None
+
+    class DummyXForm:
+        matrix = np.eye(4)
+
+    monkeypatch.setattr(nifreeze.estimator, "robust_window", fake_window)
+    monkeypatch.setattr(nifreeze.estimator, "_prepare_registration_data", fake_prepare)
+    monkeypatch.setattr(nifreeze.estimator, "_run_registration", lambda *a, **k: DummyXForm())
+
+    with pytest.warns(UserWarning, match="without clipping"):
+        Estimator(DummyInsiderModel(dataset=dataset), strategy="linear").run(dataset)
+
+    assert received == [("none", None)] * len(dataset)
+
+
 def test_estimator_start_and_end_index(request, monkeypatch):
     """Test that estimator respects both start_index and end_index."""
     recorded_indices = []
@@ -193,6 +501,8 @@ def test_estimator_start_and_end_index(request, monkeypatch):
     assert recorded_indices == [2, 3, 4]
 
 
+# The random DWI volumes are 2x2x2, too small to estimate a clipping window
+@pytest.mark.filterwarnings("ignore:Registering volume .* without clipping:UserWarning")
 @pytest.mark.parametrize(
     "strategy, iterator_func, modality",
     [
@@ -214,7 +524,7 @@ def test_estimator_iterator_index_match(
         dwi_dataobj, affine, brainmask_dataobj, gradients, b0_thres = setup_random_dwi_data
 
         b0s_mask = gradients[:, -1] <= b0_thres
-        b0_dataobj = dwi_dataobj[..., b0s_mask].squeeze()
+        b0_dataobj = dwi_dataobj[b0s_mask].squeeze()
 
         dataset = DummyDWIDataset(dwi_dataobj, affine, brainmask_dataobj, b0_dataobj, gradients)
         bvals = gradients[:, -1][gradients[:, -1] > DEFAULT_LOWB_THRESHOLD]

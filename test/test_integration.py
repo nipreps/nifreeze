@@ -32,7 +32,10 @@ import nibabel as nb
 import nitransforms as nt
 import numpy as np
 import pytest
+from nibabel.affines import from_matvec
+from nibabel.eulerangles import euler2mat
 
+import nifreeze.estimator
 import nifreeze.registration.ants as ants
 from nifreeze.data import dmri
 from nifreeze.estimator import Estimator
@@ -87,7 +90,8 @@ def _identity_run_registration(*args, **kwargs):
 
 
 def _dwi_data_to_nifti(dwi_dataobj, affine, brainmask_dataobj, b0_dataobj):
-    dwi = nb.Nifti1Image(dwi_dataobj, affine)
+    # NIfTI stores the volumes last
+    dwi = nb.Nifti1Image(np.moveaxis(dwi_dataobj, 0, -1), affine)
     brainmask = nb.Nifti1Image(brainmask_dataobj, affine)
     b0 = nb.Nifti1Image(b0_dataobj, affine)
 
@@ -150,10 +154,10 @@ def _create_dmri_data_files(
 
     b0_mask = gradients[:, -1] <= b0_thres
     dwi, brainmask, b0 = _dwi_data_to_nifti(
-        dwi_dataobj[..., ~b0_mask],
+        dwi_dataobj[~b0_mask],
         affine,
         brainmask_dataobj.astype(np.uint8),
-        dwi_dataobj[..., b0_mask][..., 0],
+        dwi_dataobj[b0_mask][0],
     )
 
     (
@@ -237,7 +241,7 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path, p_error=20.0):
     masknii = nb.Nifti1Image(
         dwi_orig.brainmask.astype(np.uint8)  # type: ignore
         if has_mask
-        else np.ones(dwi_orig.dataobj.shape[:-1], dtype=np.uint8),
+        else np.ones(dwi_orig.shape3d, dtype=np.uint8),
         dwi_orig.affine,
         None,
     )
@@ -274,6 +278,54 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path, p_error=20.0):
         )
         + f" (N={masksize} voxels)."
     )
+
+
+@pytest.mark.parametrize("perturb", [False, True])
+def test_registration_initial_transform(datadir, tmp_path, perturb):
+    """Started at (or near) the true transform, ANTs returns the true transform."""
+    dwi_motion = dmri.DWI.from_filename(
+        datadir / "dmri_data" / "motion_test_data" / "dwi_motion.h5"
+    )
+    dwi_motion._filepath = tmp_path / "dwi_motion.h5"  # Prevent accidental overwriting
+    assert dwi_motion.motion_affines is not None and dwi_motion.bzero is not None
+    index = 3
+    truth = np.array(dwi_motion.motion_affines[index])
+    init = truth.copy()
+    if perturb:
+        # About 1 degree and 0.8 mm away from the truth
+        init = from_matvec(euler2mat(0.01, -0.01, 0.015), [0.5, -0.5, 0.3]) @ truth
+
+    dwi_orig = dmri.DWI.from_filename(datadir / "dwi.h5")
+    assert dwi_orig.brainmask is not None
+    masknii = nb.Nifti1Image(dwi_orig.brainmask.astype(np.uint8), dwi_orig.affine, None)
+    mask_path = tmp_path / "brainmask.nii"
+    masknii.to_filename(mask_path)
+
+    fixed_path, moving_path, init_path = ants._prepare_registration_data(
+        dwi_motion.dataobj[index],
+        dwi_motion.bzero,
+        dwi_motion.affine,
+        index,
+        tmp_path,
+        clip="both",
+        init_affine=init,
+    )
+    assert init_path is not None
+    xform = ants._run_registration(
+        fixed_path,
+        moving_path,
+        index,
+        tmp_path,
+        init_affine=init_path,
+        fixedmask_path=mask_path,
+        output_transform_prefix=f"ants-{index:05d}",
+        seed=12345,
+    )
+
+    error = displacements_within_mask(
+        masknii, nt.linear.Affine(xform.matrix), nt.linear.Affine(truth)
+    ).max()
+    assert error < 0.2
 
 
 @pytest.mark.random_gtab_data(6, (1000,), 1)
@@ -335,7 +387,8 @@ def test_dmri_data_average_dwi_model_estimation(
     }
 
     model_kwargs = {"b0_thres": b0_thres, "max_b": max_b, "ignore_bzero": ignore_bzero}
-    monkeypatch.setattr(ants, "_run_registration", _identity_run_registration)
+    # The estimator holds its own reference to the function
+    monkeypatch.setattr(nifreeze.estimator, "_run_registration", _identity_run_registration)
 
     # Create the dataset using the repository test data
     dwi_data = dmri.from_nii(dwi_data_file, **data_kwargs)
@@ -439,7 +492,8 @@ def test_dmri_data_dti_model_estimation(
 
     model_kwargs = {"b0_thres": b0_thres, "max_b": max_b, "ignore_bzero": ignore_bzero}
 
-    monkeypatch.setattr(ants, "_run_registration", _identity_run_registration)
+    # The estimator holds its own reference to the function
+    monkeypatch.setattr(nifreeze.estimator, "_run_registration", _identity_run_registration)
 
     # Create the dataset using the repository test data
     dwi_data = dmri.from_nii(dwi_data_file, **data_kwargs)
@@ -555,7 +609,8 @@ def test_dmri_data_dki_model_estimation(
 
     model_kwargs = {"b0_thres": b0_thres, "max_b": max_b, "ignore_bzero": ignore_bzero}
 
-    monkeypatch.setattr(ants, "_run_registration", _identity_run_registration)
+    # The estimator holds its own reference to the function
+    monkeypatch.setattr(nifreeze.estimator, "_run_registration", _identity_run_registration)
 
     # Create the dataset using the repository test data
     dwi_data = dmri.from_nii(dwi_data_file, **data_kwargs)

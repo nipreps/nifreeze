@@ -24,19 +24,20 @@
 
 from __future__ import annotations
 
-from collections import namedtuple
 from pathlib import Path
 from typing import Any
 
 import attrs
 import h5py
-import nibabel as nb
 import numpy as np
-from nitransforms.linear import Affine
-from nitransforms.resampling import apply
 from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset, _cmp, _data_repr, _has_ndim
+from nifreeze.data.utils import (
+    load_nfhdf5_fields,
+    replace_on_success,
+    save_nfhdf5_fields,
+)
 
 ATTRIBUTE_ABSENCE_ERROR_MSG = "PET '{attribute}' may not be None"
 """PET initialization array attribute absence error message."""
@@ -222,7 +223,7 @@ class PET(BaseDataset[np.ndarray]):
         instantiation time.
 
         Specifically, the length of the frame_time and uptake attributes must
-        match the last dimension of the data (number of frames).
+        match the first dimension of the data (number of frames).
 
         Computes the values for the private attributes.
         """
@@ -239,7 +240,7 @@ class PET(BaseDataset[np.ndarray]):
                     )
                 )
 
-        n_frames = int(self.dataobj.shape[-1])
+        n_frames = int(self.dataobj.shape[0])
         _check_attr_vol_length_match("midframe", self.midframe, n_frames)
 
         # Ensure that the total duration is larger than last midframe
@@ -264,14 +265,14 @@ class PET(BaseDataset[np.ndarray]):
         Parameters
         ----------
         idx : :obj:`int` or :obj:`slice` or :obj:`tuple` or :obj:`~numpy.ndarray`
-            Indexer for the last dimension (or possibly other dimensions if extended).
+            Indexer for the volume (first) dimension.
 
         Returns
         -------
         volumes : :obj:`~numpy.ndarray`
             The selected data subset.
             If ``idx`` is a single integer, this will have shape ``(X, Y, Z)``,
-            otherwise it may have shape ``(X, Y, Z, k)``.
+            otherwise it may have shape ``(k, X, Y, Z)``.
         motion_affine : :obj:`~numpy.ndarray` or :obj:`None`
             The corresponding per-volume motion affine(s) or :obj:`None` if identity transform(s).
         time : :obj:`~numpy.ndarray`
@@ -280,64 +281,22 @@ class PET(BaseDataset[np.ndarray]):
         """
         return super().__getitem__(idx)
 
-    def set_transform(self, index: int, affine: np.ndarray, order: int = 3) -> None:
-        """Set an affine, and update data object and gradients."""
-        ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
-        reference = ImageGrid(self.dataobj.shape[:3], self.affine)
-        xform = Affine(matrix=affine, reference=reference)
-
-        if not Path(self._filepath).exists():
-            self.to_filename(self._filepath)
-
-        # read original PET
-        with h5py.File(self._filepath, "r") as in_file:
-            root = in_file["/0"]
-            dframe = np.asanyarray(root["dataobj"][..., index])
-
-        dmoving = nb.Nifti1Image(dframe, self.affine, None)
-
-        # resample and update orientation at index
-        self.dataobj[..., index] = np.asanyarray(
-            apply(xform, dmoving, order=order).dataobj,
-            dtype=self.dataobj.dtype,
-        )
-
-        # update transform
-        if self.motion_affines is None:
-            self.motion_affines = np.asarray([None] * len(self))
-
-        self.motion_affines[index] = xform
-
     def to_filename(
         self, filename: Path | str, compression: str | None = None, compression_opts: Any = None
     ) -> None:
-        """Write an HDF5 file to disk."""
+        """Write the dataset to an :ref:`nfHDF5 <nfhdf5>` file."""
         filename = Path(filename)
         if not filename.name.endswith(".h5"):
             filename = filename.parent / f"{filename.name}.h5"
 
-        with h5py.File(filename, "w") as out_file:
-            out_file.attrs["Format"] = "EMC/PET"
-            out_file.attrs["Version"] = np.uint16(1)
+        with replace_on_success(filename) as tmp, h5py.File(tmp, "w") as out_file:
+            out_file.attrs["Format"] = "nfHDF5"
+            out_file.attrs["Version"] = np.uint16(2)  # v2: volume-major dataobj
             root = out_file.create_group("/0")
             root.attrs["Type"] = "pet"
-            for f in attrs.fields(self.__class__):
-                if f.name.startswith("_"):
-                    continue
-
-                value = getattr(self, f.name)
-                if value is not None:
-                    root.create_dataset(
-                        f.name,
-                        data=value,
-                        compression=compression,
-                        compression_opts=compression_opts,
-                    )
+            save_nfhdf5_fields(root, self, compression, compression_opts)
 
     @classmethod
     def from_filename(cls, filename: Path | str) -> Self:
-        """Read an HDF5 file from disk."""
-        with h5py.File(filename, "r") as in_file:
-            root = in_file["/0"]
-            data = {k: np.asanyarray(v) for k, v in root.items() if not k.startswith("_")}
-        return cls(**data)
+        """Read an :ref:`nfHDF5 <nfhdf5>` file from disk."""
+        return cls(**load_nfhdf5_fields(filename))

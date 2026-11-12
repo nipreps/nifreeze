@@ -41,6 +41,7 @@ from nifreeze.data.filtering import BVAL_ATOL, dwi_select_shells, grand_mean_nor
 from nifreeze.model._dipy import GP_JITTER, GaussianProcessModel
 from nifreeze.model.base import BaseModel, ExpectationModel
 from nifreeze.model.gpr import uses_bvalue
+from nifreeze.model.gqi import DEFAULT_RIDGE
 from nifreeze.model.lovo import (
     DEFAULT_KRR_LAMBDA_GRID,
     ClosedFormLOVOMixin,
@@ -103,8 +104,8 @@ def _compute_data_mask(
     :obj:`~numpy.ndarray`
         The computed data mask.
     """
-    # Use the brainmask if available, else create a default mask
-    data_mask = brainmask if brainmask is not None else np.ones(shape, dtype=bool)
+    # Use a copy of the brainmask if available, else create a default mask
+    data_mask = brainmask.copy() if brainmask is not None else np.ones(shape, dtype=bool)
 
     # Modify the mask if b0 is not ignored
     if not ignore_bzero and bzero is not None:
@@ -131,7 +132,7 @@ def _compute_S0(
     Parameters
     ----------
     dwi_dataobj : :obj:`~numpy.ndarray`
-        DWI data.
+        DWI data, ``(N, X, Y, Z)``.
     data_mask : :obj:`~numpy.ndarray`
         The mask to apply on the data.
     bzero : :obj:`~numpy.ndarray`
@@ -150,7 +151,7 @@ def _compute_S0(
     # By default, set S0 to the q-th percentile of the DWI data within mask
     S0 = np.full(
         data_mask.sum(),
-        np.round(np.percentile(dwi_dataobj[data_mask, ...], default_percentile)),
+        np.round(np.percentile(dwi_dataobj[:, data_mask], default_percentile)),
     )
 
     # Modify S0 if b0 is not ignored
@@ -158,6 +159,41 @@ def _compute_S0(
         S0 = bzero[data_mask]
 
     return S0
+
+
+def _masked_volumes(
+    dataobj: np.ndarray, volumes: np.ndarray, voxels: np.ndarray | None = None
+) -> np.ndarray:
+    """Gather volumes at the selected voxels into a voxels-by-volumes array.
+
+    Reads one volume at a time from the ``(N, X, Y, Z)`` data object, so the only
+    allocation is the C-contiguous result, where each voxel's signal is contiguous
+    (the volumes-last layout DIPY and the GP expect). Voxels follow the C order of
+    ``volume[voxels]``.
+
+    Parameters
+    ----------
+    dataobj : :obj:`~numpy.ndarray`
+        The dataset's ``(N, X, Y, Z)`` data object.
+    volumes : :obj:`~numpy.ndarray`
+        Boolean mask of the ``N`` volumes to gather.
+    voxels : :obj:`~numpy.ndarray`, optional
+        Boolean ``(X, Y, Z)`` mask of the voxels to gather (all if :obj:`None`).
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        Array of shape ``(n_voxels, n_volumes)``.
+
+    """
+    rows = np.flatnonzero(volumes)
+    flat = dataobj.reshape(dataobj.shape[0], -1)
+    cols = slice(None) if voxels is None else np.flatnonzero(voxels)
+    n_voxels = flat.shape[1] if voxels is None else int(np.count_nonzero(voxels))
+    out = np.empty((n_voxels, rows.size), dtype=dataobj.dtype)
+    for j, i in enumerate(rows):
+        out[:, j] = flat[i, cols]
+    return out
 
 
 def _append_bzero(dataobj, gtab, bzero=None):
@@ -170,7 +206,9 @@ def _append_bzero(dataobj, gtab, bzero=None):
     Parameters
     ----------
     dataobj : :obj:`~numpy.ndarray`
-        Diffusion-weighted imaging data.
+        Diffusion-weighted imaging data, with volumes on the last axis (as DIPY
+        expects; e.g., the ``(n_voxels, n_volumes)`` output of
+        :func:`_masked_volumes`).
     gtab : :obj:`~dipy.core.gradients.GradientTable`
         Gradient table object containing b-values and b-vectors corresponding
         to the input data.
@@ -248,11 +286,11 @@ class BaseDWIModel(BaseModel):
         if "DiffusionKurtosisModel" in model_str:
             bvals = dataset.gradients[:, -1]
             bvecs = dataset.gradients[:, :-1]
+            # The fit appends the b0 (if any) as one more volume
+            if dataset.bzero is not None:
+                bvals = np.concatenate([bvals, np.asarray([0])])
+                bvecs = np.concatenate([bvecs, np.zeros([1, 3])])
             gtab = gradient_table_from_bvals_bvecs(bvals, bvecs)
-            bzero = dataset.bzero
-            if bzero is not None:
-                bzero = bzero * dataset.brainmask if dataset.brainmask is not None else bzero
-            _, gtab = _append_bzero(dataset.dataobj, gtab, bzero=bzero)
             enough_b = check_multi_b(gtab, 3, non_zero=False)
             if not enough_b:
                 raise ValueError(DWI_DKI_SHELL_ERROR_MSG)
@@ -264,7 +302,7 @@ class BaseDWIModel(BaseModel):
 
         # Compute the data mask (ignores or uses b0 as specified)
         self._data_mask = _compute_data_mask(
-            dataset.dataobj.shape[:3],
+            dataset.shape3d,
             dataset.brainmask,
             dataset.bzero,
             ignore_bzero=ignore_bzero,
@@ -294,7 +332,6 @@ class BaseDWIModel(BaseModel):
         if self._locked_fit is not None:
             return len(self._models)
 
-        brainmask = self._dataset.brainmask
         idxmask = np.ones(len(self._dataset), dtype=bool)
 
         if index is not None:
@@ -303,9 +340,9 @@ class BaseDWIModel(BaseModel):
             self._locked_fit = True
             self._warn_single_fit_canary()
 
-        data, _, gtab = self._dataset[idxmask]
-        # Select voxels within mask or just unravel 3D if no mask
-        data = data[brainmask, ...] if brainmask is not None else data.reshape(-1, data.shape[-1])
+        gtab = self._dataset.gradients[idxmask]
+        # Select the voxels of the data mask, which S0 and the predictions also use
+        data = _masked_volumes(self._dataset.dataobj, idxmask, self._data_mask)
 
         # Replace the gradient table with a DIPY object
         gtab = gradient_table_from_bvals_bvecs(gtab[:, -1], gtab[:, :-1])
@@ -319,11 +356,7 @@ class BaseDWIModel(BaseModel):
         if is_dki:
             bzero = self._dataset.bzero
             if bzero is not None:
-                bzero = (
-                    bzero[brainmask, ...]
-                    if brainmask is not None
-                    else bzero.reshape(data.shape[0])
-                )
+                bzero = bzero[self._data_mask, ...]
             data, gtab = _append_bzero(data, gtab, bzero=bzero)
 
         n_jobs = n_jobs or 1
@@ -478,7 +511,7 @@ class AverageDWIModel(ExpectationModel):
                 atol_low=self._atol_low,
                 atol_high=self._atol_high,
             )
-            shelldata = self._dataset.dataobj[..., shellmask]
+            shelldata = self._dataset.dataobj[shellmask]
 
         # Regress out global signal differences
         if self._detrend:
@@ -488,7 +521,7 @@ class AverageDWIModel(ExpectationModel):
         avg_func = np.median if self._stat == "median" else np.mean
 
         # Calculate the average
-        return avg_func(shelldata, axis=-1)
+        return avg_func(shelldata, axis=0)
 
 
 class DTIModel(BaseDWIModel):
@@ -530,6 +563,7 @@ class GQIModel(BaseDWIModel):
         "sampling_length",
         "sphere",
         "recursion_level",
+        "ridge",
     )
     _model_class = "nifreeze.model.gqi.GeneralizedQSamplingModel"
 
@@ -565,10 +599,10 @@ class GPModel(BaseDWIModel):
             self._locked_fit = True
             self._warn_single_fit_canary()
 
-        data, _, gtab = self._dataset[idxmask]
+        gtab = self._dataset.gradients[idxmask]
         # Restrict to the fitted voxels so predictions align with the scatter
         # mask used in ``fit_predict``.
-        train = data[self._data_mask, ...]
+        train = _masked_volumes(self._dataset.dataobj, idxmask, self._data_mask)
         gtab = gradient_table_from_bvals_bvecs(gtab[:, -1], gtab[:, :-1])
 
         module_name, class_name = self._model_class.rsplit(".", 1)
@@ -671,20 +705,20 @@ class GPLOOModel(ClosedFormLOVOMixin, GPModel):
 
 
 class GQIKRRModel(ClosedFormLOVOMixin, GQIModel):
-    """GQI as kernel ridge regression, with closed-form leave-one-volume-out prediction.
+    """GQI with closed-form leave-one-volume-out prediction.
 
-    The GQI basis :math:`\\mathbf{K}` (gradients by sphere vertices) induces the
-    q-space Gram matrix :math:`\\mathbf{G} = \\mathbf{K}\\mathbf{K}^T`. Kernel ridge
-    regression with :math:`\\mathbf{A} = \\mathbf{G} + \\lambda \\mathbf{I}` predicts
-    each volume from the training Gram matrix (rather than from the target's own
-    norm, as the one-row :class:`GQIModel` prediction does), and its LOVO
-    predictions come from one matrix.
+    The prediction of :class:`GQIModel` is kernel ridge regression on the GQI
+    basis, around a mean per shell (see
+    :meth:`~nifreeze.model.gqi.GeneralizedQSamplingFit.predict`). With the same
+    ridge :math:`\\lambda`, the predictions of all volumes come from one matrix,
+    built from :math:`\\mathbf{A} = \\mathbf{G} + \\lambda \\mathbf{I}`, instead of
+    one fit per volume. Both models share their default ridge.
     """
 
     def __init__(
         self,
         dataset: DWI,
-        krr_lambda: float | None = None,
+        krr_lambda: float | None = DEFAULT_RIDGE,
         krr_lambda_grid: Sequence[float] = DEFAULT_KRR_LAMBDA_GRID,
         **kwargs,
     ):
@@ -695,33 +729,43 @@ class GQIKRRModel(ClosedFormLOVOMixin, GQIModel):
         dataset : :obj:`~nifreeze.data.dmri.base.DWI`
             Reference to a DWI object.
         krr_lambda : :obj:`float`, optional
-            Ridge strength, relative to the mean diagonal of the Gram matrix. If
-            :obj:`None`, it is chosen from ``krr_lambda_grid`` by closed-form LOVO
-            error on a random voxel subsample.
+            Ridge :math:`\\lambda`, the ``ridge`` of :class:`GQIModel` (which takes
+            precedence when given). Defaults to
+            :data:`~nifreeze.model.gqi.DEFAULT_RIDGE`. If :obj:`None`, it is chosen
+            from ``krr_lambda_grid`` by closed-form LOVO error on a random voxel
+            subsample, on the dataset the model is built on; the ridge chosen then
+            changes with the motion in the data.
         krr_lambda_grid : :obj:`~typing.Sequence` of :obj:`float`, optional
             Candidate ridge strengths.
         nvox_prefit : :obj:`int`, optional
-            Number of voxels used to choose the ridge strength (all if :obj:`None`).
+            Number of voxels used to choose the ridge strength, when ``krr_lambda``
+            is :obj:`None` (all if :obj:`None`).
         random_state : :obj:`int`, optional
             Seed for the voxel subsample.
 
         """
         super().__init__(dataset, **kwargs)
-        self._krr_lambda = krr_lambda
+        self._krr_lambda = self._model_kwargs.get("ridge", krr_lambda)
         self._krr_lambda_grid = tuple(krr_lambda_grid)
 
     def _covariance(self, gradients: np.ndarray) -> np.ndarray:
-        from nifreeze.model.gqi import GeneralizedQSamplingModel
+        from nifreeze.model.gqi import GeneralizedQSamplingModel, sphere_gram
 
         gtab = gradient_table_from_bvals_bvecs(gradients[:, -1], gradients[:, :-1])
-        basis = GeneralizedQSamplingModel(gtab, **self._model_kwargs).kernel
-        gram = basis @ basis.T
-        gram /= np.trace(gram) / len(gram)
+        gram = sphere_gram(GeneralizedQSamplingModel(gtab, **self._model_kwargs).kernel)
         if self._krr_lambda is None:
             self._krr_lambda = select_krr_lambda(
-                [gram], [self._hyperparameter_signals()], self._krr_lambda_grid
+                [gram],
+                [self._hyperparameter_signals()],
+                self._krr_lambda_grid,
+                shells=[self._shells(gradients)],
             )
         return gram + self._krr_lambda * np.eye(len(gram))
+
+    def _shells(self, gradients: np.ndarray) -> np.ndarray:
+        from nifreeze.model.gqi import shell_bvalues
+
+        return shell_bvalues(gradients[:, -1])
 
     def _postprocess(self, predicted: np.ndarray) -> np.ndarray:
         # Diffusion signals are non-negative (as in GQI's own prediction)

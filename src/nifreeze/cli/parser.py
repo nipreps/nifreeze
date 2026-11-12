@@ -79,7 +79,10 @@ def _build_parser() -> ArgumentParser:
         default=None,
         help=(
             "Path to the yaml file containing the parameters "
-            "to configure the image registration process."
+            "to configure the image registration process, at every level of the "
+            "cascade: 'ants_config' names a configuration of "
+            "nifreeze/registration/config or a file of settings, and the other keys "
+            "override its settings."
         ),
     )
     parser.add_argument(
@@ -120,8 +123,7 @@ def _build_parser() -> ArgumentParser:
         default=None,
         help=(
             "Number of random voxels used to fit the hyperparameters of the "
-            "Gaussian process models ('gp', 'gp-loo') and to choose the ridge "
-            "strength of 'gqi-krr'."
+            "Gaussian process models ('gp', 'gp-loo')."
         ),
     )
     parser.add_argument(
@@ -162,6 +164,28 @@ def _build_parser() -> ArgumentParser:
     )
 
     parser.add_argument("--write-hdf5", action="store_true", help=("Generate an HDF5 file also."))
+    parser.add_argument(
+        "--debug-dir",
+        action="store",
+        type=Path,
+        default=None,
+        help=(
+            "Keep the registration working files of each model in a folder of this "
+            "directory, with an 'aligned_<index>.nii' image per volume: the registered "
+            "volume with its affine corrected by the estimated motion (no resampling), "
+            "which a viewer shows on top of its target 'predicted_<index>.nii'."
+        ),
+    )
+    parser.add_argument(
+        "--no-instant-update",
+        action="store_false",
+        dest="instant_update",
+        help=(
+            "Train the models on the original volumes only. By default, as soon as a "
+            "volume is registered, the models see it realigned (resampled once from the "
+            "original, with its rotated b-vector) when predicting the remaining volumes."
+        ),
+    )
 
     g_dmri = parser.add_argument_group("Options for dMRI inputs")
     g_dmri.add_argument(

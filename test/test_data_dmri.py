@@ -23,10 +23,12 @@
 """Unit tests exercising the dMRI data structure."""
 
 import re
+import tracemalloc
 import warnings
 from pathlib import Path
 
 import attrs
+import h5py
 import nibabel as nb
 import numpy as np
 import pytest
@@ -84,7 +86,8 @@ def _dwi_data_to_nifti(
     brainmask_dataobj,
     b0_dataobj=None,
 ):
-    dwi = nb.Nifti1Image(dwi_dataobj, affine)
+    # NIfTI stores the volumes last
+    dwi = nb.Nifti1Image(np.moveaxis(dwi_dataobj, 0, -1), affine)
     brainmask = nb.Nifti1Image(brainmask_dataobj, affine)
     b0 = None
     if b0_dataobj is not None:
@@ -199,6 +202,7 @@ def test_format_gradients_basic(value, expect_transpose):
 )
 def test_dwi_post_init_orientation_count_errors(setup_random_uniform_spatial_data, case_mark):
     data, affine = setup_random_uniform_spatial_data
+    data = np.moveaxis(data, -1, 0)
     with pytest.raises(ValueError, match=GRADIENT_ABSENCE_ERROR_MSG):
         DWI(dataobj=data, affine=affine)
 
@@ -206,7 +210,7 @@ def test_dwi_post_init_orientation_count_errors(setup_random_uniform_spatial_dat
         ValueError,
         match=f"DWI datasets must have at least {DTI_MIN_ORIENTATIONS} diffusion-weighted",
     ):
-        DWI(dataobj=data, affine=affine, gradients=B_MATRIX[: data.shape[-1], :])
+        DWI(dataobj=data, affine=affine, gradients=B_MATRIX[: data.shape[0], :])
 
 
 @pytest.mark.parametrize(
@@ -232,7 +236,8 @@ def test_dwi_post_init_bzero_errors(
     rng = request.node.rng
     dwi_dataobj, affine, _, gradients, b0_thres = setup_random_dwi_data
     b0s_mask = gradients[:, -1] <= b0_thres
-    b0_dataobj = dwi_dataobj[..., b0s_mask]
+    # Build the (wrongly shaped) b0 maps in NIfTI order: volumes last
+    b0_dataobj = np.moveaxis(dwi_dataobj, 0, -1)[..., b0s_mask]
     # Add a new axis if requested
     if extra_b0_axis > 0:
         b0_dataobj = b0_dataobj[..., np.newaxis]
@@ -261,7 +266,7 @@ def test_dwi_post_init_bzero_errors(
         ValueError,
         match=re.escape(
             BZERO_SHAPE_MISMATCH_ERROR_MSG.format(
-                bzero_shape=b0_dataobj.shape, data_shape=dwi_dataobj.shape[:3]
+                bzero_shape=b0_dataobj.shape, data_shape=dwi_dataobj.shape[1:]
             )
         ),
     ):
@@ -279,7 +284,7 @@ def test_dwi_post_init_b0_handling(request, vol_size, b0_count, provide_bzero, b
     For each parameter combination:
       - Build a gradient table whose first `b0_count` volumes have b=0
         and the rest have b-values in the range (bval_min, bval_max);
-      - Build a random dataobj of shape (**vol_size, N) where N is the number
+      - Build a random dataobj of shape (N, **vol_size) where N is the number
         of DWI volumes;
       - If `provide_bzero` is True, pass explicit bzero data that must be
         preserved; else, rely on the bzero computed at instantiation, i.e.
@@ -303,8 +308,8 @@ def test_dwi_post_init_b0_handling(request, vol_size, b0_count, provide_bzero, b
     bvecs = np.vstack((bzeros, bvecs))
     gradients = np.column_stack((bvecs, bvals))
 
-    # Create random dataobj with shape
-    dataobj = rng.standard_normal((*vol_size, n_vols)).astype(float)
+    # Create random dataobj with shape (drawn in NIfTI order, then volumes first)
+    dataobj = np.moveaxis(rng.standard_normal((*vol_size, n_vols)).astype(float), -1, 0)
 
     # Optionally supply a bzero
     provided = None
@@ -350,18 +355,16 @@ def test_dwi_post_init_b0_handling(request, vol_size, b0_count, provide_bzero, b
         else:
             # When there are b0 frames and no provided bzero:
             #  - If exactly one b0 frame, the stored bzero should be the 3D volume
-            #  - If multiple b0 frames, the stored bzero should be the median along last axis
-            b0_vols = dataobj[
-                ..., b0_mask
-            ].squeeze()  # shape (X,Y,Z,expected_b0_num) or (X,Y,Z) if 1
-            expected_bzero = b0_vols if b0_vols.ndim == 3 else np.median(b0_vols, axis=-1)
+            #  - If multiple b0 frames, the stored bzero should be the median along first axis
+            b0_vols = dataobj[b0_mask].squeeze()  # shape (expected_b0_num,X,Y,Z) or (X,Y,Z) if 1
+            expected_bzero = b0_vols if b0_vols.ndim == 3 else np.median(b0_vols, axis=0)
             assert np.allclose(dwi_obj.bzero, expected_bzero)
 
     assert dwi_obj.gradients.shape[0] == expected_non_b0_count
-    assert dwi_obj.dataobj.shape[-1] == expected_non_b0_count
+    assert dwi_obj.dataobj.shape[0] == expected_non_b0_count
 
     assert np.allclose(dwi_obj.gradients, gradients[~b0_mask])
-    assert np.allclose(dwi_obj.dataobj, dataobj[..., ~b0_mask])
+    assert np.allclose(dwi_obj.dataobj, dataobj[~b0_mask])
 
 
 @pytest.mark.random_gtab_data(10, (1000, 2000), 2)
@@ -428,15 +431,15 @@ def test_gradient_instantiation_dwi_vol_mismatch_error(
 
     # Add additional volumes: simply concatenate the last volume
     if additional_volume_count:
-        additional_dwi_dataobj = np.tile(dwi_dataobj[..., -1:], (1, additional_volume_count))
-        dwi_dataobj = np.concatenate((dwi_dataobj, additional_dwi_dataobj), axis=-1)
+        additional_dwi_dataobj = np.repeat(dwi_dataobj[-1:], additional_volume_count, axis=0)
+        dwi_dataobj = np.concatenate((dwi_dataobj, additional_dwi_dataobj), axis=0)
     # Add additional gradients: simply concatenate the gradient
     if additional_gradient_count:
         additional_gradients = np.tile(gradients[-1:, :], (additional_gradient_count, 1))
         gradients = np.concatenate((gradients, additional_gradients), axis=0)
 
     # Test with b0s present
-    n_volumes = dwi_dataobj.shape[-1]
+    n_volumes = dwi_dataobj.shape[0]
     with pytest.raises(
         ValueError,
         match=GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR.format(
@@ -450,9 +453,9 @@ def test_gradient_instantiation_dwi_vol_mismatch_error(
         )
 
     # Test without b0s present
-    dwi_dataobj = dwi_dataobj[..., 2:]
+    dwi_dataobj = dwi_dataobj[2:]
     gradients = gradients[2:, :]
-    n_volumes = dwi_dataobj.shape[-1]
+    n_volumes = dwi_dataobj.shape[0]
     with pytest.raises(
         ValueError,
         match=GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR.format(
@@ -538,7 +541,7 @@ def test_load_gradients_bval_bvec_warn(tmp_path, setup_random_dwi_data):
     bvecs = gradients[:, :-1]
 
     b0s_mask = bvals <= b0_thres
-    b0_dataobj = dwi_dataobj[..., b0s_mask].squeeze()
+    b0_dataobj = dwi_dataobj[b0s_mask].squeeze()
 
     b0_fname = tmp_path / "b0.nii.gz"
     nb.Nifti1Image(b0_dataobj, np.eye(4), None).to_filename(b0_fname)
@@ -603,6 +606,54 @@ def test_load_gradients(tmp_path, setup_random_dwi_data, row_major_gradients):
     assert hasattr(dwi_obj, "gradients")
     assert dwi_obj.gradients.shape == expected_nonzero_grads.shape
     assert np.allclose(dwi_obj.gradients, expected_nonzero_grads, atol=1e-6)
+
+
+@pytest.mark.parametrize("row_major_gradients", (True, False))
+@pytest.mark.parametrize("with_b0_file", (False, True))
+def test_from_nii_drops_b0_while_loading(tmp_path, row_major_gradients, with_b0_file):
+    """``from_nii`` leaves the b=0 volumes out of the volumes-first copy of the series.
+
+    The dataset is the same as ``DWI`` builds from the whole series, and loading
+    allocates one copy of the series, not one to reorder it and another to drop
+    the b=0 volumes.
+    """
+    rng = np.random.default_rng(1234)
+    shape3d, n_volumes = (32, 32, 20), 24
+    bvals = np.where(np.arange(n_volumes) % 8 == 0, 0.0, 1000.0)
+    bvecs = rng.standard_normal((n_volumes, 3))
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+    bvecs[bvals == 0] = 0
+    gradients = np.column_stack((bvecs, bvals))
+    # Uncompressed, so nibabel maps the file instead of decompressing it in memory
+    data = rng.random((*shape3d, n_volumes), dtype=np.float32)
+    nb.Nifti1Image(data, np.eye(4)).to_filename(tmp_path / "dwi.nii")
+    np.savetxt(
+        tmp_path / "grads.txt", gradients if row_major_gradients else gradients.T, fmt="%.6f"
+    )
+
+    kwargs = {}
+    expected_bzero = np.median(data[..., bvals == 0], axis=-1)
+    expected_warning = DWI_B0_MULTIPLE_VOLUMES_WARN_MSG
+    if with_b0_file:
+        expected_bzero = rng.random(shape3d, dtype=np.float32)
+        nb.Nifti1Image(expected_bzero, np.eye(4)).to_filename(tmp_path / "b0.nii")
+        kwargs["b0_file"] = tmp_path / "b0.nii"
+        expected_warning = DWI_REDUNDANT_B0_WARN_MSG
+
+    tracemalloc.start()
+    try:
+        with pytest.warns(UserWarning, match=re.escape(expected_warning)):
+            dwi = from_nii(tmp_path / "dwi.nii", gradients_file=tmp_path / "grads.txt", **kwargs)
+        peak = tracemalloc.get_traced_memory()[1]
+    finally:
+        tracemalloc.stop()
+
+    keep = bvals > 0
+    assert np.array_equal(dwi.dataobj, np.moveaxis(data[..., keep], -1, 0))
+    assert np.allclose(dwi.gradients, gradients[keep], atol=1e-5)
+    assert dwi.bzero is not None
+    assert np.allclose(dwi.bzero, expected_bzero)
+    assert peak < 1.4 * data.nbytes
 
 
 @pytest.mark.random_gtab_data(10, (1000, 2000), 1)
@@ -706,8 +757,8 @@ def test_to_nifti(
     bvecs = np.vstack((bzeros, bvecs))
     gradients = np.column_stack((bvecs, bvals))
 
-    # Create random dataobj with shape
-    dataobj = rng.standard_normal((*vol_size, n_vols)).astype(float)
+    # Create random dataobj with shape (drawn in NIfTI order, then volumes first)
+    dataobj = np.moveaxis(rng.standard_normal((*vol_size, n_vols)).astype(float), -1, 0)
 
     # Optionally supply a bzero
     provided = None
@@ -742,7 +793,8 @@ def test_to_nifti(
     def simple_to_nifti(_dataset, filename=None, write_hmxfms=None, order=None):
         _ = write_hmxfms
         _ = order
-        _nii = nb.Nifti1Image(_dataset.dataobj, _dataset.affine)
+        # Offset, standing in for the resampling, so the output tells the two apart
+        _nii = nb.Nifti1Image(np.moveaxis(_dataset.dataobj + 1.0, 0, -1), _dataset.affine)
         if filename is not None:
             _nii.to_filename(filename)
         return _nii
@@ -780,21 +832,23 @@ def test_to_nifti(
         ]
         bvecs_dwi = np.asarray(rotated)
 
-    # Check the primary NIfTI output
-    _dataobj = dwi_obj.dataobj
+    # Check the primary NIfTI output: the volumes of ``_base_to_nifti``
+    _dataobj = dwi_obj.dataobj + 1.0
     # Concatenate the b0 if the primary data has a b0 volume or if it was
     # requested to do so
     if not no_bzero:
         assert dwi_obj.bzero is not None
         # ToDo
         # The code will concatenate as many zeros as they exist to the data
-        _dataobj = np.concatenate((dwi_obj.bzero[..., np.newaxis], dwi_obj.dataobj), axis=-1)
+        _dataobj = np.concatenate((dwi_obj.bzero[np.newaxis], _dataobj), axis=0)
         # But when inserting b0 data to the gradients, it inserts a single b0.
         # Here I will insert as many values as b0 volumes to make the test fail
-        dwi_b0_count = dwi_obj.bzero.shape[-1] if dwi_obj.bzero.ndim == 4 else 1
+        dwi_b0_count = dwi_obj.bzero.shape[0] if dwi_obj.bzero.ndim == 4 else 1
         bvals_dwi = np.concatenate((np.zeros(dwi_b0_count), bvals_dwi))
         bvecs_dwi = np.vstack((np.zeros((dwi_b0_count, bvecs_dwi.shape[1])), bvecs_dwi))
 
+    # NIfTI stores the volumes last
+    _dataobj = np.moveaxis(_dataobj, 0, -1)
     assert isinstance(nii, nb.Nifti1Image)
     assert np.allclose(nii.get_fdata(), _dataobj)
     assert np.allclose(nii.affine, dwi_obj.affine)
@@ -815,19 +869,18 @@ def test_to_nifti(
         np.allclose(_nii_dataobj.get_fdata(), _nii_load.get_fdata())
         np.allclose(_nii_dataobj.affine, _nii_load.affine)
 
-        # Check gradients
-        if motion_affines is not None:
-            bvecs_file = _filename.with_suffix("").with_suffix(".bvec")
-            bvals_file = _filename.with_suffix("").with_suffix(".bval")
-            assert bvals_file.is_file()
-            assert bvecs_file.is_file()
+        # Check gradients, written with every NIfTI file
+        bvecs_file = _filename.with_suffix("").with_suffix(".bvec")
+        bvals_file = _filename.with_suffix("").with_suffix(".bval")
+        assert bvals_file.is_file()
+        assert bvecs_file.is_file()
 
-            # Read the files
-            bvals_from_file = np.loadtxt(bvals_file)
-            bvecs_from_file = np.loadtxt(bvecs_file).T
+        # Read the files
+        bvals_from_file = np.loadtxt(bvals_file)
+        bvecs_from_file = np.loadtxt(bvecs_file).T
 
-            assert np.allclose(bvals_from_file, bvals_dwi, rtol=0, atol=10**-bvals_dec_places)
-            assert np.allclose(bvecs_from_file, bvecs_dwi, rtol=0, atol=10**-bvecs_dec_places)
+        assert np.allclose(bvals_from_file, bvals_dwi, rtol=0, atol=10**-bvals_dec_places)
+        assert np.allclose(bvecs_from_file, bvecs_dwi, rtol=0, atol=10**-bvecs_dec_places)
 
 
 @pytest.mark.skip(reason="to_nifti takes absurdly long")
@@ -849,6 +902,8 @@ def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
     nifti_data = load_api(dwi_nifti_path, nb.Nifti1Image).get_fdata()
     if insert_b0:
         nifti_data = nifti_data[..., 1:]
+    # NIfTI stores the volumes last
+    nifti_data = np.moveaxis(nifti_data, -1, 0)
 
     # Try loading NIfTI + b-vecs/vals
     out_root = dwi_nifti_path.parent / dwi_nifti_path.name.replace(
@@ -954,7 +1009,7 @@ def test_equality_operator(tmp_path, setup_random_dwi_data):
     dwi_dataobj, affine, brainmask_dataobj, gradients, b0_thres = setup_random_dwi_data
 
     b0s_mask = gradients[:, -1] <= b0_thres
-    b0_dataobj = dwi_dataobj[..., b0s_mask].squeeze()
+    b0_dataobj = dwi_dataobj[b0s_mask].squeeze()
 
     dwi_nii, brainmask, b0 = _dwi_data_to_nifti(
         dwi_dataobj, affine, brainmask_dataobj.astype(np.uint8), b0_dataobj=b0_dataobj
@@ -1025,6 +1080,39 @@ def test_equality_operator(tmp_path, setup_random_dwi_data):
     assert round_trip_dwi_obj == dwi_obj_from_nii
 
 
+@pytest.mark.random_dwi_data(50, (8, 8, 8), True)
+@pytest.mark.parametrize("existing", [False, True])
+def test_to_filename_appends_extension(tmp_path, setup_random_dwi_data, existing):
+    """A name without ``.h5`` gets the extension, and only that file is modified."""
+    dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
+
+    # Ignore warning due to redundant b0 volumes
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", message=DWI_B0_MULTIPLE_VOLUMES_WARN_MSG, category=UserWarning
+        )
+        dwi_obj = DWI(
+            dataobj=dwi_dataobj,
+            affine=affine,
+            brainmask=brainmask_dataobj,
+            gradients=gradients,
+        )
+
+    filename = tmp_path / "dwi"
+    if existing:
+        with h5py.File(filename, "w") as other:
+            other.attrs["Type"] = "unrelated"
+
+    dwi_obj.to_filename(filename)
+
+    with h5py.File(tmp_path / "dwi.h5", "r") as out_file:
+        assert out_file.attrs["Type"] == "dmri"
+    if existing:
+        with h5py.File(filename, "r") as other:
+            assert other.attrs["Type"] == "unrelated"
+    assert DWI.from_filename(tmp_path / "dwi.h5") == dwi_obj
+
+
 @pytest.mark.random_dwi_data(50, (34, 36, 24), False)
 def test_shells(setup_random_dwi_data):
     dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
@@ -1047,7 +1135,7 @@ def test_shells(setup_random_dwi_data):
     )
 
     indices = [np.where(np.isin(dwi_obj.bvals, bvals))[0] for bvals in expected_bval_groups]
-    expected_dwi_data = [dwi_obj.dataobj[..., idx] for idx in indices]
+    expected_dwi_data = [dwi_obj.dataobj[idx] for idx in indices]
     expected_motion_affines = [
         dwi_obj.motion_affines[idx] if dwi_obj.motion_affines else None for idx in indices
     ]
@@ -1906,3 +1994,59 @@ def test_transform_fsl_bvec(b_ijk, zooms, flips, axis_order, origin, angles):
         f"Expected {rotated_b_ijk}, got {test_b_ijk} for b_ijk={b_ijk}, "
         f"zooms={zooms}, origin={origin}, angles={angles}"
     )
+
+
+def _rotation_about_z(degrees: float, shift: tuple = (0.0, 0.0, 0.0)) -> np.ndarray:
+    angle = np.deg2rad(degrees)
+    matrix = np.eye(4)
+    matrix[:2, :2] = [[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]]
+    matrix[:3, 3] = shift
+    return matrix
+
+
+def _small_dwi(gradients: np.ndarray) -> DWI:
+    rng = np.random.default_rng(1234)
+    return DWI(
+        dataobj=rng.uniform(1.0, 2.0, (len(gradients), 6, 6, 4)).astype("float32"),
+        affine=np.diag([2.0, 2.0, 2.5, 1.0]),
+        gradients=gradients,
+        bzero=np.ones((6, 6, 4), dtype="float32"),
+    )
+
+
+def test_dwi_realign_into_rotates_the_bvector():
+    """The realigned view's b-vector is the original one rotated as at export."""
+    rng = np.random.default_rng(1234)
+    bvecs = rng.normal(size=(DTI_MIN_ORIENTATIONS + 2, 3))
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+    dwi = _small_dwi(np.column_stack([bvecs, np.full(len(bvecs), 1000.0)]))
+    original = np.array(dwi.gradients)
+    view = dwi.realigned()
+
+    matrix = _rotation_about_z(10.0, (1.0, 0.0, 0.0))
+    dwi.set_transform(3, matrix)
+    dwi.realign_into(view, 3)
+
+    expected = transform_fsl_bvec(original[3], matrix, dwi.affine, invert=True)
+    expected /= np.linalg.norm(expected)
+    assert np.allclose(view.gradients[3, :3], expected)
+    assert view.gradients[3, 3] == original[3, 3]
+    assert np.allclose(np.delete(view.gradients, 3, axis=0), np.delete(original, 3, axis=0))
+    assert np.array_equal(dwi.gradients, original)
+
+
+def test_dwi_realign_into_keeps_integer_tables_exact():
+    """An all-integer table (stored as int16) does not truncate a rotated b-vector."""
+    axes = np.vstack([np.eye(3), -np.eye(3), np.eye(3)[:2]])
+    dwi = _small_dwi(np.column_stack([axes, np.full(len(axes), 1000)]))
+    assert np.issubdtype(dwi.gradients.dtype, np.integer)
+    view = dwi.realigned()
+
+    dwi.set_transform(0, _rotation_about_z(10.0))
+    dwi.realign_into(view, 0)
+
+    expected = transform_fsl_bvec(
+        np.array([1.0, 0.0, 0.0]), _rotation_about_z(10.0), dwi.affine, invert=True
+    )
+    assert np.allclose(view.gradients[0, :3], expected / np.linalg.norm(expected))
+    assert np.allclose(view.gradients[1:], dwi.gradients[1:])

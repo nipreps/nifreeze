@@ -30,6 +30,7 @@ from nibabel.spatialimages import SpatialImage
 
 from nifreeze.data.pet.base import PET
 from nifreeze.data.pet.utils import compute_temporal_markers
+from nifreeze.data.utils import to_time_first
 from nifreeze.utils.ndimage import get_data, load_api
 
 TEMPORAL_FILE_KEY_ERROR_MSG = "{key} key not found in temporal file"
@@ -74,7 +75,9 @@ def from_nii(
 
     # 1) Load a NIfTI
     img = load_api(filename, SpatialImage)
-    fulldata = get_data(img)
+    # NIfTI stores volumes last; datasets store them first
+    fulldata = to_time_first(get_data(img))
+    img.uncache()  # drop nibabel's cached copy of the volumes-last array
 
     # 2) Load the temporal data
     with open(temporal_file, "r") as f:

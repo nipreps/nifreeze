@@ -175,10 +175,12 @@ nifreeze `implements` those contracts. The generic "no nifreeze source/API" rule
 is unchanged: nifreeze's own modules appear only as pointers, never as page
 substance.
 
-Currently the only such dependency is **DIPY**, floored in `pyproject.toml` at
+The main such dependency is **DIPY**, floored in `pyproject.toml` at
 release `1.12.1`. Treat the DIPY tool pages as a *cache* of the surface at that
 floor, kept in sync when the floor rises (see the sync procedure in
-[[dipy-version-pin-fragility]]).
+[[dipy-version-pin-fragility]]). The benchmark runner **asv** (pinned at `0.6.6`
+in the `benchmark` extra) has one tool page, [[tool-asv]], recording the
+behavior the benchmark CI relies on.
 
 Concept pages in this wiki use `namespace: paper` (concepts are
 literature-sourced). If a future concept is purely internal to the project

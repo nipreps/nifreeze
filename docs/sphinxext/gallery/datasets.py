@@ -44,6 +44,7 @@ import numpy as np
 
 from nifreeze.data.dmri import DWI
 from nifreeze.data.dmri.utils import find_shelling_scheme, format_gradients
+from nifreeze.data.utils import to_time_first
 
 SINGLE_SHELL = "single-shell"
 MULTI_SHELL = "multi-shell"
@@ -176,7 +177,9 @@ def synthetic_dwi(
     gradients = np.column_stack([bvecs, bvals])
 
     n_vols = gradients.shape[0]
+    # Drawn in NIfTI order (volumes last); datasets store the volumes first
     dataobj = rng.uniform(50.0, 1000.0, size=(*vol_shape, n_vols)).astype(np.float32)
+    dataobj = np.moveaxis(dataobj, -1, 0)
     brainmask = np.ones(tuple(vol_shape), dtype=bool)
 
     return DWI(
@@ -319,6 +322,8 @@ def _load_dwi(
     if crop:
         data, mask, affine = _crop_to_mask(data, mask, affine)
 
+    # NIfTI stores the volumes last; datasets store them first
+    data = to_time_first(data)
     return DWI(dataobj=data, affine=affine, brainmask=mask, gradients=gradients)
 
 

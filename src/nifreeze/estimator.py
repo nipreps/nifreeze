@@ -24,11 +24,14 @@
 
 from __future__ import annotations
 
+from concurrent.futures import Future, ThreadPoolExecutor
+from contextlib import nullcontext
 from os import cpu_count
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from timeit import default_timer as timer
 from typing import TypeVar
+from warnings import warn
 
 import nibabel as nb
 import numpy as np
@@ -36,10 +39,12 @@ from tqdm import tqdm
 from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset
-from nifreeze.model.base import BaseModel, ModelFactory
+from nifreeze.data.filtering import ClippingValueError, robust_window
+from nifreeze.model.base import BaseModel, ModelFactory, TrivialModel
 from nifreeze.registration.ants import (
     _prepare_registration_data,
     _run_registration,
+    _write_aligned,
 )
 from nifreeze.utils import iterators
 
@@ -142,6 +147,36 @@ class Estimator:
         ----------
         dataset : :obj:`~nifreeze.data.base.BaseDataset`
             The input dataset this estimator operates on.
+        align_kwargs : :obj:`dict`, optional
+            Registration settings for every estimator of the chain (e.g., those of
+            ``--align-config``). The settings given to an estimator at construction
+            take precedence.
+        clip : :obj:`str`, optional
+            Clip the intensity of ``"sample"``, ``"predicted"``, ``"both"``
+            (default) or ``"none"`` of the images before registration.
+        clip_windows : :obj:`dict`, optional
+            Intensity windows by volume index. A volume's window is estimated
+            from the volume the first time it is registered, and then reused
+            for its prediction and by every later estimator of the chain.
+        debug_dir : :obj:`os.pathlike`, optional
+            Keep the registration working files of each estimator of the chain
+            in a folder of ``debug_dir`` (instead of a temporary directory), with
+            an ``aligned_<index>.nii`` trace per volume: the registered sample
+            with its affine corrected by the estimated transform, which a viewer
+            shows on top of ``predicted_<index>.nii``.
+        instant_update : :obj:`bool`, optional
+            Whether models train on the realigned view of the dataset (default):
+            right after a volume is registered, the model sees it resampled once,
+            from the original volume, with the estimate (and, for DWI, its rotated
+            b-vector). The dataset itself is never modified; registration and
+            export keep using the original volumes. It applies to models given by
+            name and to model instances built on this dataset (see
+            :meth:`~nifreeze.model.base.BaseModel.set_dataset`), except the
+            trivial model, whose reference never moves.
+        num_threads : :obj:`int`, optional
+            Threads of each registration (default: ``omp_nthreads``).
+        realigned : :obj:`dict`, optional
+            Realigned views by dataset, shared by the estimators of a chain.
 
         Returns
         -------
@@ -149,6 +184,9 @@ class Estimator:
             The estimator, after fitting.
 
         """
+        # Shared with the previous estimators of the chain
+        windows = kwargs.setdefault("clip_windows", {})
+        views = kwargs.setdefault("realigned", {})
         if self._prev is not None:
             result = self._prev.run(dataset, **kwargs)
             if isinstance(self._prev, Filter):
@@ -156,6 +194,19 @@ class Estimator:
 
         n_jobs = kwargs.pop("n_jobs", None) or min(cpu_count() or 1, 8)
         n_threads = kwargs.pop("omp_nthreads", None) or ((cpu_count() or 2) - 1)
+
+        # The realigned view the model trains on (one per dataset in a chain)
+        view = None
+        if kwargs.pop("instant_update", True) and not (
+            # The trivial model's reference never moves
+            isinstance(self._model, TrivialModel)
+            or (isinstance(self._model, str) and self._model.lower() == "trivial")
+            # A model instance built on another dataset keeps reading it
+            or (isinstance(self._model, BaseModel) and self._model._dataset is not dataset)
+        ):
+            view = views.get(id(dataset))
+            if view is None:
+                view = views[id(dataset)] = dataset.realigned()
 
         num_voxels = dataset.brainmask.sum() if dataset.brainmask is not None else dataset.size3d
         chunk_size = DEFAULT_CHUNK_SIZE * (n_threads or 1)
@@ -190,11 +241,13 @@ class Estimator:
             # Factory creates the appropriate model and pipes arguments
             model = ModelFactory.init(
                 model=self._model,
-                dataset=dataset,
+                dataset=dataset if view is None else view,
                 **self._model_kwargs,
             )
         else:
             model = self._model
+            if view is not None:
+                model.set_dataset(view)
 
         # Prepare fit/predict keyword arguments
         fit_pred_kwargs = {
@@ -214,8 +267,20 @@ class Estimator:
             model.fit_predict(None, **fit_pred_kwargs)
             print(f"Fitting 'single' model finished, elapsed {timer() - start}s.")
 
-        kwargs["num_threads"] = n_threads
-        kwargs = self._align_kwargs | kwargs
+        # Registration settings: the run's (shared by the chain), this estimator's, and
+        # then the run's other keyword arguments
+        kwargs = (kwargs.pop("align_kwargs", None) or {}) | self._align_kwargs | kwargs
+        kwargs.setdefault("num_threads", n_threads)
+        clip = kwargs.pop("clip", "both")
+        clipping = str(clip).lower() in ("sample", "predicted", "both", "true")
+        kwargs.pop("clip_windows", None)
+        kwargs.pop("realigned", None)
+
+        work_dir = None
+        if (debug_dir := kwargs.pop("debug_dir", None)) is not None:
+            # Absolute, because nipype runs ANTs from within the working directory
+            work_dir = Path(debug_dir).absolute() / self._debug_name(model)
+            work_dir.mkdir(parents=True, exist_ok=True)
 
         # Calculate effective dataset length for progress bar
         if self._stop_index is not None:
@@ -223,13 +288,19 @@ class Estimator:
         else:
             dataset_length = len(dataset) - self._start_index
 
-        with TemporaryDirectory() as tmp_dir:
+        traces: list[Future] = []
+        with (
+            (
+                nullcontext(str(work_dir)) if work_dir is not None else TemporaryDirectory()
+            ) as tmp_dir,
+            ThreadPoolExecutor(max_workers=1) as tracer,
+        ):
             print(f"Processing in <{tmp_dir}>")
             ptmp_dir = Path(tmp_dir)
 
             bmask_path = None
             if dataset.brainmask is not None:
-                bmask_path = ptmp_dir / "brainmask.nii.gz"
+                bmask_path = ptmp_dir / "brainmask.nii"
                 nb.Nifti1Image(
                     dataset.brainmask.astype(np.uint8), dataset.affine, None
                 ).to_filename(bmask_path)
@@ -245,14 +316,33 @@ class Estimator:
                         **fit_pred_kwargs,
                     )
 
+                    volume = dataset[i][0]  # Access the target volume
+                    if clipping and i not in windows:
+                        try:
+                            windows[i] = robust_window(volume, dataset.brainmask)
+                        except ClippingValueError as exc:
+                            warn(f"Registering volume {i} without clipping: {exc}", stacklevel=2)
+                            windows[i] = None
+                    window = windows.get(i)
+
+                    # Start from the current estimate (left by a previous estimator of the
+                    # chain, or stored in the dataset)
+                    init_affine = None
+                    if dataset.motion_affines is not None:
+                        current = np.asarray(dataset.motion_affines[i], dtype=float)
+                        if not np.allclose(current, np.eye(4)):
+                            init_affine = current
+
                     # prepare data for running ANTs
                     predicted_path, volume_path, init_path = _prepare_registration_data(
-                        dataset[i][0],  # Access the target volume
+                        volume,
                         predicted,
                         dataset.affine,
                         i,
                         ptmp_dir,
-                        kwargs.pop("clip", "both"),
+                        clip=clip if window is not None else "none",
+                        window=window,
+                        init_affine=init_affine,
                     )
 
                     pbar.set_description_str(f"{REG_MSG: <16} vol. <{i}>")
@@ -270,6 +360,33 @@ class Estimator:
 
                     # update
                     dataset.set_transform(i, xform.matrix)
+                    if view is not None:
+                        # Instant update: the next predictions see this volume realigned
+                        dataset.realign_into(view, i)
+                        model.update(i)
+                    if work_dir is not None:
+                        # Debugging trace, written while the next volume is registered
+                        traces.append(
+                            tracer.submit(
+                                _write_aligned,
+                                volume_path,
+                                xform.matrix,
+                                ptmp_dir / f"aligned_{i:05d}.nii",
+                            )
+                        )
                     pbar.update()
 
+            # Surface any error raised while writing a trace
+            for trace in traces:
+                trace.result()
+
         return self
+
+    def _debug_name(self, model: BaseModel) -> str:
+        """Name this estimator's folder of ``debug_dir`` by position in the chain and model."""
+        position, prev = 0, self._prev
+        while prev is not None:
+            position += isinstance(prev, Estimator)
+            prev = getattr(prev, "_prev", None)
+        name = self._model if isinstance(self._model, str) else type(model).__name__
+        return f"{position:02d}-{name.lower()}"

@@ -1,0 +1,11 @@
+Variant,Change from A,1° and 1 mm: median,1° and 1 mm: p95,4° and 4 mm: median,4° and 4 mm: p95,Seconds (median)
+(none),no registration: the true motion,1.214,1.276,4.855,5.105,
+A,"none: the estimator's default, with noise",0.223,0.449,0.225,0.428,2.0
+B,no noise,0.040,0.076,0.043,0.099,1.5
+C,shrink factor 1,0.105,0.231,0.096,0.223,3.5
+D,"shrink factor 1, no noise",0.029,0.071,0.034,0.081,2.9
+E,longer optimization,0.217,0.435,0.225,0.377,3.4
+F,"shrink factor 1, longer optimization",0.112,0.216,0.091,0.212,16.6
+G,"shrink factor 1, no noise, longer optimization",0.029,0.069,0.031,0.074,16.3
+H,"longer optimization, every voxel sampled",0.610,1.038,0.163,0.501,16.7
+I,"shrink factor 1, float32 inputs",0.130,0.225,0.102,0.164,2.9
