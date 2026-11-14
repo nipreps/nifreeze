@@ -13,6 +13,18 @@ Check your installation with the following command line::
 
     python -c "from nifreeze import __version__; print(__version__)"
 
+Supported versions
+------------------
+*nifreeze* follows `SPEC 0 <https://scientific-python.org/specs/spec-0000/>`__,
+the minimum supported dependencies of the Scientific Python ecosystem.
+A Python version is supported for three years after its release, and a version of a
+dependency for two years after its release.
+Python 3.13 and 3.14 are supported, and every pull request is tested on both.
+Python 3.15 is tested weekly, and will be supported once all *nifreeze*'s dependencies
+publish packages for it.
+Each quarter, an automated pull request raises the minimum versions of the dependencies,
+and a test job checks that *nifreeze* still works with them.
+
 
 External Dependencies
 ---------------------

@@ -1,0 +1,35 @@
+name: Update SPEC 0 dependency floors
+
+on:
+  schedule:
+    # Day 3 of each quarter, after the action publishes the quarter's schedule on day 1
+    - cron: '0 0 3 1,4,7,10 *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      # Python is excluded: dropping a Python version also changes the CI matrices,
+      # tox.ini, the classifiers, ruff's target and the tools/ script headers (#644)
+      - uses: scientific-python/spec0-action@7c875bc60508e9aab2bdb851e99bfcc53b283e94 # v1.6
+        with:
+          update_all: 2
+          excluded_packages: python
+          pr_title: 'MNT: Drop Dependency Versions Past The SPEC 0 Window'
+          commit_msg: 'mnt: drop dependency versions past the SPEC 0 window'
+          pr_body: >-
+            Raises the lower bounds of the dependencies to the SPEC 0 schedule
+            (https://scientific-python.org/specs/spec-0000/), and those of the other
+            dependencies to their oldest release of the last two years (#644).
+            GitHub does not run workflows on pull requests opened with the workflow's
+            token: close and reopen this pull request to run CI, including the job at
+            the minimum versions.
