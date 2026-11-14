@@ -294,7 +294,11 @@ class Perturbation:
     moved: tuple[int, ...] = ()
     """Indices of the moved volumes."""
     motions: tuple[np.ndarray, ...] = attrs.field(default=(), eq=False)
-    """Head motion of each moved volume, as a ``(4, 4)`` matrix in world coordinates."""
+    """Head motion of each moved volume, as a ``(4, 4)`` matrix in world coordinates.
+    A matrix :math:`M` takes a point :math:`x` of the aligned head to :math:`M x` in the
+    scanner, so the moved volume shows at :math:`M x` what the aligned one shows at
+    :math:`x`. Registering the aligned volume (fixed) to the moved one (moving) thus
+    estimates :math:`M`."""
     distortion: Distortion | None = None
     """Distortion of every volume, applied after its motion, in the scanner's frame."""
 
