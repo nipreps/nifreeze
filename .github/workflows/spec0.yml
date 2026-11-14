@@ -5,6 +5,11 @@ on:
     # Day 3 of each quarter, after the action publishes the quarter's schedule on day 1
     - cron: '0 0 3 1,4,7,10 *'
   workflow_dispatch:
+    inputs:
+      create_pr:
+        description: 'Open a pull request (otherwise, only show the changes in the log)'
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -22,6 +27,7 @@ jobs:
       # tox.ini, the classifiers, ruff's target and the tools/ script headers (#644)
       - uses: scientific-python/spec0-action@7c875bc60508e9aab2bdb851e99bfcc53b283e94 # v1.6
         with:
+          create_pr: ${{ github.event_name == 'schedule' || inputs.create_pr }}
           update_all: 2
           excluded_packages: python
           pr_title: 'MNT: Drop Dependency Versions Past The SPEC 0 Window'
