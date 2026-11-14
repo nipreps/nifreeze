@@ -482,7 +482,7 @@ def _plot_pet_timeseries(
     fig, ax = plt.subplots()
 
     colors = plt.get_cmap("tab10")
-    for i in range(np.prod(dataobj.shape[:-1])):
+    for i in range(int(np.prod(dataobj.shape[:-1]))):
         ax.plot(
             tp,
             dataobj.reshape((-1, n_timepoints))[i],
