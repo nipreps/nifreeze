@@ -131,6 +131,11 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && fromJson('["3.13", "3.14", "3.15"]') || fromJson('["3.13", "3.14"]') }}
+        depends: ['latest']
+        include:
+          # The lowest versions the dependency floors allow (#644)
+          - python-version: '3.13'
+            depends: 'min'
     steps:
       - uses: actions/checkout@v5
         with:
@@ -175,6 +180,8 @@ jobs:
       - name: Prepare test output directory
         run: mkdir -p "${TEST_OUTPUT_DIR}"
       - name: Run tox
+        env:
+          DEPENDS: ${{ matrix.depends }}
         run: |
           export PATH=$ANTSPATH:$PATH
           tox -v --exit-and-dump-after 1200
@@ -182,7 +189,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
-          name: test-output-py${{ matrix.python-version }}
+          name: test-output-py${{ matrix.python-version }}-${{ matrix.depends }}
           path: ${{ env.TEST_OUTPUT_DIR }}
           if-no-files-found: warn
       - uses: codecov/codecov-action@v5
