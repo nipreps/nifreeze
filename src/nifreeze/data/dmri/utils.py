@@ -67,6 +67,12 @@ Gradient table shape does not match the number of diffusion volumes: \
 expected {n_volumes} rows, found {n_gradients}."""
 """dMRI volume count vs. gradient count mismatch error message."""
 
+BVEC_FRAMES = ("fsl", "voxel")
+"""Conventions of b-vectors given on the voxel axes (see :func:`bvecs_to_ras`)."""
+
+BVEC_FRAME_ERROR_MSG = "Unknown b-vector frame {frame!r}: expected one of {frames}."
+"""Unknown b-vector frame error message."""
+
 
 def find_shelling_scheme(
     bvals: np.ndarray,
@@ -315,3 +321,97 @@ def transform_fsl_bvec(
     ijk2ijk_xfm = np.linalg.inv(imaffine) @ xfm @ imaffine
 
     return ijk2ijk_xfm[:3, :3] @ b_ijk[:3]
+
+
+def _voxel_axes(affine: np.ndarray) -> np.ndarray:
+    """Return the world direction of each voxel axis, as the columns of an orthogonal matrix.
+
+    This is the orthogonal factor of the polar decomposition of the affine's linear part.
+    Without shear, it is that linear part with its columns scaled to unit length, so the
+    voxel sizes do not bend directions.
+    """
+    u, _, vt = np.linalg.svd(np.asanyarray(affine, dtype=float)[:3, :3])
+    return u @ vt
+
+
+def _frame_flip(affine: np.ndarray, frame: str) -> np.ndarray:
+    """Return the sign of each voxel-axis component in ``frame``."""
+    if frame not in BVEC_FRAMES:
+        raise ValueError(BVEC_FRAME_ERROR_MSG.format(frame=frame, frames=BVEC_FRAMES))
+    flip = np.ones(3)
+    if frame == "fsl" and np.linalg.det(np.asanyarray(affine, dtype=float)[:3, :3]) > 0:
+        flip[0] = -1.0
+    return flip
+
+
+def bvecs_to_ras(bvecs: np.ndarray, affine: np.ndarray, frame: str) -> np.ndarray:
+    """
+    Convert b-vectors given on the voxel axes into world RAS+ coordinates.
+
+    The conversion is orthogonal: it keeps the norms, and zero vectors stay zero.
+
+    Parameters
+    ----------
+    bvecs : :obj:`~numpy.ndarray`
+        The b-vectors, shape ``(N, 3)``.
+    affine : :obj:`~numpy.ndarray`
+        The affine of the image the b-vectors belong to.
+    frame : :obj:`str`
+        The convention of ``bvecs`` (one of :data:`BVEC_FRAMES`):
+        ``"fsl"`` is on the voxel axes, with the x component flipped when the determinant
+        of the affine is positive (FSL's ``.bvec`` files);
+        ``"voxel"`` is on the voxel axes without that flip, as DIPY's tractography reads them.
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        The b-vectors in world RAS+ coordinates, shape ``(N, 3)``.
+
+    Examples
+    --------
+    FSL's first component points to the left on images stored either way:
+
+    >>> las, ras = np.diag([-2.0, 2.0, 2.0, 1.0]), np.diag([2.0, 2.0, 2.0, 1.0])
+    >>> bvecs_to_ras(np.array([[1.0, 0.0, 0.0]]), las, "fsl")
+    array([[-1.,  0.,  0.]])
+    >>> bvecs_to_ras(np.array([[1.0, 0.0, 0.0]]), ras, "fsl")
+    array([[-1.,  0.,  0.]])
+    >>> bvecs_to_ras(np.array([[1.0, 0.0, 0.0]]), ras, "voxel")
+    array([[1., 0., 0.]])
+
+    """
+    bvecs = np.asanyarray(bvecs, dtype=float)
+    return (bvecs * _frame_flip(affine, frame)) @ _voxel_axes(affine).T
+
+
+def bvecs_from_ras(bvecs: np.ndarray, affine: np.ndarray, frame: str) -> np.ndarray:
+    """
+    Convert b-vectors from world RAS+ coordinates onto the voxel axes.
+
+    This is the inverse of :func:`bvecs_to_ras`.
+
+    Parameters
+    ----------
+    bvecs : :obj:`~numpy.ndarray`
+        The b-vectors in world RAS+ coordinates, shape ``(N, 3)``.
+    affine : :obj:`~numpy.ndarray`
+        The affine of the image the b-vectors are written for.
+    frame : :obj:`str`
+        The convention to write (one of :data:`BVEC_FRAMES`, see :func:`bvecs_to_ras`).
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        The b-vectors on the voxel axes, in ``frame``, shape ``(N, 3)``.
+
+    Examples
+    --------
+    >>> phantom = np.diag([-2.0, -2.0, 2.0, 1.0])
+    >>> bvecs_from_ras(np.array([[0.6, 0.8, 0.0]]), phantom, "voxel")
+    array([[-0.6, -0.8,  0. ]])
+    >>> bvecs_from_ras(np.array([[0.6, 0.8, 0.0]]), phantom, "fsl")
+    array([[ 0.6, -0.8,  0. ]])
+
+    """
+    bvecs = np.asanyarray(bvecs, dtype=float)
+    return (bvecs @ _voxel_axes(affine)) * _frame_flip(affine, frame)
