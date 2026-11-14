@@ -208,7 +208,7 @@ def test_rasb_columns_error(tmp_path):
         load_rasb(tmp_path / "dwi.b")
 
 
-@pytest.mark.skipif(shutil.which("mrconvert") is None, reason="MRtrix is not installed")
+@pytest.mark.skipif(shutil.which("mrinfo") is None, reason="MRtrix is not installed")
 @pytest.mark.parametrize("name", AFFINES)
 def test_bvec_bval_matches_mrtrix(request, tmp_path, name):
     """The FSL reader agrees with MRtrix's import of the same files (``-fslgrad``)."""
@@ -222,17 +222,16 @@ def test_bvec_bval_matches_mrtrix(request, tmp_path, name):
 
     subprocess.run(
         [
-            "mrconvert",
-            "-quiet",
+            "mrinfo",
             str(tmp_path / "dwi.nii.gz"),
             "-fslgrad",
             str(tmp_path / "dwi.bvec"),
             str(tmp_path / "dwi.bval"),
             "-export_grad_mrtrix",
             str(tmp_path / "dwi.b"),
-            str(tmp_path / "dwi.mif"),
         ],
         check=True,
+        capture_output=True,
     )
 
     assert np.allclose(load_rasb(tmp_path / "dwi.b"), gradients, atol=1e-5)
