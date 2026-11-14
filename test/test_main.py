@@ -69,7 +69,9 @@ def set_command(monkeypatch):
         yield
 
 
-def test_help(capsys):
+def test_help(capsys, monkeypatch):
+    # Python 3.14's argparse colors the help when FORCE_COLOR is set (as on CI)
+    monkeypatch.setenv("PYTHON_COLORS", "0")
     with pytest.raises(SystemExit):
         main(["--help"])
     captured = capsys.readouterr()
