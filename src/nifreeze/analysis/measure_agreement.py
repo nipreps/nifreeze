@@ -140,7 +140,7 @@ def compute_bland_altman_features(
     # Compute differences, mean difference, and std dev of differences
     diff = data1 - data2
     mean_diff = np.mean(diff)
-    std_diff = np.std(diff, axis=axis)
+    std_diff = float(np.std(diff, axis=axis))
     # std_diff = np.std(diff, ddof=1)  # Use Bessel's correction
 
     # Compute confidence interval limits of agreement (LoA)
