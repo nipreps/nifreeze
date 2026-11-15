@@ -78,7 +78,7 @@ test = [
 ]
 types = [
   "pandas-stubs>=2.2.3.241126",
-  "types-setuptools>=75.4.0.20241115",
+  "types-setuptools>=75.5.0.20241116",
   "scipy-stubs>=1.14.1.4",
   "types-attrs",
   "types-PyYAML>=6.0.12.20241221",
