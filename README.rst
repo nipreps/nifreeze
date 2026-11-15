@@ -26,6 +26,10 @@ and eddy-current-derived distortion estimation in dMRI.
    :target: https://pypi.python.org/pypi/nifreeze/
    :alt: Latest Version
 
+.. image:: https://img.shields.io/badge/SPEC-0-green?labelColor=%23004811&color=%235CA038
+   :target: https://scientific-python.org/specs/spec-0000/
+   :alt: SPEC 0: Minimum Supported Dependencies
+
 .. image:: https://github.com/nipreps/nifreeze/actions/workflows/citation.yml/badge.svg
    :target: https://github.com/nipreps/nifreeze/actions/workflows/citation.yml
    :alt: Citation
