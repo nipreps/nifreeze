@@ -73,15 +73,19 @@ These use it:
 prediction from a perturbed copy with the prediction of the same volume from the
 reference, on the same grid.
 
-**The phantoms' b-vectors rotate the right way.**
-TRXScan applies the components of its gradient tables along the voxel axes
-(:doc:`../phantoms`).
-:func:`~nifreeze.data.dmri.utils.transform_fsl_bvec` turns a b-vector by the motion
-conjugated with the grid's affine, which is right for tables along the voxel axes,
-without FSL's flip.
-The phantoms are that case.
-Tables loaded from FSL's ``.bvec`` files on grids with a positive determinant are
-not, as `#620 <https://github.com/nipreps/nifreeze/issues/620>`__ reports.
+**The phantoms' b-vectors rotated the wrong way until #642.**
+TRXScan's diffusion signal reads its gradient tables in world RAS+ coordinates; only
+its eddy-current model applies the components along the voxel axes
+(`#642 <https://github.com/nipreps/nifreeze/issues/642>`__).
+Until #642, the realignment turned a b-vector by the motion conjugated with the
+grid's affine, which is right only for tables along the voxel axes, without FSL's
+flip (`#620 <https://github.com/nipreps/nifreeze/issues/620>`__).
+Every estimator run on the phantoms that realigned volumes before #642, the
+end-to-end gates among them, trained its models on b-vectors turned about the wrong
+axis.
+R1 and the registration floor realign no volume.
+Since #642, :func:`~nifreeze.data.dmri.utils.realign_bvecs` turns them by the
+motion's rotation, in world coordinates.
 
 The checks
 ----------

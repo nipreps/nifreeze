@@ -36,14 +36,18 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
 
    For example, for dMRI data, ensure the gradient table is provided. NiFreeze
    expects the table to have one row per diffusion-weighted image, with the
-   first three columns storing the gradient direction components and the last
-   column indicating the timing and strength of the gradients in units of
-   s/mm² ``[ R A S+ b ]``.
+   first three columns storing the gradient direction in world RAS+ coordinates
+   and the last column indicating the timing and strength of the gradients in
+   units of s/mm² ``[ R A S+ b ]``.
+   FSL's ``.bvec`` and ``.bval`` files are converted with the image's affine.
 
    .. code-block:: python
 
       # Load dMRI data into a DWI object
       dataset = dmri.load("/path/to/your/dwi_data.nii.gz", gradients_file="/path/to/your/gradient_file")
+
+      # Or from FSL's files
+      dataset = dmri.load("/path/to/your/dwi_data.nii.gz", bvec_file="/path/to/your/dwi.bvec", bval_file="/path/to/your/dwi.bval")
 
    .. note::
 

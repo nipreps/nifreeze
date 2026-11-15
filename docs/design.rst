@@ -35,12 +35,17 @@ uniform API, enabling transparent access to individual volumes by index.
 dMRI
 """"
 
-dRMI modality gradients are handled internally arrays arranged according to
-the ``[gx gy gz b]`` layout, where ``[gx gy gz]`` are the components of a
-given gradient vector, and ``b`` is the b-value in units of :math:`s/mm^2`.
-
-# ToDo
-# Or use [ R A S+ b ] instead of ``[gx gy gz b]``  as in usage.rst
+dMRI gradients are held as a table of one row per volume, ``[R A S b]``: a unit
+b-vector in world RAS+ coordinates (the frame the image's affine maps voxels
+into), then the b-value in units of :math:`s/mm^2`.
+Conversions happen only where a table enters or leaves:
+:func:`~nifreeze.data.dmri.io.from_nii` converts FSL's ``.bvec`` and ``.bval``
+files with the image's affine, and reads RAS+B tables (MRtrix's ``.b``,
+NiPreps' ``.tsv``) as they are;
+:meth:`~nifreeze.data.dmri.DWI.to_nifti` writes both conventions.
+When a volume moves by :math:`M`, its b-vector in the realigned view is
+:math:`R^{-1} \mathbf{g}`, with :math:`R` the rotation of :math:`M`
+(:func:`~nifreeze.data.dmri.utils.realign_bvecs`).
 
 The dMRI data class holds a single ``b0`` volume. The rationale behind this is
 that this volume serves as a canonical reference for transforming non-zero
@@ -62,7 +67,7 @@ nfHDF5 files
 :func:`~nifreeze.data.load` and
 :meth:`~nifreeze.data.base.BaseDataset.from_filename` read it back.
 
-- The file attributes ``Format`` (``"nfHDF5"``) and ``Version`` (``2``)
+- The file attributes ``Format`` (``"nfHDF5"``) and ``Version`` (``3``)
   identify the layout.
 - The group ``/0`` holds one HDF5 dataset per field of the dataset object:
   ``dataobj``, ``affine``, ``brainmask`` and ``motion_affines``, plus the
@@ -74,11 +79,18 @@ nfHDF5 files
   loaded and volumes are read from disk as they are accessed.
   Compressed files (``to_filename(..., compression="gzip")``) are
   decompressed into a temporary file first.
+- ``gradients`` (dMRI) holds the table in RAS+B, as
+  :class:`~nifreeze.data.dmri.DWI` does.
 
 Files written by earlier versions of *NiFreeze* (version 1) store the volumes
 last, and their ``Format`` is ``"NFDH5"`` (``"EMC/PET"`` for PET).
 They still load, after a conversion into a temporary file;
 save them again with ``to_filename`` to skip that step.
+
+Files of versions 1 and 2 do not record the frame of their gradient table.
+:meth:`~nifreeze.data.dmri.DWI.from_filename` reads it as RAS+B, and warns.
+A table loaded from FSL's ``.bvec`` files into one of these files is on the
+voxel axes instead: load it again from its source.
 
 Preprocessing
 -------------

@@ -37,7 +37,7 @@ from nifreeze.data.dmri.utils import (
     bvecs_from_ras,
     bvecs_to_ras,
     format_gradients,
-    transform_fsl_bvec,
+    realign_bvecs,
 )
 from nifreeze.data.utils import to_time_first
 from nifreeze.utils.ndimage import get_data, load_api
@@ -70,8 +70,9 @@ def from_nii(
     """
     Load DWI data from NIfTI and construct a DWI object.
 
-    This function loads data from a NIfTI file, optionally loading a gradient table
-    from either a separate gradients file or from .bvec / .bval files.
+    This function loads data from a NIfTI file, and its gradient table from either a
+    RAS+B file or FSL's ``.bvec`` and ``.bval`` files, which are converted into RAS+B
+    with the image's affine.
 
     Parameters
     ----------
@@ -81,14 +82,14 @@ def from_nii(
         A brainmask NIfTI file. If provided, will be loaded and
         stored in the returned dataset.
     gradients_file : :obj:`os.pathlike`, optional
-        A text file containing the gradients table, shape (N, C) where the last column
-        stores the b-values. If provided following the column-major convention (C, N),
-        it will be transposed automatically. If provided, it supersedes any .bvec / .bval
+        A RAS+B gradient table (see :func:`load_rasb`): MRtrix's ``.b``, NiPreps' ``.tsv``,
+        or any text file of ``N`` rows ``R A S B``. A table with one column per volume
+        (four rows) is transposed. If provided, it supersedes any .bvec / .bval
         combination.
     bvec_file : :obj:`os.pathlike`, optional
-        A text file containing b-vectors, shape (N, 3) or (3, N).
+        FSL's b-vectors, shape (3, N) or (N, 3) (see :func:`load_bvec_bval`).
     bval_file : :obj:`os.pathlike`, optional
-        A text file containing b-values, shape (N,).
+        FSL's b-values, shape (N,).
     b0_file : :obj:`os.pathlike`, optional
         A NIfTI file containing a b=0 volume (possibly averaged or reference).
         If not provided, and the data contains at least one b=0 volume, one will be computed.
@@ -111,18 +112,13 @@ def from_nii(
     # 1) Open a NIfTI; its data are read below
     img = load_api(filename, SpatialImage)
 
-    # 2) Determine the gradients array from either gradients_file or bvec/bval
+    # 2) Read the gradient table into RAS+B, from either gradients_file or bvec/bval
     if gradients_file:
-        grad = np.loadtxt(gradients_file, dtype="float32")
+        grad = load_rasb(gradients_file)
         if bvec_file and bval_file:
             warn(GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG, stacklevel=2)
     elif bvec_file and bval_file:
-        bvecs = np.loadtxt(bvec_file, dtype="float32")
-        if bvecs.shape[1] != 3 and bvecs.shape[0] == 3:
-            bvecs = bvecs.T
-
-        bvals = np.loadtxt(bval_file, dtype="float32")
-        grad = np.column_stack((bvecs, bvals))
+        grad = load_bvec_bval(bvec_file, bval_file, img.affine)
     else:
         raise RuntimeError(GRADIENT_DATA_MISSING_ERROR_MSG)
 
@@ -176,10 +172,13 @@ def to_nifti(
     """
     Export the dMRI object to disk (NIfTI data, and gradients).
 
-    Gradients (b-vecs & b-vals files) are written next to the NIfTI file, matching its
-    volumes. The b-vectors are rotated if the DWI object has non-null
-    :attr:`~nifreeze.data.base.BaseDataset.motion_affine` data (i.e., following the
-    motion estimation).
+    The gradient table is written next to the NIfTI file, matching its volumes, twice:
+    in FSL's convention for the output's affine (``.bvec`` and ``.bval``, see
+    :func:`save_bvec_bval`), and in RAS+B (NiPreps' ``.tsv``, see :func:`save_rasb`).
+    If the DWI object has non-null
+    :attr:`~nifreeze.data.base.BaseDataset.motion_affines` (i.e., following the
+    motion estimation), the b-vectors are turned into the reference's frame
+    (see :func:`~nifreeze.data.dmri.utils.realign_bvecs`).
 
     Parameters
     ----------
@@ -213,11 +212,11 @@ def to_nifti(
     bvals = dwi.bvals
     bvecs = dwi.bvecs
 
-    # Rotate b-vectors if dwi.motion_affines is not None
+    # Turn the b-vectors into the reference's frame if dwi.motion_affines is not None
     if dwi.motion_affines is not None:
         rotated = [
-            transform_fsl_bvec(bvec, affine, dwi.affine, invert=True)
-            for bvec, affine in zip(dwi.gradients[:, :3], dwi.motion_affines, strict=True)
+            realign_bvecs(bvec, matrix)
+            for bvec, matrix in zip(dwi.bvecs, dwi.motion_affines, strict=True)
         ]
         bvecs = np.asarray(rotated)
 
@@ -251,16 +250,24 @@ def to_nifti(
         # Convert filename to a Path object.
         out_root = Path(filename).absolute()
 
-        # Get the base stem for writing .bvec / .bval.
+        # Get the base stem for writing the gradient tables.
         out_root = out_root.parent / out_root.name.replace("".join(out_root.suffixes), "")
 
-        # Construct sidecar file paths.
-        bvecs_file = out_root.with_suffix(".bvec")
-        bvals_file = out_root.with_suffix(".bval")
-
-        # Save bvecs and bvals to text files. BIDS expects 3 rows x N columns.
-        np.savetxt(bvecs_file, bvecs.T, fmt=f"%.{bvecs_dec_places}f")
-        np.savetxt(bvals_file, bvals[np.newaxis, :], fmt=f"%.{bvals_dec_places}f")
+        gradients = np.column_stack((bvecs, bvals))
+        save_bvec_bval(
+            gradients,
+            nii.affine,
+            out_root.with_suffix(".bvec"),
+            out_root.with_suffix(".bval"),
+            bvals_dec_places=bvals_dec_places,
+            bvecs_dec_places=bvecs_dec_places,
+        )
+        save_rasb(
+            gradients,
+            out_root.with_suffix(".tsv"),
+            bvals_dec_places=bvals_dec_places,
+            bvecs_dec_places=bvecs_dec_places,
+        )
 
     return nii
 
@@ -333,7 +340,8 @@ def load_rasb(filename: Path | str) -> np.ndarray:
     Read a RAS+B gradient table: MRtrix's ``.b``, or NiPreps' ``.tsv``.
 
     Each row holds a b-vector in world RAS+ coordinates and its b-value. Lines starting
-    with ``#`` are comments, and a first line ``R A S B`` is a header.
+    with ``#`` are comments, and a first line ``R A S B`` is a header. A table written with
+    one column per volume (four rows) is transposed.
 
     Parameters
     ----------
@@ -352,6 +360,8 @@ def load_rasb(filename: Path | str) -> np.ndarray:
     if rows and [token.upper() for token in rows[0]] == list("RASB"):
         rows = rows[1:]  # a header written without the comment mark
     table = np.array(rows, dtype=float)
+    if table.ndim == 2 and table.shape[0] == 4 and table.shape[1] != 4:
+        table = table.T
     if table.ndim != 2 or table.shape[1] != 4:
         raise ValueError(GRADIENT_EXPECTED_COLUMNS_ERROR_MSG)
     return table

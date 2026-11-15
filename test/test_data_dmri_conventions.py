@@ -40,6 +40,7 @@ from nifreeze.data.dmri.utils import (
     GRADIENT_EXPECTED_COLUMNS_ERROR_MSG,
     bvecs_from_ras,
     bvecs_to_ras,
+    realign_bvecs,
 )
 
 
@@ -200,6 +201,14 @@ def test_rasb_header_without_comment(request, tmp_path):
     assert np.allclose(load_rasb(tmp_path / "dwi.tsv"), gradients)
 
 
+def test_rasb_one_column_per_volume(request, tmp_path):
+    """A table written with one column per volume (four rows) is transposed."""
+    gradients = _gradients(request.node.rng)
+    np.savetxt(tmp_path / "dwi.txt", gradients.T)
+
+    assert np.allclose(load_rasb(tmp_path / "dwi.txt"), gradients)
+
+
 def test_rasb_columns_error(tmp_path):
     """A RAS+B table has four columns."""
     np.savetxt(tmp_path / "dwi.b", np.zeros((5, 3)))
@@ -235,3 +244,21 @@ def test_bvec_bval_matches_mrtrix(request, tmp_path, name):
     )
 
     assert np.allclose(load_rasb(tmp_path / "dwi.b"), gradients, atol=1e-5)
+
+
+@pytest.mark.parametrize("degrees", [0.0, 10.0, 90.0])
+def test_realign_bvecs_takes_the_rotation(request, degrees):
+    """Only the motion's rotation turns b-vectors: not its translation, scaling or shear."""
+    gradients = _gradients(request.node.rng)[2:]
+    rotation = _rotation((1, -2, 0.5), degrees)
+    rigid = nb.affines.from_matvec(rotation, (5.0, -3.0, 2.0))
+    # A symmetric positive-definite stretch, which the polar decomposition separates
+    stretched = nb.affines.from_matvec(
+        rotation @ np.array([[1.1, 0.05, 0.0], [0.05, 0.95, 0.02], [0.0, 0.02, 1.0]]),
+        (5.0, -3.0, 2.0),
+    )
+
+    expected = gradients[:, :3] @ np.linalg.inv(rotation).T
+    assert np.allclose(realign_bvecs(gradients[:, :3], rigid), expected)
+    assert np.allclose(realign_bvecs(gradients[:, :3], stretched), expected)
+    assert np.allclose(np.linalg.norm(realign_bvecs(gradients[:, :3], stretched), axis=1), 1.0)

@@ -194,7 +194,10 @@ def _build_parser() -> ArgumentParser:
         nargs="+",
         type=Path,
         metavar="FILE",
-        help="A gradient file containing b-vectors and b-values",
+        help=(
+            "The gradient table: one RAS+B file (MRtrix's .b, or NiPreps' .tsv), or FSL's "
+            ".bvec and .bval files, in that order"
+        ),
     )
     g_dmri.add_argument(
         "--b0-file",

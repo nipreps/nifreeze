@@ -36,7 +36,13 @@ import numpy as np
 import numpy.typing as npt
 from typing_extensions import Self
 
-from nifreeze.data.base import NFHDF5_EXT, BaseDataset, _cmp, _data_repr
+from nifreeze.data.base import (
+    NFHDF5_EXT,
+    NFHDF5_RASB_VERSION,
+    BaseDataset,
+    _cmp,
+    _data_repr,
+)
 from nifreeze.data.dmri.utils import (
     DEFAULT_HIGHB_THRESHOLD,
     DEFAULT_LOWB_THRESHOLD,
@@ -47,7 +53,7 @@ from nifreeze.data.dmri.utils import (
     GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR,
     find_shelling_scheme,
     format_gradients,
-    transform_fsl_bvec,
+    realign_bvecs,
 )
 from nifreeze.data.utils import stream_select_volumes
 
@@ -66,6 +72,12 @@ The DWI data contains b0 volumes, but the 'bzero' attribute was set. DWI b0 "
 volumes will be discarded, and the corresponding 'dataobj' and 'gradient' data \
 removed."""
 """DWI b0 and bzero provided warning message."""
+
+NFHDF5_FRAME_ASSUMED_WARN_MSG = """\
+{filename} is an nfHDF5 file of version {version}, which does not record the frame of its \
+gradient table: reading the b-vectors as world RAS+. Save it again with ``to_filename`` \
+to record the frame."""
+"""Warning message for nfHDF5 files older than the RAS+B gradient tables."""
 
 VOLUMES_LAST_ERROR_MSG = """\
 DWI 'dataobj' has shape {shape}, with the {n_gradients} volumes on the last axis. \
@@ -180,7 +192,8 @@ class DWI(BaseDataset[np.ndarray]):
         converter=format_gradients,
         validator=validate_gradients,
     )
-    """A 2D numpy array of the gradient table (``N`` orientations x ``C`` components)."""
+    """The gradient table, ``(N, 4)``: a unit b-vector in world RAS+ coordinates (the frame
+    the affine maps voxels into), then the b-value in s/mm²."""
     bzero: np.ndarray | None = attrs.field(
         default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp)
     )
@@ -241,7 +254,8 @@ class DWI(BaseDataset[np.ndarray]):
 
         Besides the volume (see :meth:`BaseDataset.realign_into
         <nifreeze.data.base.BaseDataset.realign_into>`), the original b-vector is
-        rotated by the estimate, as at export, and normalized. The view's whole
+        turned into the reference's frame by the estimate's rotation, as at export
+        (see :func:`~nifreeze.data.dmri.utils.realign_bvecs`). The view's whole
         gradient table is reassigned, so an integer table is never truncated.
 
         """
@@ -250,8 +264,7 @@ class DWI(BaseDataset[np.ndarray]):
         bvec = np.asarray(self.gradients[index, :3], dtype=float)
         matrix = None if self.motion_affines is None else self.motion_affines[index]
         if matrix is not None and not np.allclose(matrix, np.eye(4)):
-            bvec = transform_fsl_bvec(bvec, matrix, self.affine, invert=True)
-            bvec /= np.linalg.norm(bvec)
+            bvec = realign_bvecs(bvec, matrix)
 
         table = np.array(view.gradients, dtype=float)
         if not np.allclose(table[index, :3], bvec):
@@ -291,6 +304,9 @@ class DWI(BaseDataset[np.ndarray]):
         """
         Read an HDF5 file from disk and create a DWI object.
 
+        Files older than version 3 do not record the frame of their gradient table,
+        which is read as RAS+B with a warning (see :ref:`nfHDF5 <nfhdf5>`).
+
         Parameters
         ----------
         filename : :obj:`os.pathlike`
@@ -302,7 +318,16 @@ class DWI(BaseDataset[np.ndarray]):
             The constructed dataset with data loaded from the file.
 
         """
-        return super().from_filename(filename)
+        dataset = super().from_filename(filename)
+        with h5py.File(filename, "r") as in_file:
+            version = int(in_file.attrs.get("Version", 1))
+        if version < NFHDF5_RASB_VERSION:
+            warn(
+                NFHDF5_FRAME_ASSUMED_WARN_MSG.format(filename=filename, version=version),
+                UserWarning,
+                stacklevel=2,
+            )
+        return dataset
 
     @property
     def bvals(self):

@@ -50,6 +50,13 @@ Ts = TypeVarTuple("Ts")
 
 NFHDF5_EXT = ".h5"
 
+NFHDF5_VERSION = 3
+"""The version of the :ref:`nfHDF5 <nfhdf5>` files written: 2 stores volumes first, and 3
+gradient tables in RAS+B."""
+
+NFHDF5_RASB_VERSION = 3
+"""The first :ref:`nfHDF5 <nfhdf5>` version whose gradient tables are known to be RAS+B."""
+
 ImageGrid = namedtuple("ImageGrid", ("shape", "affine"))
 
 DATAOBJ_ABSENCE_ERROR_MSG = "BaseDataset 'dataobj' may not be None"
@@ -529,7 +536,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
         with replace_on_success(filename) as tmp, h5py.File(tmp, "w") as out_file:
             out_file.attrs["Format"] = "nfHDF5"  # version-1 files carry "NFDH5"
-            out_file.attrs["Version"] = np.uint16(2)  # v2: volume-major dataobj
+            out_file.attrs["Version"] = np.uint16(NFHDF5_VERSION)
             root = out_file.create_group("/0")
             root.attrs["Type"] = "base dataset"
             save_nfhdf5_fields(root, self, compression, compression_opts)

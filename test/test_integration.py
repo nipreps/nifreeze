@@ -44,6 +44,9 @@ from nifreeze.registration.utils import displacements_within_mask
 
 EXPECTED_DWI_MOTION_SHA256 = "3ba55cc3acfd584a7738f9701724e284f54bdf72261bf535b5dae062d7c0c30e"
 
+GIN_VERSION_1 = pytest.mark.filterwarnings("ignore:.*does not record the frame:UserWarning")
+"""GIN's nfHDF5 files are of version 1, whose gradient tables are read as RAS+B (#642)."""
+
 DWI_DATA_CASES = (
     # Fully populated: mask + motion + gradients + b0
     (True, True, True, False, False, True, 50, 2000, False),
@@ -194,6 +197,7 @@ def _sha256sum(path):
     return hasher.hexdigest()
 
 
+@GIN_VERSION_1
 def test_proximity_estimator_trivial_model(datadir, tmp_path, p_error=20.0):
     """
     Check the proximity of transforms estimated by the estimator with a trivial B0 model.
@@ -280,6 +284,7 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path, p_error=20.0):
     )
 
 
+@GIN_VERSION_1
 @pytest.mark.parametrize("perturb", [False, True])
 def test_registration_initial_transform(datadir, tmp_path, perturb):
     """Started at (or near) the true transform, ANTs returns the true transform."""
@@ -654,6 +659,7 @@ def test_dmri_data_dki_model_estimation(
     assert aff.shape[1:] == (4, 4)
 
 
+@GIN_VERSION_1
 def test_stacked_estimators(datadir, tmp_path, monkeypatch):
     """Check that models can be stacked."""
 
