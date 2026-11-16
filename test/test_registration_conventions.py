@@ -46,6 +46,8 @@ from scipy.spatial.transform import Rotation
 
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.dmri import DWI
+from nifreeze.data.dmri.io import load_bvec_bval, load_rasb
+from nifreeze.data.dmri.utils import bvecs_from_ras
 from nifreeze.data.filtering import robust_window
 from nifreeze.registration.ants import (
     WINDOW_LEVELS,
@@ -80,10 +82,8 @@ def _affine(kind: str) -> np.ndarray:
 
 AFFINES = ("ras", "phantom", "oblique")
 """The three frames every test runs on."""
-WRONG_AXIS = pytest.mark.xfail(
-    strict=True, reason="nipreps/nifreeze#620: b-vectors rotate about the wrong axis"
-)
-"""B-vector tables that ``transform_fsl_bvec`` rotates about the wrong axis."""
+BVEC_AFFINES = (*AFFINES, "las")
+"""The frames of the b-vector tests: FSL's convention differs by the determinant's sign."""
 
 
 def _motion(degrees: float = 3.0, shift=(1.5, -1.0, 2.0)) -> np.ndarray:
@@ -363,15 +363,7 @@ def _rotated_in_the_head(matrix: np.ndarray, direction: np.ndarray) -> np.ndarra
     return np.linalg.inv(matrix[:3, :3]) @ direction
 
 
-@pytest.mark.parametrize(
-    "kind",
-    [
-        "ras",
-        pytest.param("phantom", marks=WRONG_AXIS),
-        pytest.param("oblique", marks=WRONG_AXIS),
-        pytest.param("las", marks=WRONG_AXIS),
-    ],
-)
+@pytest.mark.parametrize("kind", BVEC_AFFINES)
 def test_ras_bvectors_turn_with_the_head(kind):
     """A table in world (RAS) coordinates, as the phantoms' ``.b`` files give it."""
     affine = _affine(kind)
@@ -397,21 +389,14 @@ def _fsl(world: np.ndarray, affine: np.ndarray) -> np.ndarray:
     return voxel
 
 
-@pytest.mark.parametrize(
-    "kind",
-    [
-        pytest.param("ras", marks=WRONG_AXIS),
-        pytest.param("phantom", marks=WRONG_AXIS),
-        pytest.param("oblique", marks=WRONG_AXIS),
-        # With a negative determinant, FSL's table is on the voxel axes without a flip
-        "las",
-    ],
-)
-def test_fsl_bvectors_turn_with_the_head(kind):
-    """A table in FSL's convention, as ``.bvec`` files give it."""
+@pytest.mark.parametrize("kind", BVEC_AFFINES)
+def test_fsl_bvectors_turn_with_the_head(kind, tmp_path):
+    """A table in FSL's convention, as ``.bvec`` files give it, read with the FSL reader."""
     affine = _affine(kind)
     world = _directions()
-    dwi = _dwi(np.column_stack([_fsl(world, affine), np.full(len(world), 1000.0)]), affine)
+    np.savetxt(tmp_path / "dwi.bvec", _fsl(world, affine).T)
+    np.savetxt(tmp_path / "dwi.bval", np.full((1, len(world)), 1000.0))
+    dwi = _dwi(load_bvec_bval(tmp_path / "dwi.bvec", tmp_path / "dwi.bval", affine), affine)
     view = dwi.realigned()
     matrix = _motion(degrees=10.0)
 
@@ -419,7 +404,25 @@ def test_fsl_bvectors_turn_with_the_head(kind):
     dwi.realign_into(view, 3)
 
     expected = _fsl(_rotated_in_the_head(matrix, world[3]), affine)
-    assert np.allclose(view.gradients[3, :3], expected, atol=1e-6)
+    assert np.allclose(bvecs_from_ras(view.gradients[3, :3], affine, "fsl"), expected, atol=1e-6)
+
+
+@pytest.mark.parametrize("kind", BVEC_AFFINES)
+def test_exported_bvectors_turn_with_the_head(kind, tmp_path):
+    """``to_nifti`` writes the realigned b-vectors in FSL's convention and in RAS+B."""
+    affine = _affine(kind)
+    world = _directions()
+    dwi = _dwi(np.column_stack([world, np.full(len(world), 1000.0)]), affine)
+    matrix = _motion(degrees=10.0)
+    dwi.set_transform(3, matrix)
+
+    dwi.to_nifti(tmp_path / "dwi.nii.gz", order=0)
+
+    expected = world.copy()
+    expected[3] = _rotated_in_the_head(matrix, world[3])
+    fsl = load_bvec_bval(tmp_path / "dwi.bvec", tmp_path / "dwi.bval", affine)
+    assert np.allclose(fsl[:, :3], expected, atol=1e-5)
+    assert np.allclose(load_rasb(tmp_path / "dwi.tsv")[:, :3], expected, atol=1e-5)
 
 
 # 7. Roles and threads

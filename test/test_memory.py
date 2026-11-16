@@ -35,7 +35,7 @@ import h5py
 import numpy as np
 import pytest
 
-from nifreeze.data.base import BaseDataset
+from nifreeze.data.base import NFHDF5_VERSION, BaseDataset
 from nifreeze.data.dmri.base import DWI
 from nifreeze.data.utils import save_dataobj_volume_major
 
@@ -135,7 +135,7 @@ def _write_dwi_with_b0(path, data):
         bvecs[i] = 0.0
     with h5py.File(path, "w") as f:
         f.attrs["Format"] = "nfHDF5"
-        f.attrs["Version"] = np.uint16(2)
+        f.attrs["Version"] = np.uint16(NFHDF5_VERSION)
         root = f.create_group("/0")
         root.attrs["Type"] = "dmri"
         save_dataobj_volume_major(root, data)

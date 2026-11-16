@@ -268,6 +268,8 @@ filterwarnings = [
   "ignore:Updating b0_threshold to.*:UserWarning",
   # scikit-learn
   "ignore:The optimal value found for dimension.*:sklearn.exceptions.ConvergenceWarning",
+  # GIN's nfHDF5 files are of version 1, whose gradient tables are read as RAS+B (#642)
+  "ignore:.*/dwi(_motion)?\\.h5 is an nfHDF5 file of version 1,:UserWarning",
 ]
 
 [tool.coverage.run]

@@ -37,6 +37,7 @@ import nifreeze.cli.run as cli_run
     ],
 )
 @pytest.mark.filterwarnings("ignore:write_hmxfms is set to True")
+@pytest.mark.filterwarnings("ignore:.*does not record the frame:UserWarning")  # GIN's file
 @pytest.mark.filterwarnings("error")
 def test_run_call(tmp_path, monkeypatch, write_hdf5):
     """Test the main function of the CLI."""
