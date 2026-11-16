@@ -5,6 +5,7 @@ on:
     branches: ['main', 'maint/*']
     paths:
       - 'tools/phantoms/**'
+      - 'pyproject.toml'
       - 'src/nifreeze/testing/phantoms.py'
       - '.github/actions/phantom-fixtures/**'
       - '.github/workflows/phantoms.yml'
@@ -12,6 +13,7 @@ on:
     branches: ['main', 'maint/*']
     paths:
       - 'tools/phantoms/**'
+      - 'pyproject.toml'
       - 'src/nifreeze/testing/phantoms.py'
       - '.github/actions/phantom-fixtures/**'
       - '.github/workflows/phantoms.yml'
@@ -62,5 +64,10 @@ jobs:
           enable-cache: true
           cache-dependency-glob: tools/phantoms/phantom.py.lock
           cache-suffix: phantoms
+      # The locks include NiFreeze's own dependencies, so pyproject.toml can make them stale (#655)
+      - name: Check that the locks are current
+        run: |
+          uv lock --check --script tools/phantoms/phantom.py
+          uv lock --check --script tools/phantoms/ladder.py
       - name: Verify
-        run: uv run tools/phantoms/phantom.py verify
+        run: uv run --locked tools/phantoms/phantom.py verify

@@ -51,7 +51,8 @@ runs:
     - name: Simulate the dataset
       if: steps.restore.outputs.cache-hit != 'true'
       shell: bash
-      run: uv run tools/phantoms/phantom.py fixture --out "$NIFREEZE_PHANTOMS"
+      # As locked, which the key hashes; phantoms.yml reports a stale lock (#655)
+      run: uv run --frozen tools/phantoms/phantom.py fixture --out "$NIFREEZE_PHANTOMS"
 
     - name: Save the dataset
       if: steps.restore.outputs.cache-hit != 'true'
