@@ -51,7 +51,8 @@ the brain mask, the gradients, the truth maps and a JSON sidecar, under
 ``<dataset>/sub-60501/dwi``. ``--directions`` keeps the first b=0 and that many
 directions of each shell (``spread``), and ``--oversample`` simulates the signal
 on a grid that many times finer per side than the acquisition's (1 by default;
-TRXScan's own default is 2).
+TRXScan's own default is 2). ``--centre-streamlines`` bins the streamlines by the
+voxel centres, where TRXScan samples the tissue fractions (see :func:`centred`).
 
 ``cells`` simulates the perturbed copies of that reference: diffusion-weighted
 volumes moved by rigid motions (re-simulated from the moved phantom), distorted
@@ -72,6 +73,7 @@ directions per shell, its reference and the perturbed copies they use.
 """
 
 import argparse
+import dataclasses
 import json
 import math
 import multiprocessing
@@ -220,12 +222,15 @@ def simulate(
     chunk: int | None = 8,
     truth: bool = True,
     oversample: int = 1,
+    centre: bool = False,
 ) -> dict[str, Any]:
     """Simulate the clean reference of one protocol."""
     protocol = acquisition(name, voxel, oversample)
     table, gtab = gradients(name, volumes)
     source = phantom(streamlines)
     grid = source.grid(protocol)
+    if centre:
+        grid = centred(grid)
     simulation = grid.simulate(
         gtab, protocol, CLEAN, kspace=False, clean_b0=False, chunk=chunk, truth_peaks=truth
     )
@@ -251,6 +256,23 @@ def grid_moved(source: Any, matrix: np.ndarray, protocol: Any, grid: Any) -> Any
     apply again to the affine of ``like=``.
     """
     return source.moved(matrix).grid(protocol.replace(oblique_deg=None), like=grid)
+
+
+def centred(grid: Any) -> Any:
+    """``grid`` with its streamlines moved half a simulation voxel along each grid axis.
+
+    TRXScan samples the tissue fractions at the voxel centres, but bins a streamline
+    point of voxel coordinates ``v`` in voxel ``floor(v)`` (``src/raster.rs:135-138``),
+    half a voxel off along each axis. Moved by that half voxel, the streamlines are
+    binned by the nearest voxel centre. The shift is that of the simulation grid, where
+    the signal is simulated; with ``oversample`` above 1, the truth maps, which TRXScan
+    bins on the acquisition grid, stay a quarter of a voxel off in-plane.
+    """
+    shift = grid.sim_affine[:3, :3] @ np.full(3, 0.5)
+    lines = grid.streamlines
+    return dataclasses.replace(
+        grid, streamlines=ts.Streamlines(lines.positions + shift, lines.offsets, lines.weights)
+    )
 
 
 def _magnitudes(simulation: Any) -> np.ndarray:
@@ -312,6 +334,7 @@ def write_reference(
     chunk: int | None = 8,
     volumes: list[int] | None = None,
     oversample: int = 1,
+    centre: bool = False,
 ) -> Path:
     """Write the clean and noisy datasets of one protocol, with their truth.
 
@@ -319,7 +342,13 @@ def write_reference(
     """
     entry = CATALOG[name]
     result = simulate(
-        name, streamlines, voxel=voxel, volumes=volumes, chunk=chunk, oversample=oversample
+        name,
+        streamlines,
+        voxel=voxel,
+        volumes=volumes,
+        chunk=chunk,
+        oversample=oversample,
+        centre=centre,
     )
     dwi, affine, table = result["dwi"], result["affine"], result["table"]
     bzero = dwi[..., table[:, 3] < 50].mean(axis=-1)
@@ -359,7 +388,7 @@ def write_reference(
             "Keying": "numpy default_rng([seed, volume index])",
             "WhiteMatterVoxels": int(white.sum()),
         },
-        "GeneratedBy": _provenance(streamlines, oversample),
+        "GeneratedBy": _provenance(streamlines, oversample, centre),
     }
     Path(f"{stem}_dwi.json").write_text(json.dumps(sidecar, indent=2) + "\n")
     return folder
@@ -374,11 +403,15 @@ def simulate_moved(
     matrix: np.ndarray,
     strengths: list[float],
     chunk: int | None,
+    centre: bool = False,
 ) -> list[np.ndarray]:
     """One volume of the phantom moved by ``matrix``: without eddy currents, then with each
     strength."""
     # The head moves in the scanner: the phantom is moved, then gridded as the reference
     moved_grid = grid_moved(source, matrix, protocol, grid)
+    if centre:
+        # The binning is the fixed grid's, so the shift follows the motion
+        moved_grid = centred(moved_grid)
     # The table's largest b-value comes along, as in the reference's simulation
     subset = _dipy(table[[volume, int(np.argmax(table[:, 3]))]])
     images = []
@@ -403,16 +436,19 @@ def _start_worker(
     voxel: float | None,
     volumes: list[int] | None,
     oversample: int,
+    centre: bool,
     threads: int,
 ) -> None:
     ts.set_threads(threads)
     protocol = acquisition(name, voxel, oversample)
     source = phantom(streamlines)
+    grid = source.grid(protocol)
     _WORKER.update(
         source=source,
         protocol=protocol,
-        grid=source.grid(protocol),
+        grid=centred(grid) if centre else grid,
         table=gradients(name, volumes)[0],
+        centre=centre,
     )
 
 
@@ -432,6 +468,7 @@ def _workers(
     voxel: float | None,
     volumes: list[int] | None,
     oversample: int = 1,
+    centre: bool = False,
 ) -> Iterator[ProcessPoolExecutor | None]:
     """Processes that simulate moved volumes, or none for ``jobs=1``.
 
@@ -446,7 +483,7 @@ def _workers(
         jobs,
         mp_context=multiprocessing.get_context("spawn"),
         initializer=_start_worker,
-        initargs=(name, streamlines, voxel, volumes, oversample, max(1, budget // jobs)),
+        initargs=(name, streamlines, voxel, volumes, oversample, centre, max(1, budget // jobs)),
     ) as pool:
         yield pool
 
@@ -464,6 +501,7 @@ def write_cells(
     volumes: list[int] | None = None,
     jobs: int = 1,
     oversample: int = 1,
+    centre: bool = False,
 ) -> Path:
     """Write the perturbed copies of one protocol's reference, with their ground truth.
 
@@ -485,6 +523,8 @@ def write_cells(
     table, gtab = gradients(name, volumes)
     source = phantom(streamlines)
     grid = source.grid(protocol)
+    if centre:
+        grid = centred(grid)
     weighted = np.flatnonzero(table[:, 3] >= 50)
     terms = eddy_terms(grid, protocol, table)
     # Magnitudes are in voxels along phase encoding, so they mean the same at any resolution
@@ -528,7 +568,7 @@ def write_cells(
             "Reference": reference,
             "SourceVolumes": [int(v) for v in sources],
             **sidecar,
-            "GeneratedBy": _provenance(streamlines, oversample),
+            "GeneratedBy": _provenance(streamlines, oversample, centre),
         }
         Path(f"{stem}.json").write_text(json.dumps(sidecar, indent=2) + "\n")
 
@@ -545,10 +585,13 @@ def write_cells(
         for j, matrix in zip(perturbation.moved, perturbation.motions, strict=True)
     ]
     levels = [strengths[e] for e in eddies]
-    with _workers(jobs, name, streamlines, voxel, volumes, oversample) as pool:
+    with _workers(jobs, name, streamlines, voxel, volumes, oversample, centre) as pool:
         # Every moved volume, in the order of the plan; the workers start on them at once
         results: Iterator[list[np.ndarray]] = (
-            (simulate_moved(source, protocol, grid, table, v, m, levels, chunk) for v, m in units)
+            (
+                simulate_moved(source, protocol, grid, table, v, m, levels, chunk, centre)
+                for v, m in units
+            )
             if pool is None
             else pool.map(
                 _simulate_in_worker,
@@ -605,7 +648,7 @@ def write_fixture(out: Path) -> Path:
     return out
 
 
-def _provenance(streamlines: int, oversample: int) -> dict[str, Any]:
+def _provenance(streamlines: int, oversample: int, centre: bool = False) -> dict[str, Any]:
     return {
         "Name": "nifreeze tools/phantoms/phantom.py",
         "NiFreezeVersion": version("nifreeze"),
@@ -615,6 +658,8 @@ def _provenance(streamlines: int, oversample: int) -> dict[str, Any]:
         "Streamlines": streamlines,
         "StreamlineSeed": PHANTOM_SEED,
         "Oversample": oversample,
+        # Along each grid axis, in voxels of the simulation grid (see centred)
+        "StreamlineShiftVoxels": 0.5 if centre else 0.0,
     }
 
 
@@ -704,28 +749,35 @@ def _verify_motion(name: str, voxel: float, streamlines: int, picks: list[int]) 
 
 
 def _verify_workers(name: str, voxel: float, streamlines: int, picks: list[int]) -> list[str]:
-    """Moved volumes simulated by worker processes equal those simulated in this one."""
+    """Moved volumes simulated by worker processes equal those simulated in this one, with
+    the streamlines centred or not."""
     protocol = acquisition(name, voxel)
     table = gradients(name, picks)[0]
     source = phantom(streamlines)
-    grid = source.grid(protocol)
     # The last two, whose index in the subset is not their index in the protocol
     volumes = [int(i) for i in np.flatnonzero(table[:, 3] >= 50)[-2:]]
     matrices = [np.asarray(m) for m in perturbation_plan(2, (2.0,), (2,), seeds=(0,))[0].motions]
-    levels = [2.0 / eddy_terms(grid, protocol, table)["reach"]]
-    here = [
-        simulate_moved(source, protocol, grid, table, v, m, levels, 8)
-        for v, m in zip(volumes, matrices, strict=True)
-    ]
-    with _workers(2, name, streamlines, voxel, picks) as pool:
-        assert pool is not None
-        there = list(pool.map(_simulate_in_worker, volumes, matrices, repeat(levels), repeat(8)))
-    same = all(
-        np.array_equal(a, b)
-        for x, y in zip(here, there, strict=True)
-        for a, b in zip(x, y, strict=True)
-    )
-    return [] if same else ["moved volumes simulated by worker processes differ"]
+    failures = []
+    for centre in (False, True):
+        grid = centred(source.grid(protocol)) if centre else source.grid(protocol)
+        levels = [2.0 / eddy_terms(grid, protocol, table)["reach"]]
+        here = [
+            simulate_moved(source, protocol, grid, table, v, m, levels, 8, centre)
+            for v, m in zip(volumes, matrices, strict=True)
+        ]
+        with _workers(2, name, streamlines, voxel, picks, centre=centre) as pool:
+            assert pool is not None
+            there = list(
+                pool.map(_simulate_in_worker, volumes, matrices, repeat(levels), repeat(8))
+            )
+        same = all(
+            np.array_equal(a, b)
+            for x, y in zip(here, there, strict=True)
+            for a, b in zip(x, y, strict=True)
+        )
+        if not same:
+            failures.append(f"moved volumes simulated by worker processes differ ({centre=})")
+    return failures
 
 
 def _floats(text: str) -> list[float]:
@@ -744,6 +796,9 @@ def main(argv: list[str] | None = None) -> int:
     reference.add_argument("--chunk", type=int, default=8, help="slices per simulated slab")
     reference.add_argument("--oversample", type=int, default=1, help="finer simulation grid")
     reference.add_argument("--directions", type=int, help="directions per shell (all)")
+    reference.add_argument(
+        "--centre-streamlines", action="store_true", help="bin the streamlines by voxel centres"
+    )
     cells = commands.add_parser("cells", help="simulate the perturbed copies")
     cells.add_argument("--protocol", required=True, choices=sorted(CATALOG))
     cells.add_argument("--out", type=Path, required=True, help="dataset root")
@@ -761,6 +816,9 @@ def main(argv: list[str] | None = None) -> int:
     cells.add_argument("--chunk", type=int, default=8, help="slices per simulated slab")
     cells.add_argument("--oversample", type=int, default=1, help="finer simulation grid")
     cells.add_argument("--directions", type=int, help="directions per shell (all)")
+    cells.add_argument(
+        "--centre-streamlines", action="store_true", help="bin the streamlines by voxel centres"
+    )
     cells.add_argument(
         "--jobs",
         type=int,
@@ -786,6 +844,7 @@ def main(argv: list[str] | None = None) -> int:
             args.chunk,
             volumes=volumes,
             oversample=args.oversample,
+            centre=args.centre_streamlines,
         )
         print(f"wrote {folder}")
         return 0
@@ -803,6 +862,7 @@ def main(argv: list[str] | None = None) -> int:
             volumes=volumes,
             jobs=args.jobs,
             oversample=args.oversample,
+            centre=args.centre_streamlines,
         )
         print(f"wrote {folder}")
         return 0
