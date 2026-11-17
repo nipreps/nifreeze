@@ -33,12 +33,19 @@ env:
   OPENBLAS_NUM_THREADS: 1
   MKL_NUM_THREADS: 1
   OMP_NUM_THREADS: 1
+  # The registration benchmarks run conda-forge's ANTs
+  ANTSPATH: /usr/share/miniconda/bin/
 
 jobs:
   compare:
     name: Compare with main
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    # Skipped on pull requests that only change documentation (#611)
+    if: >-
+      github.event_name == 'pull_request'
+      && !(startsWith(github.head_ref, 'doc/') || startsWith(github.head_ref, 'docs/')
+      || startsWith(github.event.pull_request.title, 'DOC:'))
+    # ubuntu-latest (26.04) has no Miniconda to install ANTs from (#638)
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
 
     steps:
@@ -55,7 +62,7 @@ jobs:
 
     - uses: actions/setup-python@v6
       with:
-        python-version: '3.12'
+        python-version: '3.13'
 
     - name: Install dependencies
       run: |
@@ -65,11 +72,19 @@ jobs:
     - name: Test the report
       run: python -m pytest -p no:cacheprovider benchmarks/tests
 
+    - name: Install ANTs
+      run: |
+        # Override libiconv pre-installed from anaconda channel
+        # See https://github.com/conda-forge/libitk-feedstock/issues/98
+        conda install -c conda-forge ants=2.4 libitk=5.3 libiconv
+
     # The quality benchmarks analyze the CI phantom
     - uses: ./.github/actions/phantom-fixtures
 
     - name: Benchmark both commits
       run: |
+        # Last on the path: ANTSPATH also holds conda's python
+        export PATH="$PATH:$ANTSPATH"
         asv machine --yes --config "$ASV_CONFIG" --machine "$ASV_MACHINE"
         # ASV reads the file relative to the directory of its configuration
         printf '%s\n' "$TARGET" "$BASE" > "$RUNNER_TEMP/commits.txt"
@@ -98,7 +113,8 @@ jobs:
   record:
     name: Record
     if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    # ubuntu-latest (26.04) has no Miniconda to install ANTs from (#638)
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
 
     steps:
@@ -108,12 +124,18 @@ jobs:
 
     - uses: actions/setup-python@v6
       with:
-        python-version: '3.12'
+        python-version: '3.13'
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install .[benchmark]
+
+    - name: Install ANTs
+      run: |
+        # Override libiconv pre-installed from anaconda channel
+        # See https://github.com/conda-forge/libitk-feedstock/issues/98
+        conda install -c conda-forge ants=2.4 libitk=5.3 libiconv
 
     - uses: ./.github/actions/phantom-fixtures
 
@@ -121,6 +143,8 @@ jobs:
       env:
         COMMITS: ${{ inputs.commits }}
       run: |
+        # Last on the path: ANTSPATH also holds conda's python
+        export PATH="$PATH:$ANTSPATH"
         asv machine --yes --config "$ASV_CONFIG" --machine "$ASV_MACHINE"
         if [[ -n "$COMMITS" ]]; then
           # Skip the commits the dashboard already has
@@ -167,7 +191,7 @@ jobs:
 
     - uses: actions/setup-python@v6
       with:
-        python-version: '3.12'
+        python-version: '3.13'
 
     - name: Install dependencies
       run: |

@@ -67,6 +67,12 @@ Gradient table shape does not match the number of diffusion volumes: \
 expected {n_volumes} rows, found {n_gradients}."""
 """dMRI volume count vs. gradient count mismatch error message."""
 
+BVEC_FRAMES = ("fsl", "voxel")
+"""Conventions of b-vectors given on the voxel axes (see :func:`bvecs_to_ras`)."""
+
+BVEC_FRAME_ERROR_MSG = "Unknown b-vector frame {frame!r}: expected one of {frames}."
+"""Unknown b-vector frame error message."""
+
 
 def find_shelling_scheme(
     bvals: np.ndarray,
@@ -282,36 +288,130 @@ def format_gradients(
     return formatted
 
 
-def transform_fsl_bvec(
-    b_ijk: np.ndarray, xfm: np.ndarray, imaffine: np.ndarray, invert: bool = False
-) -> np.ndarray:
+def _rotation(matrix: np.ndarray) -> np.ndarray:
+    """Return the orthogonal factor of the polar decomposition of a matrix's linear part.
+
+    For an image's affine, its columns are the world directions of the voxel axes.
+    Without shear, it is the linear part with its columns scaled to unit length, so the
+    voxel sizes do not bend directions. For a rigid motion, it is the motion's rotation.
     """
-    Transform a b-vector from the original space to the new space defined by the affine.
+    u, _, vt = np.linalg.svd(np.asanyarray(matrix, dtype=float)[:3, :3])
+    return u @ vt
+
+
+def _frame_flip(affine: np.ndarray, frame: str) -> np.ndarray:
+    """Return the sign of each voxel-axis component in ``frame``."""
+    if frame not in BVEC_FRAMES:
+        raise ValueError(BVEC_FRAME_ERROR_MSG.format(frame=frame, frames=BVEC_FRAMES))
+    flip = np.ones(3)
+    if frame == "fsl" and np.linalg.det(np.asanyarray(affine, dtype=float)[:3, :3]) > 0:
+        flip[0] = -1.0
+    return flip
+
+
+def bvecs_to_ras(bvecs: np.ndarray, affine: np.ndarray, frame: str) -> np.ndarray:
+    """
+    Convert b-vectors given on the voxel axes into world RAS+ coordinates.
+
+    The conversion is orthogonal: it keeps the norms, and zero vectors stay zero.
 
     Parameters
     ----------
-    b_ijk : :obj:`~numpy.ndarray`
-        The b-vector in FSL/DIPY conventions (i.e., voxel coordinates).
-    xfm : :obj:`~numpy.ndarray`
-        The affine transformation to apply.
-        Please note that this is the inverse of the head-motion-correction affine,
-        which maps coordinates from the realigned space to the moved (scan) space.
-        In this case, we want to move the b-vector from the moved (scan) space into
-        the realigned space.
-    imaffine : :obj:`~numpy.ndarray`
-        The image's affine, to convert.
-    invert : :obj:`bool`, optional
-        If ``True``, the transformation will be inverted.
+    bvecs : :obj:`~numpy.ndarray`
+        The b-vectors, shape ``(N, 3)``.
+    affine : :obj:`~numpy.ndarray`
+        The affine of the image the b-vectors belong to.
+    frame : :obj:`str`
+        The convention of ``bvecs`` (one of :data:`BVEC_FRAMES`):
+        ``"fsl"`` is on the voxel axes, with the x component flipped when the determinant
+        of the affine is positive (FSL's ``.bvec`` files);
+        ``"voxel"`` is on the voxel axes without that flip, as DIPY's tractography reads them.
 
     Returns
     -------
     :obj:`~numpy.ndarray`
-        The transformed b-vector in voxel coordinates (FSL/DIPY).
+        The b-vectors in world RAS+ coordinates, shape ``(N, 3)``.
+
+    Examples
+    --------
+    FSL's first component points to the left on images stored either way:
+
+    >>> las, ras = np.diag([-2.0, 2.0, 2.0, 1.0]), np.diag([2.0, 2.0, 2.0, 1.0])
+    >>> bvecs_to_ras(np.array([[1.0, 0.0, 0.0]]), las, "fsl")
+    array([[-1.,  0.,  0.]])
+    >>> bvecs_to_ras(np.array([[1.0, 0.0, 0.0]]), ras, "fsl")
+    array([[-1.,  0.,  0.]])
+    >>> bvecs_to_ras(np.array([[1.0, 0.0, 0.0]]), ras, "voxel")
+    array([[1., 0., 0.]])
 
     """
-    xfm = np.linalg.inv(xfm) if invert else xfm.copy()
+    bvecs = np.asanyarray(bvecs, dtype=float)
+    return (bvecs * _frame_flip(affine, frame)) @ _rotation(affine).T
 
-    # Go from world coordinates (xfm) to voxel coordinates
-    ijk2ijk_xfm = np.linalg.inv(imaffine) @ xfm @ imaffine
 
-    return ijk2ijk_xfm[:3, :3] @ b_ijk[:3]
+def bvecs_from_ras(bvecs: np.ndarray, affine: np.ndarray, frame: str) -> np.ndarray:
+    """
+    Convert b-vectors from world RAS+ coordinates onto the voxel axes.
+
+    This is the inverse of :func:`bvecs_to_ras`.
+
+    Parameters
+    ----------
+    bvecs : :obj:`~numpy.ndarray`
+        The b-vectors in world RAS+ coordinates, shape ``(N, 3)``.
+    affine : :obj:`~numpy.ndarray`
+        The affine of the image the b-vectors are written for.
+    frame : :obj:`str`
+        The convention to write (one of :data:`BVEC_FRAMES`, see :func:`bvecs_to_ras`).
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        The b-vectors on the voxel axes, in ``frame``, shape ``(N, 3)``.
+
+    Examples
+    --------
+    >>> phantom = np.diag([-2.0, -2.0, 2.0, 1.0])
+    >>> bvecs_from_ras(np.array([[0.6, 0.8, 0.0]]), phantom, "voxel")
+    array([[-0.6, -0.8,  0. ]])
+    >>> bvecs_from_ras(np.array([[0.6, 0.8, 0.0]]), phantom, "fsl")
+    array([[ 0.6, -0.8,  0. ]])
+
+    """
+    bvecs = np.asanyarray(bvecs, dtype=float)
+    return (bvecs @ _rotation(affine)) * _frame_flip(affine, frame)
+
+
+def realign_bvecs(bvecs: np.ndarray, matrix: np.ndarray) -> np.ndarray:
+    r"""
+    Turn world RAS+ b-vectors of a moved volume into the frame of the reference.
+
+    When the head moves by ``matrix`` (fixed to moving, as the estimator reports it),
+    a gradient applied along :math:`\mathbf{g}` in the scanner points along
+    :math:`R^{-1} \mathbf{g}` in the head, with :math:`R` the rotation of ``matrix``
+    (the orthogonal factor of its linear part). Neither the translation nor the
+    image's affine enters, and the norms are kept.
+
+    Parameters
+    ----------
+    bvecs : :obj:`~numpy.ndarray`
+        The b-vectors in world RAS+ coordinates, shape ``(N, 3)`` or ``(3,)``.
+    matrix : :obj:`~numpy.ndarray`
+        The ``4 x 4`` motion of the volume, in world coordinates.
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        The b-vectors in the reference's frame, with the shape of ``bvecs``.
+
+    Examples
+    --------
+    After a quarter turn of the head about z, the scanner's x points along the head's -y:
+
+    >>> quarter = np.array([[0, -1, 0, 5], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+    >>> realign_bvecs(np.array([1.0, 0.0, 0.0]), quarter).round(6) + 0.0
+    array([ 0., -1.,  0.])
+
+    """
+    # Row vectors: (R^-1 g)^T = g^T R, as R is orthogonal
+    return np.asanyarray(bvecs, dtype=float) @ _rotation(matrix)

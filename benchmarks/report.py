@@ -103,12 +103,19 @@ GATES = {
         None,
         min_change=0.05,
     ),
+    "registration": Gate(
+        "Registration error",
+        "mm within the brain, against the true motion",
+        None,
+        min_change=0.1,
+    ),
 }
 """The gate of each kind of benchmark."""
 
 KIND_PREFIXES = (
     ("track_quality_drift_", "drift"),
     ("track_quality_ratio_", "ratio"),
+    ("track_registration_", "registration"),
     ("track_alloc_", "alloc"),
     ("track_rss_", "rss"),
     ("time_cpu_", "cpu"),

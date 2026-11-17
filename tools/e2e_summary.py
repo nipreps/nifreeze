@@ -59,16 +59,18 @@ def main(results_dir: Path) -> str:
     for name in names:
         result = results[name]
         errors = _errors(result)
-        gate = result.get("gate")
-        if gate:
+        gate = result.get("gate") or {}
+        if "max_p95" in gate:
             shells_text = gate["shells"]
             if not isinstance(shells_text, str):
                 shells_text = "b=" + ",".join(shells_text)
             gate_text = (
                 f"{gate['errors']}, {shells_text}: < {gate['max_median']} / {gate['max_p95']}"
             )
+        elif gate:
+            gate_text = f"< {gate['max_median']} median, < {gate['max']} max"
         else:
-            gate_text = "< 0.2 median, < 1.0 max"
+            gate_text = ""
         offset = f"{result['offset_mm']:.2f}" if "offset_mm" in result else ""
         cells = [
             _cell(errors["shells"][shell]) if shell in errors["shells"] else "" for shell in shells

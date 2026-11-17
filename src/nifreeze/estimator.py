@@ -147,6 +147,10 @@ class Estimator:
         ----------
         dataset : :obj:`~nifreeze.data.base.BaseDataset`
             The input dataset this estimator operates on.
+        align_kwargs : :obj:`dict`, optional
+            Registration settings for every estimator of the chain (e.g., those of
+            ``--align-config``). The settings given to an estimator at construction
+            take precedence.
         clip : :obj:`str`, optional
             Clip the intensity of ``"sample"``, ``"predicted"``, ``"both"``
             (default) or ``"none"`` of the images before registration.
@@ -169,6 +173,8 @@ class Estimator:
             name and to model instances built on this dataset (see
             :meth:`~nifreeze.model.base.BaseModel.set_dataset`), except the
             trivial model, whose reference never moves.
+        num_threads : :obj:`int`, optional
+            Threads of each registration (default: ``omp_nthreads``).
         realigned : :obj:`dict`, optional
             Realigned views by dataset, shared by the estimators of a chain.
 
@@ -261,8 +267,10 @@ class Estimator:
             model.fit_predict(None, **fit_pred_kwargs)
             print(f"Fitting 'single' model finished, elapsed {timer() - start}s.")
 
-        kwargs["num_threads"] = n_threads
-        kwargs = self._align_kwargs | kwargs
+        # Registration settings: the run's (shared by the chain), this estimator's, and
+        # then the run's other keyword arguments
+        kwargs = (kwargs.pop("align_kwargs", None) or {}) | self._align_kwargs | kwargs
+        kwargs.setdefault("num_threads", n_threads)
         clip = kwargs.pop("clip", "both")
         clipping = str(clip).lower() in ("sample", "predicted", "both", "true")
         kwargs.pop("clip_windows", None)

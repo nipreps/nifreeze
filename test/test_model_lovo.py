@@ -35,7 +35,7 @@ from nifreeze.data.dmri import DWI
 from nifreeze.model import lovo
 from nifreeze.model._dipy import GP_JITTER
 from nifreeze.model.gpr import DiffusionGPR, MultiShellKernel, SphericalKriging, uses_bvalue
-from nifreeze.model.gqi import GeneralizedQSamplingModel
+from nifreeze.model.gqi import GeneralizedQSamplingModel, shell_bvalues, sphere_gram
 from nifreeze.testing import simulations as _sim
 
 
@@ -428,47 +428,65 @@ def test_gploo_multishell_auto_kernel(request):
     assert uses_bvalue(gp._kernel)
 
 
-def test_gqikrr_matches_explicit_ridge(setup_random_dwi_data):
-    """``GQIKRRModel`` rows equal kernel ridge regression on the other volumes."""
-    dwi = _random_dwi(setup_random_dwi_data)
-    krr = model.dmri.GQIKRRModel(dwi, krr_lambda=0.1)
+@pytest.mark.parametrize("ridge", [1e-3, 0.1, 10.0])
+def test_gqi_closed_form_matches_refits(ridge):
+    """Each row of the smoother holds the weights of GQI refit without that volume.
 
-    gradients = np.asarray(dwi.gradients, dtype=float)
+    ``GeneralizedQSamplingFit.predict`` is linear in the data above its clamp at
+    zero, so a fit on an offset identity matrix gives its weights, one voxel per
+    training volume. The last volume is alone in its shell: refit, it is
+    predicted around the mean of the nearest shell, and so is it in closed form.
+    """
+    rng = np.random.default_rng(1234)
+    bvals = np.repeat([1000.0, 2000.0, 3000.0], [12, 12, 1])
+    bvecs = rng.standard_normal((len(bvals), 3))
+    gradients = np.column_stack([bvecs / np.linalg.norm(bvecs, axis=1, keepdims=True), bvals])
     gtab = gradient_table_from_bvals_bvecs(gradients[:, -1], gradients[:, :-1])
-    basis = GeneralizedQSamplingModel(gtab).kernel
-    gram = basis @ basis.T
-    gram /= np.trace(gram) / len(gram)
+    gram = sphere_gram(GeneralizedQSamplingModel(gtab).kernel)
+    smoother = lovo.lovo_smoother(
+        gram + ridge * np.eye(len(gram)), shells=shell_bvalues(gradients[:, -1])
+    )
 
-    mask = krr._data_mask
-    signals = np.asarray(dwi.dataobj)[:, mask].astype(float)
-    for index in (0, len(dwi) // 2):
-        train = np.ones(len(dwi), dtype=bool)
-        train[index] = False
-        ridge = gram[np.ix_(train, train)] + 0.1 * np.eye(train.sum())
-        expected = gram[index, train] @ np.linalg.solve(ridge, signals[train])
-        predicted = krr.fit_predict(index)
-        assert predicted is not None
-        assert np.allclose(predicted[mask], np.maximum(expected, 0), rtol=1e-4, atol=1e-5)
+    offset = 100.0  # Keeps every prediction above the clamp at zero
+    for index in (0, 12, len(gradients) - 1):
+        train = np.arange(len(gradients)) != index
+        fit = GeneralizedQSamplingModel(
+            gradient_table_from_bvals_bvecs(gradients[train, -1], gradients[train, :-1]),
+            ridge=ridge,
+        ).fit(offset + np.eye(train.sum()))
+        target = gradient_table_from_bvals_bvecs(gradients[[index], -1], gradients[[index], :-1])
+        weights = fit.predict(target)[:, 0] - offset
+        assert np.allclose(smoother[index, train], weights, rtol=0, atol=1e-10)
+        assert smoother[index, index] == 0.0
 
 
-def test_gqikrr_fixes_gqi_amplitude():
-    """Unlike the one-row GQI prediction, GQI-KRR predicts the signal amplitude."""
+@pytest.mark.parametrize("kwargs", [{}, {"ridge": 0.1}], ids=["default", "ridge"])
+def test_gqikrr_matches_gqi_refits(kwargs):
+    """With the same ridge, GQI-KRR predicts as GQI refit on the other volumes."""
+    dwi = _crossing_dwi()
+    krr = model.dmri.GQIKRRModel(dwi, **kwargs)
+    gqi = model.dmri.GQIModel(dwi, **kwargs)
+    for index in (0, 10, 20, 30):
+        closed_form, refit = krr.fit_predict(index), gqi.fit_predict(index)
+        assert closed_form is not None and refit is not None
+        assert np.allclose(closed_form, refit, rtol=1e-5, atol=1e-3)
+
+
+def test_gqikrr_selects_ridge():
+    """Asked to, GQI-KRR chooses its ridge from the grid and predicts the signal."""
     dwi = _crossing_dwi()
     mask = np.ones(dwi.shape3d, dtype=bool)
-    krr = model.dmri.GQIKRRModel(dwi)
-    gqi = model.dmri.GQIModel(dwi)
-
-    def nrmse(_model):
-        errors, observed = [], []
-        for index in (0, 10, 20, 30):
-            errors.append(_model.fit_predict(index)[mask] - dwi.dataobj[index][mask])
-            observed.append(dwi.dataobj[index][mask])
-        return np.sqrt(np.mean(np.square(errors))) / np.mean(observed)
-
+    krr = model.dmri.GQIKRRModel(dwi, krr_lambda=None)
     assert krr._krr_lambda is None
-    assert nrmse(krr) < 0.2
+
+    errors, observed = [], []
+    for index in (0, 10, 20, 30):
+        predicted = krr.fit_predict(index)
+        assert predicted is not None
+        errors.append(predicted[mask] - dwi.dataobj[index][mask])
+        observed.append(dwi.dataobj[index][mask])
+    assert np.sqrt(np.mean(np.square(errors))) / np.mean(observed) < 0.2
     assert krr._krr_lambda in lovo.DEFAULT_KRR_LAMBDA_GRID
-    assert nrmse(krr) < 0.5 * nrmse(gqi)
 
 
 @pytest.mark.parametrize(

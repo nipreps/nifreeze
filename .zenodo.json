@@ -10,13 +10,13 @@
   "license": "Apache-2.0",
   "related_identifiers": [
     {
-      "identifier": "http://dmriprep.org",
-      "relation": "isPartOf",
+      "identifier": "https://www.nipreps.org/nifreeze/",
+      "relation": "isDocumentedBy",
       "scheme": "url"
     },
     {
-      "identifier": "10.1038/s41592-018-0235-4",
-      "relation": "isPartOf",
+      "identifier": "10.58530/2025/3252",
+      "relation": "isDescribedBy",
       "scheme": "doi"
     }
   ],
@@ -24,37 +24,56 @@
   "upload_type": "software",
   "creators": [
     {
-      "affiliation": "Department of Psychology, University of Texas at Austin, TX, USA",
-      "name": "Pisner, Derek",
-      "orcid": "0000-0002-1228-0201"
+      "orcid": "0000-0001-8435-6191",
+      "affiliation": "School of Engineering, HES-SO Valais/Wallis, Sion, Switzerland",
+      "name": "Oscar Esteban"
     },
     {
-      "affiliation": "Dept. of Radiology, Lausanne University Hospital and University of Lausanne",
-      "name": "Tourbier, Sebastien",
-      "orcid": "0000-0002-4441-899X"
+      "orcid": "0000-0002-9661-1396",
+      "affiliation": "Brigham and Women's Hospital, Mass General Brigham, Harvard Medical School, MA, USA",
+      "name": "Jon Haitz Legarreta Gorroño"
     },
     {
-      "affiliation": "The University of Washington eScience Institute",
-      "name": "Rokem, Ariel",
-      "orcid": "0000-0003-0679-1985"
+      "orcid": "0000-0003-2131-5688",
+      "affiliation": "Department of Computer Science, University of Copenhagen, Copenhagen, Denmark, and Molecular Imaging Branch, National Institute of Mental Health, Bethesda MD, USA",
+      "name": "Martin Nørgaard"
     },
     {
-      "affiliation": "Dept. of Radiology, Lausanne University Hospital and University of Lausanne",
-      "name": "Esteban, Oscar",
-      "orcid": "0000-0001-8435-6191"
+      "orcid": "0000-0002-6533-164X",
+      "affiliation": "Department of Psychology, Stanford University, CA, USA",
+      "name": "Christopher J. Markiewicz"
     }
   ],
   "contributors": [
     {
-      "affiliation": "Perelman School of Medicine, University of Pennsylvania, PA, USA",
-      "name": "Cieslak, Matthew",
-      "orcid": "0000-0002-1931-4734",
+      "orcid": "0000-0003-0679-1985",
+      "affiliation": "Centre for Addiction and Mental Health and University of Toronto, Toronto, ON, Canada",
+      "name": "Ariel Rokem",
       "type": "Researcher"
     },
     {
-      "affiliation": "Sagol School of Neuroscience, Tel Aviv University",
-      "name": "Ben-Zvi, Gal",
-      "orcid": "0000-0002-5655-9423"
+      "orcid": "0000-0003-3715-7012",
+      "affiliation": "Department of Neuroimaging, Institute of Psychiatry, Psychology and Neuroscience, King's College London, London, UK",
+      "name": "Eilidh MacNicol",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0000-0002-1931-4734",
+      "affiliation": "Perelman School of Medicine, University of Pennsylvania, PA, USA",
+      "name": "Matthew Cieslak",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0009-0008-9915-526X",
+      "affiliation": "School of Engineering, HES-SO Valais/Wallis, Sion, Switzerland",
+      "name": "Olivier Amacker",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0000-0001-7072-9399",
+      "affiliation": "Perelman School of Medicine, University of Pennsylvania, PA, USA",
+      "name": "Theodore D. Satterthwaite",
+      "type": "Researcher"
     }
   ]
 }

@@ -61,6 +61,9 @@ PARAMETERS_DOUBLE_LIST = {"shrink_factors", "smoothing_sigmas", "transform_param
 REGISTRATION_MALFORMED_SETTINGS_ERROR_MSG = "Malformed settings file (levels: {levels})"
 """Registration malformed settings error message."""
 
+REGISTRATION_UNKNOWN_SETTINGS_ERROR_MSG = "Unknown registration settings: {keys}"
+"""Unknown registration settings error message."""
+
 REGISTRATION_INIT_WITHOUT_COLLAPSE_ERROR_MSG = (
     "An initial transform requires 'collapse_output_transforms': otherwise the first "
     "output transform is the initialization, not the estimate."
@@ -222,14 +225,15 @@ def _prepare_registration_data(
     return predicted_path, sample_path, init_path
 
 
-def _get_ants_settings(settings: str = "b0-to-b0_level0") -> Path:
+def _get_ants_settings(settings: str | Path = "b0-to-b0_level0") -> Path:
     """
     Retrieve the path to ANTs settings configuration file.
 
     Parameters
     ----------
-    settings : :obj:`str`, optional
-        Name of the settings configuration.
+    settings : :obj:`str` or :obj:`os.pathlike`, optional
+        A file of settings, or the name of a configuration of
+        ``nifreeze/registration/config`` (with or without ``.json``).
 
     Returns
     -------
@@ -241,11 +245,17 @@ def _get_ants_settings(settings: str = "b0-to-b0_level0") -> Path:
     >>> _get_ants_settings()
     PosixPath('.../config/b0-to-b0_level0.json')
 
-    >>> _get_ants_settings("b0-to-b0_level1")
-    PosixPath('.../config/b0-to-b0_level1.json')
+    >>> _get_ants_settings("dwi-to-dwi_level1")
+    PosixPath('.../config/dwi-to-dwi_level1.json')
+
+    >>> _get_ants_settings("dwi-to-dwi_level1.json")
+    PosixPath('.../config/dwi-to-dwi_level1.json')
 
     """
-    return Path(str(files("nifreeze.registration").joinpath(f"config/{settings}.json")))
+    if (path := Path(settings)).is_file():
+        return path
+    name = str(settings).removesuffix(".json")
+    return Path(str(files("nifreeze.registration").joinpath(f"config/{name}.json")))
 
 
 def _massage_mask_path(mask_path: str | Path | list[str], nlevels: int) -> list[str]:
@@ -292,7 +302,7 @@ def generate_command(
     fixedmask_path: str | Path | list[str] | None = None,
     movingmask_path: str | Path | list[str] | None = None,
     init_affine: str | Path | None = None,
-    default: str = "b0-to-b0_level0",
+    default: str | Path = "b0-to-b0_level0",
     terminal_output: str | None = None,
     num_threads: int | None = None,
     environ: dict | None = None,
@@ -313,8 +323,9 @@ def generate_command(
         Path to the moving image mask.
     init_affine : :obj:`os.pathlike`, optional
         Initial affine transformation.
-    default : :obj:`str`, optional
-        Default settings configuration.
+    default : :obj:`str` or :obj:`os.pathlike`, optional
+        Default settings configuration: a file, or the name of a packaged one
+        (see :func:`_get_ants_settings`).
     terminal_output : :obj:`str`, optional
         Redirect terminal output (Nipype configuration)
     environ : :obj:`dict`, optional
@@ -447,6 +458,8 @@ def generate_command(
     settings = loads(_get_ants_settings(default).read_text()) | {
         k: kwargs.pop(k) for k in PARAMETERS_SINGLE_VALUE if k in kwargs
     }
+    if unknown := sorted(set(kwargs) - PARAMETERS_SINGLE_LIST - PARAMETERS_DOUBLE_LIST):
+        raise TypeError(REGISTRATION_UNKNOWN_SETTINGS_ERROR_MSG.format(keys=", ".join(unknown)))
 
     # Determine number of levels and assert consistency of levels
     levels = {len(settings[p]) for p in PARAMETERS_SINGLE_LIST if p in settings}
@@ -458,8 +471,6 @@ def generate_command(
     for key, value in kwargs.items():
         if key in PARAMETERS_DOUBLE_LIST:
             value = [value]
-        elif key not in PARAMETERS_SINGLE_LIST:
-            continue
 
         if nlevels == 1:
             settings[key] = [value]
@@ -496,6 +507,8 @@ def generate_command(
     )
     if num_threads:
         reg_iface.inputs.num_threads = num_threads
+        # nipype exports only NSLOTS, which ITK reads only when this is unset
+        reg_iface.inputs.environ["ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS"] = str(num_threads)
 
     return reg_iface
 
@@ -539,7 +552,7 @@ def _run_registration(
         environ["ANTS_RANDOM_SEED"] = str(seed)
 
     if "ants_config" in kwargs:
-        align_kwargs["default"] = align_kwargs.pop("ants_config").replace(".json", "")
+        align_kwargs["default"] = align_kwargs.pop("ants_config")
 
     registration = generate_command(
         fixed_path,

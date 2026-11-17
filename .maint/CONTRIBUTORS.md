@@ -8,6 +8,7 @@ Before every release, unlisted contributors will be invited again to add their n
 
 | **Lastname** | **Name** | **Handle** | **ORCID** | **Affiliation** |
 | --- | --- | --- | --- | --- |
+| Amacker | Olivier | @MadeInShineA | 0009-0008-9915-526X | School of Engineering, HES-SO Valais/Wallis, Sion, Switzerland |
 | Cieslak | Matthew | @mattcieslak | 0000-0002-1931-4734 | Perelman School of Medicine, University of Pennsylvania, PA, USA |
 | MacNicol | Eilidh | @eilidhmacnicol | 0000-0003-3715-7012 | Department of Neuroimaging, Institute of Psychiatry, Psychology and Neuroscience, King's College London, London, UK |
-| Rokem | Ariel | @arokem | 0000-0003-0679-1985 | The University of Washington eScience Institute, WA, USA |
+| Rokem | Ariel | @arokem | 0000-0003-0679-1985 | Centre for Addiction and Mental Health and University of Toronto, Toronto, ON, Canada |

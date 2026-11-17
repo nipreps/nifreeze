@@ -22,5 +22,7 @@ Contents
     developers
     phantoms
     roadmap
+    registration
+    edd/index
     changes
     bibliography

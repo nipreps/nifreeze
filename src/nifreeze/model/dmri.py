@@ -41,6 +41,7 @@ from nifreeze.data.filtering import BVAL_ATOL, dwi_select_shells, grand_mean_nor
 from nifreeze.model._dipy import GP_JITTER, GaussianProcessModel
 from nifreeze.model.base import BaseModel, ExpectationModel
 from nifreeze.model.gpr import uses_bvalue
+from nifreeze.model.gqi import DEFAULT_RIDGE
 from nifreeze.model.lovo import (
     DEFAULT_KRR_LAMBDA_GRID,
     ClosedFormLOVOMixin,
@@ -562,6 +563,7 @@ class GQIModel(BaseDWIModel):
         "sampling_length",
         "sphere",
         "recursion_level",
+        "ridge",
     )
     _model_class = "nifreeze.model.gqi.GeneralizedQSamplingModel"
 
@@ -703,20 +705,20 @@ class GPLOOModel(ClosedFormLOVOMixin, GPModel):
 
 
 class GQIKRRModel(ClosedFormLOVOMixin, GQIModel):
-    """GQI as kernel ridge regression, with closed-form leave-one-volume-out prediction.
+    """GQI with closed-form leave-one-volume-out prediction.
 
-    The GQI basis :math:`\\mathbf{K}` (gradients by sphere vertices) induces the
-    q-space Gram matrix :math:`\\mathbf{G} = \\mathbf{K}\\mathbf{K}^T`. Kernel ridge
-    regression with :math:`\\mathbf{A} = \\mathbf{G} + \\lambda \\mathbf{I}` predicts
-    each volume from the training Gram matrix (rather than from the target's own
-    norm, as the one-row :class:`GQIModel` prediction does), and its LOVO
-    predictions come from one matrix.
+    The prediction of :class:`GQIModel` is kernel ridge regression on the GQI
+    basis, around a mean per shell (see
+    :meth:`~nifreeze.model.gqi.GeneralizedQSamplingFit.predict`). With the same
+    ridge :math:`\\lambda`, the predictions of all volumes come from one matrix,
+    built from :math:`\\mathbf{A} = \\mathbf{G} + \\lambda \\mathbf{I}`, instead of
+    one fit per volume. Both models share their default ridge.
     """
 
     def __init__(
         self,
         dataset: DWI,
-        krr_lambda: float | None = None,
+        krr_lambda: float | None = DEFAULT_RIDGE,
         krr_lambda_grid: Sequence[float] = DEFAULT_KRR_LAMBDA_GRID,
         **kwargs,
     ):
@@ -727,33 +729,43 @@ class GQIKRRModel(ClosedFormLOVOMixin, GQIModel):
         dataset : :obj:`~nifreeze.data.dmri.base.DWI`
             Reference to a DWI object.
         krr_lambda : :obj:`float`, optional
-            Ridge strength, relative to the mean diagonal of the Gram matrix. If
-            :obj:`None`, it is chosen from ``krr_lambda_grid`` by closed-form LOVO
-            error on a random voxel subsample.
+            Ridge :math:`\\lambda`, the ``ridge`` of :class:`GQIModel` (which takes
+            precedence when given). Defaults to
+            :data:`~nifreeze.model.gqi.DEFAULT_RIDGE`. If :obj:`None`, it is chosen
+            from ``krr_lambda_grid`` by closed-form LOVO error on a random voxel
+            subsample, on the dataset the model is built on; the ridge chosen then
+            changes with the motion in the data.
         krr_lambda_grid : :obj:`~typing.Sequence` of :obj:`float`, optional
             Candidate ridge strengths.
         nvox_prefit : :obj:`int`, optional
-            Number of voxels used to choose the ridge strength (all if :obj:`None`).
+            Number of voxels used to choose the ridge strength, when ``krr_lambda``
+            is :obj:`None` (all if :obj:`None`).
         random_state : :obj:`int`, optional
             Seed for the voxel subsample.
 
         """
         super().__init__(dataset, **kwargs)
-        self._krr_lambda = krr_lambda
+        self._krr_lambda = self._model_kwargs.get("ridge", krr_lambda)
         self._krr_lambda_grid = tuple(krr_lambda_grid)
 
     def _covariance(self, gradients: np.ndarray) -> np.ndarray:
-        from nifreeze.model.gqi import GeneralizedQSamplingModel
+        from nifreeze.model.gqi import GeneralizedQSamplingModel, sphere_gram
 
         gtab = gradient_table_from_bvals_bvecs(gradients[:, -1], gradients[:, :-1])
-        basis = GeneralizedQSamplingModel(gtab, **self._model_kwargs).kernel
-        gram = basis @ basis.T
-        gram /= np.trace(gram) / len(gram)
+        gram = sphere_gram(GeneralizedQSamplingModel(gtab, **self._model_kwargs).kernel)
         if self._krr_lambda is None:
             self._krr_lambda = select_krr_lambda(
-                [gram], [self._hyperparameter_signals()], self._krr_lambda_grid
+                [gram],
+                [self._hyperparameter_signals()],
+                self._krr_lambda_grid,
+                shells=[self._shells(gradients)],
             )
         return gram + self._krr_lambda * np.eye(len(gram))
+
+    def _shells(self, gradients: np.ndarray) -> np.ndarray:
+        from nifreeze.model.gqi import shell_bvalues
+
+        return shell_bvalues(gradients[:, -1])
 
     def _postprocess(self, predicted: np.ndarray) -> np.ndarray:
         # Diffusion signals are non-negative (as in GQI's own prediction)

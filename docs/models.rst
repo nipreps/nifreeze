@@ -36,23 +36,36 @@ GQI as a signal predictor (a NiFreeze extension)
 ------------------------------------------------
 Yeh (2010) defines only the *forward* map signal → SDF. *NiFreeze* additionally
 needs the *inverse* to predict the diffusion signal given a b-vector (and -value).
-:meth:`~nifreeze.model.gqi.GeneralizedQSamplingFit.predict` composes the
-forward GQI kernel with a Tikhonov-regularized reconstruction kernel
-(:func:`~nifreeze.model.gqi.prediction_kernel`):
+:meth:`~nifreeze.model.gqi.GeneralizedQSamplingFit.predict` uses the GQI basis
+as the kernel of a ridge regression, around an unpenalized mean per shell:
 
 .. math::
 
-   \mathbf{K}^{+} = (\mathbf{K}\mathbf{K}^{\mathsf T} + \lambda_0 \mathbf{I})^{-1}
-   \mathbf{K}, \qquad \lambda_0 = 10^{-6}.
+   \hat{\mathbf{y}}_o = \mathbf{G}_o (\mathbf{G} + \lambda\mathbf{I})^{-1}
+   (\mathbf{y} - \mathbf{m}) + \mathbf{m}_o, \qquad
+   \mathbf{G} = \mathbf{K}\mathbf{K}^{\mathsf T} / n_v,
 
-This is the regularized least-squares signal whose forward GQI transform
-reproduces the fitted SDF. It is a *NiFreeze* modeling choice and is **not** part
-of Yeh (2010).
+where :math:`\mathbf{G}` is the Gram matrix of the fitted gradients averaged over
+the :math:`n_v` vertices of the sphere (:func:`~nifreeze.model.gqi.sphere_gram`),
+:math:`\mathbf{G}_o` that of the predicted gradients with them, :math:`\mathbf{m}`
+the mean of each fitted volume's shell and :math:`\mathbf{m}_o` that of the
+nearest shell to each predicted b-value. As :math:`\lambda \to 0` the prediction
+interpolates the fitted data, and as :math:`\lambda \to \infty` it returns the
+shell mean; at every :math:`\lambda` it keeps the shell's amplitude. It is a
+*NiFreeze* modeling choice and is **not** part of Yeh (2010).
+
+An earlier prediction divided by the norm of the predicted direction's own kernel
+row, instead of using the Gram matrix of the fitted gradients, and overscaled the
+signal 30 to 80 times on held-out volumes (`#495
+<https://github.com/nipreps/nifreeze/issues/495>`__).
 
 .. _gqi-reconstruction-fidelity:
 
 Reconstruction fidelity and the intercept behaviour
 ---------------------------------------------------
+This characterization predates the ridge path: it is of the earlier round trip,
+without a mean per shell and with a vanishing ridge :math:`\lambda_0 = 10^{-6}`
+(in units of :math:`\mathbf{K}\mathbf{K}^{\mathsf T}`).
 Applied to the signal, the round-trip operator is
 :math:`\mathbf{P} = \mathbf{A}(\mathbf{A}+\lambda_0\mathbf{I})^{-1}` with
 :math:`\mathbf{A} = \mathbf{K}\mathbf{K}^{\mathsf T}`. Empirically, on
@@ -101,7 +114,7 @@ default, :data:`~nifreeze.model.gqi.DEFAULT_SPHERE_RECURSION_LEVEL` = 5 (1026
 vertices), was chosen from the following experiment.
 
 **Settings.** ``method="standard"``, ``sampling_length`` :math:`\sigma = 1.2`,
-``INVERSE_LAMBDA`` :math:`\lambda_0 = 10^{-6}`. Metric: per-voxel round-trip
+:math:`\lambda_0 = 10^{-6}`. Metric: per-voxel round-trip
 slope (fit the model on the diffusion-weighted set, reconstruct that *same* set,
 then take the least-squares slope of predicted vs. observed, averaged over
 voxels) and the mean per-voxel correlation. **No direction is held out**: this
@@ -193,6 +206,116 @@ build) for no single-shell benefit, so they are opt-in rather than the default.
        slope = ((dc * pc).sum(1) / ((dc**2).sum(1) + 1e-12)).mean()
        print(r, len(create_unit_sphere(recursion_level=r).vertices), round(float(slope), 3))
 
+.. _gqi-ridge:
+
+The ridge and its default
+-------------------------
+The ridge :math:`\lambda` of the prediction (``ridge``, a parameter of
+:class:`~nifreeze.model.gqi.GeneralizedQSamplingModel`) trades interpolation of
+the fitted data for smoothing toward the shell means. The default of
+:class:`~nifreeze.model.dmri.GQIModel` and :class:`~nifreeze.model.dmri.GQIKRRModel`,
+:data:`~nifreeze.model.gqi.DEFAULT_RIDGE` = 0.3, was chosen from the following
+experiment.
+
+**Settings.** ``method="standard"``, ``sampling_length`` :math:`\sigma = 1.2`,
+``recursion_level`` 5. Each diffusion-weighted volume (b=0 excluded) is predicted
+from all the others, in closed form, at each ridge of
+:data:`~nifreeze.model.lovo.DEFAULT_KRR_LAMBDA_GRID`. Metrics: the squared error
+normalized by each voxel's signal energy, averaged over 5000 voxels drawn from the
+brain; and, at the ridge with the lowest error, the median over volumes of the
+ratio between the predicted and observed mean signals (amplitude).
+
+**Data.** The grid and single-shell data of :ref:`gqi-sphere-density`, and DIPY's
+Sherbrooke 3-shell dataset (``get_fnames("sherbrooke_3shell")``: b=1000, 2000 and
+3500, 64 directions each), slab ``[32:96, 32:96, 25:35]``, with the brain defined
+as for the single-shell data. b=0 excluded in all three.
+
+.. list-table:: Leave-one-volume-out error of GQI along the ridge path
+   :header-rows: 1
+
+   * - ridge
+     - grid (dsi_voxels), 101 volumes
+     - single-shell (stanford_hardi), 150 volumes
+     - multi-shell (sherbrooke_3shell), 192 volumes
+   * - 0.0001
+     - 0.0538
+     - 0.0912
+     - 0.1598
+   * - 0.00032
+     - 0.0428
+     - 0.0886
+     - 0.1428
+   * - 0.001
+     - 0.0356
+     - 0.0847
+     - 0.1300
+   * - 0.0032
+     - 0.0302
+     - 0.0804
+     - 0.1222
+   * - 0.01
+     - 0.0261
+     - 0.0774
+     - 0.1155
+   * - 0.032
+     - 0.0236
+     - 0.0749
+     - 0.1099
+   * - 0.1
+     - 0.0230
+     - 0.0719
+     - 0.1058
+   * - 0.32
+     - 0.0252
+     - 0.0698
+     - 0.1022
+   * - 1
+     - 0.0330
+     - 0.0705
+     - 0.0997
+   * - 3.2
+     - 0.0455
+     - 0.0779
+     - 0.0990
+   * - 10
+     - 0.0558
+     - 0.0900
+     - 0.1004
+   * - 32
+     - 0.0607
+     - 0.0985
+     - 0.1019
+   * - 1e+02
+     - 0.0626
+     - 0.1023
+     - 0.1027
+   * - selected
+     - 0.1
+     - 0.32
+     - 3.2
+   * - amplitude
+     - 1.000
+     - 0.997
+     - 1.000
+
+**Reading.** Every curve has an interior minimum, and the amplitude is within
+0.3% of the observed one at each. The selected ridge grows as the basis
+represents the signal less well: the grid acquisition interpolates best (0.1),
+the single shell needs more smoothing (0.32), and the multi-shell data the most
+(3.2). There, the curve is nearly flat from 1 to 100: across shells, the sinc
+basis predicts barely better than the shell means (0.099 against 0.103 at the
+largest ridge).
+
+**Decision.** The default ridge is the single-shell optimum. Against their own
+optima, it costs 10% on the grid data and 3% on the multi-shell data.
+:class:`~nifreeze.model.dmri.GQIKRRModel` shares it. Asked to choose the ridge on
+the data it is built on (``krr_lambda=None``), it chooses a larger one where volumes
+moved: on the CI phantom, 0.32 on the reference and 1.0 on every copy with motion
+(`#605 <https://github.com/nipreps/nifreeze/pull/605>`__). Its targets would then
+change with the motion through the ridge as well, so the choice is opt-in.
+
+**Reproduction.** ``python tools/gqi_ridge.py`` prints the table.
+
 .. _closed-form-lovo:
 
 Closed-form leave-one-volume-out prediction
@@ -234,15 +357,17 @@ unchanged:
    ``--nvox-prefit``, 1000 by default).
 
 ``gqi-krr`` (:class:`~nifreeze.model.dmri.GQIKRRModel`)
-   GQI :footcite:p:`yeh_generalized_2010` as kernel ridge regression. The GQI
-   basis :math:`\mathbf{K}` induces the q-space Gram matrix
-   :math:`\mathbf{G} = \mathbf{K}\mathbf{K}^{\mathsf T}` and
-   :math:`\mathbf{A} = \mathbf{G} + \lambda\mathbf{I}`, with :math:`\lambda`
-   relative to the mean diagonal of :math:`\mathbf{G}`. Unlike the one-row
-   prediction of :class:`~nifreeze.model.dmri.GQIModel`, which normalizes by the
-   target direction's own norm and overscales the signal, it predicts from the
-   training Gram matrix. :math:`\lambda` is given (``krr_lambda``) or chosen by
-   closed-form LOVO error (:func:`~nifreeze.model.lovo.select_krr_lambda`).
+   GQI :footcite:p:`yeh_generalized_2010` as kernel ridge regression, the
+   prediction of :class:`~nifreeze.model.dmri.GQIModel` (see :ref:`gqi-models`)
+   in closed form: :math:`\mathbf{A} = \mathbf{G} + \lambda\mathbf{I}`, with
+   :math:`\mathbf{G} = \mathbf{K}\mathbf{K}^{\mathsf T} / n_v` the Gram matrix of
+   the GQI basis averaged over the sphere. Like the refitting model, it predicts
+   around the mean of each shell, estimated on the training volumes
+   (``shells`` of :func:`~nifreeze.model.lovo.lovo_smoother`), and at the same
+   :math:`\lambda` both give the same predictions. :math:`\lambda` defaults to
+   that of :class:`~nifreeze.model.dmri.GQIModel` (see :ref:`gqi-ridge`). It can
+   be given (``krr_lambda``, or ``ridge``), or chosen by closed-form LOVO error
+   with ``krr_lambda=None`` (:func:`~nifreeze.model.lovo.select_krr_lambda`).
 
 **Held-out independence.** No prediction uses the held-out volume, so single-fit
 mode returns the same genuine LOVO predictions and is not a canary. The

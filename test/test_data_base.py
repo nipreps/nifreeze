@@ -432,7 +432,7 @@ def test_to_filename_and_from_filename(random_dataset: BaseDataset):
         assert h5_file.is_file()
         with h5py.File(h5_file, "r") as in_file:
             assert in_file.attrs["Format"] == "nfHDF5"
-            assert in_file.attrs["Version"] == 2
+            assert in_file.attrs["Version"] == 3
 
         # Read from filename
         ds2: BaseDataset[Any] = BaseDataset.from_filename(h5_file)

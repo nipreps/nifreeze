@@ -40,12 +40,14 @@ from nifreeze.data.dmri.base import (
     DWI,
     DWI_B0_MULTIPLE_VOLUMES_WARN_MSG,
     DWI_REDUNDANT_B0_WARN_MSG,
+    NFHDF5_FRAME_ASSUMED_WARN_MSG,
     validate_gradients,
 )
 from nifreeze.data.dmri.io import (
     GRADIENT_BVAL_BVEC_PRIORITY_WARN_MSG,
     GRADIENT_DATA_MISSING_ERROR_MSG,
     from_nii,
+    load_rasb,
     to_nifti,
 )
 from nifreeze.data.dmri.utils import (
@@ -56,9 +58,9 @@ from nifreeze.data.dmri.utils import (
     GRADIENT_NDIM_ERROR_MSG,
     GRADIENT_OBJECT_ERROR_MSG,
     GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR,
+    bvecs_to_ras,
     find_shelling_scheme,
     format_gradients,
-    transform_fsl_bvec,
 )
 from nifreeze.utils.ndimage import load_api
 
@@ -123,7 +125,9 @@ def _serialize_dwi_data(
 def test_main(datadir):
     input_file = datadir / "dwi.h5"
 
-    assert isinstance(load(input_file), DWI)
+    # GIN's file is of version 1, which does not record the frame of its table
+    with pytest.warns(UserWarning, match="does not record the frame"):
+        assert isinstance(load(input_file), DWI)
 
 
 @pytest.mark.parametrize(
@@ -472,7 +476,7 @@ def test_gradient_instantiation_dwi_vol_mismatch_error(
 @pytest.mark.random_gtab_data(10, (1000, 2000), 2)
 @pytest.mark.random_dwi_data(50, (34, 36, 24), True)
 @pytest.mark.parametrize("row_major_gradients", (False, True))
-def test_load_gradients_ndim_error(tmp_path, setup_random_dwi_data, row_major_gradients):
+def test_load_gradients_single_column_error(tmp_path, setup_random_dwi_data, row_major_gradients):
     dwi_dataobj, affine, brainmask_dataobj, gradients, _ = setup_random_dwi_data
 
     dwi_nii, _, _ = _dwi_data_to_nifti(dwi_dataobj, affine, brainmask_dataobj.astype(np.uint8))
@@ -490,7 +494,8 @@ def test_load_gradients_ndim_error(tmp_path, setup_random_dwi_data, row_major_gr
     grads_fname = tmp_path / "grads.txt"
     np.savetxt(grads_fname, gradients, fmt="%.6f")
 
-    with pytest.raises(ValueError, match=GRADIENT_NDIM_ERROR_MSG):
+    # Read as a table of one row or one column, which does not have four columns
+    with pytest.raises(ValueError, match=re.escape(GRADIENT_EXPECTED_COLUMNS_ERROR_MSG)):
         from_nii(dwi_fname, gradients_file=grads_fname)
 
 
@@ -697,7 +702,10 @@ def test_load_bvecs_bvals(tmp_path, setup_random_dwi_data, transpose_bvals, tran
 
     gradmask = gradients[:, -1] > b0_thres
 
-    expected_nonzero_grads = gradients[gradmask]
+    # FSL's b-vectors are converted into RAS+ with the image's affine
+    expected_nonzero_grads = np.column_stack(
+        (bvecs_to_ras(gradients[:, :-1], affine, "fsl"), gradients[:, -1])
+    )[gradmask]
     assert hasattr(dwi_obj, "gradients")
     assert dwi_obj.gradients.shape == expected_nonzero_grads.shape
     assert np.allclose(dwi_obj.gradients, expected_nonzero_grads, atol=1e-6)
@@ -793,7 +801,8 @@ def test_to_nifti(
     def simple_to_nifti(_dataset, filename=None, write_hmxfms=None, order=None):
         _ = write_hmxfms
         _ = order
-        _nii = nb.Nifti1Image(np.moveaxis(_dataset.dataobj, 0, -1), _dataset.affine)
+        # Offset, standing in for the resampling, so the output tells the two apart
+        _nii = nb.Nifti1Image(np.moveaxis(_dataset.dataobj + 1.0, 0, -1), _dataset.affine)
         if filename is not None:
             _nii.to_filename(filename)
         return _nii
@@ -821,25 +830,19 @@ def test_to_nifti(
                 == "Ignoring ``insert_b0`` argument as the data object's bzero field is unset"
             )
 
+    # The motions (2 * I) have no rotation, so the b-vectors are written as they are
     bvecs_dwi = dwi_obj.bvecs
     bvals_dwi = dwi_obj.bvals
-    # Transform bvecs if motion affines are present
-    if dwi_obj.motion_affines is not None:
-        rotated = [
-            transform_fsl_bvec(_bvec, _affine, dwi_obj.affine, invert=True)
-            for _bvec, _affine in zip(bvecs_dwi, dwi_obj.motion_affines, strict=True)
-        ]
-        bvecs_dwi = np.asarray(rotated)
 
-    # Check the primary NIfTI output
-    _dataobj = dwi_obj.dataobj
+    # Check the primary NIfTI output: the volumes of ``_base_to_nifti``
+    _dataobj = dwi_obj.dataobj + 1.0
     # Concatenate the b0 if the primary data has a b0 volume or if it was
     # requested to do so
     if not no_bzero:
         assert dwi_obj.bzero is not None
         # ToDo
         # The code will concatenate as many zeros as they exist to the data
-        _dataobj = np.concatenate((dwi_obj.bzero[np.newaxis], dwi_obj.dataobj), axis=0)
+        _dataobj = np.concatenate((dwi_obj.bzero[np.newaxis], _dataobj), axis=0)
         # But when inserting b0 data to the gradients, it inserts a single b0.
         # Here I will insert as many values as b0 volumes to make the test fail
         dwi_b0_count = dwi_obj.bzero.shape[0] if dwi_obj.bzero.ndim == 4 else 1
@@ -868,19 +871,21 @@ def test_to_nifti(
         np.allclose(_nii_dataobj.get_fdata(), _nii_load.get_fdata())
         np.allclose(_nii_dataobj.affine, _nii_load.affine)
 
-        # Check gradients
-        if motion_affines is not None:
-            bvecs_file = _filename.with_suffix("").with_suffix(".bvec")
-            bvals_file = _filename.with_suffix("").with_suffix(".bval")
-            assert bvals_file.is_file()
-            assert bvecs_file.is_file()
+        # Check gradients, written with every NIfTI file
+        bvecs_file = _filename.with_suffix("").with_suffix(".bvec")
+        bvals_file = _filename.with_suffix("").with_suffix(".bval")
+        assert bvals_file.is_file()
+        assert bvecs_file.is_file()
 
-            # Read the files
-            bvals_from_file = np.loadtxt(bvals_file)
-            bvecs_from_file = np.loadtxt(bvecs_file).T
+        # Read the files: FSL's for the output's affine, and RAS+B
+        bvals_from_file = np.loadtxt(bvals_file)
+        bvecs_from_file = bvecs_to_ras(np.loadtxt(bvecs_file).T, nii.affine, "fsl")
+        rasb_from_file = load_rasb(_filename.with_suffix("").with_suffix(".tsv"))
 
-            assert np.allclose(bvals_from_file, bvals_dwi, rtol=0, atol=10**-bvals_dec_places)
-            assert np.allclose(bvecs_from_file, bvecs_dwi, rtol=0, atol=10**-bvecs_dec_places)
+        assert np.allclose(bvals_from_file, bvals_dwi, rtol=0, atol=10**-bvals_dec_places)
+        assert np.allclose(bvecs_from_file, bvecs_dwi, rtol=0, atol=10**-bvecs_dec_places)
+        assert np.allclose(rasb_from_file[:, 3], bvals_dwi, rtol=0, atol=10**-bvals_dec_places)
+        assert np.allclose(rasb_from_file[:, :3], bvecs_dwi, rtol=0, atol=10**-bvecs_dec_places)
 
 
 @pytest.mark.skip(reason="to_nifti takes absurdly long")
@@ -1111,6 +1116,45 @@ def test_to_filename_appends_extension(tmp_path, setup_random_dwi_data, existing
         with h5py.File(filename, "r") as other:
             assert other.attrs["Type"] == "unrelated"
     assert DWI.from_filename(tmp_path / "dwi.h5") == dwi_obj
+
+
+@pytest.mark.parametrize("version", [1, 2, None])
+def test_from_filename_assumes_rasb_before_version_3(tmp_path, version):
+    """Files before version 3 do not record their table's frame: read as RAS+B, and warn."""
+    dwi = DWI(
+        dataobj=np.ones((len(B_MATRIX) - 1, 4, 4, 4), dtype="float32"),
+        affine=np.diag([-2.0, 2.0, 2.0, 1.0]),
+        gradients=B_MATRIX[1:],
+        bzero=np.ones((4, 4, 4), dtype="float32"),
+    )
+    dwi.to_filename(tmp_path / "dwi.h5")
+    with h5py.File(tmp_path / "dwi.h5", "r+") as out_file:
+        assert out_file.attrs["Version"] == 3
+        if version is None:
+            del out_file.attrs["Version"]  # read as version 1
+        else:
+            out_file.attrs["Version"] = np.uint16(version)
+
+    message = NFHDF5_FRAME_ASSUMED_WARN_MSG.format(
+        filename=tmp_path / "dwi.h5", version=version or 1
+    )
+    with pytest.warns(UserWarning, match=re.escape(message)):
+        loaded = DWI.from_filename(tmp_path / "dwi.h5")
+    assert np.allclose(loaded.gradients, dwi.gradients)
+
+
+def test_from_filename_version_3_does_not_warn(tmp_path):
+    dwi = DWI(
+        dataobj=np.ones((len(B_MATRIX) - 1, 4, 4, 4), dtype="float32"),
+        affine=np.eye(4),
+        gradients=B_MATRIX[1:],
+        bzero=np.ones((4, 4, 4), dtype="float32"),
+    )
+    dwi.to_filename(tmp_path / "dwi.h5")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert DWI.from_filename(tmp_path / "dwi.h5") == dwi
 
 
 @pytest.mark.random_dwi_data(50, (34, 36, 24), False)
@@ -1953,49 +1997,6 @@ def test_find_shelling_scheme_files(
     assert np.allclose(obt_bval_estimated, exp_bval_estimated)
 
 
-@pytest.mark.parametrize(
-    "b_ijk",
-    [
-        np.array([1.0, 0.0, 0.0]),
-        np.array([0.0, 1.0, 0.0]),
-        np.array([0.0, 0.0, 1.0]),
-    ],
-)
-@pytest.mark.parametrize("zooms", [(1.0, 1.0, 1.0), (2.0, 2.0, 2.0), (1.0, 2.0, 3.0)])
-@pytest.mark.parametrize(
-    "flips", [(1, 1, 1), (-1, 1, 1), (1, -1, 1), (1, 1, -1), (-1, -1, 1), (-1, -1, -1)]
-)
-@pytest.mark.parametrize("axis_order", [(0, 1, 2), (2, 0, 1), (1, 2, 0)])
-@pytest.mark.parametrize("origin", [(0.0, 0.0, 0.0), (-10.0, -10.0, -10.0)])
-@pytest.mark.parametrize(
-    "angles", [(0.0, 0.0, 0.0), (0.1, 0.0, 0.0), (0.0, 0.1, 0.0), (0.0, 0.0, 0.1)]
-)
-def test_transform_fsl_bvec(b_ijk, zooms, flips, axis_order, origin, angles):
-    """Test the rotation of FSL b-vectors."""
-
-    angles = dict(zip(("x", "y", "z"), angles, strict=False))
-    affine = nb.affines.from_matvec(np.diag(zooms * np.array(flips)), origin)
-
-    # Reorder first 3 columns of affine according to axis_order
-    affine = affine[:, list(axis_order) + [3]]
-
-    rotation_matrix = nb.eulerangles.euler2mat(**angles)
-
-    # Ground truth
-    rotated_b_ijk = rotation_matrix @ b_ijk
-
-    # Rotation matrix in voxel space to scanner space
-    rotation_ras = (
-        affine @ nb.affines.from_matvec(rotation_matrix, (0, 0, 0)) @ np.linalg.inv(affine)
-    )
-    test_b_ijk = transform_fsl_bvec(b_ijk, rotation_ras, affine)
-
-    assert np.allclose(test_b_ijk, rotated_b_ijk, atol=1e-6), (
-        f"Expected {rotated_b_ijk}, got {test_b_ijk} for b_ijk={b_ijk}, "
-        f"zooms={zooms}, origin={origin}, angles={angles}"
-    )
-
-
 def _rotation_about_z(degrees: float, shift: tuple = (0.0, 0.0, 0.0)) -> np.ndarray:
     angle = np.deg2rad(degrees)
     matrix = np.eye(4)
@@ -2015,7 +2016,7 @@ def _small_dwi(gradients: np.ndarray) -> DWI:
 
 
 def test_dwi_realign_into_rotates_the_bvector():
-    """The realigned view's b-vector is the original one rotated as at export."""
+    """The realigned view's b-vector is the original one turned by the inverse rotation."""
     rng = np.random.default_rng(1234)
     bvecs = rng.normal(size=(DTI_MIN_ORIENTATIONS + 2, 3))
     bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
@@ -2027,8 +2028,7 @@ def test_dwi_realign_into_rotates_the_bvector():
     dwi.set_transform(3, matrix)
     dwi.realign_into(view, 3)
 
-    expected = transform_fsl_bvec(original[3], matrix, dwi.affine, invert=True)
-    expected /= np.linalg.norm(expected)
+    expected = np.linalg.inv(matrix[:3, :3]) @ original[3, :3]
     assert np.allclose(view.gradients[3, :3], expected)
     assert view.gradients[3, 3] == original[3, 3]
     assert np.allclose(np.delete(view.gradients, 3, axis=0), np.delete(original, 3, axis=0))
@@ -2045,8 +2045,6 @@ def test_dwi_realign_into_keeps_integer_tables_exact():
     dwi.set_transform(0, _rotation_about_z(10.0))
     dwi.realign_into(view, 0)
 
-    expected = transform_fsl_bvec(
-        np.array([1.0, 0.0, 0.0]), _rotation_about_z(10.0), dwi.affine, invert=True
-    )
-    assert np.allclose(view.gradients[0, :3], expected / np.linalg.norm(expected))
+    expected = np.linalg.inv(_rotation_about_z(10.0)[:3, :3]) @ np.array([1.0, 0.0, 0.0])
+    assert np.allclose(view.gradients[0, :3], expected)
     assert np.allclose(view.gradients[1:], dwi.gradients[1:])

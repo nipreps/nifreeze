@@ -218,6 +218,44 @@ def test_estimator_clip_windows_cached(request, monkeypatch):
     assert received[:n] == received[n:]
 
 
+@pytest.mark.parametrize(("num_threads", "expected"), [(None, 5), (3, 3)])
+def test_estimator_registration_settings(request, monkeypatch, num_threads, expected):
+    """The run's settings reach every estimator of a chain, under each estimator's own."""
+    dataset = DummyDataset(rng=request.node.rng)
+    received = []
+
+    class DummyXForm:
+        matrix = np.eye(4)
+
+    def fake_registration(*args, **kwargs):
+        received.append(kwargs)
+        return DummyXForm()
+
+    monkeypatch.setattr(
+        nifreeze.estimator, "_prepare_registration_data", lambda *a, **k: (None, None, None)
+    )
+    monkeypatch.setattr(nifreeze.estimator, "_run_registration", fake_registration)
+
+    first = Estimator(DummyInsiderModel(dataset=dataset), strategy="linear")
+    second = Estimator(
+        DummyInsiderModel(dataset=dataset), strategy="linear", prev=first, metric="GC"
+    )
+    threads = {} if num_threads is None else {"num_threads": num_threads}
+    second.run(
+        dataset,
+        align_kwargs={"ants_config": "dwi-to-dwi_level1", "metric": "Mattes"},
+        omp_nthreads=5,
+        **threads,
+    )
+
+    n = len(dataset)
+    assert len(received) == 2 * n
+    assert all("align_kwargs" not in kwargs for kwargs in received)
+    assert all(kwargs["ants_config"] == "dwi-to-dwi_level1" for kwargs in received)
+    assert all(kwargs["num_threads"] == expected for kwargs in received)
+    assert [kwargs["metric"] for kwargs in received] == ["Mattes"] * n + ["GC"] * n
+
+
 def test_estimator_debug_dir(request, monkeypatch, tmp_path):
     """With ``debug_dir``, each pass keeps its inputs and an aligned trace per volume."""
     dataset = DummyDataset(rng=request.node.rng)

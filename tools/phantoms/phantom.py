@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.12"
+# requires-python = ">=3.13"
 # dependencies = ["trxscan[dipy,trx]", "nifreeze"]
 #
 # [tool.uv.sources]
@@ -48,7 +48,13 @@ clean: no motion, eddy currents, susceptibility distortion, readout relaxation
 or noise; T2 contrast comes from per-tissue S0 at the protocol's echo time. It
 writes the noise-free magnitude, one noisy realization at the protocol's SNR,
 the brain mask, the gradients, the truth maps and a JSON sidecar, under
-``<dataset>/sub-60501/dwi``.
+``<dataset>/sub-60501/dwi``. ``--directions`` keeps the first b=0 and that many
+directions of each shell (``spread``), and ``--oversample`` simulates the signal
+on a grid that many times finer per side than the acquisition's (1 by default;
+TRXScan's own default is 2). ``--centre-streamlines`` bins the streamlines by the
+voxel centres, where TRXScan samples the tissue fractions (see :func:`centred`).
+``--slice-profile`` simulates each slice as that many thinner slices and averages
+them, so that a voxel takes the signal across its slice (see :func:`thin`).
 
 ``cells`` simulates the perturbed copies of that reference: diffusion-weighted
 volumes moved by rigid motions (re-simulated from the moved phantom), distorted
@@ -61,7 +67,8 @@ processes, which share the threads of ``RAYON_NUM_THREADS``.
 ``verify`` checks, at a coarse resolution, what the perturbed copies rely on:
 repeated runs are identical, a subset of the gradient table reproduces the same
 volumes of the full run, the closed-form displacement reproduces TRXScan's
-eddy-current images, and a moved volume moves as its matrix says.
+eddy-current images, a moved volume moves as its matrix says, and a slice profile
+leaves the image where it was.
 
 ``fixture`` writes the small dataset that CI simulates for the phantom tests
 and the quality benchmarks: the Sherbrooke protocol at 4 mm, one b=0 and 8
@@ -69,6 +76,7 @@ directions per shell, its reference and the perturbed copies they use.
 """
 
 import argparse
+import dataclasses
 import json
 import math
 import multiprocessing
@@ -82,6 +90,7 @@ from functools import cache
 from importlib.metadata import version
 from itertools import islice, repeat
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import nibabel as nb
@@ -120,11 +129,12 @@ FIXTURE: dict[str, Any] = {
 """The dataset that CI simulates, small enough for every pull request."""
 
 
-def acquisition(name: str, voxel: float | None = None) -> Any:
+def acquisition(name: str, voxel: float | None = None, oversample: int = 1) -> Any:
     """The protocol of a catalog entry as a clean TRXScan acquisition.
 
     With ``voxel``, the voxels are isotropic of that size and the matrix keeps
-    the field of view.
+    the field of view. ``oversample`` subdivides each voxel side of the grid the
+    signal is simulated on (TRXScan's default is 2).
     """
     entry = CATALOG[name]
     voxels = np.asarray(entry["voxel_mm"], dtype=float)
@@ -145,7 +155,7 @@ def acquisition(name: str, voxel: float | None = None) -> Any:
         te_ms=te_ms,
         # T2 contrast without the readout's T2 weighting, which blurs along phase encoding
         tissue_s0=tuple(math.exp(-te_ms / t2) for t2 in ts.Tissue.ADULT.t2_ms),
-        oversample=1,
+        oversample=oversample,
         phase_model="none",
         partial_fourier=1.0,
         coils=1,
@@ -215,17 +225,41 @@ def simulate(
     volumes: list[int] | None = None,
     chunk: int | None = 8,
     truth: bool = True,
+    oversample: int = 1,
+    centre: bool = False,
+    profile: int = 1,
 ) -> dict[str, Any]:
     """Simulate the clean reference of one protocol."""
-    protocol = acquisition(name, voxel)
+    protocol = acquisition(name, voxel, oversample)
     table, gtab = gradients(name, volumes)
     source = phantom(streamlines)
     grid = source.grid(protocol)
-    simulation = grid.simulate(
-        gtab, protocol, CLEAN, kspace=False, clean_b0=False, chunk=chunk, truth_peaks=truth
+    if centre:
+        grid = centred(grid)
+    slices, signal = thin(source, protocol, grid, profile, centre)
+    simulation = signal.simulate(
+        gtab,
+        slices,
+        CLEAN,
+        kspace=False,
+        clean_b0=False,
+        chunk=chunk,
+        truth_peaks=truth and profile == 1,
     )
-    affine = simulation.magnitude.affine
-    dwi = _magnitudes(simulation)
+    affine = simulation.magnitude.affine if profile == 1 else grid.image("mask").affine
+    dwi = thick(_magnitudes(simulation), profile)
+    peaks = simulation.truth_peaks if truth else None
+    if truth and profile > 1:
+        # TRXScan computes the peaks on the grid it simulates: one volume on the acquisition grid
+        peaks = grid.simulate(
+            _dipy(table[[int(np.argmax(table[:, 3]))]]),
+            protocol,
+            CLEAN,
+            kspace=False,
+            clean_b0=False,
+            chunk=chunk,
+            truth_peaks=True,
+        ).truth_peaks
     return {
         "protocol": protocol,
         "table": table,
@@ -233,7 +267,7 @@ def simulate(
         "dwi": dwi,
         "mask": np.asarray(grid.image("mask").dataobj) > 0.5,
         "white_matter": np.asarray(grid.image("wm").dataobj) >= 0.9,
-        "peaks": simulation.truth_peaks if truth else None,
+        "peaks": peaks,
         "maps": grid.microstructure(protocol, gtab) if truth else {},
         "readout": protocol.sidecar(int(simulation.magnitude.shape[1])),
     }
@@ -246,6 +280,58 @@ def grid_moved(source: Any, matrix: np.ndarray, protocol: Any, grid: Any) -> Any
     apply again to the affine of ``like=``.
     """
     return source.moved(matrix).grid(protocol.replace(oblique_deg=None), like=grid)
+
+
+def centred(grid: Any) -> Any:
+    """``grid`` with its streamlines moved half a simulation voxel along each grid axis.
+
+    TRXScan samples the tissue fractions at the voxel centres, but bins a streamline
+    point of voxel coordinates ``v`` in voxel ``floor(v)`` (``src/raster.rs:135-138``),
+    half a voxel off along each axis. Moved by that half voxel, the streamlines are
+    binned by the nearest voxel centre. The shift is that of the simulation grid, where
+    the signal is simulated; with ``oversample`` above 1, the truth maps, which TRXScan
+    bins on the acquisition grid, stay a quarter of a voxel off in-plane.
+    """
+    shift = grid.sim_affine[:3, :3] @ np.full(3, 0.5)
+    lines = grid.streamlines
+    return dataclasses.replace(
+        grid, streamlines=ts.Streamlines(lines.positions + shift, lines.offsets, lines.weights)
+    )
+
+
+def thin(
+    source: Any, protocol: Any, grid: Any, profile: int, centre: bool = False
+) -> tuple[Any, Any]:
+    """The protocol and grid the signal is simulated on: ``grid``, or ``profile`` thin
+    slices filling each of its slices.
+
+    TRXScan takes each voxel's signal at the centre of its slice (the simulation grid is
+    never finer through-plane), where an excitation takes it across the slice's
+    thickness. Simulated as ``profile`` thinner slices and averaged (:func:`thick`), each
+    slice gets a flat slice profile. The thin grid is ``grid`` with its slice axis (k)
+    divided, given to TRXScan as is: TRXScan's own placement centres a grid on the
+    phantom after rounding, which would offset the thin slices from the acquired ones.
+    """
+    if profile == 1:
+        return protocol, grid
+    dims = (int(grid.dims[0]), int(grid.dims[1]), int(grid.dims[2]) * profile)
+    # Thin slice t is at (t + 1/2) / profile - 1/2 in voxels of the acquired slices
+    split = np.diag([1.0, 1.0, 1.0 / profile, 1.0])
+    split[2, 3] = (1.0 - profile) / (2.0 * profile)
+    vx, vy, vz = protocol.voxel_mm
+    slices = protocol.replace(voxel_mm=(vx, vy, vz / profile), matrix=dims)
+    target = SimpleNamespace(dims=dims, affine=np.asarray(grid.affine, dtype=float) @ split)
+    # ``grid`` already carries the oblique rotation, as in grid_moved
+    signal = source.grid(slices.replace(oblique_deg=None), like=target)
+    return slices, centred(signal) if centre else signal
+
+
+def thick(dwi: np.ndarray, profile: int) -> np.ndarray:
+    """Each run of ``profile`` thin slices (see :func:`thin`) averaged into its slice."""
+    if profile == 1:
+        return dwi
+    nx, ny, nz = dwi.shape[:3]
+    return dwi.reshape(nx, ny, nz // profile, profile, *dwi.shape[3:]).mean(axis=3)
 
 
 def _magnitudes(simulation: Any) -> np.ndarray:
@@ -306,13 +392,25 @@ def write_reference(
     voxel: float | None = None,
     chunk: int | None = 8,
     volumes: list[int] | None = None,
+    oversample: int = 1,
+    centre: bool = False,
+    profile: int = 1,
 ) -> Path:
     """Write the clean and noisy datasets of one protocol, with their truth.
 
     With ``volumes``, the datasets keep only those volumes of the protocol.
     """
     entry = CATALOG[name]
-    result = simulate(name, streamlines, voxel=voxel, volumes=volumes, chunk=chunk)
+    result = simulate(
+        name,
+        streamlines,
+        voxel=voxel,
+        volumes=volumes,
+        chunk=chunk,
+        oversample=oversample,
+        centre=centre,
+        profile=profile,
+    )
     dwi, affine, table = result["dwi"], result["affine"], result["table"]
     bzero = dwi[..., table[:, 3] < 50].mean(axis=-1)
     white = result["white_matter"] & result["mask"]
@@ -351,7 +449,7 @@ def write_reference(
             "Keying": "numpy default_rng([seed, volume index])",
             "WhiteMatterVoxels": int(white.sum()),
         },
-        "GeneratedBy": _provenance(streamlines),
+        "GeneratedBy": _provenance(streamlines, oversample, centre, profile),
     }
     Path(f"{stem}_dwi.json").write_text(json.dumps(sidecar, indent=2) + "\n")
     return folder
@@ -366,11 +464,16 @@ def simulate_moved(
     matrix: np.ndarray,
     strengths: list[float],
     chunk: int | None,
+    centre: bool = False,
+    profile: int = 1,
 ) -> list[np.ndarray]:
     """One volume of the phantom moved by ``matrix``: without eddy currents, then with each
-    strength."""
+    strength. ``protocol`` and ``grid`` are those the signal is simulated on (:func:`thin`)."""
     # The head moves in the scanner: the phantom is moved, then gridded as the reference
     moved_grid = grid_moved(source, matrix, protocol, grid)
+    if centre:
+        # The binning is the fixed grid's, so the shift follows the motion
+        moved_grid = centred(moved_grid)
     # The table's largest b-value comes along, as in the reference's simulation
     subset = _dipy(table[[volume, int(np.argmax(table[:, 3]))]])
     images = []
@@ -381,7 +484,7 @@ def simulate_moved(
         simulation = moved_grid.simulate(
             subset, protocol, artifacts, kspace=False, clean_b0=False, chunk=chunk
         )
-        images.append(_magnitudes(simulation)[..., 0])
+        images.append(thick(_magnitudes(simulation), profile)[..., 0])
     return images
 
 
@@ -390,16 +493,27 @@ _WORKER: dict[str, Any] = {}
 
 
 def _start_worker(
-    name: str, streamlines: int, voxel: float | None, volumes: list[int] | None, threads: int
+    name: str,
+    streamlines: int,
+    voxel: float | None,
+    volumes: list[int] | None,
+    oversample: int,
+    centre: bool,
+    profile: int,
+    threads: int,
 ) -> None:
     ts.set_threads(threads)
-    protocol = acquisition(name, voxel)
+    protocol = acquisition(name, voxel, oversample)
     source = phantom(streamlines)
+    grid = source.grid(protocol)
+    slices, signal = thin(source, protocol, centred(grid) if centre else grid, profile, centre)
     _WORKER.update(
         source=source,
-        protocol=protocol,
-        grid=source.grid(protocol),
+        protocol=slices,
+        grid=signal,
         table=gradients(name, volumes)[0],
+        centre=centre,
+        profile=profile,
     )
 
 
@@ -413,7 +527,14 @@ def _simulate_in_worker(
 
 @contextmanager
 def _workers(
-    jobs: int, name: str, streamlines: int, voxel: float | None, volumes: list[int] | None
+    jobs: int,
+    name: str,
+    streamlines: int,
+    voxel: float | None,
+    volumes: list[int] | None,
+    oversample: int = 1,
+    centre: bool = False,
+    profile: int = 1,
 ) -> Iterator[ProcessPoolExecutor | None]:
     """Processes that simulate moved volumes, or none for ``jobs=1``.
 
@@ -428,7 +549,16 @@ def _workers(
         jobs,
         mp_context=multiprocessing.get_context("spawn"),
         initializer=_start_worker,
-        initargs=(name, streamlines, voxel, volumes, max(1, budget // jobs)),
+        initargs=(
+            name,
+            streamlines,
+            voxel,
+            volumes,
+            oversample,
+            centre,
+            profile,
+            max(1, budget // jobs),
+        ),
     ) as pool:
         yield pool
 
@@ -445,6 +575,9 @@ def write_cells(
     chunk: int | None = 8,
     volumes: list[int] | None = None,
     jobs: int = 1,
+    oversample: int = 1,
+    centre: bool = False,
+    profile: int = 1,
 ) -> Path:
     """Write the perturbed copies of one protocol's reference, with their ground truth.
 
@@ -459,13 +592,18 @@ def write_cells(
     to its b-value. With ``volumes``, the reference keeps only those volumes of
     the protocol, and the copies are numbered as the reference's volumes. With
     ``jobs``, the moved volumes are simulated in that many processes; the files are
-    the same.
+    the same. A slice profile (``profile``, see :func:`thin`) takes no eddy currents:
+    their closed-form displacement assumes the acquired slices.
     """
+    if profile > 1 and eddies:
+        raise ValueError("eddy currents are not simulated with a slice profile")
     entry = CATALOG[name]
-    protocol = acquisition(name, voxel)
+    protocol = acquisition(name, voxel, oversample)
     table, gtab = gradients(name, volumes)
     source = phantom(streamlines)
     grid = source.grid(protocol)
+    if centre:
+        grid = centred(grid)
     weighted = np.flatnonzero(table[:, 3] >= 50)
     terms = eddy_terms(grid, protocol, table)
     # Magnitudes are in voxels along phase encoding, so they mean the same at any resolution
@@ -509,7 +647,7 @@ def write_cells(
             "Reference": reference,
             "SourceVolumes": [int(v) for v in sources],
             **sidecar,
-            "GeneratedBy": _provenance(streamlines),
+            "GeneratedBy": _provenance(streamlines, oversample, centre, profile),
         }
         Path(f"{stem}.json").write_text(json.dumps(sidecar, indent=2) + "\n")
 
@@ -526,19 +664,23 @@ def write_cells(
         for j, matrix in zip(perturbation.moved, perturbation.motions, strict=True)
     ]
     levels = [strengths[e] for e in eddies]
-    with _workers(jobs, name, streamlines, voxel, volumes) as pool:
+    with _workers(jobs, name, streamlines, voxel, volumes, oversample, centre, profile) as pool:
         # Every moved volume, in the order of the plan; the workers start on them at once
-        results: Iterator[list[np.ndarray]] = (
-            (simulate_moved(source, protocol, grid, table, v, m, levels, chunk) for v, m in units)
-            if pool is None
-            else pool.map(
+        results: Iterator[list[np.ndarray]]
+        if pool is None:
+            slices, signal = thin(source, protocol, grid, profile, centre)
+            results = (
+                simulate_moved(source, slices, signal, table, v, m, levels, chunk, centre, profile)
+                for v, m in units
+            )
+        else:
+            results = pool.map(
                 _simulate_in_worker,
                 [v for v, _ in units],
                 [m for _, m in units],
                 repeat(levels),
                 repeat(chunk),
             )
-        )
 
         for e in eddies:
             artifacts = CLEAN.replace(eddy=strengths[e], eddy_tau_ms=EDDY_TAU_MS)
@@ -586,7 +728,9 @@ def write_fixture(out: Path) -> Path:
     return out
 
 
-def _provenance(streamlines: int) -> dict[str, Any]:
+def _provenance(
+    streamlines: int, oversample: int, centre: bool = False, profile: int = 1
+) -> dict[str, Any]:
     return {
         "Name": "nifreeze tools/phantoms/phantom.py",
         "NiFreezeVersion": version("nifreeze"),
@@ -595,6 +739,11 @@ def _provenance(streamlines: int) -> dict[str, Any]:
         "Phantom": f"sub-{SUBJECT}",
         "Streamlines": streamlines,
         "StreamlineSeed": PHANTOM_SEED,
+        "Oversample": oversample,
+        # Along each grid axis, in voxels of the simulation grid (see centred)
+        "StreamlineShiftVoxels": 0.5 if centre else 0.0,
+        # Thin slices averaged into each slice (see thin); 1 is the signal at its centre
+        "SliceProfile": profile,
     }
 
 
@@ -617,6 +766,7 @@ def verify(name: str, voxel: float = 4.0, streamlines: int = 50_000) -> list[str
         failures.append("a subset of the gradient table does not reproduce the full run")
     failures += _verify_eddy(name, voxel, streamlines, picks)
     failures += _verify_motion(name, voxel, streamlines, picks)
+    failures += _verify_profile(name, voxel, streamlines, picks)
     failures += _verify_workers(name, voxel, streamlines, picks)
     return failures
 
@@ -683,33 +833,66 @@ def _verify_motion(name: str, voxel: float, streamlines: int, picks: list[int]) 
     return [] if error < 0.2 * voxel else [f"a moved volume is {error:.2f} mm off its motion"]
 
 
+def _verify_profile(name: str, voxel: float, streamlines: int, picks: list[int]) -> list[str]:
+    """A slice profile leaves the image where it was: with 2 thin slices per slice, the
+    center of mass of a b=0 volume is within a tenth of a voxel of its own without."""
+    volume = [i for i in picks if gradients(name)[0][i, 3] < 50][0]
+    flat, profiled = (
+        simulate(name, streamlines, voxel=voxel, volumes=[volume], truth=False, profile=p)
+        for p in (1, 2)
+    )
+    if not np.allclose(flat["affine"], profiled["affine"]):
+        return ["a slice profile changes the grid"]
+    affine = np.asarray(flat["affine"], dtype=float)
+
+    def center_of_mass(image: np.ndarray) -> np.ndarray:
+        ijk = np.argwhere(image > 0)
+        return affine[:3, :3] @ np.average(ijk, axis=0, weights=image[image > 0]) + affine[:3, 3]
+
+    error = np.linalg.norm(
+        center_of_mass(profiled["dwi"][..., 0]) - center_of_mass(flat["dwi"][..., 0])
+    )
+    return [] if error < 0.1 * voxel else [f"a slice profile moves the image {error:.2f} mm"]
+
+
 def _verify_workers(name: str, voxel: float, streamlines: int, picks: list[int]) -> list[str]:
-    """Moved volumes simulated by worker processes equal those simulated in this one."""
+    """Moved volumes simulated by worker processes equal those simulated in this one, with
+    the streamlines centred or not, and with a slice profile."""
     protocol = acquisition(name, voxel)
     table = gradients(name, picks)[0]
     source = phantom(streamlines)
-    grid = source.grid(protocol)
     # The last two, whose index in the subset is not their index in the protocol
     volumes = [int(i) for i in np.flatnonzero(table[:, 3] >= 50)[-2:]]
     matrices = [np.asarray(m) for m in perturbation_plan(2, (2.0,), (2,), seeds=(0,))[0].motions]
-    levels = [2.0 / eddy_terms(grid, protocol, table)["reach"]]
-    here = [
-        simulate_moved(source, protocol, grid, table, v, m, levels, 8)
-        for v, m in zip(volumes, matrices, strict=True)
-    ]
-    with _workers(2, name, streamlines, voxel, picks) as pool:
-        assert pool is not None
-        there = list(pool.map(_simulate_in_worker, volumes, matrices, repeat(levels), repeat(8)))
-    same = all(
-        np.array_equal(a, b)
-        for x, y in zip(here, there, strict=True)
-        for a, b in zip(x, y, strict=True)
-    )
-    return [] if same else ["moved volumes simulated by worker processes differ"]
+    failures = []
+    for centre, profile in ((False, 1), (True, 1), (True, 2)):
+        grid = centred(source.grid(protocol)) if centre else source.grid(protocol)
+        # No eddy currents with a slice profile (see write_cells)
+        levels = [2.0 / eddy_terms(grid, protocol, table)["reach"]] if profile == 1 else []
+        slices, signal = thin(source, protocol, grid, profile, centre)
+        here = [
+            simulate_moved(source, slices, signal, table, v, m, levels, 8, centre, profile)
+            for v, m in zip(volumes, matrices, strict=True)
+        ]
+        with _workers(2, name, streamlines, voxel, picks, centre=centre, profile=profile) as pool:
+            assert pool is not None
+            there = list(
+                pool.map(_simulate_in_worker, volumes, matrices, repeat(levels), repeat(8))
+            )
+        same = all(
+            np.array_equal(a, b)
+            for x, y in zip(here, there, strict=True)
+            for a, b in zip(x, y, strict=True)
+        )
+        if not same:
+            failures.append(
+                f"moved volumes simulated by worker processes differ ({centre=}, {profile=})"
+            )
+    return failures
 
 
 def _floats(text: str) -> list[float]:
-    return [float(value) for value in text.split(",")]
+    return [float(value) for value in text.split(",") if value]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -722,6 +905,14 @@ def main(argv: list[str] | None = None) -> int:
     reference.add_argument("--seed", type=int, default=0, help="seed of the noise")
     reference.add_argument("--voxel", type=float, help="isotropic voxel size (mm), same FOV")
     reference.add_argument("--chunk", type=int, default=8, help="slices per simulated slab")
+    reference.add_argument("--oversample", type=int, default=1, help="finer simulation grid")
+    reference.add_argument("--directions", type=int, help="directions per shell (all)")
+    reference.add_argument(
+        "--centre-streamlines", action="store_true", help="bin the streamlines by voxel centres"
+    )
+    reference.add_argument(
+        "--slice-profile", type=int, default=1, help="thin slices averaged into each slice"
+    )
     cells = commands.add_parser("cells", help="simulate the perturbed copies")
     cells.add_argument("--protocol", required=True, choices=sorted(CATALOG))
     cells.add_argument("--out", type=Path, required=True, help="dataset root")
@@ -730,13 +921,24 @@ def main(argv: list[str] | None = None) -> int:
         "--eddies",
         type=_floats,
         default=[2.0, 4.0, 8.0],
-        help="largest eddy-current displacements, in voxels along phase encoding",
+        help="largest eddy-current displacements, in voxels along phase encoding ('' for none)",
     )
     cells.add_argument("--seeds", type=lambda text: [int(v) for v in text.split(",")], default=[0])
     cells.add_argument("--count", type=int, help="moved volumes (all by default)")
     cells.add_argument("--streamlines", type=int, default=400_000)
     cells.add_argument("--voxel", type=float, help="isotropic voxel size (mm), same FOV")
     cells.add_argument("--chunk", type=int, default=8, help="slices per simulated slab")
+    cells.add_argument("--oversample", type=int, default=1, help="finer simulation grid")
+    cells.add_argument("--directions", type=int, help="directions per shell (all)")
+    cells.add_argument(
+        "--centre-streamlines", action="store_true", help="bin the streamlines by voxel centres"
+    )
+    cells.add_argument(
+        "--slice-profile",
+        type=int,
+        default=1,
+        help="thin slices averaged into each slice (no eddy currents)",
+    )
     cells.add_argument(
         "--jobs",
         type=int,
@@ -749,9 +951,21 @@ def main(argv: list[str] | None = None) -> int:
     fixture.add_argument("--out", type=Path, required=True, help="dataset root")
     args = parser.parse_args(argv)
 
+    volumes = None
+    if args.command in ("reference", "cells") and args.directions is not None:
+        volumes = spread(args.protocol, args.directions)
     if args.command == "reference":
         folder = write_reference(
-            args.protocol, args.out, args.streamlines, args.seed, args.voxel, args.chunk
+            args.protocol,
+            args.out,
+            args.streamlines,
+            args.seed,
+            args.voxel,
+            args.chunk,
+            volumes=volumes,
+            oversample=args.oversample,
+            centre=args.centre_streamlines,
+            profile=args.slice_profile,
         )
         print(f"wrote {folder}")
         return 0
@@ -766,7 +980,11 @@ def main(argv: list[str] | None = None) -> int:
             args.streamlines,
             args.voxel,
             args.chunk,
+            volumes=volumes,
             jobs=args.jobs,
+            oversample=args.oversample,
+            centre=args.centre_streamlines,
+            profile=args.slice_profile,
         )
         print(f"wrote {folder}")
         return 0

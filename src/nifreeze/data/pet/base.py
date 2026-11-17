@@ -32,7 +32,7 @@ import h5py
 import numpy as np
 from typing_extensions import Self
 
-from nifreeze.data.base import BaseDataset, _cmp, _data_repr, _has_ndim
+from nifreeze.data.base import NFHDF5_VERSION, BaseDataset, _cmp, _data_repr, _has_ndim
 from nifreeze.data.utils import (
     load_nfhdf5_fields,
     replace_on_success,
@@ -291,7 +291,7 @@ class PET(BaseDataset[np.ndarray]):
 
         with replace_on_success(filename) as tmp, h5py.File(tmp, "w") as out_file:
             out_file.attrs["Format"] = "nfHDF5"
-            out_file.attrs["Version"] = np.uint16(2)  # v2: volume-major dataobj
+            out_file.attrs["Version"] = np.uint16(NFHDF5_VERSION)
             root = out_file.create_group("/0")
             root.attrs["Type"] = "pet"
             save_nfhdf5_fields(root, self, compression, compression_opts)

@@ -292,31 +292,29 @@ def _load_dwi(
     separate files, e.g. ds003138).
     """
 
-    from dipy.io import read_bvals_bvecs
     from nibabel.spatialimages import SpatialImage
 
+    from nifreeze.data.dmri.io import load_bvec_bval
     from nifreeze.utils.ndimage import load_api
 
     _get(ds_path, [f for triple in triples for f in triple])
 
     data_list: list[np.ndarray] = []
-    bvals_list: list[np.ndarray] = []
-    bvecs_list: list[np.ndarray] = []
+    tables: list[np.ndarray] = []
     affine: np.ndarray | None = None
     for dwi_file, bval_file, bvec_file in triples:
         img = load_api(dwi_file, SpatialImage)
         affine = img.affine
         data_list.append(np.asarray(img.dataobj, dtype=np.float32))
-        bvals, bvecs = read_bvals_bvecs(str(bval_file), str(bvec_file))
-        bvals_list.append(np.asarray(bvals))
-        bvecs_list.append(np.asarray(bvecs))
+        # FSL's tables, into world RAS+ with the affine of the image they came with
+        tables.append(load_bvec_bval(bvec_file, bval_file, img.affine))
 
     assert affine is not None  # triples is always non-empty
 
     data = np.concatenate(data_list, axis=-1) if len(data_list) > 1 else data_list[0]
-    bvals = np.concatenate(bvals_list)
-    bvecs = np.vstack(bvecs_list)
-    gradients = format_gradients(np.column_stack([bvecs, bvals]))
+    table = np.vstack(tables)
+    bvals = table[:, 3]
+    gradients = format_gradients(table)
 
     mask = _brain_mask(data, bvals, median_radius=median_radius, numpass=numpass)
     if crop:

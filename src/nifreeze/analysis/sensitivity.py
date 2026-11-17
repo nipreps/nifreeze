@@ -58,18 +58,22 @@ class Distortion:
     r"""
     Displacements along the phase-encoding axis, polynomial in space, one per volume.
 
-    Volume ``i`` shows at each point what lies :math:`d_i` mm further along the
-    phase-encoding axis. :math:`d_i` is a polynomial of the voxel-axis
+    The displacement :math:`d_i` (mm) of volume ``i`` is a polynomial of the voxel-axis
     coordinates, centered on ``center`` and divided by ``radius`` along each axis.
 
-    Without ``readout``, a distorted volume is resampled at the displaced points,
-    with its intensity scaled by the Jacobian
+    Without ``readout``, volume ``i`` shows at each point :math:`x` what lies
+    :math:`d_i(x)` mm further along the phase-encoding axis: it is resampled at the
+    displaced points, with its intensity scaled by the Jacobian
     :math:`1 + \partial d_i / \partial x_{PE}` so that no signal is created or lost.
     With it, the volume is formed as an EPI readout forms it, which is how TRXScan
     simulates eddy currents: the displacement is that of an off-resonance field
     :math:`f_i = d_i / (T \, \delta)` (Hz), with :math:`T` the total readout time
     and :math:`\delta` the voxel size along phase encoding, and each
     phase-encoding line accrues the field's phase at the time it is acquired.
+    The signal from each point :math:`p` then appears :math:`d_i(p)` mm back along the
+    phase-encoding axis. The readout takes the displacement where the signal comes
+    from, and resampling where it lands, so the two give different volumes for the
+    same coefficients.
     """
 
     magnitude: float
@@ -290,7 +294,11 @@ class Perturbation:
     moved: tuple[int, ...] = ()
     """Indices of the moved volumes."""
     motions: tuple[np.ndarray, ...] = attrs.field(default=(), eq=False)
-    """Head motion of each moved volume, as a ``(4, 4)`` matrix in world coordinates."""
+    """Head motion of each moved volume, as a ``(4, 4)`` matrix in world coordinates.
+    A matrix :math:`M` takes a point :math:`x` of the aligned head to :math:`M x` in the
+    scanner, so the moved volume shows at :math:`M x` what the aligned one shows at
+    :math:`x`. Registering the aligned volume (fixed) to the moved one (moving) thus
+    estimates :math:`M`."""
     distortion: Distortion | None = None
     """Distortion of every volume, applied after its motion, in the scanner's frame."""
 
