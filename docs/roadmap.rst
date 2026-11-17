@@ -6,9 +6,11 @@ This page records where *NiFreeze* is going, and why.
 The work is tracked in a pinned issue
 (`#596 <https://github.com/nipreps/nifreeze/issues/596>`__),
 with one milestone per track.
+The plan was written on October 29, 2026, and :ref:`roadmap-progress` records what changed by
+November 17, 2026.
 
-Where *NiFreeze* stands
------------------------
+Where *NiFreeze* stood (October 29, 2026)
+-----------------------------------------
 The pieces of an open alternative to FSL's *eddy* are in place:
 leave-one-volume-out models (:doc:`models`),
 the instant update and its realigned view,
@@ -133,6 +135,48 @@ Each volume is registered for rigid motion first, then for the B-spline field al
 The realigned view undoes both, so the models no longer train on distorted volumes.
 An end-to-end test on the phantom's eddy-current sets gates the result
 (`#8 <https://github.com/nipreps/nifreeze/issues/8>`__).
+
+.. _roadmap-progress:
+
+Progress (November 17, 2026)
+----------------------------
+**Registration harness (R1)** is in place: registration is scored against a phantom's exact motion,
+and timed (`#584 <https://github.com/nipreps/nifreeze/issues/584>`__, `#598 <https://github.com/nipreps/nifreeze/issues/598>`__).
+
+**In-memory registration (R2)** has its groundwork, but not the interface itself (`#590 <https://github.com/nipreps/nifreeze/issues/590>`__), which comes next.
+Settings from the command line and from callers now apply (`#585 <https://github.com/nipreps/nifreeze/issues/585>`__), settings can be read from a file (`#630 <https://github.com/nipreps/nifreeze/issues/630>`__),
+the thread count reaches ITK (`#621 <https://github.com/nipreps/nifreeze/issues/621>`__), and the command line records which ``antsRegistration`` it ran (`#631 <https://github.com/nipreps/nifreeze/issues/631>`__).
+
+**Models (M):** every model's prediction is tested for its amplitude (`#586 <https://github.com/nipreps/nifreeze/issues/586>`__),
+and GQI predicts by ridge regression around a mean per shell, on one path with GQI-KRR (`#495 <https://github.com/nipreps/nifreeze/issues/495>`__).
+DTI's b=0 (`#599 <https://github.com/nipreps/nifreeze/issues/599>`__) and the GP's hyperparameters (`#525 <https://github.com/nipreps/nifreeze/issues/525>`__) remain.
+
+**Data and memory (D):** ``to_nifti(insert_b0=True)`` writes the realigned volumes (`#587 <https://github.com/nipreps/nifreeze/issues/587>`__).
+The benchmarks that open the track (`#595 <https://github.com/nipreps/nifreeze/issues/595>`__) come next.
+
+**Estimator (E)** and **eddy currents in the loop (P)** have not started.
+The estimator waits on `#590 <https://github.com/nipreps/nifreeze/issues/590>`__ and `#513 <https://github.com/nipreps/nifreeze/issues/513>`__.
+
+Three changes to the plan:
+
+- **Experiments decide the registration changes.**
+  An experiment-driven programme (`#614 <https://github.com/nipreps/nifreeze/issues/614>`__) refines tracks R1, R2 and P:
+  each change to registration is decided by an experiment on the phantoms,
+  and reported in :doc:`edd/index`.
+  The first experiments settled the bookkeeping and the model targets they share (`#615 <https://github.com/nipreps/nifreeze/issues/615>`__, `#617 <https://github.com/nipreps/nifreeze/issues/617>`__),
+  what they count as error (`#626 <https://github.com/nipreps/nifreeze/issues/626>`__), the eddy-current truth (`#618 <https://github.com/nipreps/nifreeze/issues/618>`__),
+  and the conventions by which data reach ANTs (`#619 <https://github.com/nipreps/nifreeze/issues/619>`__).
+  That last one found the b-vectors rotating about the wrong axis (`#620 <https://github.com/nipreps/nifreeze/issues/620>`__),
+  and *NiFreeze* now holds them in world RAS+ coordinates (`#642 <https://github.com/nipreps/nifreeze/issues/642>`__).
+- **The phantoms were checked first.**
+  At their true motion, moved copies differed from their reference by more than interpolation explains.
+  Centring the streamlines, oversampling in-plane and a slice profile bring that excess from 0.070 to 0.014 (`#635 <https://github.com/nipreps/nifreeze/issues/635>`__).
+  Which settings the experiments' phantoms use is decided in `#658 <https://github.com/nipreps/nifreeze/issues/658>`__.
+- **A pipeline is adopting *NiFreeze* before the tracks end.**
+  MRIQC's head-motion correction for DWI is being built on it
+  (`MRIQC #1518 <https://github.com/nipreps/mriqc/pull/1518>`__),
+  which needed a release: 26.0.0rc1, with Python 3.13 or newer
+  and the oldest versions of the dependencies set by SPEC 0 (`#644 <https://github.com/nipreps/nifreeze/issues/644>`__).
 
 Later
 -----
