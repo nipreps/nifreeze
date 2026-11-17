@@ -57,16 +57,22 @@ import numpy as np
 from nifreeze.analysis.sensitivity import held_out_predictions
 from nifreeze.data.dmri import DWI
 from nifreeze.data.filtering import robust_window
+from nifreeze.registration.ants import AntsCommandLine
 from nifreeze.registration.utils import displacements_within_mask
 
 FIXED = ("oracle", "unmoved", "moved")
 """The fixed images each moved volume is registered to."""
 
-Register = Callable[[np.ndarray, np.ndarray, np.ndarray, np.ndarray, int], np.ndarray]
-"""``register(fixed, moving, affine, mask, index)``: the fixed-to-moving matrix (RAS)."""
+Register = Callable[..., nt.linear.Affine]
+"""
+``register(fixed, moving, affine, mask=..., window=..., index=...)``: the estimate.
+
+A backend of :class:`~nifreeze.registration.base.Registration`, or any callable
+that returns the fixed-to-moving transform (RAS) the same way.
+"""
 
 
-class AntsRegistration:
+class AntsRegistration(AntsCommandLine):
     """The estimator's ANTs path, as it runs today: files, nipype and ``antsRegistration``."""
 
     def __init__(self, workdir: Path | str, seed: int | None = 12345, **settings: Any):
@@ -80,50 +86,11 @@ class AntsRegistration:
         seed : :obj:`int`, optional
             Seed of ANTs' random sampling.
         **settings
-            Further arguments of :func:`~nifreeze.registration.ants._run_registration`.
+            Further arguments of :class:`~nifreeze.registration.ants.AntsCommandLine`
+            (``ants_config`` names its settings).
 
         """
-        self.workdir = Path(workdir)
-        self.workdir.mkdir(parents=True, exist_ok=True)
-        self.seed = seed
-        self.settings = settings
-        self._mask_path: Path | None = None
-
-    def __call__(
-        self,
-        fixed: np.ndarray,
-        moving: np.ndarray,
-        affine: np.ndarray,
-        mask: np.ndarray,
-        index: int,
-    ) -> np.ndarray:
-        from nifreeze.registration.ants import _prepare_registration_data, _run_registration
-
-        if self._mask_path is None:
-            # The estimator writes the mask once, too
-            self._mask_path = self.workdir / "brainmask.nii"
-            nb.Nifti1Image(mask.astype("uint8"), affine).to_filename(self._mask_path)
-
-        fixed_path, moving_path, _ = _prepare_registration_data(
-            moving,
-            fixed,
-            affine,
-            index,
-            self.workdir,
-            clip="both",
-            window=robust_window(moving, mask),
-        )
-        xform = _run_registration(
-            fixed_path,
-            moving_path,
-            index,
-            self.workdir,
-            fixedmask_path=self._mask_path,
-            output_transform_prefix=f"ants-{index:05d}",
-            seed=self.seed,
-            **self.settings,
-        )
-        return np.asarray(xform.matrix)
+        super().__init__(settings.pop("ants_config", None), workdir=workdir, seed=seed, **settings)
 
 
 def registration_accuracy(
@@ -142,7 +109,8 @@ def registration_accuracy(
     Parameters
     ----------
     register : :obj:`~collections.abc.Callable`
-        The registration (see :data:`Register`).
+        The registration (see :data:`Register`), given each moved volume's
+        intensity window, as the estimator gives it.
     clean : :obj:`~nifreeze.data.dmri.DWI`
         The noise-free reference, the source of the ``oracle`` targets.
     reference : :obj:`~nifreeze.data.dmri.DWI`
@@ -193,13 +161,15 @@ def registration_accuracy(
     for kind in fixed:
         for index, target in targets[kind]().items():
             start = perf_counter()
+            moving = np.asarray(moved.dataobj[index])
             estimated = register(
                 np.asarray(target, dtype="float32"),
-                np.asarray(moved.dataobj[index]),
+                moving,
                 reference.affine,
-                mask,
-                index,
-            )
+                mask=mask,
+                window=robust_window(moving, mask),
+                index=index,
+            ).matrix
             seconds = perf_counter() - start
             errors = displacements_within_mask(
                 mask_img, nt.linear.Affine(estimated), nt.linear.Affine(truth[index])

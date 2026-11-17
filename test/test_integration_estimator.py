@@ -25,10 +25,12 @@ import re
 from typing import Union
 
 import nibabel as nb
+import nitransforms as nt
 import numpy as np
 import pytest
 
 import nifreeze.estimator
+import nifreeze.registration.ants
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.dmri.utils import DEFAULT_LOWB_THRESHOLD
 from nifreeze.data.filtering import ClippingValueError
@@ -37,6 +39,7 @@ from nifreeze.data.pet.utils import compute_uptake_statistic
 from nifreeze.estimator import Estimator
 from nifreeze.model.base import BaseModel, ExpectationModel
 from nifreeze.model.pet import BSplinePETModel
+from nifreeze.registration.base import Registration
 from nifreeze.utils import iterators
 from nifreeze.utils.ndimage import load_api
 
@@ -153,7 +156,7 @@ def test_estimator_start_index(request, monkeypatch):
         matrix = np.eye(4)
 
     monkeypatch.setattr(
-        nifreeze.estimator,
+        nifreeze.registration.ants,
         "_run_registration",
         lambda *a, **k: DummyXForm(),
     )
@@ -179,8 +182,10 @@ def test_estimator_clip_reaches_every_volume(request, monkeypatch):
     class DummyXForm:
         matrix = np.eye(4)
 
-    monkeypatch.setattr(nifreeze.estimator, "_prepare_registration_data", fake_prepare)
-    monkeypatch.setattr(nifreeze.estimator, "_run_registration", lambda *a, **k: DummyXForm())
+    monkeypatch.setattr(nifreeze.registration.ants, "_prepare_registration_data", fake_prepare)
+    monkeypatch.setattr(
+        nifreeze.registration.ants, "_run_registration", lambda *a, **k: DummyXForm()
+    )
 
     model = DummyInsiderModel(dataset=dataset)
     Estimator(model, strategy="linear", clip="none").run(dataset)
@@ -206,8 +211,10 @@ def test_estimator_clip_windows_cached(request, monkeypatch):
         matrix = np.eye(4)
 
     monkeypatch.setattr(nifreeze.estimator, "robust_window", fake_window)
-    monkeypatch.setattr(nifreeze.estimator, "_prepare_registration_data", fake_prepare)
-    monkeypatch.setattr(nifreeze.estimator, "_run_registration", lambda *a, **k: DummyXForm())
+    monkeypatch.setattr(nifreeze.registration.ants, "_prepare_registration_data", fake_prepare)
+    monkeypatch.setattr(
+        nifreeze.registration.ants, "_run_registration", lambda *a, **k: DummyXForm()
+    )
 
     first = Estimator(DummyInsiderModel(dataset=dataset), strategy="linear")
     Estimator(DummyInsiderModel(dataset=dataset), strategy="linear", prev=first).run(dataset)
@@ -232,9 +239,11 @@ def test_estimator_registration_settings(request, monkeypatch, num_threads, expe
         return DummyXForm()
 
     monkeypatch.setattr(
-        nifreeze.estimator, "_prepare_registration_data", lambda *a, **k: (None, None, None)
+        nifreeze.registration.ants,
+        "_prepare_registration_data",
+        lambda *a, **k: (None, None, None),
     )
-    monkeypatch.setattr(nifreeze.estimator, "_run_registration", fake_registration)
+    monkeypatch.setattr(nifreeze.registration.ants, "_run_registration", fake_registration)
 
     first = Estimator(DummyInsiderModel(dataset=dataset), strategy="linear")
     second = Estimator(
@@ -256,6 +265,47 @@ def test_estimator_registration_settings(request, monkeypatch, num_threads, expe
     assert [kwargs["metric"] for kwargs in received] == ["Mattes"] * n + ["GC"] * n
 
 
+class RecordingRegistration(Registration):
+    """A backend that records its calls, returns a shift by index, and counts its closings."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.calls: list[dict] = []
+        self.closed = 0
+
+    def __call__(self, fixed, moving, affine, mask=None, init=None, *, window=None, index=0):
+        self.calls.append({"index": index, "init": init, "window": window, "mask": mask})
+        matrix = np.eye(4)
+        matrix[0, 3] = 0.1 * (index + 1)
+        return nt.linear.Affine(matrix)
+
+    def close(self):
+        self.closed += 1
+
+
+def test_estimator_registers_with_the_given_backend(request, monkeypatch):
+    """A backend given at construction registers every volume, with its own settings."""
+    dataset = DummyDataset(rng=request.node.rng)
+    backend = RecordingRegistration()
+    estimates: dict[int, np.ndarray] = {}
+    monkeypatch.setattr(dataset, "set_transform", estimates.__setitem__)
+
+    Estimator(DummyInsiderModel(dataset=dataset), strategy="linear", registration=backend).run(
+        dataset, align_kwargs={"ants_config": "dwi-to-dwi_level1"}, num_threads=3
+    )
+
+    n = len(dataset)
+    assert [call["index"] for call in backend.calls] == list(range(n))
+    assert all(call["mask"] is dataset.brainmask for call in backend.calls)
+    assert all(call["init"] is None for call in backend.calls)
+    assert backend.closed == 1
+    # The run's registration settings configure only the default backend
+    assert (backend.settings, backend.num_threads) == (None, None)
+    # Each estimate is set as the backend returned it
+    assert sorted(estimates) == list(range(n))
+    assert all(np.isclose(estimates[i][0, 3], 0.1 * (i + 1)) for i in range(n))
+
+
 def test_estimator_debug_dir(request, monkeypatch, tmp_path):
     """With ``debug_dir``, each pass keeps its inputs and an aligned trace per volume."""
     dataset = DummyDataset(rng=request.node.rng)
@@ -271,7 +321,7 @@ def test_estimator_debug_dir(request, monkeypatch, tmp_path):
         workdirs.add(dirname)
         return DummyXForm()
 
-    monkeypatch.setattr(nifreeze.estimator, "_run_registration", fake_registration)
+    monkeypatch.setattr(nifreeze.registration.ants, "_run_registration", fake_registration)
     # A relative debug_dir must reach the registration as an absolute path,
     # because nipype runs ANTs from within the working directory
     monkeypatch.chdir(tmp_path)
@@ -319,9 +369,9 @@ def _shifting_registration(monkeypatch, n_volumes: int) -> list:
             self.matrix = np.eye(4)
             self.matrix[1, 3] = shift
 
-    monkeypatch.setattr(nifreeze.estimator, "_prepare_registration_data", fake_prepare)
+    monkeypatch.setattr(nifreeze.registration.ants, "_prepare_registration_data", fake_prepare)
     monkeypatch.setattr(
-        nifreeze.estimator, "_run_registration", lambda *a, **k: DummyXForm(next(shifts))
+        nifreeze.registration.ants, "_run_registration", lambda *a, **k: DummyXForm(next(shifts))
     )
     return predictions
 
@@ -427,9 +477,9 @@ def test_estimator_chain_initializes_from_previous_estimate(request, monkeypatch
             self.matrix = np.eye(4)
             self.matrix[0, 3] = shift
 
-    monkeypatch.setattr(nifreeze.estimator, "_prepare_registration_data", fake_prepare)
+    monkeypatch.setattr(nifreeze.registration.ants, "_prepare_registration_data", fake_prepare)
     monkeypatch.setattr(
-        nifreeze.estimator, "_run_registration", lambda *a, **k: DummyXForm(next(shifts))
+        nifreeze.registration.ants, "_run_registration", lambda *a, **k: DummyXForm(next(shifts))
     )
 
     first = Estimator(DummyInsiderModel(dataset=dataset), strategy="linear")
@@ -461,8 +511,10 @@ def test_estimator_clip_degenerate_window(request, monkeypatch):
         matrix = np.eye(4)
 
     monkeypatch.setattr(nifreeze.estimator, "robust_window", fake_window)
-    monkeypatch.setattr(nifreeze.estimator, "_prepare_registration_data", fake_prepare)
-    monkeypatch.setattr(nifreeze.estimator, "_run_registration", lambda *a, **k: DummyXForm())
+    monkeypatch.setattr(nifreeze.registration.ants, "_prepare_registration_data", fake_prepare)
+    monkeypatch.setattr(
+        nifreeze.registration.ants, "_run_registration", lambda *a, **k: DummyXForm()
+    )
 
     with pytest.warns(UserWarning, match="without clipping"):
         Estimator(DummyInsiderModel(dataset=dataset), strategy="linear").run(dataset)
@@ -487,7 +539,7 @@ def test_estimator_start_and_end_index(request, monkeypatch):
         matrix = np.eye(4)
 
     monkeypatch.setattr(
-        nifreeze.estimator,
+        nifreeze.registration.ants,
         "_run_registration",
         lambda *a, **k: DummyXForm(),
     )
@@ -563,7 +615,7 @@ def test_estimator_iterator_index_match(
         matrix = np.eye(4)
 
     monkeypatch.setattr(
-        nifreeze.estimator,
+        nifreeze.registration.ants,
         "_run_registration",
         lambda *a, **k: DummyXForm(),
     )

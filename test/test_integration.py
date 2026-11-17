@@ -35,7 +35,6 @@ import pytest
 from nibabel.affines import from_matvec
 from nibabel.eulerangles import euler2mat
 
-import nifreeze.estimator
 import nifreeze.registration.ants as ants
 from nifreeze.data import dmri
 from nifreeze.estimator import Estimator
@@ -388,7 +387,7 @@ def test_dmri_data_average_dwi_model_estimation(
 
     model_kwargs = {"b0_thres": b0_thres, "max_b": max_b, "ignore_bzero": ignore_bzero}
     # The estimator holds its own reference to the function
-    monkeypatch.setattr(nifreeze.estimator, "_run_registration", _identity_run_registration)
+    monkeypatch.setattr(ants, "_run_registration", _identity_run_registration)
 
     # Create the dataset using the repository test data
     dwi_data = dmri.from_nii(dwi_data_file, **data_kwargs)
@@ -493,7 +492,7 @@ def test_dmri_data_dti_model_estimation(
     model_kwargs = {"b0_thres": b0_thres, "max_b": max_b, "ignore_bzero": ignore_bzero}
 
     # The estimator holds its own reference to the function
-    monkeypatch.setattr(nifreeze.estimator, "_run_registration", _identity_run_registration)
+    monkeypatch.setattr(ants, "_run_registration", _identity_run_registration)
 
     # Create the dataset using the repository test data
     dwi_data = dmri.from_nii(dwi_data_file, **data_kwargs)
@@ -610,7 +609,7 @@ def test_dmri_data_dki_model_estimation(
     model_kwargs = {"b0_thres": b0_thres, "max_b": max_b, "ignore_bzero": ignore_bzero}
 
     # The estimator holds its own reference to the function
-    monkeypatch.setattr(nifreeze.estimator, "_run_registration", _identity_run_registration)
+    monkeypatch.setattr(ants, "_run_registration", _identity_run_registration)
 
     # Create the dataset using the repository test data
     dwi_data = dmri.from_nii(dwi_data_file, **data_kwargs)

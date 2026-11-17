@@ -25,10 +25,13 @@
 from __future__ import annotations
 
 from collections import namedtuple
+from concurrent.futures import Future, ThreadPoolExecutor
 from importlib.resources import files
 from io import BytesIO
 from json import loads
 from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import Any
 from warnings import warn
 
 import nibabel as nb
@@ -36,6 +39,9 @@ import nitransforms as nt
 import numpy as np
 from nipype.interfaces.ants.registration import Registration
 from nitransforms.linear import Affine
+from typing_extensions import Self
+
+from nifreeze.registration import base
 
 PARAMETERS_SINGLE_VALUE = {
     "collapse_output_transforms",
@@ -576,3 +582,146 @@ def _run_registration(
     )
 
     return xform
+
+
+class AntsCommandLine(base.Registration):
+    """
+    Register with ``antsRegistration``, through files and nipype.
+
+    Each call writes the images as 12-bit NIfTI (see :func:`_prepare_registration_data`),
+    runs ``antsRegistration`` (see :func:`_run_registration`) and reads the transform
+    back. The fixed mask is written once, for as long as the same array is given.
+
+    Parameters
+    ----------
+    settings : :obj:`str` or :obj:`os.pathlike`, optional
+        A file of settings, or the name of a configuration of
+        ``nifreeze/registration/config`` (:obj:`None` selects the default of
+        :func:`generate_command`).
+    workdir : :obj:`os.pathlike`, optional
+        Where to write the files (default: ``debug_dir``, or else a temporary
+        directory, removed on :meth:`close`).
+    environ : :obj:`dict`, optional
+        Environment variables for ``antsRegistration``.
+    **kwargs
+        See :class:`~nifreeze.registration.base.Registration`; the overrides are
+        those of :func:`generate_command`.
+
+    """
+
+    def __init__(
+        self,
+        settings: str | Path | None = None,
+        *,
+        workdir: str | Path | None = None,
+        environ: dict | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(settings, **kwargs)
+        self.workdir = None if workdir is None else Path(workdir).absolute()
+        self.environ = environ
+        self._tmpdir: TemporaryDirectory | None = None
+        self._mask: tuple[np.ndarray, Path] | None = None
+        self._tracer: ThreadPoolExecutor | None = None
+        self._traces: list[Future] = []
+
+    def _workdir(self) -> Path:
+        """The folder of the files, created on first use."""
+        path = self.debug_dir or self.workdir
+        if path is None:
+            if self._tmpdir is None:
+                self._tmpdir = TemporaryDirectory()
+            return Path(self._tmpdir.name)
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def _mask_path(
+        self, mask: np.ndarray | None, affine: np.ndarray, workdir: Path
+    ) -> Path | None:
+        """Write the fixed mask, unless the same array was written already."""
+        if mask is None:
+            return None
+        if self._mask is None or self._mask[0] is not mask:
+            path = workdir / "brainmask.nii"
+            nb.Nifti1Image(mask.astype(np.uint8), affine, None).to_filename(path)
+            self._mask = (mask, path)
+        return self._mask[1]
+
+    def __call__(
+        self,
+        fixed: np.ndarray,
+        moving: np.ndarray,
+        affine: np.ndarray,
+        mask: np.ndarray | None = None,
+        init: np.ndarray | None = None,
+        *,
+        window: tuple[float, float] | None = None,
+        index: int = 0,
+    ) -> nt.linear.Affine:
+        workdir = self._workdir()
+        mask_path = self._mask_path(mask, affine, workdir)
+
+        fixed_path, moving_path, init_path = _prepare_registration_data(
+            moving,
+            fixed,
+            affine,
+            index,
+            workdir,
+            clip=self.clip if window is not None else "none",
+            window=window,
+            init_affine=init,
+        )
+
+        settings: dict[str, Any] = dict(self.overrides)
+        if self.settings is not None:
+            settings["ants_config"] = self.settings
+        if self.environ is not None:
+            settings["environ"] = dict(self.environ)
+        if self.seed is not None:
+            settings["seed"] = self.seed
+        xform = _run_registration(
+            fixed_path,
+            moving_path,
+            index,
+            workdir,
+            init_affine=init_path,
+            fixedmask_path=mask_path,
+            output_transform_prefix=f"ants-{index:05d}",
+            num_threads=self.num_threads,
+            **settings,
+        )
+
+        if self.debug_dir is not None:
+            # Debugging trace, written while the next volume is registered
+            if self._tracer is None:
+                self._tracer = ThreadPoolExecutor(max_workers=1)
+            self._traces.append(
+                self._tracer.submit(
+                    _write_aligned, moving_path, xform.matrix, workdir / f"aligned_{index:05d}.nii"
+                )
+            )
+        return xform
+
+    def close(self) -> None:
+        """Wait for the debug traces (raising their errors) and remove temporary files."""
+        try:
+            for trace in self._traces:
+                trace.result()
+        finally:
+            self._traces = []
+            if self._tracer is not None:
+                self._tracer.shutdown()
+                self._tracer = None
+            if self._tmpdir is not None:
+                self._tmpdir.cleanup()
+                self._tmpdir = None
+            self._mask = None
+
+    def __enter__(self) -> Self:
+        self._workdir()
+        return self
+
+    def __repr__(self) -> str:
+        workdir = self.debug_dir or self.workdir or (self._tmpdir and self._tmpdir.name)
+        shown = None if workdir is None else str(workdir)
+        return f"{type(self).__name__}(settings={self.settings!r}, workdir={shown!r})"

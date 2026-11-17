@@ -61,7 +61,9 @@ def test_the_truth_has_no_error(phantom):
     clean, reference, moved, truth = phantom
 
     rows = reg.registration_accuracy(
-        lambda fixed, moving, affine, mask, index: truth[index],
+        lambda fixed, moving, affine, mask=None, init=None, *, window=None, index=0: (
+            nt.linear.Affine(truth[index])
+        ),
         clean,
         reference,
         moved,
@@ -79,7 +81,9 @@ def test_no_registration_has_the_error_of_the_motion(phantom):
     mask = nb.Nifti1Image(np.asanyarray(reference.brainmask, dtype="uint8"), reference.affine)
 
     rows = reg.registration_accuracy(
-        lambda fixed, moving, affine, mask, index: np.eye(4),
+        lambda fixed, moving, affine, mask=None, init=None, *, window=None, index=0: (
+            nt.linear.Affine()
+        ),
         clean,
         reference,
         moved,
@@ -97,10 +101,10 @@ def test_the_model_targets_need_a_model(phantom):
     clean, reference, moved, truth = phantom
 
     with pytest.raises(ValueError, match="model is required"):
-        reg.registration_accuracy(lambda *_: np.eye(4), clean, reference, moved, truth)
+        reg.registration_accuracy(lambda *_: nt.linear.Affine(), clean, reference, moved, truth)
     with pytest.raises(ValueError, match="unknown fixed"):
         reg.registration_accuracy(
-            lambda *_: np.eye(4), clean, reference, moved, truth, fixed=["b0"]
+            lambda *_: nt.linear.Affine(), clean, reference, moved, truth, fixed=["b0"]
         )
 
 
