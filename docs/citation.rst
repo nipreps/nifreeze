@@ -18,7 +18,6 @@ which provides APA and BibTeX formats.
 
 Writing a paper about NiFreeze
 ------------------------------
-
 NiFreeze follows the NiPreps community's guidelines on
 `recognizing contributions and publications
 <https://www.nipreps.org/community/CONTRIBUTING/#recognizing-contributions>`__:
