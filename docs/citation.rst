@@ -43,7 +43,7 @@ Default author list
 
 The default author list for *NiFreeze* 26.0.0rc1:
 
-Jon Haitz Legarreta Gorroño \ :sup:`1`\ ; Martin Nørgaard \ :sup:`2`\ ; Christopher J. Markiewicz \ :sup:`3`\ ; Eilidh MacNicol \ :sup:`4`\ ; Matthew Cieslak \ :sup:`5`\ ; Theodore D. Satterthwaite \ :sup:`5`\ ; Ariel Rokem \ :sup:`6`\ ; Oscar Esteban \ :sup:`7`\ .
+Jon Haitz Legarreta Gorroño \ :sup:`1`\ ; Martin Nørgaard \ :sup:`2`\ ; Christopher J. Markiewicz \ :sup:`3`\ ; Eilidh MacNicol \ :sup:`4`\ ; Matthew Cieslak \ :sup:`5`\ ; Olivier Amacker \ :sup:`6`\ ; Theodore D. Satterthwaite \ :sup:`5`\ ; Ariel Rokem \ :sup:`7`\ ; Oscar Esteban \ :sup:`6`\ .
 
 Affiliations:
 
@@ -52,8 +52,8 @@ Affiliations:
 3. Department of Psychology, Stanford University, CA, USA
 4. Department of Neuroimaging, Institute of Psychiatry, Psychology and Neuroscience, King's College London, London, UK
 5. Perelman School of Medicine, University of Pennsylvania, PA, USA
-6. Centre for Addiction and Mental Health and University of Toronto, Toronto, ON, Canada
-7. School of Engineering, HES-SO Valais/Wallis, Sion, Switzerland
+6. School of Engineering, HES-SO Valais/Wallis, Sion, Switzerland
+7. Centre for Addiction and Mental Health and University of Toronto, Toronto, ON, Canada
 
 .. END AUTHORS
 
