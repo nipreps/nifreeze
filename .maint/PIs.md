@@ -10,6 +10,6 @@ If you are participating because of your affiliation with another organization (
 
 | **Lastname** | **Name** | **Handle** | **ORCID** | **Affiliation** |
 | --- | --- | --- | --- | --- |
-| Esteban | Oscar | @oesteban | 0000-0001-8435-6191 | Department of Radiology, Lausanne University Hospital and University of Lausanne, Switzerland |
-| Rokem | Ariel | @arokem | 0000-0003-0679-1985 | The University of Washington eScience Institute, WA, USA |
+| Esteban | Oscar | @oesteban | 0000-0001-8435-6191 | School of Engineering, HES-SO Valais/Wallis, Sion, Switzerland |
+| Rokem | Ariel | @arokem | 0000-0003-0679-1985 | Centre for Addiction and Mental Health and University of Toronto, Toronto, ON, Canada |
 | Satterthwaite | Theodore D. |  | 0000-0001-7072-9399 | Perelman School of Medicine, University of Pennsylvania, PA, USA |
