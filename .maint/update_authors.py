@@ -21,20 +21,38 @@
 #     https://www.nipreps.org/community/licensing/
 #
 # /// script
-# requires-python = ">=3.12"
+# requires-python = ">=3.13"
 # dependencies = [
 #     "click",
 #     "fuzzywuzzy",
+#     "python-Levenshtein",
+#     "pyyaml",
 # ]
 # ///
-"""Update and sort the creators list of the zenodo record."""
+"""Sort the authors of the Zenodo record, ``CITATION.cff`` and the documentation.
+
+Authors are ranked by the lines they wrote that the repository still holds (``git summary
+--line``, from git-extras), with the PIs last in papers. Run from the repository's root::
+
+    uv run .maint/update_authors.py zenodo
+    uv run .maint/update_authors.py publication --release 26.0.0rc1 --docs docs/citation.rst
+
+"""
 
 import json
+import shutil
+import subprocess as sp
 import sys
 from pathlib import Path
 
 import click
+import yaml
 from fuzzywuzzy import fuzz, process
+
+CFF_BEGIN = "# BEGIN AUTHORS"
+CFF_END = "# END AUTHORS"
+DOCS_BEGIN = ".. BEGIN AUTHORS"
+DOCS_END = ".. END AUTHORS"
 
 
 def read_md_table(md_text):
@@ -82,9 +100,8 @@ def read_md_table(md_text):
     return retval
 
 
-def sort_contributors(entries, git_lines, exclude=None, last=None):
+def sort_contributors(entries, git_lines, exclude=None):
     """Return a list of author dictionaries, ordered by contribution."""
-    last = last or []
     sorted_authors = sorted(entries, key=lambda i: i["name"])
 
     first_last = [" ".join(val["name"].split(",")[::-1]).strip() for val in sorted_authors]
@@ -126,36 +143,57 @@ def sort_contributors(entries, git_lines, exclude=None, last=None):
     return author_matches, unmatched
 
 
-def get_git_lines(fname="line-contributors.txt"):
-    """Run git-line-summary."""
-    import shutil
-    import subprocess as sp
+def get_git_lines():
+    """Authors by the lines they wrote that the repository still holds, most first."""
+    if not shutil.which("git-summary"):
+        raise RuntimeError("git summary not found: please install git-extras.")
 
-    contrib_file = Path(fname)
+    print("Running git summary --line on the repository", file=sys.stderr)
+    lines = sp.check_output(["git", "summary", "--line"]).decode().splitlines()
+    return [
+        " ".join(line.strip().split()[1:-1])
+        for line in lines
+        if "%" in line and "Not Committed Yet" not in line
+    ]
 
-    lines = []
-    if contrib_file.exists():
-        print("WARNING: Reusing existing line-contributors.txt file.", file=sys.stderr)
-        lines = contrib_file.read_text().splitlines()
 
-    git_line_summary_path = shutil.which("git-line-summary")
-    if not git_line_summary_path:
-        git_line_summary_path = "git summary --dedup-by-email".split(" ")
-    else:
-        git_line_summary_path = [git_line_summary_path]
+def _replace_block(path, begin, end, block):
+    """Replace the lines between the ``begin`` and ``end`` marker lines of a file."""
+    lines = Path(path).read_text().splitlines(keepends=True)
+    first = [i for i, line in enumerate(lines) if line.startswith(begin)]
+    last = [i for i, line in enumerate(lines) if line.startswith(end)]
+    if len(first) != 1 or len(last) != 1 or first[0] > last[0]:
+        raise RuntimeError(f'{path} must contain one "{begin}" line followed by one "{end}" line.')
+    Path(path).write_text("".join(lines[: first[0] + 1]) + block + "".join(lines[last[0] :]))
 
-    if not lines and git_line_summary_path:
-        print("Running git-line-summary on repo")
-        lines = sp.check_output(git_line_summary_path).decode().splitlines()
-        lines = [line for line in lines if "Not Committed Yet" not in line]
-        contrib_file.write_text("\n".join(lines))
 
-    if not lines:
-        _msg = ": git-line-summary not found, please install git-extras " * (
-            git_line_summary_path is None
+def _cff_names(*md_files):
+    """Map each full name to its (given, family) pair, from the ``.maint`` tables."""
+    return {
+        f"{row.get('name', '')} {row.get('lastname', '')}".strip(): (
+            row.get("name"),
+            row.get("lastname"),
         )
-        raise RuntimeError(f"Could not find line-contributors from git repository{_msg}.")
-    return [" ".join(line.strip().split()[1:-1]) for line in lines if "%" in line]
+        for md_file in md_files
+        for row in read_md_table(Path(md_file).read_text())
+    }
+
+
+def _cff_person(entry, names):
+    """Convert a Zenodo creator into a CFF person."""
+    given, family = names.get(entry["name"], (None, None))
+    person = {}
+    if family:
+        person["family-names"] = family
+    if given:
+        person["given-names"] = given
+    if not person:
+        person["name"] = entry["name"]
+    if entry.get("orcid"):
+        person["orcid"] = f"https://orcid.org/{entry['orcid']}"
+    if entry.get("affiliation") and entry["affiliation"] != "Unknown affiliation":
+        person["affiliation"] = entry["affiliation"]
+    return person
 
 
 def _namelast(inlist):
@@ -166,6 +204,15 @@ def _namelast(inlist):
             i["name"] = i.get("handle", "<Unknown Name>")
         retval.append(i)
     return retval
+
+
+def _report(misses):
+    if misses:
+        print(
+            "Some people made commits, but are missing in .maint/ "
+            f"files: {', '.join(sorted(misses))}",
+            file=sys.stderr,
+        )
 
 
 @click.group()
@@ -182,14 +229,16 @@ def cli():
 )
 @click.option("--pi", type=click.Path(exists=True), default=".maint/PIs.md")
 @click.option("-f", "--former-file", type=click.Path(exists=True), default=".maint/FORMER.md")
+@click.option("--cff-file", type=click.Path(exists=True), default="CITATION.cff")
 def zenodo(
     zenodo_file,
     maintainers,
     contributors,
     pi,
     former_file,
+    cff_file,
 ):
-    """Generate a new Zenodo payload file."""
+    """Generate a new Zenodo payload file and the matching CITATION.cff authors."""
     data = get_git_lines()
 
     zenodo = json.loads(Path(zenodo_file).read_text())
@@ -202,23 +251,24 @@ def zenodo(
     )
 
     zen_contributors, miss_contributors = sort_contributors(
-        _namelast(read_md_table(Path(contributors).read_text())), data, exclude=former
+        _namelast(read_md_table(Path(contributors).read_text())),
+        data,
+        exclude=former,
     )
 
     zen_pi = _namelast(reversed(read_md_table(Path(pi).read_text())))
 
+    # PIs who are also contributors keep their place among them
+    contributor_names = {c["name"] for c in zen_contributors}
     zenodo["creators"] = zen_creators
-    zenodo["contributors"] = zen_contributors + [pi for pi in zen_pi if pi not in zen_contributors]
+    zenodo["contributors"] = zen_contributors + [
+        p for p in zen_pi if p["name"] not in contributor_names
+    ]
     creator_names = {c["name"] for c in zenodo["creators"] if c["name"] != "<Unknown Name>"}
 
     zenodo["contributors"] = [c for c in zenodo["contributors"] if c["name"] not in creator_names]
 
-    misses = set(miss_creators).intersection(miss_contributors)
-    if misses:
-        print(
-            f"Some people made commits, but are missing in .maint/ files: {', '.join(misses)}",
-            file=sys.stderr,
-        )
+    _report(set(miss_creators).intersection(miss_contributors))
 
     # Remove position
     for creator in zenodo["creators"]:
@@ -239,7 +289,13 @@ def zenodo(
         elif isinstance(creator["affiliation"], list):
             creator["affiliation"] = creator["affiliation"][0]
 
-    Path(zenodo_file).write_text("%s\n" % json.dumps(zenodo, indent=2))
+    Path(zenodo_file).write_text(f"{json.dumps(zenodo, indent=2, ensure_ascii=False)}\n")
+
+    # CITATION.cff has no contributor role: its authors mirror the Zenodo creators
+    names = _cff_names(maintainers, contributors, pi)
+    authors = [_cff_person(creator, names) for creator in zenodo["creators"]]
+    block = yaml.safe_dump({"authors": authors}, sort_keys=False, allow_unicode=True, width=10**6)
+    _replace_block(cff_file, CFF_BEGIN, CFF_END, block)
 
 
 @cli.command()
@@ -249,13 +305,25 @@ def zenodo(
 )
 @click.option("--pi", type=click.Path(exists=True), default=".maint/PIs.md")
 @click.option("-f", "--former-file", type=click.Path(exists=True), default=".maint/FORMER.md")
+@click.option("--release", help="The version the list is for (with --docs).")
+@click.option(
+    "--docs",
+    "docs_file",
+    type=click.Path(exists=True),
+    help="Write the list into this page, between its BEGIN and END AUTHORS comments.",
+)
 def publication(
     maintainers,
     contributors,
     pi,
     former_file,
+    release,
+    docs_file,
 ):
     """Generate the list of authors and affiliations for papers."""
+    if docs_file and not release:
+        raise click.UsageError("--docs needs --release.")
+
     members = _namelast(read_md_table(Path(maintainers).read_text())) + _namelast(
         read_md_table(Path(contributors).read_text())
     )
@@ -294,29 +362,25 @@ def publication(
         for author in hits
     ]
 
-    if misses:
-        print(
-            f"Some people made commits, but are missing in .maint/ files: {', '.join(misses)}",
-            file=sys.stderr,
-        )
+    _report(misses)
 
-    print("Authors (%d):" % len(hits))
-    print(
-        "%s."
-        % "; ".join(
-            [
-                "{} \\ :sup:`{}`\\ ".format(i["name"], idx)
-                for i, idx in zip(hits, aff_indexes, strict=False)
-            ]
-        )
+    authors = "; ".join(
+        f"{i['name']} \\ :sup:`{idx}`\\ " for i, idx in zip(hits, aff_indexes, strict=True)
     )
+    numbered = "\n".join(f"{i + 1}. {a}" for i, a in enumerate(affiliations))
+    if not docs_file:
+        print(f"Authors ({len(hits)}):\n{authors}.\n\n\nAffiliations:\n{numbered}")
+        return
 
-    print(
-        "\n\nAffiliations:\n%s"
-        % "\n".join([f"{i + 1: >2}. {a}" for i, a in enumerate(affiliations)])
+    _replace_block(
+        docs_file,
+        DOCS_BEGIN,
+        DOCS_END,
+        f"\nThe default author list for *NiFreeze* {release}:\n\n"
+        f"{authors}.\n\nAffiliations:\n\n{numbered}\n\n",
     )
 
 
 if __name__ == "__main__":
-    """ Install entry-point """
+    """Install entry-point"""
     cli()
