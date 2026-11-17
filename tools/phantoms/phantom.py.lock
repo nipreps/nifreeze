@@ -1069,6 +1069,8 @@ requires-dist = [
     { name = "ipykernel", marker = "extra == 'all'", specifier = ">=6.30.0" },
     { name = "ipykernel", marker = "extra == 'test'", specifier = ">=6.30.0" },
     { name = "ipykernel", marker = "extra == 'tests'", specifier = ">=6.30.0" },
+    { name = "itk-elastix", marker = "extra == 'all'", specifier = ">=0.25.4" },
+    { name = "itk-elastix", marker = "extra == 'elastix'", specifier = ">=0.25.4" },
     { name = "joblib", specifier = ">=1.5.0" },
     { name = "jupyter", marker = "extra == 'all'" },
     { name = "jupyter", marker = "extra == 'notebooks'" },
@@ -1178,7 +1180,7 @@ requires-dist = [
     { name = "virtualenv", marker = "extra == 'all'", specifier = "==20.38.0" },
     { name = "virtualenv", marker = "extra == 'benchmark'", specifier = "==20.38.0" },
 ]
-provides-extras = ["all", "antsopt", "benchmark", "dev", "doc", "docs", "gallery", "notebooks", "plotting", "resmon", "test", "tests", "types"]
+provides-extras = ["all", "antsopt", "benchmark", "dev", "doc", "docs", "elastix", "gallery", "notebooks", "plotting", "resmon", "test", "tests", "types"]
 
 [[package]]
 name = "nilearn"
