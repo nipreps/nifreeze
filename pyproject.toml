@@ -177,6 +177,8 @@ exclude = ["^benchmarks/env/", "^benchmarks/html/"]
 [[tool.mypy.overrides]]
 module = [
   "IPython.*",
+  "itk",
+  "itk.*",
   "nipype.*",
   "nilearn.*",
   "nireports.*",
