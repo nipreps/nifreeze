@@ -24,6 +24,7 @@
         "ErodeMask": ["false"],
         "Optimizer": ["AdaptiveStochasticGradientDescent"],
         "AutomaticParameterEstimation": ["true"],
+        "MaximumStepLength": ["12.0"],
         "MaximumNumberOfIterations": ["20"],
         "WriteResultImage": ["false"]
       }
@@ -49,6 +50,7 @@
         "ErodeMask": ["false"],
         "Optimizer": ["AdaptiveStochasticGradientDescent"],
         "AutomaticParameterEstimation": ["true"],
+        "MaximumStepLength": ["1.96"],
         "MaximumNumberOfIterations": ["10"],
         "WriteResultImage": ["false"]
       }
