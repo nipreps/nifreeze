@@ -34,6 +34,7 @@ import nibabel as nb
 import nitransforms as nt
 import numpy as np
 import pytest
+from test_registration_conventions import SKIP_ELASTIX
 
 from nifreeze.analysis import registration as reg
 from nifreeze.analysis.phantoms import load_phantom
@@ -124,6 +125,21 @@ def test_ants_recovers_the_motion_from_the_oracle(phantom, tmp_path):
     ]
     assert all(row["seconds"] > 0 for row in rows)
     assert np.median([row["max"] for row in rows]) < np.median(motions)
+
+
+@SKIP_ELASTIX
+def test_elastix_recovers_the_motion_from_the_oracle(phantom):
+    """Registered to the noise-free original, in memory, the volumes land within 0.5 mm."""
+    from nifreeze.registration.elastix import Elastix
+
+    clean, reference, moved, truth = phantom
+
+    rows = reg.registration_accuracy(
+        Elastix(num_threads=1), clean, reference, moved, truth, fixed=["oracle"]
+    )
+
+    assert all(row["seconds"] > 0 for row in rows)
+    assert max(row["mean"] for row in rows) < 0.5
 
 
 @pytest.mark.skipif(shutil.which("antsRegistration") is None, reason="ANTs is not installed")

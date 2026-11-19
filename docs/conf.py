@@ -60,6 +60,7 @@ nbsphinx_execute = "never"
 autodoc_mock_imports = [
     "dipy",
     "h5py",
+    "itk",
     "joblib",
     "matplotlib",
     "nest_asyncio",
