@@ -62,8 +62,10 @@ Each moved volume is registered to three fixed images, which together separate r
 On the eddy-only sets, the harness scores the displacement along phase encoding.
 It also records the time each registration takes.
 
-In-memory registration (R2)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Registration without files (R2)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Today the images reach ``antsRegistration`` through files on disk, and the transform comes back through another file.
+Passing the images through the filesystem costs far more time than passing them in memory.
 A backend-independent interface exchanges arrays instead of files
 (`#590 <https://github.com/nipreps/nifreeze/issues/590>`__).
 ANTsPy comes first: it is the same algorithm, so the harness can show that nothing but the time changed.
@@ -143,7 +145,7 @@ Progress (November 17, 2026)
 **Registration harness (R1)** is in place: registration is scored against a phantom's exact motion,
 and timed (`#584 <https://github.com/nipreps/nifreeze/issues/584>`__, `#598 <https://github.com/nipreps/nifreeze/issues/598>`__).
 
-**In-memory registration (R2)** has its groundwork, but not the interface itself (`#590 <https://github.com/nipreps/nifreeze/issues/590>`__), which comes next.
+**Registration without files (R2)** has its groundwork, but not the interface itself (`#590 <https://github.com/nipreps/nifreeze/issues/590>`__), which comes next.
 Settings from the command line and from callers now apply (`#585 <https://github.com/nipreps/nifreeze/issues/585>`__), settings can be read from a file (`#630 <https://github.com/nipreps/nifreeze/issues/630>`__),
 the thread count reaches ITK (`#621 <https://github.com/nipreps/nifreeze/issues/621>`__), and the command line records which ``antsRegistration`` it ran (`#631 <https://github.com/nipreps/nifreeze/issues/631>`__).
 
