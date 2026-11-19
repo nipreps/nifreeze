@@ -1,3 +1,32 @@
-.version-tree ul {
-	list-style-type: none;
+/* The version menu (_templates/sidebar/versions.html) */
+.nf-versions {
+  padding: 0 var(--sidebar-item-spacing-horizontal) 0.75rem;
+  font-size: var(--sidebar-item-font-size);
+  color: var(--color-sidebar-link-text);
+}
+
+.nf-versions summary {
+  cursor: pointer;
+}
+
+.nf-versions ul {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+}
+
+.nf-versions li a {
+  display: block;
+  padding: 0.2rem 0 0.2rem 0.75rem;
+  color: var(--color-sidebar-link-text);
+  text-decoration: none;
+}
+
+.nf-versions li a:hover {
+  background: var(--color-sidebar-item-background--hover);
+}
+
+.nf-versions li.current > a {
+  font-weight: bold;
+  color: var(--color-sidebar-link-text--top-level);
 }

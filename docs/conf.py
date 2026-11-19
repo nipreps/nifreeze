@@ -33,6 +33,13 @@ author = "The NiPreps Developers"
 version = Version(__version__).public
 # The full version, including alpha/beta/rc tags
 release = __version__
+# How the version menu labels this build (a final release has no label)
+if Version(__version__).is_devrelease:
+    version_kind = "development"
+elif Version(__version__).is_prerelease:
+    version_kind = "pre-release"
+else:
+    version_kind = ""
 
 # -- General configuration ---------------------------------------------------
 extensions = [
@@ -141,6 +148,8 @@ pygments_style = None
 # a list of builtin themes.
 #
 html_theme = "furo"
+html_title = "NiFreeze"
+html_context = {"version_kind": version_kind}
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -159,15 +168,19 @@ html_css_files = [
     "css/version-switch.css",
 ]
 
-# Custom sidebar templates, must be a dictionary that maps document names
-# to template names.
-#
-# The default sidebars (for documents that don't match any pattern) are
-# defined by theme itself.  Builtin themes are using these templates by
-# default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
-# 'searchbox.html']``.
-#
-# html_sidebars = {}
+# Furo's sidebar, with the version menu under the project's name (and without the
+# Read the Docs ads)
+html_sidebars = {
+    "**": [
+        "sidebar/brand.html",
+        "sidebar/versions.html",
+        "sidebar/search.html",
+        "sidebar/scroll-start.html",
+        "sidebar/navigation.html",
+        "sidebar/scroll-end.html",
+        "sidebar/variant-selector.html",
+    ]
+}
 
 # Sphinx extension for BibTeX style citations.
 # https://github.com/mcmtroffaes/sphinxcontrib-bibtex
