@@ -658,7 +658,7 @@ def _b0_motions():
     combinations are marked ``slow``, and the test workflow runs them weekly (#681).
     """
     r_max, t_max = max(_B0_ROTATIONS), max(_B0_TRANSLATIONS)
-    corners = {(0.0,) * 6, (r_max,) * 3 + (t_max,) * 3}
+    corners: set[tuple[float, ...]] = {(0.0,) * 6, (r_max,) * 3 + (t_max,) * 3}
     for axis in range(3):
         corners.add(tuple(r_max if i == axis else 0.0 for i in range(6)))
         corners.add(tuple(t_max if i == axis + 3 else 0.0 for i in range(6)))
