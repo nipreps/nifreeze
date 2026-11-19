@@ -129,7 +129,7 @@ def test_ants_recovers_the_motion_from_the_oracle(phantom, tmp_path):
 
 @SKIP_ELASTIX
 def test_elastix_recovers_the_motion_from_the_oracle(phantom):
-    """Registered to the noise-free original, in memory, the volumes land within 0.5 mm."""
+    """Registered by elastix to the noise-free original, the volumes land within 0.5 mm."""
     from nifreeze.registration.elastix import Elastix
 
     clean, reference, moved, truth = phantom
