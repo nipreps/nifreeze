@@ -27,7 +27,7 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""The decision and tables of the elastix accuracy test (#672).
+"""The decision, tables and figures of the elastix accuracy test (#672).
 
 Reads ``<protocol>.{tsv,json,npz}`` of each protocol, which
 ``tools/registration/elastix_accuracy.py`` wrote, and applies the decision rules of the
@@ -48,10 +48,14 @@ faster
 The outcome is the first that applies: ``less accurate`` (a cell is "worse", a
 registration fails, or elastix lands beyond no correction more often), ``not
 repeatable``, ``not shown accurate`` (a cell is "inconclusive"), ``slower`` (accurate
-and repeatable, but not faster), or ``default`` (all three hold)::
+and repeatable, but not faster), or ``default`` (all three hold).
 
-    uv run tools/registration/elastix_accuracy_figures.py \\
-        --results <results> --out <folder>
+Beside the decision, it writes what the report gives but the rules don't use (the
+comparisons by motion, the median errors, the error of no correction) and, with
+``--figures``, the report's two figures::
+
+    uv run tools/registration/elastix_accuracy_figures.py --results <results> \\
+        --out docs/_static/registration/elastix-accuracy --figures
 """
 
 import argparse
@@ -217,35 +221,322 @@ def decide(results: dict[str, tuple[list[dict[str, Any]], float, Any]]) -> dict[
     }
 
 
-def tables(decision: dict[str, Any], out: Path) -> None:
-    """The comparisons and the times, as CSV tables for the report."""
-    with (out / "elastix-accuracy-comparisons.csv").open("w", newline="") as stream:
+def context(results: dict[str, tuple[list[dict[str, Any]], float, Any]]) -> dict[str, Any]:
+    """What the report gives beside the decision: by motion, the errors, no correction."""
+    motion, errors, none = [], [], []
+    for protocol, (rows, voxel, _) in results.items():
+        uncorrected = _errors(rows, NONE, NONE, "oracle")
+        magnitudes = sorted({m for m, _ in uncorrected})
+        none += [
+            {
+                "protocol": protocol,
+                "magnitude": m,
+                "median": float(np.median([e for (mm, _), e in uncorrected.items() if mm == m])),
+            }
+            for m in magnitudes
+        ]
+        for stage in STAGES:
+            for fixed in FIXED:
+                ours = _errors(rows, CANDIDATE, stage, fixed)
+                theirs = _errors(rows, REFERENCE, stage, fixed)
+                for m in magnitudes:
+                    pairs = sorted(p for p in ours if p[0] == m)
+                    motion.append(
+                        {"protocol": protocol, "stage": stage, "fixed": fixed, "magnitude": m}
+                        | paired_comparison(
+                            [ours[p] for p in pairs], [theirs[p] for p in pairs], MARGIN * voxel
+                        )
+                    )
+                errors.append(
+                    {"protocol": protocol, "stage": stage, "fixed": fixed}
+                    | {
+                        f"{arm}_{key}": float(
+                            np.median(
+                                [
+                                    r[key]
+                                    for r in rows
+                                    if r["arm"] == arm
+                                    and r["stage"] == stage
+                                    and r["fixed"] == fixed
+                                ]
+                            )
+                        )
+                        for arm in (REFERENCE, CANDIDATE)
+                        for key in ("mean", "max")
+                    }
+                )
+    return {"motion": motion, "errors": errors, "none": none}
+
+
+PROTOCOL_NAMES = {"sherbrooke": "Sherbrooke (2 mm)", "hcpya": "HCP-YA (1.25 mm)"}
+FIXED_NAMES = {
+    "oracle": "Oracle",
+    "unmoved": "Prediction, unmoved data",
+    "moved": "Prediction, moved data",
+}
+
+
+def _interval(value: float, low: float, high: float) -> str:
+    return f"{value:+.3f} [{low:+.3f}, {high:+.3f}]"
+
+
+def _write(path: Path, header: list[str], rows: list[list[Any]]) -> None:
+    with path.open("w", newline="") as stream:
         writer = csv.writer(stream)
-        writer.writerow(["Protocol", "Stage", "Fixed", "Median (mm)", "95th pct. (mm)", "Verdict"])
-        for c in decision["cells"]:
-            writer.writerow(
-                [
-                    c["protocol"],
-                    c["stage"],
-                    c["fixed"],
-                    f"{c['median']:+.3f} [{c['median_low']:+.3f}, {c['median_high']:+.3f}]",
-                    f"{c['p95']:+.3f} [{c['p95_low']:+.3f}, {c['p95_high']:+.3f}]",
-                    c["verdict"],
-                ]
+        writer.writerow(header)
+        writer.writerows(rows)
+
+
+def tables(decision: dict[str, Any], reported: dict[str, Any], out: Path) -> None:
+    """The comparisons, times, errors and comparisons by motion, as the report's tables."""
+    _write(
+        out / "elastix-accuracy-comparisons.csv",
+        [
+            "Protocol",
+            "Stage",
+            "Fixed image",
+            "Elastix - ANTs, median (mm)",
+            "95th percentile (mm)",
+            "Holm p",
+            "Verdict",
+        ],
+        [
+            [
+                PROTOCOL_NAMES[c["protocol"]],
+                c["stage"],
+                FIXED_NAMES[c["fixed"]],
+                _interval(c["median"], c["median_low"], c["median_high"]),
+                _interval(c["p95"], c["p95_low"], c["p95_high"]),
+                f"{c['holm_p']:.1g}",
+                c["verdict"],
+            ]
+            for c in decision["cells"]
+        ],
+    )
+    _write(
+        out / "elastix-accuracy-time.csv",
+        ["Protocol", "Stage", "ANTs (s)", "Elastix (s)", "Ratio"],
+        [
+            [
+                PROTOCOL_NAMES[s["protocol"]],
+                s["stage"],
+                f"{s['seconds'][REFERENCE]:.2f}",
+                f"{s['seconds'][CANDIDATE]:.2f}",
+                f"{s['ratio']:.2f}",
+            ]
+            for s in decision["stages"]
+        ],
+    )
+    _write(
+        out / "elastix-accuracy-errors.csv",
+        [
+            "Protocol",
+            "Stage",
+            "Fixed image",
+            "Mean, ANTs (mm)",
+            "Mean, elastix (mm)",
+            "Maximum, ANTs (mm)",
+            "Maximum, elastix (mm)",
+        ],
+        [
+            [
+                PROTOCOL_NAMES[e["protocol"]],
+                e["stage"],
+                FIXED_NAMES[e["fixed"]],
+                *(
+                    f"{e[f'{arm}_{key}']:.3f}"
+                    for key in ("mean", "max")
+                    for arm in ("ants", "elastix")
+                ),
+            ]
+            for e in reported["errors"]
+        ],
+    )
+    magnitudes = sorted({m["magnitude"] for m in reported["motion"]})
+    by_cell: dict[tuple, dict[float, dict[str, Any]]] = {}
+    for m in reported["motion"]:
+        by_cell.setdefault((m["protocol"], m["stage"], m["fixed"]), {})[m["magnitude"]] = m
+    _write(
+        out / "elastix-accuracy-motion.csv",
+        ["Protocol", "Stage", "Fixed image", *(f"{m:g} mm" for m in magnitudes)],
+        [
+            [
+                PROTOCOL_NAMES[protocol],
+                stage,
+                FIXED_NAMES[fixed],
+                *(f"{cells[m]['median']:+.3f}, {cells[m]['verdict']}" for m in magnitudes),
+            ]
+            for (protocol, stage, fixed), cells in by_cell.items()
+        ],
+    )
+    _write(
+        out / "elastix-accuracy-none.csv",
+        ["Protocol", *(f"{m:g} mm" for m in magnitudes)],
+        [
+            [
+                PROTOCOL_NAMES[protocol],
+                *(f"{n['median']:.2f}" for n in reported["none"] if n["protocol"] == protocol),
+            ]
+            for protocol in dict.fromkeys(n["protocol"] for n in reported["none"])
+        ],
+    )
+
+
+INK, MUTED, RULE = "#0b0b0b", "#52514e", "#d9d8d4"
+COLORS = {"oracle": "#2a78d6", "unmoved": "#eb6834", "moved": "#1baf7a"}
+"""Three slots validated for color-vision deficiencies (the figures of #609)."""
+MARKERS = {"oracle": "o", "unmoved": "s", "moved": "^"}
+
+
+def _style() -> Any:
+    import matplotlib as mpl
+
+    mpl.use("Agg")
+    import matplotlib.pyplot as plt
+
+    plt.rcParams.update(
+        {
+            "font.size": 9,
+            "axes.edgecolor": MUTED,
+            "axes.labelcolor": INK,
+            "axes.spines.top": False,
+            "axes.spines.right": False,
+            "xtick.color": MUTED,
+            "ytick.color": MUTED,
+        }
+    )
+    return plt
+
+
+def _margins(ax: Any, margin: float, vertical: bool) -> None:
+    """The zero line and the margin on either side of it."""
+    line = ax.axvline if vertical else ax.axhline
+    line(0, color=RULE, linewidth=0.8, zorder=0)
+    for value in (-margin, margin):
+        line(value, color=MUTED, linewidth=0.7, linestyle=":", zorder=0)
+
+
+def forest(decision: dict[str, Any], out: Path) -> None:
+    """Each cell's median difference with its interval, against the margin."""
+    from matplotlib.ticker import MaxNLocator
+
+    plt = _style()
+    protocols = list(dict.fromkeys(c["protocol"] for c in decision["cells"]))
+    fig, axes = plt.subplots(
+        1, len(protocols), figsize=(10, 3.6), layout="constrained", sharey=True, squeeze=False
+    )
+    for ax, protocol in zip(axes[0], protocols, strict=True):
+        cells = [c for c in decision["cells"] if c["protocol"] == protocol]
+        margin = cells[0]["margin_mm"]
+        _margins(ax, margin, vertical=True)
+        ys = [i + (i // len(FIXED)) * 0.8 for i in range(len(cells))][::-1]
+        for y, c in zip(ys, cells, strict=True):
+            color = COLORS[c["fixed"]]
+            ax.plot([c["median_low"], c["median_high"]], [y, y], color=color, linewidth=1.6)
+            ax.scatter([c["median"]], [y], color=color, marker=MARKERS[c["fixed"]], s=28, zorder=3)
+            ax.text(
+                1.01,
+                y,
+                c["verdict"],
+                transform=ax.get_yaxis_transform(),
+                va="center",
+                color=INK,
+                fontsize=8,
             )
-    with (out / "elastix-accuracy-time.csv").open("w", newline="") as stream:
-        writer = csv.writer(stream)
-        writer.writerow(["Protocol", "Stage", "ANTs (s)", "Elastix (s)", "Ratio"])
-        for s in decision["stages"]:
-            writer.writerow(
-                [
-                    s["protocol"],
-                    s["stage"],
-                    f"{s['seconds'][REFERENCE]:.2f}",
-                    f"{s['seconds'][CANDIDATE]:.2f}",
-                    f"{s['ratio']:.2f}",
-                ]
+        for value, name in ((-margin, "-margin"), (margin, "+margin")):
+            ax.text(
+                value,
+                1.0,
+                name,
+                transform=ax.get_xaxis_transform(),
+                va="bottom",
+                ha="center",
+                color=MUTED,
+                fontsize=7.5,
             )
+        ax.set_yticks(ys, [FIXED_NAMES[c["fixed"]] for c in cells])
+        ax.tick_params(axis="y", length=0)
+        ax.spines["left"].set_visible(False)
+        ax.set_title(PROTOCOL_NAMES[protocol], color=INK, pad=14)
+        ax.set_xlabel("Elastix - ANTs, median of the mean error (mm)")
+        ax.xaxis.set_major_locator(MaxNLocator(5))
+    first = axes[0, 0]
+    ys = [i + (i // len(FIXED)) * 0.8 for i in range(len(STAGES) * len(FIXED))][::-1]
+    for g, stage in enumerate(STAGES):
+        first.text(
+            -0.02,
+            ys[g * len(FIXED)] + 0.75,
+            f"{stage.capitalize()} stage",
+            transform=first.get_yaxis_transform(),
+            ha="right",
+            va="center",
+            color=INK,
+            fontweight="bold",
+        )
+    first.set_ylim(min(ys) - 0.6, max(ys) + 1.1)
+    fig.savefig(out / "elastix-accuracy-cells.png", dpi=200, facecolor="white")
+    plt.close(fig)
+
+
+def by_motion(decision: dict[str, Any], reported: dict[str, Any], out: Path) -> None:
+    """The median difference at each motion, by protocol, stage and fixed image."""
+    plt = _style()
+    protocols = list(dict.fromkeys(c["protocol"] for c in decision["cells"]))
+    margin = {c["protocol"]: c["margin_mm"] for c in decision["cells"]}
+    fig, axes = plt.subplots(
+        len(protocols),
+        len(STAGES),
+        figsize=(10, 6),
+        layout="constrained",
+        sharey="row",
+        squeeze=False,
+    )
+    offsets = {"oracle": 0.92, "unmoved": 1.0, "moved": 1.08}
+    for r_, protocol in enumerate(protocols):
+        for c_, stage in enumerate(STAGES):
+            ax = axes[r_, c_]
+            _margins(ax, margin[protocol], vertical=False)
+            for fixed in FIXED:
+                points = sorted(
+                    (
+                        m
+                        for m in reported["motion"]
+                        if (m["protocol"], m["stage"], m["fixed"]) == (protocol, stage, fixed)
+                    ),
+                    key=lambda m: m["magnitude"],
+                )
+                xs = np.array([m["magnitude"] for m in points]) * offsets[fixed]
+                color = COLORS[fixed]
+                ax.vlines(
+                    xs,
+                    [m["median_low"] for m in points],
+                    [m["median_high"] for m in points],
+                    color=color,
+                    linewidth=1.0,
+                    alpha=0.7,
+                )
+                ax.plot(
+                    xs,
+                    [m["median"] for m in points],
+                    color=color,
+                    linewidth=1.4,
+                    marker=MARKERS[fixed],
+                    markersize=5,
+                    label=FIXED_NAMES[fixed],
+                )
+            ax.set_xscale("log", base=2)
+            ax.set_xticks([0.5, 1, 2, 4], ["0.5", "1", "2", "4"])
+            ax.minorticks_off()
+            if r_ == 0:
+                ax.set_title(f"{stage.capitalize()} stage", color=INK)
+            if c_ == 0:
+                ax.set_ylabel(f"{PROTOCOL_NAMES[protocol]}\nelastix - ANTs (mm)")
+            if r_ == len(protocols) - 1:
+                ax.set_xlabel("Motion (mm and degrees)")
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="outside upper center", ncols=len(FIXED), frameon=False)
+    fig.savefig(out / "elastix-accuracy-motion.png", dpi=200, facecolor="white")
+    plt.close(fig)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -253,6 +544,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--results", type=Path, required=True, help="the results folder")
     parser.add_argument("--protocols", nargs="+", default=list(PROTOCOLS))
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--figures", action="store_true", help="also the report's figures")
     args = parser.parse_args(argv)
 
     results = {}
@@ -264,9 +556,13 @@ def main(argv: list[str] | None = None) -> int:
             np.load(args.results / f"{protocol}.npz"),
         )
     decision = decide(results)
+    reported = context(results)
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "elastix-accuracy-decision.json").write_text(json.dumps(decision, indent=2) + "\n")
-    tables(decision, args.out)
+    tables(decision, reported, args.out)
+    if args.figures:
+        forest(decision, args.out)
+        by_motion(decision, reported, args.out)
     print(decision["outcome"], decision["verdicts"], decision["rules"])
     return 0
 
