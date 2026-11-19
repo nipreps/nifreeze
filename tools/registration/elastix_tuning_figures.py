@@ -31,7 +31,7 @@
 
 Reads ``<protocol>.{tsv,json}``, which ``tools/registration/elastix_tuning.py`` wrote, and
 applies the decision rules of the working hypothesis. Each configuration is compared
-with the translation (``t-x1``) on each fixed image, by
+with the direct mapping (``t-x1``) on each fixed image, by
 :func:`~experiments.paired_comparison` of the mean error per registration, paired by
 volume and motion, resampled within motions, with a margin of 0.01 voxel. A
 configuration passes if no registration failed, if, on every fixed image, it is not
@@ -56,7 +56,7 @@ import numpy as np
 from experiments import holm, paired_comparison
 
 REFERENCE = "t-x1"
-"""The translation (#674)."""
+"""The direct mapping (#674)."""
 BASELINE = "ants"
 """Today's ANTs path."""
 MARGIN = 0.01
@@ -161,7 +161,7 @@ def decide(rows: list[dict[str, Any]], voxel: float) -> dict[str, Any]:
     elif slower := [arm for arm, c in configurations.items() if c["accurate"]]:
         choice, outcome = None, "trade-off: " + ", ".join(slower)
     else:
-        choice, outcome = None, "keep the translation"
+        choice, outcome = None, "keep the direct mapping"
     return {
         "margin_mm": margin,
         "seconds": seconds,

@@ -35,18 +35,19 @@ by today's ANTs path and by elastix (:class:`~nifreeze.registration.elastix.Elas
 each combination of two crossed factors:
 
 schedule
-    ``t``, the translation of ANTs' two levels (#674): full-resolution images, whose shrink
+    ``t``, the direct mapping of ANTs' two levels (#674): full-resolution images, whose shrink
     factors only thin the samples. ``p2`` and ``p3``, a pyramid of two (rescaled by 2 and 1)
     or three (4, 2 and 1) resolutions, smoothed by half the rescale factor (voxels) except
     at full resolution. Each level samples a fraction of its own grid's mask voxels and steps
-    at most a length: the translation's last level's (0.18, 1.96 mm) at the last level, its
+    at most a length: the direct mapping's last level's (0.18, 1.96 mm) at the last level, its
     first level's (0.4, 12 mm) at the others.
 iterations
-    ``x1``, ``x4`` and ``x16`` times the translation's: 20 at every level but the last, 10 there.
+    ``x1``, ``x4`` and ``x16`` times the direct mapping's: 20 at every level but the last,
+    10 there.
 
-The optimizer is the translation's (adaptive stochastic gradient descent): the
+The optimizer is the direct mapping's (adaptive stochastic gradient descent): the
 preconditioned one diverged in the pilot, with these steps and with elastix's default.
-``t-x1`` is the translation itself. A registration that raises (such as elastix's
+``t-x1`` is the direct mapping itself. A registration that raises (such as elastix's
 samples mapped outside the moving image) is recorded as ``failed``, with the error of no
 correction. Each configuration is written to
 ``<out>/settings/<name>.json`` and registered from that file. One thread per registration,
@@ -81,13 +82,13 @@ SEED = 12345
 MODEL = "gqi-krr"
 """The model of the ``unmoved`` and ``moved`` targets."""
 SETTINGS = "b0-to-b0_level0"
-"""The rigid default, ANTs' and its translation."""
+"""The rigid default, ANTs' and its direct mapping."""
 SCHEDULES = {"t": None, "p2": (2, 1), "p3": (4, 2, 1)}
-"""The rescale factors of each schedule's pyramid (none for the translation's)."""
+"""The rescale factors of each schedule's pyramid (none for the direct mapping's)."""
 ITERATIONS = (1, 4, 16)
-"""Multiples of the translation's iterations."""
+"""Multiples of the direct mapping's iterations."""
 REFERENCE = "t-x1"
-"""The translation (#674), against which the configurations are compared."""
+"""The direct mapping (#674), against which the configurations are compared."""
 CHUNK = 8
 """Volumes per task."""
 
@@ -97,7 +98,7 @@ _SHARED: dict[str, Any] = {}
 
 def configuration(schedule: str, iterations: int) -> dict[str, Any]:
     """
-    The settings of one configuration, from the translation.
+    The settings of one configuration, from the direct mapping.
 
     >>> configuration("t", 1) == get_settings(SETTINGS)
     True
