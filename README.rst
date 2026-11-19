@@ -6,6 +6,8 @@
 *NiFreeze* is a flexible framework for volume-to-volume motion estimation and correction in d/fMRI and PET,
 and eddy-current-derived distortion estimation in dMRI.
 
+.. BEGIN NOTICE AND BADGES (left out of the documentation's home page)
+
 .. important:: *NiFreeze* is a major evolution and generalized successor of *eddymotion*
 
    In November 2024, the *NiPreps Steering Committee* brought to the *Bi-monthly Roundup*
@@ -69,6 +71,8 @@ and eddy-current-derived distortion estimation in dMRI.
 .. image:: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
    :target: https://github.com/astral-sh/ruff
    :alt: Code format
+
+.. END NOTICE AND BADGES
 
 Diffusion and functional MRI (d/fMRI) generally employ echo-planar imaging (EPI) for fast
 whole-brain acquisition.
