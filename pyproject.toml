@@ -65,6 +65,7 @@ dev = [
   "pre-commit>=4.1.0",
   "pre-commit-hooks>=6.0.0",
 ]
+elastix = ["itk-elastix>=0.25.4"]
 plotting = ["nilearn>=0.11.0"]
 resmon = ["psutil>=6.1.1"]
 test = [
@@ -115,7 +116,7 @@ gallery = [
 # Aliases
 docs = ["nifreeze[doc]"]
 tests = ["nifreeze[test]"]
-all = ["nifreeze[antsopt,benchmark,dev,doc,gallery,notebooks,plotting,resmon,test,types]"]
+all = ["nifreeze[antsopt,benchmark,dev,doc,elastix,gallery,notebooks,plotting,resmon,test,types]"]
 
 [project.scripts]
 nifreeze = "nifreeze.cli.run:main"
@@ -176,6 +177,8 @@ exclude = ["^benchmarks/env/", "^benchmarks/html/"]
 [[tool.mypy.overrides]]
 module = [
   "IPython.*",
+  "itk",
+  "itk.*",
   "nipype.*",
   "nilearn.*",
   "nireports.*",
@@ -261,6 +264,7 @@ markers = [
   "random_uniform_spatial_data: Custom marker for random spatial data tests",
   "memory: Opt-in peak-RSS memory tests (heavier fixtures; run explicitly with -m memory)",
   "e2e: Opt-in end-to-end tests on simulated motion (need ANTs; run explicitly with -m e2e)",
+  "slow: Exhaustive grids of cases; CI deselects them on pull requests and pushes, and runs them weekly",
 ]
 filterwarnings = [
   "ignore::DeprecationWarning",

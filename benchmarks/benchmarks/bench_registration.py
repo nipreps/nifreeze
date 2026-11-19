@@ -49,7 +49,6 @@ import numpy as np
 try:
     from nifreeze.analysis.phantoms import load_phantom
     from nifreeze.analysis.registration import AntsRegistration, registration_accuracy
-    from nifreeze.data.filtering import robust_window
 except ImportError:  # not on commits before nifreeze#584
     registration_accuracy = None  # type: ignore[assignment]
 
@@ -127,21 +126,16 @@ class RegistrationTime:
         clean, reference, moved, _ = phantom
         self.workdir = tempfile.TemporaryDirectory()
         self.register = AntsRegistration(self.workdir.name, num_threads=1)
-        self.fixed = np.asarray(clean.dataobj[0], dtype="float32")
-        self.moving = np.asarray(moved.dataobj[0])
-        self.affine = reference.affine
-        self.mask = np.asanyarray(reference.brainmask, dtype=bool)
+        self.args = (
+            np.asarray(clean.dataobj[0], dtype="float32"),
+            np.asarray(moved.dataobj[0]),
+            reference.affine,
+            np.asanyarray(reference.brainmask, dtype=bool),
+            0,
+        )
 
     def teardown(self):
         self.workdir.cleanup()
 
     def time_register(self):
-        # The window is estimated within, as the harness does
-        self.register(
-            self.fixed,
-            self.moving,
-            self.affine,
-            mask=self.mask,
-            window=robust_window(self.moving, self.mask),
-            index=0,
-        )
+        self.register(*self.args)

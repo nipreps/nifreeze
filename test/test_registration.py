@@ -27,6 +27,7 @@ import os
 import re
 from collections.abc import Sized
 from importlib.resources import files
+from itertools import product
 from os import cpu_count
 from pathlib import Path
 from typing import Callable, Set
@@ -241,145 +242,6 @@ def test_write_aligned(tmp_path):
     resampled = apply(nt.linear.Affine(matrix), moving_path, reference=fixed_path)
     viewed = apply(nt.linear.Affine(np.eye(4)), aligned_path, reference=fixed_path)
     assert np.allclose(np.asanyarray(viewed.dataobj), np.asanyarray(resampled.dataobj), atol=1e-3)
-
-
-class _RecordedRuns:
-    """Stand in for ``_run_registration``: record each call and return a shift by index."""
-
-    def __init__(self):
-        self.calls: list[dict] = []
-
-    def __call__(self, fixed_path, moving_path, vol_idx, dirname, **kwargs):
-        self.calls.append(
-            {"fixed": fixed_path, "moving": moving_path, "index": vol_idx, "dirname": dirname}
-            | kwargs
-        )
-        return nt.linear.Affine(_shift(vol_idx))
-
-
-def _shift(index: int) -> np.ndarray:
-    return from_matvec(np.eye(3), [0.1 * index, 0.0, 0.0])
-
-
-@pytest.fixture
-def volumes(request) -> tuple[np.ndarray, np.ndarray]:
-    """A fixed and a moving volume."""
-    rng = request.node.rng
-    return (
-        rng.uniform(1.0, 2.0, (10, 10, 10)).astype("float32"),
-        rng.uniform(1.0, 2.0, (10, 10, 10)).astype("float32"),
-    )
-
-
-def test_ants_command_line_runs_todays_path(tmp_path, monkeypatch, volumes):
-    """A call writes the estimator's files and runs ANTs with the backend's settings."""
-    runs = _RecordedRuns()
-    monkeypatch.setattr(ants, "_run_registration", runs)
-    fixed, moving = volumes
-    mask = np.ones(fixed.shape, dtype=bool)
-
-    with ants.AntsCommandLine(
-        "dwi-to-dwi_level1",
-        num_threads=3,
-        seed=7,
-        environ={"SOME_VARIABLE": "1"},
-        workdir=tmp_path,
-        metric="GC",
-    ) as registration:
-        xform = registration(
-            fixed, moving, np.eye(4), mask=mask, init=_shift(1), window=(1.2, 1.8), index=4
-        )
-
-    (call,) = runs.calls
-    assert np.allclose(xform.matrix, _shift(4))
-    assert (call["fixed"], call["moving"]) == (
-        tmp_path / "predicted_00004.nii",
-        tmp_path / "sample_00004.nii",
-    )
-    assert (call["index"], call["dirname"]) == (4, tmp_path)
-    assert call["init_affine"] == tmp_path / "init_00004.mat"
-    assert call["fixedmask_path"] == tmp_path / "brainmask.nii"
-    assert call["output_transform_prefix"] == "ants-00004"
-    assert call["ants_config"] == "dwi-to-dwi_level1"
-    assert (call["num_threads"], call["seed"], call["metric"]) == (3, 7, "GC")
-    assert call["environ"] == {"SOME_VARIABLE": "1"}
-    # Both images are clipped to the window, in 12-bit codes
-    for path in (call["fixed"], call["moving"]):
-        image = load_api(str(path), nb.Nifti1Image)
-        assert image.get_data_dtype() == np.int16
-        assert 1.2 - 1e-3 <= image.get_fdata().min() <= image.get_fdata().max() <= 1.8 + 1e-3
-
-
-def test_ants_command_line_without_a_window_clips_nothing(tmp_path, monkeypatch, volumes):
-    runs = _RecordedRuns()
-    monkeypatch.setattr(ants, "_run_registration", runs)
-    fixed, moving = volumes
-
-    with ants.AntsCommandLine(workdir=tmp_path) as registration:
-        registration(fixed, moving, np.eye(4))
-
-    (call,) = runs.calls
-    assert "ants_config" not in call
-    assert call["fixedmask_path"] is None
-    assert call["init_affine"] is None
-    written = load_api(str(call["moving"]), nb.Nifti1Image)
-    assert written.get_data_dtype() == np.float32
-    assert np.array_equal(written.get_fdata(dtype="float32"), moving)
-
-
-def test_ants_command_line_writes_each_mask_once(tmp_path, monkeypatch, volumes):
-    runs = _RecordedRuns()
-    monkeypatch.setattr(ants, "_run_registration", runs)
-    fixed, moving = volumes
-    mask = np.ones(fixed.shape, dtype=bool)
-    other = np.copy(mask)
-    mask_path = tmp_path / "brainmask.nii"
-
-    with ants.AntsCommandLine(workdir=tmp_path) as registration:
-        registration(fixed, moving, np.eye(4), mask=mask, index=0)
-        assert mask_path.exists()
-        mask_path.unlink()
-        # The same array is not written again
-        registration(fixed, moving, np.eye(4), mask=mask, index=1)
-        assert not mask_path.exists()
-        # Another array is
-        registration(fixed, moving, np.eye(4), mask=other, index=2)
-        assert mask_path.exists()
-        registration(fixed, moving, np.eye(4), index=3)
-
-    assert [call["fixedmask_path"] for call in runs.calls] == [mask_path] * 3 + [None]
-
-
-def test_ants_command_line_removes_its_temporary_files(monkeypatch, volumes):
-    runs = _RecordedRuns()
-    monkeypatch.setattr(ants, "_run_registration", runs)
-    fixed, moving = volumes
-
-    with ants.AntsCommandLine() as registration:
-        registration(fixed, moving, np.eye(4))
-        workdir = runs.calls[0]["dirname"]
-        assert (workdir / "sample_00000.nii").exists()
-        assert repr(registration) == (f"AntsCommandLine(settings=None, workdir={str(workdir)!r})")
-
-    assert not workdir.exists()
-
-
-def test_ants_command_line_keeps_a_debug_trace(tmp_path, monkeypatch, volumes):
-    """With ``debug_dir``, the files stay, with an aligned trace per volume."""
-    runs = _RecordedRuns()
-    monkeypatch.setattr(ants, "_run_registration", runs)
-    fixed, moving = volumes
-    # A relative folder reaches ANTs as an absolute path: nipype runs ANTs from within it
-    monkeypatch.chdir(tmp_path)
-
-    with ants.AntsCommandLine(debug_dir="debug") as registration:
-        registration(fixed, moving, np.eye(4), index=2)
-
-    debug = tmp_path / "debug"
-    assert runs.calls[0]["dirname"] == debug
-    sample = load_api(str(debug / "sample_00002.nii"), nb.Nifti1Image)
-    aligned = load_api(str(debug / "aligned_00002.nii"), nb.Nifti1Image)
-    assert np.allclose(aligned.affine, np.linalg.inv(_shift(2)) @ sample.affine)
 
 
 def test_generate_command_malformed_settings(tmp_path, monkeypatch, random_nifti_file, json_file):
@@ -784,14 +646,29 @@ def test_generate_command_masks_and_init_propagation(
         )
 
 
-@pytest.mark.parametrize("r_x", [0.0, 0.1, 0.3])
-@pytest.mark.parametrize("r_y", [0.0, 0.1, 0.3])
-@pytest.mark.parametrize("r_z", [0.0, 0.1, 0.3])
-@pytest.mark.parametrize("t_x", [0.0, 1.0])
-@pytest.mark.parametrize("t_y", [0.0, 1.0])
-@pytest.mark.parametrize("t_z", [0.0, 1.0])
+_B0_ROTATIONS = (0.0, 0.1, 0.3)  # radians, about each axis
+_B0_TRANSLATIONS = (0.0, 1.0)  # millimeters, along each axis
+
+
+def _b0_motions():
+    """Every combination of the rotations and translations, as ``pytest.param``.
+
+    Only the corners run on pull requests and pushes: no motion, each axis alone at its
+    largest rotation or translation, and all six at their largest. The remaining 208
+    combinations are marked ``slow``, and the test workflow runs them weekly (#681).
+    """
+    r_max, t_max = max(_B0_ROTATIONS), max(_B0_TRANSLATIONS)
+    corners: set[tuple[float, ...]] = {(0.0,) * 6, (r_max,) * 3 + (t_max,) * 3}
+    for axis in range(3):
+        corners.add(tuple(r_max if i == axis else 0.0 for i in range(6)))
+        corners.add(tuple(t_max if i == axis + 3 else 0.0 for i in range(6)))
+
+    for motion in product(*(_B0_ROTATIONS,) * 3, *(_B0_TRANSLATIONS,) * 3):
+        yield pytest.param(*motion, marks=() if motion in corners else pytest.mark.slow)
+
+
+@pytest.mark.parametrize(("r_x", "r_y", "r_z", "t_x", "t_y", "t_z"), list(_b0_motions()))
 @pytest.mark.parametrize("dataset", ["hcph", "dwi"])
-# @pytest.mark.parametrize("dataset", ["dwi"])
 def test_ANTs_config_b0(datadir, tmp_path, dataset, r_x, r_y, r_z, t_x, t_y, t_z):
     """Check that the registration parameters for b=0
     gives a good estimate of known affine"""

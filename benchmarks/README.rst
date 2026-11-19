@@ -58,6 +58,9 @@ is still compared with what merging it would change.
 ``report.py`` then prints a plain-text report to the log, writes it to the
 job summary, and fails the job if a benchmark regressed past its threshold
 or fails on the pull request.
+The workflow runs on the pull requests that change the package (``src/``, ``pyproject.toml``),
+the suite (``benchmarks/``), the phantom fixture (``tools/phantoms/``), the CI actions
+or the workflow; the others change nothing it could measure.
 
 Pushes to ``main`` record their results and publish the dashboard to
 ``gh-pages`` (``benchmarks/``, raw results in ``benchmarks/results/``).

@@ -24,12 +24,16 @@
 
 from __future__ import annotations
 
+from concurrent.futures import Future, ThreadPoolExecutor
+from contextlib import nullcontext
 from os import cpu_count
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from timeit import default_timer as timer
 from typing import TypeVar
 from warnings import warn
 
+import nibabel as nb
 import numpy as np
 from tqdm import tqdm
 from typing_extensions import Self
@@ -37,8 +41,11 @@ from typing_extensions import Self
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.filtering import ClippingValueError, robust_window
 from nifreeze.model.base import BaseModel, ModelFactory, TrivialModel
-from nifreeze.registration.ants import AntsCommandLine
-from nifreeze.registration.base import Registration
+from nifreeze.registration.ants import (
+    _prepare_registration_data,
+    _run_registration,
+    _write_aligned,
+)
 from nifreeze.utils import iterators
 
 DatasetT = TypeVar("DatasetT", bound=BaseDataset)
@@ -97,11 +104,6 @@ class Estimator:
         First volume index to process.
     stop_index : :obj:`int`, optional
         One-past-last volume index to process (``None`` = to the end).
-    registration : :obj:`~nifreeze.registration.base.Registration`, optional
-        The registration backend. By default, each run registers with
-        :class:`~nifreeze.registration.ants.AntsCommandLine`, configured by the
-        registration settings of the run and of this estimator; a backend given
-        here keeps its own settings.
 
     """
 
@@ -114,7 +116,6 @@ class Estimator:
         "_align_kwargs",
         "_start_index",
         "_stop_index",
-        "_registration",
     )
 
     def __init__(
@@ -126,7 +127,6 @@ class Estimator:
         single_fit: bool = False,
         start_index: int = 0,
         stop_index: int | None = None,
-        registration: Registration | None = None,
         **kwargs,
     ):
         self._model = model
@@ -135,7 +135,6 @@ class Estimator:
         self._single_fit = single_fit
         self._model_kwargs = model_kwargs or {}
         self._align_kwargs = kwargs or {}
-        self._registration = registration
 
         self._start_index = start_index
         self._stop_index = stop_index
@@ -151,9 +150,7 @@ class Estimator:
         align_kwargs : :obj:`dict`, optional
             Registration settings for every estimator of the chain (e.g., those of
             ``--align-config``). The settings given to an estimator at construction
-            take precedence. These settings, and ``clip``, ``debug_dir`` and
-            ``num_threads`` below, configure the default backend; a backend given
-            at construction keeps its own.
+            take precedence.
         clip : :obj:`str`, optional
             Clip the intensity of ``"sample"``, ``"predicted"``, ``"both"``
             (default) or ``"none"`` of the images before registration.
@@ -281,13 +278,9 @@ class Estimator:
 
         work_dir = None
         if (debug_dir := kwargs.pop("debug_dir", None)) is not None:
-            work_dir = Path(debug_dir) / self._debug_name(model)
-
-        registration = self._registration
-        if registration is None:
-            registration = AntsCommandLine(
-                kwargs.pop("ants_config", None), clip=clip, debug_dir=work_dir, **kwargs
-            )
+            # Absolute, because nipype runs ANTs from within the working directory
+            work_dir = Path(debug_dir).absolute() / self._debug_name(model)
+            work_dir.mkdir(parents=True, exist_ok=True)
 
         # Calculate effective dataset length for progress bar
         if self._stop_index is not None:
@@ -295,8 +288,22 @@ class Estimator:
         else:
             dataset_length = len(dataset) - self._start_index
 
-        with registration:
-            print(f"Registration: {registration}.")
+        traces: list[Future] = []
+        with (
+            (
+                nullcontext(str(work_dir)) if work_dir is not None else TemporaryDirectory()
+            ) as tmp_dir,
+            ThreadPoolExecutor(max_workers=1) as tracer,
+        ):
+            print(f"Processing in <{tmp_dir}>")
+            ptmp_dir = Path(tmp_dir)
+
+            bmask_path = None
+            if dataset.brainmask is not None:
+                bmask_path = ptmp_dir / "brainmask.nii"
+                nb.Nifti1Image(
+                    dataset.brainmask.astype(np.uint8), dataset.affine, None
+                ).to_filename(bmask_path)
 
             with tqdm(total=dataset_length, unit="vols.") as pbar:
                 # run an original-to-synthetic affine registration
@@ -326,16 +333,29 @@ class Estimator:
                         if not np.allclose(current, np.eye(4)):
                             init_affine = current
 
+                    # prepare data for running ANTs
+                    predicted_path, volume_path, init_path = _prepare_registration_data(
+                        volume,
+                        predicted,
+                        dataset.affine,
+                        i,
+                        ptmp_dir,
+                        clip=clip if window is not None else "none",
+                        window=window,
+                        init_affine=init_affine,
+                    )
+
                     pbar.set_description_str(f"{REG_MSG: <16} vol. <{i}>")
 
-                    xform = registration(
-                        predicted,
-                        volume,
-                        dataset.affine,
-                        mask=dataset.brainmask,
-                        init=init_affine,
-                        window=window,
-                        index=i,
+                    xform = _run_registration(
+                        predicted_path,
+                        volume_path,
+                        i,
+                        ptmp_dir,
+                        init_affine=init_path,
+                        fixedmask_path=bmask_path,
+                        output_transform_prefix=f"ants-{i:05d}",
+                        **kwargs,
                     )
 
                     # update
@@ -344,7 +364,21 @@ class Estimator:
                         # Instant update: the next predictions see this volume realigned
                         dataset.realign_into(view, i)
                         model.update(i)
+                    if work_dir is not None:
+                        # Debugging trace, written while the next volume is registered
+                        traces.append(
+                            tracer.submit(
+                                _write_aligned,
+                                volume_path,
+                                xform.matrix,
+                                ptmp_dir / f"aligned_{i:05d}.nii",
+                            )
+                        )
                     pbar.update()
+
+            # Surface any error raised while writing a trace
+            for trace in traces:
+                trace.result()
 
         return self
 

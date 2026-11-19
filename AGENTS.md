@@ -137,6 +137,7 @@ Three-layer design: **Data → Model → Estimator**
 - `conftest.py` provides auto-use fixtures: `random_number_generator` (fixed seed 1234), `setup_random_dwi_data`, `setup_random_pet_data`, `setup_random_base_data`, etc. Tests use custom markers like `@pytest.mark.random_dwi_data(b0_thres, vol_size, use_random_gtab)`.
 - ANTs must be installed for registration tests (`conda install -c conda-forge ants=2.4 libitk=5.3 libiconv`).
 - Pytest is configured with `--doctest-modules` by default and `PYTHONHASHSEED=0`.
+- Tests marked `slow` (exhaustive grids of cases) run in a plain `pytest`. `test.yml` deselects them on pull requests and pushes through `PYTEST_ADDOPTS`, and runs them on the weekly schedule and on manual runs.
 
 ## Key Conventions
 

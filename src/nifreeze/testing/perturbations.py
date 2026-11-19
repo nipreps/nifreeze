@@ -81,10 +81,17 @@ def rigid_motion(
     >>> np.round(motion @ (11, 0, 0, 1), 6).tolist()
     [100.0, 1.0, 0.0, 1.0]
 
+    The caller's axis and direction are left as they were:
+
+    >>> axis, direction = np.array([0.0, 0.0, 2.0]), np.array([3.0, 0.0, 4.0])
+    >>> _ = rigid_motion(2.0, axis, direction)
+    >>> axis.tolist(), direction.tolist()
+    ([0.0, 0.0, 2.0], [3.0, 0.0, 4.0])
+
     """
-    unit_axis = np.asarray(axis, dtype=float)
+    unit_axis = np.array(axis, dtype=float)
     unit_axis /= np.linalg.norm(unit_axis)
-    shift = np.asarray(direction, dtype=float)
+    shift = np.array(direction, dtype=float)
     shift *= magnitude / np.linalg.norm(shift)
     pivot = np.asarray(center, dtype=float)
 

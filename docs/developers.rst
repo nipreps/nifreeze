@@ -33,12 +33,25 @@ efficiency of pipelines using it.
 
 The benchmarks measure the memory that operations allocate, their peak resident memory,
 their CPU time and their wall time.
-Every pull request is benchmarked together with the tip of ``main`` in the same job,
+Every pull request that changes the package, its dependencies or the benchmarks is
+benchmarked together with the tip of ``main`` in the same job,
 and fails if it makes a benchmark regress past the threshold of its kind;
 the job summary lists every result.
 The results of each commit to ``main`` are published in the `nifreeze dashboard`_.
 ``benchmarks/README.rst`` describes the thresholds, how to run the benchmarks locally,
 and how to write new ones.
+
+Slow tests
+----------
+
+Tests marked ``slow`` check exhaustive grids of cases, such as every combination of
+rotations and translations in ``test_ANTs_config_b0``.
+A plain ``pytest`` runs them.
+The test workflow deselects them on pull requests and pushes, and runs them weekly and
+on demand.
+To deselect them locally::
+
+  pytest -m "not e2e and not slow"
 
 End-to-end tests
 ----------------

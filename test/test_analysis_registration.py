@@ -34,6 +34,7 @@ import nibabel as nb
 import nitransforms as nt
 import numpy as np
 import pytest
+from test_registration_conventions import SKIP_ELASTIX
 
 from nifreeze.analysis import registration as reg
 from nifreeze.analysis.phantoms import load_phantom
@@ -61,9 +62,7 @@ def test_the_truth_has_no_error(phantom):
     clean, reference, moved, truth = phantom
 
     rows = reg.registration_accuracy(
-        lambda fixed, moving, affine, mask=None, init=None, *, window=None, index=0: (
-            nt.linear.Affine(truth[index])
-        ),
+        lambda fixed, moving, affine, mask, index: truth[index],
         clean,
         reference,
         moved,
@@ -81,9 +80,7 @@ def test_no_registration_has_the_error_of_the_motion(phantom):
     mask = nb.Nifti1Image(np.asanyarray(reference.brainmask, dtype="uint8"), reference.affine)
 
     rows = reg.registration_accuracy(
-        lambda fixed, moving, affine, mask=None, init=None, *, window=None, index=0: (
-            nt.linear.Affine()
-        ),
+        lambda fixed, moving, affine, mask, index: np.eye(4),
         clean,
         reference,
         moved,
@@ -101,10 +98,10 @@ def test_the_model_targets_need_a_model(phantom):
     clean, reference, moved, truth = phantom
 
     with pytest.raises(ValueError, match="model is required"):
-        reg.registration_accuracy(lambda *_: nt.linear.Affine(), clean, reference, moved, truth)
+        reg.registration_accuracy(lambda *_: np.eye(4), clean, reference, moved, truth)
     with pytest.raises(ValueError, match="unknown fixed"):
         reg.registration_accuracy(
-            lambda *_: nt.linear.Affine(), clean, reference, moved, truth, fixed=["b0"]
+            lambda *_: np.eye(4), clean, reference, moved, truth, fixed=["b0"]
         )
 
 
@@ -128,6 +125,21 @@ def test_ants_recovers_the_motion_from_the_oracle(phantom, tmp_path):
     ]
     assert all(row["seconds"] > 0 for row in rows)
     assert np.median([row["max"] for row in rows]) < np.median(motions)
+
+
+@SKIP_ELASTIX
+def test_elastix_recovers_the_motion_from_the_oracle(phantom):
+    """Registered by elastix to the noise-free original, the volumes land within 0.5 mm."""
+    from nifreeze.registration.elastix import Elastix
+
+    clean, reference, moved, truth = phantom
+
+    rows = reg.registration_accuracy(
+        Elastix(num_threads=1), clean, reference, moved, truth, fixed=["oracle"]
+    )
+
+    assert all(row["seconds"] > 0 for row in rows)
+    assert max(row["mean"] for row in rows) < 0.5
 
 
 @pytest.mark.skipif(shutil.which("antsRegistration") is None, reason="ANTs is not installed")
