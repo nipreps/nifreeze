@@ -265,7 +265,8 @@ Consequences
   affine second pass in *NiFreeze*
   (`#674 <https://github.com/nipreps/nifreeze/pull/674>`__).
   ANTs stays the estimator's default until elastix is tested against it on the
-  held-out volumes (`#672 <https://github.com/nipreps/nifreeze/issues/672>`__).
+  held-out volumes (`#672 <https://github.com/nipreps/nifreeze/issues/672>`__), which
+  elastix passed (:doc:`elastix-accuracy`).
 * The pyramids are kept as candidates for a schedule that registers in passes:
   a coarse level across every volume, a refit of the model, then a finer level, so that
   the finer level registers to a cleaner target.
