@@ -122,7 +122,8 @@ class _Stage:
             estimate, self.failed[index] = np.eye(4), True
         else:
             self.failed[index] = False
-        self.estimates[index] = np.asarray(estimate)
+        # A matrix, or a transform once the backends share one interface (#667)
+        self.estimates[index] = np.asarray(getattr(estimate, "matrix", estimate))
         return self.estimates[index]
 
 
