@@ -302,7 +302,20 @@ commit, clean:
 * #670: ``battery.py`` at 2ebb5471, through an elastix probe that the backend
   (`#676 <https://github.com/nipreps/nifreeze/pull/676>`__) reproduces bit for bit.
 * #675: ``tools/registration/elastix_tuning.py`` at 9001a627.
-* The real images: ``real_data.py`` and ``real_dwi.py`` at 9001a627.
+* The real images: two scripts at 9001a627, now
+  ``tools/registration/elastix_real_b0.py`` and ``tools/registration/elastix_real_dwi.py``,
+  which reproduce their tables (every error identical; only the times differ).
+
+The commands of the runs, from the repository's root and with 6 workers on 6 physical
+cores::
+
+    uv run tools/registration/elastix_tuning.py --dataset <dataset> \
+        --out <results>/elastix-tuning --jobs 6
+    uv run tools/registration/elastix_real_b0.py --arms ants t-x1 p2-x1 \
+        --jobs 6 --out <results>/real-b0
+    uv run tools/registration/elastix_real_b0.py --arms p3-x1 p3-x4 --name real-data-p3 \
+        --jobs 6 --out <results>/real-b0
+    uv run tools/registration/elastix_real_dwi.py --jobs 6 --out <results>/stanford-hardi
 
 The figures and tables of this page come from::
 
