@@ -21,7 +21,6 @@ env:
   TEST_OUTPUT_DIR: /home/runner/nifreeze-tests/test-output
   DIPY_HOME: /home/runner/nifreeze-tests/dipy
   ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS: 4
-  ANTSPATH: /usr/share/miniconda/bin/
   NIFREEZE_WERRORS: 1
   TEST_DATA_REPO: https://gin.g-node.org/nipreps-data/tests-nifreeze
   # The files of TEST_DATA_REPO that the tests read. They are git blobs, which any clone
@@ -148,16 +147,7 @@ jobs:
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
       - name: Install ANTs
-        run: |
-          # Override libiconv pre-installed from anaconda channel
-          # See https://github.com/conda-forge/libitk-feedstock/issues/98
-          # Since we're not creating a new environment, we must be explicit
-          conda install -c conda-forge ants=2.4 libitk=5.3 libiconv
-      - name: Verify antsRegistration path
-        run: |
-          export PATH=$ANTSPATH:$PATH
-          which antsRegistration
-          antsRegistration --version
+        uses: ./.github/actions/ants
       - uses: actions/cache/restore@v5
         with:
           path: ${{ env.TEST_DATA_HOME }}
@@ -166,10 +156,6 @@ jobs:
           restore-keys: |
             data-v3-
             data-v2-
-      - name: Install TeX Live
-        run: |
-          sudo apt-get update
-          sudo apt install texlive texlive-latex-extra texlive-fonts-recommended cm-super dvipng
       - name: Install tox
         run: |
           uv tool install --with=tox-uv --with=tox-gh-actions tox
