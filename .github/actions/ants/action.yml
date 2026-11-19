@@ -1,0 +1,71 @@
+name: ANTs
+description: >-
+  Restore ANTs from the cache, or install it from conda-forge into an environment of its
+  own, and export the directory of its binaries as ANTSPATH.
+
+inputs:
+  spec:
+    description: Conda specs of the environment; a change makes a new cache
+    required: false
+    default: ants=2.4 libitk=5.3
+  prefix:
+    description: Directory of the environment
+    required: false
+    default: ~/ants
+
+outputs:
+  path:
+    description: Directory of the ANTs binaries, with a trailing slash (ANTSPATH)
+    value: ${{ steps.locate.outputs.path }}
+  cache-hit:
+    description: Whether the environment came from the cache
+    value: ${{ steps.restore.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Locate the environment
+      id: locate
+      shell: bash
+      env:
+        PREFIX: ${{ inputs.prefix }}
+        SPEC: ${{ inputs.spec }}
+      run: |
+        PREFIX="${PREFIX/#\~/$HOME}"
+        echo "prefix=$PREFIX" >> "$GITHUB_OUTPUT"
+        echo "path=$PREFIX/bin/" >> "$GITHUB_OUTPUT"
+        echo "ANTSPATH=$PREFIX/bin/" >> "$GITHUB_ENV"
+        # The specs hold the versions: only a change of version makes a new cache
+        echo "key=ants-v1-${RUNNER_OS}-${RUNNER_ARCH}-${SPEC// /_}" >> "$GITHUB_OUTPUT"
+
+    - name: Restore the environment
+      id: restore
+      uses: actions/cache/restore@v5
+      with:
+        path: ${{ steps.locate.outputs.prefix }}
+        key: ${{ steps.locate.outputs.key }}
+
+    - name: Install ANTs
+      if: steps.restore.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        PREFIX: ${{ steps.locate.outputs.prefix }}
+        SPEC: ${{ inputs.spec }}
+      run: |
+        # conda-forge alone, so libitk gets conda-forge's libiconv
+        # (https://github.com/conda-forge/libitk-feedstock/issues/98)
+        # shellcheck disable=SC2086 # one word per spec
+        conda create --yes --quiet --prefix "$PREFIX" --override-channels -c conda-forge $SPEC
+
+    # Saved now, not when the job ends, so that failing tests still leave the cache
+    - name: Save the environment
+      if: steps.restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v5
+      with:
+        path: ${{ steps.locate.outputs.prefix }}
+        key: ${{ steps.locate.outputs.key }}
+
+    - name: Check antsRegistration
+      shell: bash
+      run: |
+        "${ANTSPATH}antsRegistration" --version
