@@ -179,8 +179,8 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write
-    # The docs deploy also pushes to gh-pages, but only into other directories:
-    # concurrent pushes are rebased by the loop below
+    # The docs deploy also pushes to gh-pages, into other directories: a deploy that
+    # loses the race starts again from the new tip (.github/actions/gh-pages-deploy)
     concurrency:
       group: benchmark-dashboard
       cancel-in-progress: false
@@ -205,29 +205,18 @@ jobs:
         path: new-results
 
     - name: Build the dashboard and push it to gh-pages
-      run: |
-        git config --global user.email "nipreps@gmail.com"
-        git config --global user.name "NiPreps Bot"
-        PAGES="$RUNNER_TEMP/gh-pages"
-        git worktree add -B gh-pages "$PAGES" origin/gh-pages
+      uses: ./.github/actions/gh-pages-deploy
+      with:
+        message: 'benchmarks: publish the results of ${{ github.sha }}'
+        apply: |
+          # The results published so far, plus this run's
+          rm -rf benchmarks/results && mkdir -p benchmarks/results
+          if [[ -d "$SITE/benchmarks/results" ]]; then
+            cp -r "$SITE/benchmarks/results/." benchmarks/results/
+          fi
+          cp -r new-results/. benchmarks/results/
 
-        # The results published so far, plus this run's
-        mkdir -p benchmarks/results
-        if [[ -d "$PAGES/benchmarks/results" ]]; then
-          cp -r "$PAGES/benchmarks/results/." benchmarks/results/
-        fi
-        cp -r new-results/. benchmarks/results/
-
-        # ``asv publish`` empties its output directory, so the raw results are
-        # copied back in afterwards
-        asv publish --config "$ASV_CONFIG" --html-dir "$PAGES/benchmarks"
-        cp -r benchmarks/results "$PAGES/benchmarks/results"
-
-        cd "$PAGES"
-        git add benchmarks
-        git commit -m "benchmarks: publish the results of ${GITHUB_SHA::8}" || exit 0
-        for attempt in 1 2 3; do
-          git push origin gh-pages && break
-          [[ $attempt == 3 ]] && exit 1
-          git pull --rebase origin gh-pages
-        done
+          # ``asv publish`` empties its output directory, so the raw results are
+          # copied back in afterwards
+          asv publish --config "$ASV_CONFIG" --html-dir "$SITE/benchmarks"
+          cp -r benchmarks/results "$SITE/benchmarks/results"

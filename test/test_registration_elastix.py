@@ -130,6 +130,7 @@ def test_a_settings_file_with_a_pyramid_registers(tmp_path):
     affine = _affine("oblique")
     matrix = _motion()
 
-    estimated = Elastix(path, num_threads=1)(data, _move(data, affine, matrix), affine, mask, 0)
+    register = Elastix(path, num_threads=1)
+    estimated = register(data, _move(data, affine, matrix), affine, mask, 0).matrix
 
     assert _error(mask, affine, estimated, matrix) < 0.5

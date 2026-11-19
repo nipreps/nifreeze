@@ -1,0 +1,186 @@
+name: Docs
+
+on:
+  pull_request:
+    branches: ['main', 'maint/*']
+  push:
+    branches: ['main']
+    tags: ['*']
+  # Redeploy when the prediction gallery publishes new pages
+  workflow_run:
+    workflows: ['Prediction gallery']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Assemble the site from gh-pages without pushing it'
+        type: boolean
+        default: false
+
+defaults:
+  run:
+    shell: bash
+
+# Cancel superseded runs of a pull request; deploys of main and of each tag run in turn
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  actions: read  # download the gallery-pages artifact
+
+jobs:
+  build:
+    # Gallery runs redeploy when they succeed on main and were triggered by a push
+    # or a manual dispatch; scheduled gallery runs are a check and do not publish.
+    if: >-
+      github.event_name != 'workflow_run' || (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        (github.event.workflow_run.event == 'push' ||
+         github.event.workflow_run.event == 'workflow_dispatch')
+      )
+    runs-on: ubuntu-latest
+
+    steps:
+    # The version needs the commits and tags, not their files (#680)
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+        filter: blob:none
+
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+
+    - uses: astral-sh/setup-uv@v7
+
+    - name: Install dependencies
+      run: |
+        uv pip install --system hatch .[doc]
+        python -m hatch version | tail -n1
+
+    # The citation (TeX, biber, R and cffr, about 3 minutes) changes only with
+    # CITATION.cff or its script
+    - name: Restore the citation
+      id: citation
+      uses: actions/cache@v5
+      with:
+        path: |
+          docs/_static/citation.bib
+          docs/_static/citation.txt
+        key: citation-${{ hashFiles('CITATION.cff', '.github/scripts/generate_citation_artifact.sh') }}
+
+    - name: Install citation dependencies
+      if: steps.citation.outputs.cache-hit != 'true'
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y --no-install-recommends \
+          texlive-latex-extra \
+          texlive-bibtex-extra \
+          biber \
+          poppler-utils
+
+    - name: Set up R to extract citation metadata
+      if: steps.citation.outputs.cache-hit != 'true'
+      uses: r-lib/actions/setup-r@v2
+
+    - name: Install cffr and its dependencies
+      if: steps.citation.outputs.cache-hit != 'true'
+      uses: r-lib/actions/setup-r-dependencies@v2
+      with:
+        packages: cffr
+
+    - name: Generate citation
+      if: steps.citation.outputs.cache-hit != 'true'
+      run: .github/scripts/generate_citation_artifact.sh
+
+    - name: Fetch the prediction gallery
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GALLERY_RUN_ID: ${{ github.event.workflow_run.id }}
+      # Pull requests show placeholders when the published pages are gone (expired artifacts)
+      run: |
+        if [[ -n "$GALLERY_RUN_ID" ]]; then
+          ARGS=(--strict --run-id "$GALLERY_RUN_ID")
+        elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+          ARGS=(--sha "$GITHUB_SHA")
+        elif [[ "$GITHUB_REF" == refs/heads/main ]]; then
+          ARGS=(--strict)
+        else
+          ARGS=()
+        fi
+        python tools/fetch_gallery.py "${ARGS[@]}"
+
+    - name: Build docs
+      run: |
+        python -m hatch build --hooks-only
+        make -C docs/ SPHINXOPTS="-W -v" BUILDDIR="$HOME/docs" OUTDIR=html html
+
+    - name: Upload the HTML
+      id: upload
+      uses: actions/upload-artifact@v7
+      with:
+        name: docs-html
+        path: ~/docs/html
+        retention-days: 14
+
+    - name: Link the HTML from the job summary
+      env:
+        URL: ${{ steps.upload.outputs.artifact-url }}
+      run: |
+        echo "The built documentation is the [docs-html artifact]($URL) of this run;" \
+          "unzip it and open \`index.html\`." >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    # Pushes to main, tags, gallery runs and dispatches deploy; pull requests (and
+    # dispatches on other branches) assemble the site without pushing it
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      DRY_RUN: >-
+        ${{ github.event_name == 'pull_request' || inputs.dry-run
+        || !(github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) }}
+      TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+
+    steps:
+    # The deploy script and the version menu; gh-pages goes into a worktree of this clone
+    - uses: actions/checkout@v5
+
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+
+    - name: Install packaging
+      run: pip install packaging
+
+    - uses: actions/download-artifact@v8
+      with:
+        name: docs-html
+        path: ${{ runner.temp }}/html
+
+    - name: Place the build into gh-pages
+      id: deploy
+      uses: ./.github/actions/gh-pages-deploy
+      with:
+        dry-run: ${{ env.DRY_RUN }}
+        message: >-
+          docs(${{ env.TAG || 'main' }}): publish the documentation of ${{ github.sha }}
+        apply: |
+          python tools/docs_versions.py deploy --site "$SITE" \
+            --build "$RUNNER_TEMP/html" ${TAG:+--tag "$TAG"}
+
+    - name: Report the versions
+      env:
+        SITE: ${{ steps.deploy.outputs.site }}
+      run: |
+        {
+          echo '```json'
+          cat "$SITE/versions.json"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"

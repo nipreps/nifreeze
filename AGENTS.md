@@ -112,7 +112,7 @@ python tools/fetch_gallery.py  # gallery pages (needs `gh auth`); placeholders o
 make -C docs/ html
 ```
 
-CI builds the documentation as in `.github/workflows/docs-build-pr.yml`.
+CI builds the documentation as in `.github/workflows/docs.yml`, which also deploys it to `gh-pages` (`tools/docs_versions.py`).
 
 ## Architecture
 

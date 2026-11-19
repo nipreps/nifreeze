@@ -56,102 +56,28 @@ import numpy as np
 
 from nifreeze.analysis.sensitivity import held_out_predictions
 from nifreeze.data.dmri import DWI
-from nifreeze.data.filtering import robust_window
+from nifreeze.registration.ants import Ants
 from nifreeze.registration.utils import displacements_within_mask
 
 FIXED = ("oracle", "unmoved", "moved")
 """The fixed images each moved volume is registered to."""
 
-Register = Callable[[np.ndarray, np.ndarray, np.ndarray, np.ndarray, int], np.ndarray]
-"""``register(fixed, moving, affine, mask, index)``: the fixed-to-moving matrix (RAS)."""
+Register = Callable[
+    [np.ndarray, np.ndarray, np.ndarray, np.ndarray, int], nt.linear.Affine | np.ndarray
+]
+"""``register(fixed, moving, affine, mask, index)``: the fixed-to-moving transform (RAS).
+
+Any :class:`~nifreeze.registration.base.Registration`, or a function returning a matrix.
+"""
 
 
-class AntsRegistration:
-    """The estimator's ANTs path, as it runs today: files, nipype and ``antsRegistration``."""
+class AntsRegistration(Ants):
+    """The estimator's ANTs path, in ``workdir`` and with seed 12345 by default."""
 
-    def __init__(self, workdir: Path | str, seed: int | None = 12345, **settings: Any):
-        """
-        Register in ``workdir`` with the estimator's defaults.
-
-        Parameters
-        ----------
-        workdir : :obj:`os.pathlike`
-            Where the images and transforms are written.
-        seed : :obj:`int`, optional
-            Seed of ANTs' random sampling.
-        **settings
-            Further arguments of :func:`~nifreeze.registration.ants._run_registration`.
-
-        """
-        self.workdir = Path(workdir)
-        self.workdir.mkdir(parents=True, exist_ok=True)
-        self.seed = seed
-        self.settings = settings
-        self._mask_path: Path | None = None
-
-    def __call__(
-        self,
-        fixed: np.ndarray,
-        moving: np.ndarray,
-        affine: np.ndarray,
-        mask: np.ndarray,
-        index: int,
-        init: np.ndarray | None = None,
-    ) -> np.ndarray:
-        """
-        Register ``moving`` to ``fixed``.
-
-        Parameters
-        ----------
-        fixed : :obj:`~numpy.ndarray`
-            The fixed image (the model's prediction).
-        moving : :obj:`~numpy.ndarray`
-            The moving image (the sample), on the same grid.
-        affine : :obj:`~numpy.ndarray`
-            The grid's voxel-to-RAS+ affine.
-        mask : :obj:`~numpy.ndarray`
-            The mask of the fixed image.
-        index : :obj:`int`
-            The volume's index, which names the files.
-        init : :obj:`~numpy.ndarray`, optional
-            An initial fixed-to-moving matrix (RAS+), as a second pass starts from.
-            It is written for ANTs as the estimator writes the current estimate.
-
-        Returns
-        -------
-        :obj:`~numpy.ndarray`
-            The fixed-to-moving matrix (RAS+): the total transform, including ``init``.
-
-        """
-        from nifreeze.registration.ants import _prepare_registration_data, _run_registration
-
-        if self._mask_path is None:
-            # The estimator writes the mask once, too
-            self._mask_path = self.workdir / "brainmask.nii"
-            nb.Nifti1Image(mask.astype("uint8"), affine).to_filename(self._mask_path)
-
-        fixed_path, moving_path, init_path = _prepare_registration_data(
-            moving,
-            fixed,
-            affine,
-            index,
-            self.workdir,
-            clip="both",
-            init_affine=init,
-            window=robust_window(moving, mask),
-        )
-        xform = _run_registration(
-            fixed_path,
-            moving_path,
-            index,
-            self.workdir,
-            init_affine=init_path,
-            fixedmask_path=self._mask_path,
-            output_transform_prefix=f"ants-{index:05d}",
-            seed=self.seed,
-            **self.settings,
-        )
-        return np.asarray(xform.matrix)
+    def __init__(
+        self, workdir: Path | str, seed: int | None = 12345, ants_config: Any = None, **kwargs
+    ):
+        super().__init__(ants_config, seed=seed, workdir=workdir, **kwargs)
 
 
 def registration_accuracy(
@@ -229,8 +155,9 @@ def registration_accuracy(
                 index,
             )
             seconds = perf_counter() - start
+            matrix = getattr(estimated, "matrix", estimated)
             errors = displacements_within_mask(
-                mask_img, nt.linear.Affine(estimated), nt.linear.Affine(truth[index])
+                mask_img, nt.linear.Affine(matrix), nt.linear.Affine(truth[index])
             )
             rows.append(
                 {
