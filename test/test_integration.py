@@ -36,7 +36,7 @@ from nibabel.affines import from_matvec
 from nibabel.eulerangles import euler2mat
 
 import nifreeze.estimator
-import nifreeze.registration.ants as ants
+from nifreeze.analysis.registration import AntsRegistration
 from nifreeze.data import dmri
 from nifreeze.estimator import Estimator
 from nifreeze.model.base import MASK_ABSENCE_WARN_MSG, TrivialModel
@@ -298,32 +298,19 @@ def test_registration_initial_transform(datadir, tmp_path, perturb):
     dwi_orig = dmri.DWI.from_filename(datadir / "dwi.h5")
     assert dwi_orig.brainmask is not None
     masknii = nb.Nifti1Image(dwi_orig.brainmask.astype(np.uint8), dwi_orig.affine, None)
-    mask_path = tmp_path / "brainmask.nii"
-    masknii.to_filename(mask_path)
 
-    fixed_path, moving_path, init_path = ants._prepare_registration_data(
-        dwi_motion.dataobj[index],
+    estimated = AntsRegistration(tmp_path)(
         dwi_motion.bzero,
+        np.asarray(dwi_motion.dataobj[index]),
         dwi_motion.affine,
+        dwi_orig.brainmask,
         index,
-        tmp_path,
-        clip="both",
-        init_affine=init,
+        init=init,
     )
-    assert init_path is not None
-    xform = ants._run_registration(
-        fixed_path,
-        moving_path,
-        index,
-        tmp_path,
-        init_affine=init_path,
-        fixedmask_path=mask_path,
-        output_transform_prefix=f"ants-{index:05d}",
-        seed=12345,
-    )
+    assert (tmp_path / f"init_{index:05d}.mat").exists()
 
     error = displacements_within_mask(
-        masknii, nt.linear.Affine(xform.matrix), nt.linear.Affine(truth)
+        masknii, nt.linear.Affine(estimated), nt.linear.Affine(truth)
     ).max()
     assert error < 0.2
 

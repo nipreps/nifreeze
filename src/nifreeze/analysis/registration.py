@@ -96,7 +96,33 @@ class AntsRegistration:
         affine: np.ndarray,
         mask: np.ndarray,
         index: int,
+        init: np.ndarray | None = None,
     ) -> np.ndarray:
+        """
+        Register ``moving`` to ``fixed``.
+
+        Parameters
+        ----------
+        fixed : :obj:`~numpy.ndarray`
+            The fixed image (the model's prediction).
+        moving : :obj:`~numpy.ndarray`
+            The moving image (the sample), on the same grid.
+        affine : :obj:`~numpy.ndarray`
+            The grid's voxel-to-RAS+ affine.
+        mask : :obj:`~numpy.ndarray`
+            The mask of the fixed image.
+        index : :obj:`int`
+            The volume's index, which names the files.
+        init : :obj:`~numpy.ndarray`, optional
+            An initial fixed-to-moving matrix (RAS+), as a second pass starts from.
+            It is written for ANTs as the estimator writes the current estimate.
+
+        Returns
+        -------
+        :obj:`~numpy.ndarray`
+            The fixed-to-moving matrix (RAS+): the total transform, including ``init``.
+
+        """
         from nifreeze.registration.ants import _prepare_registration_data, _run_registration
 
         if self._mask_path is None:
@@ -104,13 +130,14 @@ class AntsRegistration:
             self._mask_path = self.workdir / "brainmask.nii"
             nb.Nifti1Image(mask.astype("uint8"), affine).to_filename(self._mask_path)
 
-        fixed_path, moving_path, _ = _prepare_registration_data(
+        fixed_path, moving_path, init_path = _prepare_registration_data(
             moving,
             fixed,
             affine,
             index,
             self.workdir,
             clip="both",
+            init_affine=init,
             window=robust_window(moving, mask),
         )
         xform = _run_registration(
@@ -118,6 +145,7 @@ class AntsRegistration:
             moving_path,
             index,
             self.workdir,
+            init_affine=init_path,
             fixedmask_path=self._mask_path,
             output_transform_prefix=f"ants-{index:05d}",
             seed=self.seed,
