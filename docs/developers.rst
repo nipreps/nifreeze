@@ -33,7 +33,8 @@ efficiency of pipelines using it.
 
 The benchmarks measure the memory that operations allocate, their peak resident memory,
 their CPU time and their wall time.
-Every pull request is benchmarked together with the tip of ``main`` in the same job,
+Every pull request that changes the package, its dependencies or the benchmarks is
+benchmarked together with the tip of ``main`` in the same job,
 and fails if it makes a benchmark regress past the threshold of its kind;
 the job summary lists every result.
 The results of each commit to ``main`` are published in the `nifreeze dashboard`_.
