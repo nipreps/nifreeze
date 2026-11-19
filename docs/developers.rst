@@ -17,11 +17,16 @@ With every commit (or merge commit) to ``main``, the *development* version of th
 The ``gh-pages`` branch is automatically maintained with `a GitHub Action <https://github.com/nipreps/nifreeze/blob/main/.github/workflows/docs-build-update.yml>`__.
 Please, do not commit manually to ``gh-pages``.
 
-To build the documentation locally, you first need to make sure that ``setuptools_scm[toml] >= 6.2`` is installed in your environment and then::
+To build the documentation locally::
 
   cd <nifreeze-repository>/
-  python -m setuptools_scm  # This will generate ``src/nifreeze/_version.py``
+  pip install -e .[doc]
+  python -m hatch version  # This will generate ``src/nifreeze/_version.py``
+  python tools/fetch_gallery.py  # The gallery's pages (needs ``gh auth``); placeholders otherwise
   make -C docs/ html
+
+The citation page includes ``docs/_static/citation.txt``, which CI generates from ``CITATION.cff``
+(``.github/scripts/generate_citation_artifact.sh``).
 
 Benchmarking
 ------------
