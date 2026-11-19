@@ -149,40 +149,22 @@ jobs:
         path: ${{ runner.temp }}/html
 
     - name: Place the build into gh-pages
-      run: |
-        git config --global user.email "nipreps@gmail.com"
-        git config --global user.name "NiPreps Bot"
-        SITE="$RUNNER_TEMP/site"
-        MESSAGE="docs(${TAG:-main}): publish the documentation of ${GITHUB_SHA::8}"
-
-        # Each attempt starts from the current gh-pages, so a push that lost a race
-        # (e.g., to the benchmark dashboard) is placed again on top of the winner
-        for attempt in 1 2 3 4 5; do
-          git fetch --depth=1 origin gh-pages
-          rm -rf "$SITE" && git worktree prune
-          git worktree add --detach "$SITE" FETCH_HEAD
+      id: deploy
+      uses: ./.github/actions/gh-pages-deploy
+      with:
+        dry-run: ${{ env.DRY_RUN }}
+        message: >-
+          docs(${{ env.TAG || 'main' }}): publish the documentation of ${{ github.sha }}
+        apply: |
           python tools/docs_versions.py deploy --site "$SITE" \
             --build "$RUNNER_TEMP/html" ${TAG:+--tag "$TAG"}
 
-          git -C "$SITE" add -A
-          if git -C "$SITE" diff --cached --quiet; then
-            echo "gh-pages already holds this build"
-            exit 0
-          fi
-          git -C "$SITE" commit -q -m "$MESSAGE"
-          {
-            echo "### gh-pages after this deploy"
-            echo '```'
-            git -C "$SITE" show --stat --format='%s' HEAD | tail -n 3
-            cat "$SITE/versions.json"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          if [[ "$DRY_RUN" == "true" ]]; then
-            echo "Dry run: gh-pages is not pushed"
-            exit 0
-          fi
-          git -C "$SITE" push origin HEAD:gh-pages && exit 0
-          sleep $((attempt * 10))
-        done
-        exit 1
+    - name: Report the versions
+      env:
+        SITE: ${{ steps.deploy.outputs.site }}
+      run: |
+        {
+          echo '```json'
+          cat "$SITE/versions.json"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"

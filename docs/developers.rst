@@ -17,7 +17,7 @@ A pre-release never replaces a release.
 With every commit (or merge commit) to ``main``, the *development* version of the documentation under the folder ``main/`` is updated too.
 The site's root and its version menu send visitors to the latest release, and the pages of the development version, of pre-releases and of older releases say so in a banner.
 The `Docs workflow <https://github.com/nipreps/nifreeze/blob/main/.github/workflows/docs.yml>`__ maintains the ``gh-pages`` branch with ``tools/docs_versions.py``, which also writes the list of versions (``versions.json``) and the root and 404 pages.
-Please, do not commit manually to ``gh-pages``.
+Please, do not commit manually to ``gh-pages``: each deploy replaces it with a single commit, without history (``.github/actions/gh-pages-deploy``).
 The same workflow builds the documentation of every pull request, and the job summary links the HTML (the ``docs-html`` artifact).
 
 To build the documentation locally, you first need to make sure that ``setuptools_scm[toml] >= 6.2`` is installed in your environment and then::
