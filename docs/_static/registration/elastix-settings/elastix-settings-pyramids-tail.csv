@@ -1,0 +1,11 @@
+Configuration,Oracle: p95 (mm),"Prediction, unmoved data: p95 (mm)","Prediction, moved data: p95 (mm)",Failures
+ANTs,0.433,0.487,2.482,0
+"Direct mapping, 1x iterations",0.307,0.390,2.584,0
+"Direct mapping, 4x iterations",0.251,0.258,2.645,0
+"Direct mapping, 16x iterations",0.199,0.212,2.796,0
+"Two-level pyramid, 1x iterations",0.148,0.179,2.531,0
+"Two-level pyramid, 4x iterations",0.136,0.158,2.582,0
+"Two-level pyramid, 16x iterations",0.135,0.134,2.695,0
+"Three-level pyramid, 1x iterations",0.137,0.186,2.623,0
+"Three-level pyramid, 4x iterations",0.138,0.150,2.695,0
+"Three-level pyramid, 16x iterations",0.131,0.140,2.710,0

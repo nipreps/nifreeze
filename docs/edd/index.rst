@@ -30,3 +30,4 @@ approach.
 
    eddy-truth
    error-audit
+   elastix-settings

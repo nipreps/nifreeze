@@ -22,7 +22,8 @@
 #
 """The conventions by which data reach ANTs and its estimates come back (#619).
 
-Each test uses small synthetic volumes with known transforms, on three affines: one
+The tests of direction and initialization run on both backends, ANTs and elastix
+(#671). Each test uses small synthetic volumes with known transforms, on three affines: one
 aligned with RAS, the TRXScan phantom's flipped frame (diag(-1, -1, 1)), and an
 oblique one (the b-vector tests add one aligned with LAS). Tests that fail mark the
 bug they found, as strict expected failures, until its fix. A transform maps the
@@ -30,6 +31,7 @@ fixed image's points onto the moving image's (fixed to moving, in RAS), as the
 estimator reports it.
 """
 
+import importlib.metadata
 import os
 import re
 import shutil
@@ -64,6 +66,26 @@ NO_ANTS = shutil.which("antsRegistration") is None
 """Whether ANTs is missing, which skips the tests that run it."""
 
 
+def _installed(distribution: str) -> bool:
+    try:
+        importlib.metadata.version(distribution)
+    except importlib.metadata.PackageNotFoundError:
+        return False
+    return True
+
+
+NO_ELASTIX = not _installed("itk-elastix")
+"""Whether itk-elastix (the ``elastix`` extra) is missing."""
+SKIP_ANTS = pytest.mark.skipif(NO_ANTS, reason="ANTs is not installed")
+SKIP_ELASTIX = pytest.mark.skipif(NO_ELASTIX, reason="itk-elastix is not installed")
+BACKENDS = (
+    pytest.param(("ants", "b0-to-b0_level0"), id="ants", marks=SKIP_ANTS),
+    pytest.param(("elastix", "b0-to-b0_level0"), id="elastix-rigid", marks=SKIP_ELASTIX),
+    pytest.param(("elastix", "dwi-to-dwi_level1"), id="elastix-affine", marks=SKIP_ELASTIX),
+)
+"""The backends and settings of the transform tests: ANTs' default, and elastix's two."""
+
+
 def _affine(kind: str) -> np.ndarray:
     """2 mm voxels, centered on the origin."""
     linear = {
@@ -96,8 +118,7 @@ def _motion(degrees: float = 3.0, shift=(1.5, -1.0, 2.0)) -> np.ndarray:
     return matrix
 
 
-@pytest.fixture
-def volume():
+def _volume() -> tuple[np.ndarray, np.ndarray]:
     """A smooth volume, with structure along every axis, and a spherical mask."""
     rng = np.random.default_rng(1234)
     data = ndimage.gaussian_filter(rng.random(SHAPE), 2.5)
@@ -105,6 +126,11 @@ def volume():
     grid = np.indices(SHAPE) - (np.array(SHAPE) - 1)[:, None, None, None] / 2
     mask = np.linalg.norm(grid, axis=0) < 14
     return data, mask
+
+
+@pytest.fixture
+def volume():
+    return _volume()
 
 
 def _move(data: np.ndarray, affine: np.ndarray, matrix: np.ndarray) -> np.ndarray:
@@ -119,8 +145,16 @@ def _error(mask: np.ndarray, affine: np.ndarray, estimated, expected) -> float:
     return float(displacements_within_mask(mask_img, Affine(estimated), Affine(expected)).mean())
 
 
-def _register(fixed, moving, affine, mask, workdir: Path, init=None) -> np.ndarray:
-    """Register as the estimator does (``Estimator.run``), and return the matrix."""
+def _register(
+    fixed, moving, affine, mask, workdir: Path, init=None, backend=("ants", "b0-to-b0_level0")
+) -> np.ndarray:
+    """Register as the estimator does (``Estimator.run``), or with elastix; return the matrix."""
+    tool, settings = backend
+    if tool == "elastix":
+        from nifreeze.registration.elastix import Elastix
+
+        return Elastix(settings, num_threads=1)(fixed, moving, affine, mask, 0, init=init)
+
     workdir.mkdir(exist_ok=True)
     mask_path = workdir / "brainmask.nii"
     nb.Nifti1Image(mask.astype(np.uint8), affine, None).to_filename(mask_path)
@@ -144,6 +178,7 @@ def _register(fixed, moving, affine, mask, workdir: Path, init=None) -> np.ndarr
         output_transform_prefix="ants-00000",
         seed=12345,
         num_threads=1,
+        ants_config=settings,
     )
     return np.asarray(xform.matrix)
 
@@ -187,6 +222,18 @@ def test_integers_are_clipped_and_keep_their_type(tmp_path):
     img = nb.Nifti1Image.from_filename(tmp_path / "integer.nii")
     assert img.get_data_dtype() == np.int16
     assert np.array_equal(np.asanyarray(img.dataobj), np.clip(data, 11, 50))
+
+
+@pytest.mark.parametrize("dtype", ["float32", "int16"])
+def test_elastix_registers_the_values_ants_reads(volume, tmp_path, dtype):
+    from nifreeze.registration.elastix import _coded
+
+    data = volume[0].astype(dtype)
+    window = (100.5, 900.5)
+    _to_nifti(data, _affine("ras"), tmp_path / "coded.nii", window=window)
+
+    read = nb.Nifti1Image.from_filename(tmp_path / "coded.nii").get_fdata()
+    assert np.allclose(_coded(data, window), read, rtol=0, atol=1e-4)
 
 
 @pytest.mark.skipif(NO_ANTS, reason="ANTs is not installed")
@@ -277,15 +324,15 @@ def test_ants_applies_the_written_transform_as_nitransforms(volume, tmp_path, ki
 # 4. Direction
 
 
-@pytest.mark.skipif(NO_ANTS, reason="ANTs is not installed")
+@pytest.mark.parametrize("backend", BACKENDS)
 @pytest.mark.parametrize("kind", AFFINES)
-def test_the_estimate_maps_fixed_onto_moving(volume, tmp_path, kind):
+def test_the_estimate_maps_fixed_onto_moving(volume, tmp_path, kind, backend):
     data, mask = volume
     affine = _affine(kind)
     matrix = _motion()
     moving = _move(data, affine, matrix)
 
-    estimated = _register(data, moving, affine, mask, tmp_path)
+    estimated = _register(data, moving, affine, mask, tmp_path, backend=backend)
 
     assert _error(mask, affine, estimated, matrix) < 0.5
     assert _error(mask, affine, estimated, np.linalg.inv(matrix)) > 2.0
@@ -294,17 +341,17 @@ def test_the_estimate_maps_fixed_onto_moving(volume, tmp_path, kind):
 # 5. Initialization
 
 
-@pytest.mark.skipif(NO_ANTS, reason="ANTs is not installed")
+@pytest.mark.parametrize("backend", BACKENDS)
 @pytest.mark.parametrize("kind", AFFINES)
-def test_an_initialized_estimate_is_the_total_transform(volume, tmp_path, kind):
-    """Started from part of the motion, as a second pass is, ANTs returns all of it."""
+def test_an_initialized_estimate_is_the_total_transform(volume, tmp_path, kind, backend):
+    """Started from part of the motion, as a second pass is, the estimate is all of it."""
     data, mask = volume
     affine = _affine(kind)
     matrix = _motion()
     moving = _move(data, affine, matrix)
     partial = _motion(degrees=1.5, shift=(0.75, -0.5, 1.0))
 
-    estimated = _register(data, moving, affine, mask, tmp_path, init=partial)
+    estimated = _register(data, moving, affine, mask, tmp_path, init=partial, backend=backend)
 
     assert _error(mask, affine, estimated, matrix) < 0.5
     increment = matrix @ np.linalg.inv(partial)
@@ -454,3 +501,53 @@ def test_the_callers_threads_hold_over_the_environment(tmp_path, monkeypatch):
     environ = dict(os.environ) | dict(registration.inputs.environ)
     threads = environ.get("ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS", environ.get("NSLOTS"))
     assert threads == "1"
+
+
+@SKIP_ELASTIX
+def test_elastix_masks_only_the_fixed_image_with_the_callers_threads(volume, monkeypatch):
+    """Elastix sets the process's thread count from its own; the backend restores it."""
+    import itk
+
+    from nifreeze.registration.elastix import Elastix
+
+    real, calls = itk.ElastixRegistrationMethod, []
+
+    class Spy:
+        def __getitem__(self, types):
+            def new(**kwargs):
+                calls.append(kwargs)
+                return real[types].New(**kwargs)
+
+            return type("Recorder", (), {"New": staticmethod(new)})
+
+    monkeypatch.setattr(itk, "ElastixRegistrationMethod", Spy())
+    threader = itk.MultiThreaderBase
+    before = (
+        threader.GetGlobalMaximumNumberOfThreads(),
+        threader.GetGlobalDefaultNumberOfThreads(),
+    )
+    data, mask = volume
+    Elastix(num_threads=1)(data, data, _affine("ras"), mask, 0)
+
+    assert len(calls) == 1
+    assert calls[0]["number_of_threads"] == 1
+    assert "fixed_mask" in calls[0]
+    assert "moving_mask" not in calls[0]
+    after = (
+        threader.GetGlobalMaximumNumberOfThreads(),
+        threader.GetGlobalDefaultNumberOfThreads(),
+    )
+    assert after == before
+
+
+@SKIP_ELASTIX
+def test_elastix_repeats_bit_for_bit(volume):
+    from nifreeze.registration.elastix import Elastix
+
+    data, mask = volume
+    affine = _affine("oblique")
+    moving = _move(data, affine, _motion())
+    register = Elastix(num_threads=1)
+
+    first = register(data, moving, affine, mask, 0)
+    assert np.array_equal(first, register(data, moving, affine, mask, 0))

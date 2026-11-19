@@ -1,0 +1,9 @@
+Configuration,Oracle,"Prediction, unmoved data","Prediction, moved data",Median seconds
+"Direct mapping, 4x iterations","-0.032 [-0.038, -0.025], better","-0.038 [-0.052, -0.027], better","-0.006 [-0.024, +0.010], not worse",1.08
+"Direct mapping, 16x iterations","-0.057 [-0.064, -0.046], better","-0.065 [-0.079, -0.058], better","-0.003 [-0.014, +0.009], not worse",1.49
+"Two-level pyramid, 1x iterations","-0.068 [-0.076, -0.058], better","-0.076 [-0.088, -0.070], better","-0.025 [-0.032, -0.014], better",1.16
+"Two-level pyramid, 4x iterations","-0.082 [-0.095, -0.075], better","-0.088 [-0.100, -0.075], better","-0.015 [-0.030, -0.005], not worse",1.62
+"Two-level pyramid, 16x iterations","-0.080 [-0.092, -0.072], better","-0.093 [-0.112, -0.082], better","-0.016 [-0.035, -0.003], not worse",3.52
+"Three-level pyramid, 1x iterations","-0.070 [-0.085, -0.058], better","-0.080 [-0.094, -0.067], better","-0.012 [-0.028, -0.000], not worse",1.29
+"Three-level pyramid, 4x iterations","-0.085 [-0.098, -0.073], better","-0.095 [-0.104, -0.084], better","-0.018 [-0.031, -0.006], not worse",1.77
+"Three-level pyramid, 16x iterations","-0.083 [-0.099, -0.074], better","-0.100 [-0.110, -0.084], better","-0.016 [-0.030, +0.001], not worse",3.75
