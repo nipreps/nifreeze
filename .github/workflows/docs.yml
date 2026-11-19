@@ -1,0 +1,188 @@
+name: Docs
+
+on:
+  pull_request:
+    branches: ['main', 'maint/*']
+  push:
+    branches: ['main']
+    tags: ['*']
+  # Redeploy when the prediction gallery publishes new pages
+  workflow_run:
+    workflows: ['Prediction gallery']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Assemble the site from gh-pages without pushing it'
+        type: boolean
+        default: false
+
+defaults:
+  run:
+    shell: bash
+
+# Cancel superseded runs of a pull request; deploys of main and of each tag run in turn
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  actions: read  # download the gallery-pages artifact
+
+jobs:
+  build:
+    # Gallery runs redeploy when they succeed on main and were triggered by a push
+    # or a manual dispatch; scheduled gallery runs are a check and do not publish.
+    if: >-
+      github.event_name != 'workflow_run' || (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        (github.event.workflow_run.event == 'push' ||
+         github.event.workflow_run.event == 'workflow_dispatch')
+      )
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+
+    - name: Install GraphViz and pandoc
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y --no-install-recommends graphviz pandoc
+
+    - name: Install dependencies
+      run: |
+        pip install -U build hatch pip
+        pip install .[doc]
+        python -m hatch version | tail -n1
+
+    - name: Install citation dependencies
+      run: |
+        pip install cffconvert
+        sudo apt-get update -y
+        sudo apt-get install -y --no-install-recommends \
+          texlive-latex-extra \
+          texlive-bibtex-extra \
+          biber \
+          poppler-utils
+
+    - name: Set up R to extract citation metadata
+      uses: r-lib/actions/setup-r@v2
+
+    - name: Install cffr and its dependencies
+      uses: r-lib/actions/setup-r-dependencies@v2
+      with:
+        packages: cffr
+
+    - name: Generate citation
+      run: .github/scripts/generate_citation_artifact.sh
+
+    - name: Fetch the prediction gallery
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GALLERY_RUN_ID: ${{ github.event.workflow_run.id }}
+      # Pull requests show placeholders when the published pages are gone (expired artifacts)
+      run: |
+        if [[ -n "$GALLERY_RUN_ID" ]]; then
+          ARGS=(--strict --run-id "$GALLERY_RUN_ID")
+        elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+          ARGS=(--sha "$GITHUB_SHA")
+        elif [[ "$GITHUB_REF" == refs/heads/main ]]; then
+          ARGS=(--strict)
+        else
+          ARGS=()
+        fi
+        python tools/fetch_gallery.py "${ARGS[@]}"
+
+    - name: Build docs
+      run: |
+        python -m hatch build --hooks-only
+        make -C docs/ SPHINXOPTS="-W -v" BUILDDIR="$HOME/docs" OUTDIR=html html
+
+    - name: Upload the HTML
+      id: upload
+      uses: actions/upload-artifact@v7
+      with:
+        name: docs-html
+        path: ~/docs/html
+        retention-days: 14
+
+    - name: Link the HTML from the job summary
+      env:
+        URL: ${{ steps.upload.outputs.artifact-url }}
+      run: |
+        echo "The built documentation is the [docs-html artifact]($URL) of this run;" \
+          "unzip it and open \`index.html\`." >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    # Pushes to main, tags, gallery runs and dispatches deploy; pull requests (and
+    # dispatches on other branches) assemble the site without pushing it
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      DRY_RUN: >-
+        ${{ github.event_name == 'pull_request' || inputs.dry-run
+        || !(github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) }}
+      TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+
+    steps:
+    # The deploy script and the version menu; gh-pages goes into a worktree of this clone
+    - uses: actions/checkout@v5
+
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+
+    - name: Install packaging
+      run: pip install packaging
+
+    - uses: actions/download-artifact@v8
+      with:
+        name: docs-html
+        path: ${{ runner.temp }}/html
+
+    - name: Place the build into gh-pages
+      run: |
+        git config --global user.email "nipreps@gmail.com"
+        git config --global user.name "NiPreps Bot"
+        SITE="$RUNNER_TEMP/site"
+        MESSAGE="docs(${TAG:-main}): publish the documentation of ${GITHUB_SHA::8}"
+
+        # Each attempt starts from the current gh-pages, so a push that lost a race
+        # (e.g., to the benchmark dashboard) is placed again on top of the winner
+        for attempt in 1 2 3 4 5; do
+          git fetch --depth=1 origin gh-pages
+          rm -rf "$SITE" && git worktree prune
+          git worktree add --detach "$SITE" FETCH_HEAD
+          python tools/docs_versions.py deploy --site "$SITE" \
+            --build "$RUNNER_TEMP/html" ${TAG:+--tag "$TAG"}
+
+          git -C "$SITE" add -A
+          if git -C "$SITE" diff --cached --quiet; then
+            echo "gh-pages already holds this build"
+            exit 0
+          fi
+          git -C "$SITE" commit -q -m "$MESSAGE"
+          {
+            echo "### gh-pages after this deploy"
+            echo '```'
+            git -C "$SITE" show --stat --format='%s' HEAD | tail -n 3
+            cat "$SITE/versions.json"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$DRY_RUN" == "true" ]]; then
+            echo "Dry run: gh-pages is not pushed"
+            exit 0
+          fi
+          git -C "$SITE" push origin HEAD:gh-pages && exit 0
+          sleep $((attempt * 10))
+        done
+        exit 1

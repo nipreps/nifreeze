@@ -11,11 +11,14 @@ Documentation
 -------------
 Documentation sources are found under the ``docs/`` folder, and builds are archived in the `gh-pages <https://github.com/nipreps/nifreeze/tree/gh-pages>`__ branch of the repository.
 With GitHub Pages, the documentation is posted under https://www.nipreps.org/nifreeze.
-We maintain versioned documentation, by storing git tags under ``<major>.<minor>/`` folders, i.e., we do not archive every patch release, but only every minor release.
-In other words, folder ``0.1/`` of the documentation tree contains the documents for the latest release within the *0.1.x* series.
+The documentation is versioned by release series: folder ``<major>.<minor>/`` holds the latest release of that series, or its latest pre-release until the release.
+For example, ``0.1/`` holds the documents of the latest *0.1.x* release, and a tag such as 26.0.0rc1 publishes ``26.0/``, which 26.0.0 then replaces.
+A pre-release never replaces a release.
 With every commit (or merge commit) to ``main``, the *development* version of the documentation under the folder ``main/`` is updated too.
-The ``gh-pages`` branch is automatically maintained with `a GitHub Action <https://github.com/nipreps/nifreeze/blob/main/.github/workflows/docs-build-update.yml>`__.
+The site's root and its version menu send visitors to the latest release, and the pages of the development version, of pre-releases and of older releases say so in a banner.
+The `Docs workflow <https://github.com/nipreps/nifreeze/blob/main/.github/workflows/docs.yml>`__ maintains the ``gh-pages`` branch with ``tools/docs_versions.py``, which also writes the list of versions (``versions.json``) and the root and 404 pages.
 Please, do not commit manually to ``gh-pages``.
+The same workflow builds the documentation of every pull request, and the job summary links the HTML (the ``docs-html`` artifact).
 
 To build the documentation locally, you first need to make sure that ``setuptools_scm[toml] >= 6.2`` is installed in your environment and then::
 
