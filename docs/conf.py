@@ -13,7 +13,7 @@ from pathlib import Path
 
 from packaging.version import Version
 
-from nifreeze import __copyright__, __packagename__, __version__
+from nifreeze import __copyright__, __version__
 
 # The prediction-gallery harness lives under docs/sphinxext (docs tooling).
 sys.path.insert(0, os.path.abspath("sphinxext"))
@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.abspath("sphinxext"))
 # sys.path.append(os.path.abspath("sphinxext"))
 
 # -- Project information -----------------------------------------------------
-project = __packagename__
+project = "NiFreeze"
 copyright = __copyright__
 author = "The NiPreps Developers"
 
@@ -63,6 +63,8 @@ extensions = [
 # nbsphinx stays configured (and set to never execute, which would need the full
 # scientific stack + data downloads) so notebooks can return without re-wiring.
 nbsphinx_execute = "never"
+# Nor load require.js from a CDN on every page, which only notebooks with widgets need
+nbsphinx_requirejs_path = ""
 
 autodoc_mock_imports = [
     "dipy",
@@ -122,6 +124,8 @@ exclude_patterns = [
     # here; excluding them keeps nbsphinx from warning that they are not in any
     # toctree.
     "notebooks/*.ipynb",
+    # Included by the pages that use its links, not a page of its own
+    "links.rst",
     ".ipynb_checkpoints",
 ]
 
@@ -149,13 +153,18 @@ pygments_style = None
 #
 html_theme = "furo"
 html_title = "NiFreeze"
+# Each page links to its source on GitHub
+html_theme_options = {
+    "source_repository": "https://github.com/nipreps/nifreeze/",
+    "source_branch": "main",
+    "source_directory": "docs/",
+}
 html_context = {"version_kind": version_kind}
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -304,10 +313,6 @@ intersphinx_mapping = {
     "templateflow": ("https://www.templateflow.org/python-client", None),
 }
 
-# -- Options for versioning extension ----------------------------------------
-scv_show_banner = True
-
-
 # -- Special functions -------------------------------------------------------
 import inspect
 
@@ -315,15 +320,15 @@ import inspect
 def autodoc_process_signature(app, what, name, obj, options, signature, return_annotation):
     """Replace the class signature by the signature from cls.__init__"""
 
-    if what == "class" and hasattr(obj, "__init__"):
-        try:
-            init_signature = inspect.signature(obj.__init__)
-            # Convert the Signature object to a string
-            return str(init_signature), return_annotation
-        except ValueError:
-            # Handle cases where `inspect.signature` fails
-            return signature, return_annotation
-    return signature, return_annotation
+    # ``None`` leaves the signature as it is. Sphinx 9 fails on a replacement for an
+    # object it has no signature for (e.g., ``typing.TypeVar``, imported by a module).
+    if what != "class" or signature is None:
+        return None
+    try:
+        return str(inspect.signature(obj.__init__)), return_annotation
+    except (TypeError, ValueError):
+        # ``inspect.signature`` cannot read every ``__init__``
+        return None
 
 
 def setup(app):
