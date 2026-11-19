@@ -1,0 +1,80 @@
+name: Deploy to gh-pages
+description: >-
+  Check out the tip of gh-pages, run a command that changes it, and push the result as
+  the only commit of gh-pages. When another deploy pushed first, start again from the new
+  tip. gh-pages keeps no history: its 468 rebuilds of the docs had grown the repository
+  to 1 GB, which every full checkout downloaded (#694).
+
+inputs:
+  apply:
+    description: >-
+      Shell command (bash, run from the workspace) that changes the site, checked out
+      at $SITE; it must be safe to run again
+    required: true
+  message:
+    description: Commit message
+    required: true
+  dry-run:
+    description: Build the commit and report it, without pushing
+    required: false
+    default: 'false'
+
+outputs:
+  site:
+    description: Where the site was checked out and changed
+    value: ${{ steps.deploy.outputs.site }}
+
+runs:
+  using: composite
+  steps:
+    - name: Deploy to gh-pages
+      id: deploy
+      shell: bash
+      env:
+        APPLY: ${{ inputs.apply }}
+        MESSAGE: ${{ inputs.message }}
+        DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        export SITE="$RUNNER_TEMP/gh-pages"
+        echo "site=$SITE" >> "$GITHUB_OUTPUT"
+        git config --global user.email "nipreps@gmail.com"
+        git config --global user.name "NiPreps Bot"
+        DEPTH=()
+        if [[ "$(git rev-parse --is-shallow-repository)" == "true" ]]; then
+          DEPTH=(--depth=1)
+        fi
+
+        for attempt in 1 2 3 4 5; do
+          git fetch "${DEPTH[@]}" origin gh-pages
+          TIP=$(git rev-parse FETCH_HEAD)
+          rm -rf "$SITE" && git worktree prune
+          git worktree add --detach "$SITE" "$TIP"
+          bash -euo pipefail -c "$APPLY"
+
+          git -C "$SITE" add -A
+          TREE=$(git -C "$SITE" write-tree)
+          # ``cat-file`` reads the commit itself, so it sees parents a shallow fetch hides
+          if [[ "$TREE" == "$(git rev-parse "$TIP^{tree}")" ]] \
+            && ! git cat-file -p "$TIP" | grep -q '^parent '; then
+            echo "gh-pages already holds this"
+            exit 0
+          fi
+          COMMIT=$(git commit-tree "$TREE" -m "$MESSAGE")
+          {
+            echo "### gh-pages: $MESSAGE"
+            echo '```'
+            git diff --shortstat "$TIP" "$COMMIT"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$DRY_RUN" == "true" ]]; then
+            echo "Dry run: $COMMIT is not pushed"
+            exit 0
+          fi
+          # Replace gh-pages only if nobody pushed since it was fetched
+          if git push --force-with-lease="gh-pages:$TIP" origin "$COMMIT:refs/heads/gh-pages"; then
+            exit 0
+          fi
+          sleep $((attempt * 10))
+        done
+        exit 1
