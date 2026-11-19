@@ -24,14 +24,13 @@
 Registration with elastix, through ``itk-elastix`` (the ``elastix`` extra).
 
 The images pass to elastix in memory: no files, unlike ANTs' command line.
+:class:`Elastix` is a :class:`~nifreeze.registration.base.Registration`:
+``register(fixed, moving, affine, mask, index, init)`` returns the transform that maps
+each point of the fixed image (the model's prediction) onto the moving image (the
+sample), in RAS+.
 
-:class:`Elastix` is called as the accuracy harness calls
-:class:`~nifreeze.analysis.registration.AntsRegistration`:
-``register(fixed, moving, affine, mask, index)`` returns the matrix that maps each point
-of the fixed image (the model's prediction) onto the moving image (the sample), in RAS+.
-
-The images reach elastix with the values ANTs reads today: both clipped to the moving
-volume's window and coded to 12 bits (as :func:`~nifreeze.registration.ants._to_nifti`
+The images reach elastix with the values ANTs reads: clipped to the sample's window (as
+``clip`` selects) and coded to 12 bits (as :func:`~nifreeze.registration.ants._to_nifti`
 writes them), then winsorized and histogram-matched with ANTs' parameters, when the
 settings ask for it. Only the fixed image is masked.
 
@@ -48,10 +47,10 @@ from os import PathLike
 from pathlib import Path
 from typing import Any
 
+import nibabel as nb
 import numpy as np
 
-from nifreeze.data.filtering import robust_window
-from nifreeze.registration.ants import WINDOW_LEVELS
+from nifreeze.registration.base import WINDOW_LEVELS, Registration
 
 LPS = np.diag([-1.0, -1.0, 1.0, 1.0])
 """The change between RAS+ and ITK's LPS world (its own inverse)."""
@@ -239,78 +238,50 @@ def _lps_matrix(transform: Any) -> np.ndarray:
     return matrix
 
 
-class Elastix:
-    """Register with elastix, given the images in memory, as the harness registers with ANTs."""
+class Elastix(Registration):
+    """
+    Register with elastix, given the images in memory.
+
+    Parameters
+    ----------
+    settings : :obj:`str`, :obj:`os.pathlike` or :obj:`~collections.abc.Mapping`, optional
+        The settings (see :func:`get_settings`), which the overrides update.
+    seed : :obj:`int`, optional
+        Seed of elastix's random sampling (``RandomSeed``); :obj:`None` leaves
+        elastix's default.
+    **kwargs
+        See :class:`~nifreeze.registration.base.Registration`. With ``num_threads``
+        set, estimates repeat bit for bit at a fixed seed.
+
+    """
 
     def __init__(
-        self,
-        settings: str | PathLike | Mapping[str, Any] = "b0-to-b0_level0",
-        seed: int | None = 12345,
-        num_threads: int | None = None,
-    ):
-        """
-        Register with elastix settings.
+        self, settings: Any = "b0-to-b0_level0", *, seed: int | None = 12345, **kwargs: Any
+    ) -> None:
+        super().__init__(settings, seed=seed, **kwargs)
+        self.settings = get_settings(get_settings(settings) | self.overrides)
 
-        Parameters
-        ----------
-        settings : :obj:`str`, :obj:`os.pathlike` or :obj:`~collections.abc.Mapping`
-            The settings (see :func:`get_settings`).
-        seed : :obj:`int`, optional
-            Seed of elastix's random sampling (``RandomSeed``); :obj:`None` leaves
-            elastix's default.
-        num_threads : :obj:`int`, optional
-            Threads of each registration; :obj:`None` leaves ITK's default. Estimates
-            repeat bit for bit at a fixed seed and thread count.
-
-        """
-        self.settings = get_settings(settings)
-        self.seed = seed
-        self.num_threads = num_threads
-
-    def __call__(
-        self,
-        fixed: np.ndarray,
-        moving: np.ndarray,
-        affine: np.ndarray,
-        mask: np.ndarray,
-        index: int,
-        init: np.ndarray | None = None,
-    ) -> np.ndarray:
-        """
-        Register ``moving`` to ``fixed``.
-
-        Parameters
-        ----------
-        fixed : :obj:`~numpy.ndarray`
-            The fixed image (the model's prediction).
-        moving : :obj:`~numpy.ndarray`
-            The moving image (the sample), on the same grid.
-        affine : :obj:`~numpy.ndarray`
-            The grid's voxel-to-RAS+ affine.
-        mask : :obj:`~numpy.ndarray`
-            The mask of the fixed image.
-        index : :obj:`int`
-            The volume's index (unused: the harness's signature).
-        init : :obj:`~numpy.ndarray`, optional
-            An initial fixed-to-moving matrix (RAS+), as a second pass starts from.
-
-        Returns
-        -------
-        :obj:`~numpy.ndarray`
-            The fixed-to-moving matrix (RAS+): the total transform, including ``init``.
-
-        """
+    def _register(self, fixed, moving, affine, mask, index, init, window) -> np.ndarray:
         import itk
 
-        mask = np.asanyarray(mask, dtype=bool)
-        window = robust_window(moving, mask)
-        fixed_values, moving_values = _coded(fixed, window), _coded(moving, window)
+        mask = np.ones(fixed.shape, dtype=bool) if mask is None else np.asanyarray(mask, bool)
+        fixed_values, moving_values = (
+            _coded(data, window)
+            if window is not None and self.clip in (which, "both")
+            else np.asarray(data, dtype="float32")
+            for data, which in ((fixed, "predicted"), (moving, "sample"))
+        )
         settings = self.settings
         if "winsorize_lower_quantile" in settings:
             lower = settings["winsorize_lower_quantile"]
             upper = settings["winsorize_upper_quantile"]
             fixed_values = _winsorize(fixed_values, lower, upper)
             moving_values = _winsorize(moving_values, lower, upper)
+        if self.debug_dir is not None:
+            for name, values in (("predicted", fixed_values), ("sample", moving_values)):
+                nb.Nifti1Image(values, affine).to_filename(
+                    self.debug_dir / f"{name}_{index:05d}.nii"
+                )
 
         # elastix sets the process's maximum thread count; set it here too and restore it
         threader = itk.MultiThreaderBase

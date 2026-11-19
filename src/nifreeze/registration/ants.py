@@ -26,16 +26,22 @@ from __future__ import annotations
 
 from collections import namedtuple
 from importlib.resources import files
-from io import BytesIO
 from json import loads
 from pathlib import Path
+from shutil import rmtree
+from tempfile import mkdtemp
+from typing import Any
 from warnings import warn
+from weakref import finalize
 
 import nibabel as nb
 import nitransforms as nt
 import numpy as np
 from nipype.interfaces.ants.registration import Registration
 from nitransforms.linear import Affine
+
+from nifreeze.registration import base
+from nifreeze.registration.base import WINDOW_LEVELS, _write_aligned  # noqa: F401
 
 PARAMETERS_SINGLE_VALUE = {
     "collapse_output_transforms",
@@ -69,9 +75,6 @@ REGISTRATION_INIT_WITHOUT_COLLAPSE_ERROR_MSG = (
     "output transform is the initialization, not the estimate."
 )
 """Initial transform without collapsed outputs error message."""
-
-WINDOW_LEVELS = 4095
-"""Highest code of the 12-bit encoding of floating-point registration inputs."""
 
 
 def _to_nifti(
@@ -122,33 +125,6 @@ def _to_nifti(
     nii.header.set_sform(affine, code=1)
     nii.header.set_qform(affine, code=1)
     nii.to_filename(filename)
-
-
-def _write_aligned(moving_path: str | Path, matrix: np.ndarray, out_path: str | Path) -> None:
-    """
-    Write the moving image aligned to the fixed image, without resampling.
-
-    The voxel data are copied byte for byte, and the affine is premultiplied by
-    the inverse of the estimated transform, so that a viewer displays the image
-    on top of the fixed one.
-
-    Parameters
-    ----------
-    moving_path : :obj:`os.pathlike`
-        The moving image, an uncompressed NIfTI-1 file.
-    matrix : :obj:`~numpy.ndarray`
-        The estimated transform (fixed-to-moving, in world coordinates).
-    out_path : :obj:`os.pathlike`
-        The output (uncompressed NIfTI-1) file path.
-
-    """
-    raw = Path(moving_path).read_bytes()
-    # Parse the header from the file itself: a loaded image's header has its scaling reset
-    header = nb.Nifti1Header.from_fileobj(BytesIO(raw))
-    aligned = np.linalg.inv(matrix) @ header.get_best_affine()
-    header.set_sform(aligned, code=1)
-    header.set_qform(aligned, code=1)
-    Path(out_path).write_bytes(header.binaryblock + raw[header.sizeof_hdr :])
 
 
 def _prepare_registration_data(
@@ -576,3 +552,74 @@ def _run_registration(
     )
 
     return xform
+
+
+class Ants(base.Registration):
+    """
+    Register with ``antsRegistration``, through files and nipype.
+
+    Each call writes both images (:func:`_prepare_registration_data`), runs
+    ``antsRegistration`` (:func:`_run_registration`) and reads the transform back.
+
+    Parameters
+    ----------
+    settings : :obj:`str` or :obj:`os.pathlike`, optional
+        A configuration of ``nifreeze/registration/config``, by name, or a file
+        (:obj:`None` selects the default of :func:`generate_command`).
+    workdir : :obj:`os.pathlike`, optional
+        Where the files go without ``debug_dir`` (default: a temporary folder,
+        removed with the backend).
+    **kwargs
+        See :class:`~nifreeze.registration.base.Registration`; the overrides are those
+        of :func:`generate_command`.
+
+    """
+
+    def __init__(
+        self, settings: Any = None, *, workdir: str | Path | None = None, **kwargs: Any
+    ) -> None:
+        super().__init__(settings, **kwargs)
+        folder = self.debug_dir or workdir
+        if folder is None:
+            folder = mkdtemp(prefix="nifreeze-ants-")
+            finalize(self, rmtree, folder, ignore_errors=True)
+        self.workdir = Path(folder).absolute()
+        self.workdir.mkdir(parents=True, exist_ok=True)
+        self._mask: tuple[np.ndarray, Path] | None = None
+
+    def _register(self, fixed, moving, affine, mask, index, init, window) -> np.ndarray:
+        mask_path = None
+        if mask is not None:
+            if self._mask is None or self._mask[0] is not mask:
+                # Written once for as long as the same mask comes, as the estimator did
+                path = self.workdir / "brainmask.nii"
+                nb.Nifti1Image(mask.astype(np.uint8), affine, None).to_filename(path)
+                self._mask = (mask, path)
+            mask_path = self._mask[1]
+
+        fixed_path, moving_path, init_path = _prepare_registration_data(
+            moving,
+            fixed,
+            affine,
+            index,
+            self.workdir,
+            clip=self.clip if window is not None else "none",
+            window=window,
+            init_affine=init,
+        )
+        settings = dict(self.overrides)
+        if self.settings is not None:
+            settings["ants_config"] = self.settings
+        xform = _run_registration(
+            fixed_path,
+            moving_path,
+            index,
+            self.workdir,
+            init_affine=init_path,
+            fixedmask_path=mask_path,
+            output_transform_prefix=f"ants-{index:05d}",
+            num_threads=self.num_threads,
+            seed=self.seed,
+            **settings,
+        )
+        return np.asarray(xform.matrix)

@@ -107,7 +107,9 @@ def _register(task: tuple[str, int, np.ndarray]) -> list[dict]:
             estimate = register(fixed, moving, affine, mask, case)
             seconds = perf_counter() - start
             errors = displacements_within_mask(
-                mask_img, nt.linear.Affine(estimate), nt.linear.Affine(truth)
+                mask_img,
+                nt.linear.Affine(getattr(estimate, "matrix", estimate)),
+                nt.linear.Affine(truth),
             )
             rows.append(
                 {
