@@ -3,8 +3,17 @@ name: Benchmark
 on:
   push:
     branches: ['main', 'maint/*']
+  # Only pull requests that change what the comparison measures (the package and its
+  # dependencies) or what it runs (the suite, the phantom fixture, ANTs) (#685)
   pull_request:
     branches: ['main', 'maint/*']
+    paths:
+      - 'src/**'
+      - 'pyproject.toml'
+      - 'benchmarks/**'
+      - 'tools/phantoms/**'
+      - '.github/actions/**'
+      - '.github/workflows/benchmark.yml'
   # Record a range of commits, e.g. to fill the dashboard's history
   workflow_dispatch:
     inputs:
