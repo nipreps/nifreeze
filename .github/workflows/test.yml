@@ -33,6 +33,9 @@ env:
     dwi-b0_desc-brain.nii.gz
     hcph-b0_desc-avg.nii.gz
     hcph-b0_desc-brain.nii.gz
+  # The DIPY datasets that the tests read, fetched into DIPY_HOME. Two xdist workers
+  # fetching one at the same time corrupt it (#681)
+  DIPY_DATASETS: stanford_hardi sherbrooke_3shell
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -68,8 +71,8 @@ jobs:
           fi
           echo SHA=$SHA >> $GITHUB_OUTPUT
           echo SHA7=${SHA:0:7} >> $GITHUB_OUTPUT
-          # A path added to the list makes a new cache
-          echo KEY=data-v3-${SHA}-$( sha256sum <<< "$TEST_DATA_PATHS" | cut -c 1-8 ) >> $GITHUB_OUTPUT
+          # A path or a dataset added to the lists makes a new cache
+          echo KEY=data-v3-${SHA}-$( sha256sum <<< "$TEST_DATA_PATHS $DIPY_DATASETS" | cut -c 1-8 ) >> $GITHUB_OUTPUT
       - name: Check for ${{ steps.test-head.outputs.KEY }}
         uses: actions/cache@v5
         if: steps.test-head.outputs.SHA != ''
@@ -107,10 +110,17 @@ jobs:
           cd ${TEST_DATA_HOME}
           datalad update --how merge
           datalad get -J4 ${TEST_DATA_PATHS}
-      - name: Install DIPY and fetch stanford_hardi dataset
+      - name: Install DIPY and fetch its datasets
         if: steps.test-head.outputs.SHA != '' && steps.test-data.outputs.cache-hit != 'true'
         run: |
-          echo "from dipy.data import fetch_stanford_hardi; fetch_stanford_hardi()" > fetch.py
+          cat > fetch.py <<'EOF'
+          import os
+
+          import dipy.data
+
+          for name in os.environ["DIPY_DATASETS"].split():
+              getattr(dipy.data, f"fetch_{name}")()
+          EOF
           uv tool install dipy
           uv add --script fetch.py dipy
           uv run fetch.py
