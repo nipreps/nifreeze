@@ -66,10 +66,11 @@ from nibabel.affines import from_matvec
 from nibabel.eulerangles import euler2mat
 
 import nifreeze.registration.ants  # noqa: F401 (nipype, imported before the workers fork)
-from nifreeze.analysis.registration import AntsRegistration
+from nifreeze.analysis.registration import AntsRegistration, Register
 from nifreeze.data import dmri
 from nifreeze.registration.elastix import Elastix
 from nifreeze.registration.utils import displacements_within_mask
+from nifreeze.utils.ndimage import load_api
 
 ANGLES = (0.0, 0.1, 0.3)
 """Rotations about each axis (rad), as ``test_ANTs_config_b0``."""
@@ -96,6 +97,7 @@ def _register(task: tuple[str, int, np.ndarray]) -> list[dict]:
     rows = []
     with tempfile.TemporaryDirectory(dir=_SHARED["work"]) as workdir:
         for arm in _SHARED["arms"]:
+            register: Register
             if arm == "ants":
                 register = AntsRegistration(workdir, seed=SEED, num_threads=1)
             else:
@@ -137,8 +139,9 @@ def main(argv: list[str] | None = None) -> int:
     args.out.mkdir(parents=True, exist_ok=True)
 
     for name in ("hcph", "dwi"):
-        b0 = nb.load(data / f"{name}-b0_desc-avg.nii.gz")
-        mask = np.asanyarray(nb.load(data / f"{name}-b0_desc-brain.nii.gz").dataobj) > 0
+        b0 = load_api(data / f"{name}-b0_desc-avg.nii.gz", nb.Nifti1Image)
+        brain = load_api(data / f"{name}-b0_desc-brain.nii.gz", nb.Nifti1Image)
+        mask = np.asanyarray(brain.dataobj) > 0
         _SHARED[name] = (
             np.asanyarray(b0.dataobj, dtype="float32"),
             mask,
@@ -146,6 +149,8 @@ def main(argv: list[str] | None = None) -> int:
             nb.Nifti1Image(mask.astype("uint8"), b0.affine),
         )
     moved = dmri.DWI.from_filename(data / "dmri_data" / "motion_test_data" / "dwi_motion.h5")
+    if moved.motion_affines is None:
+        raise ValueError("dwi_motion.h5 does not record its motions")
     original = dmri.DWI.from_filename(data / "dwi.h5")
     mask = np.asanyarray(original.brainmask, dtype=bool)
     _SHARED["dwi_motion"] = (

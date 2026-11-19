@@ -59,11 +59,12 @@ from dipy.segment.mask import median_otsu
 from elastix_tuning import MODEL, SEED, _Failures, _warm, configuration, configurations
 
 import nifreeze.registration.ants  # noqa: F401 (nipype, imported before the workers fork)
-from nifreeze.analysis.registration import AntsRegistration, registration_accuracy
+from nifreeze.analysis.registration import AntsRegistration, Register, registration_accuracy
 from nifreeze.analysis.sensitivity import Perturbation
 from nifreeze.data.dmri.io import from_nii
 from nifreeze.registration.elastix import Elastix
 from nifreeze.testing.perturbations import mask_centroid, perturb, perturbation_plan
+from nifreeze.utils.ndimage import load_api
 
 MAGNITUDES = (0.0, 1.0, 2.0, 4.0, 8.0)
 """Motions (mm and degrees); 0 is the control."""
@@ -80,6 +81,7 @@ def _register(task: tuple[float, str, list[int]]) -> list[dict]:
     moved, motions = _SHARED["copies"][magnitude]
     truth = {i: motions[i] for i in indices}
     with tempfile.TemporaryDirectory(dir=_SHARED["work"]) as workdir:
+        backend: Register
         if arm == "ants":
             backend = AntsRegistration(workdir, seed=SEED, num_threads=1)
         else:
@@ -122,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
     folder = args.dipy.expanduser() / "stanford_hardi"
     args.out.mkdir(parents=True, exist_ok=True)
 
-    image = nb.load(folder / "HARDI150.nii.gz")
+    image = load_api(folder / "HARDI150.nii.gz", nb.Nifti1Image)
     bvals = np.loadtxt(folder / "HARDI150.bval")
     data = np.asanyarray(image.dataobj, dtype="float32")
     _, mask = median_otsu(data, vol_idx=np.flatnonzero(bvals < 50), median_radius=4, numpass=4)

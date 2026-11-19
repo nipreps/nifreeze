@@ -72,7 +72,12 @@ from experiments import provenance, subset, write_results
 
 import nifreeze.registration.ants  # noqa: F401 (nipype, imported before the workers fork)
 from nifreeze.analysis.phantoms import load_phantom
-from nifreeze.analysis.registration import FIXED, AntsRegistration, registration_accuracy
+from nifreeze.analysis.registration import (
+    FIXED,
+    AntsRegistration,
+    Register,
+    registration_accuracy,
+)
 from nifreeze.registration.elastix import Elastix, get_settings
 
 NOISE = 20261029
@@ -197,6 +202,7 @@ def _register(task: tuple[float, str, list[int]]) -> list[dict[str, Any]]:
     truth = {index: motions[index] for index in indices}
     data = (_SHARED["clean"], _SHARED["reference"], moved, truth)
     with tempfile.TemporaryDirectory(prefix=f"{arm}-", dir=_SHARED["work"]) as workdir:
+        backend: Register
         if arm == "ants":
             backend = AntsRegistration(workdir, seed=SEED, num_threads=1, ants_config=SETTINGS)
         else:
