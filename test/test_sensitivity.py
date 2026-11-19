@@ -190,6 +190,20 @@ def test_plan_never_moves_fixed_volumes_and_pairs_its_cells():
         pert.perturbation_plan(12, magnitudes=(1.0,), counts=(11,), fixed=fixed)
 
 
+def test_a_plan_may_start_without_motion():
+    """A zero magnitude (a control) leaves the later magnitudes' motions intact (#679)."""
+    plan = pert.perturbation_plan(6, magnitudes=(0.0, 1.0, 2.0), counts=(6,), seeds=[0])
+    control, *moving = plan
+
+    assert np.allclose(np.asarray(control.motions), np.eye(4))
+    for perturbation in moving:
+        motions = np.asarray(perturbation.motions)
+        assert np.isfinite(motions).all()
+        # Rotated about the origin, so the shift is the translation itself
+        assert np.allclose(np.linalg.norm(motions[:, :3, 3], axis=1), perturbation.magnitude)
+        assert np.allclose(np.linalg.norm(_rotvec(motions[0])), np.deg2rad(perturbation.magnitude))
+
+
 def test_a_volume_motion_never_reaches_its_own_prediction():
     """Moving only volume j changes every prediction but that of volume j."""
     dataset, _ = _copies(np.random.default_rng(1234))
