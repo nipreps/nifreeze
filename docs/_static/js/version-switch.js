@@ -54,7 +54,8 @@
   }
 
   function label(entry, latest) {
-    var name = entry.version || entry.name;
+    // The development version goes by its folder (main); the others by their version
+    var name = entry.kind === "dev" ? entry.name : entry.version || entry.name;
     if (entry.path === latest) return name + " (latest release)";
     if (KIND_LABELS[entry.kind]) return name + " (" + KIND_LABELS[entry.kind] + ")";
     return name;
