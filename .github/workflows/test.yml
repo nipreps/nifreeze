@@ -168,6 +168,8 @@ jobs:
       - name: Run tox
         env:
           DEPENDS: ${{ matrix.depends }}
+          # The exhaustive grids (``slow``) run on the weekly schedule and on manual runs (#681)
+          PYTEST_ADDOPTS: ${{ !(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '-m "not e2e and not slow"' || '' }}
         run: |
           export PATH=$ANTSPATH:$PATH
           tox -v --exit-and-dump-after 1200
