@@ -46,15 +46,14 @@ from nitransforms.resampling import apply
 from scipy import ndimage
 from scipy.spatial.transform import Rotation
 
+from nifreeze.analysis.registration import AntsRegistration
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.dmri import DWI
 from nifreeze.data.dmri.io import load_bvec_bval, load_rasb
 from nifreeze.data.dmri.utils import bvecs_from_ras
-from nifreeze.data.filtering import robust_window
 from nifreeze.registration.ants import (
     WINDOW_LEVELS,
     _prepare_registration_data,
-    _run_registration,
     _to_nifti,
     generate_command,
 )
@@ -155,32 +154,8 @@ def _register(
 
         return Elastix(settings, num_threads=1)(fixed, moving, affine, mask, 0, init=init)
 
-    workdir.mkdir(exist_ok=True)
-    mask_path = workdir / "brainmask.nii"
-    nb.Nifti1Image(mask.astype(np.uint8), affine, None).to_filename(mask_path)
-    fixed_path, moving_path, init_path = _prepare_registration_data(
-        moving,
-        fixed,
-        affine,
-        0,
-        workdir,
-        clip="both",
-        init_affine=init,
-        window=robust_window(moving, mask),
-    )
-    xform = _run_registration(
-        fixed_path,
-        moving_path,
-        0,
-        workdir,
-        fixedmask_path=mask_path,
-        init_affine=init_path,
-        output_transform_prefix="ants-00000",
-        seed=12345,
-        num_threads=1,
-        ants_config=settings,
-    )
-    return np.asarray(xform.matrix)
+    register = AntsRegistration(workdir, num_threads=1, ants_config=settings)
+    return register(fixed, moving, affine, mask, 0, init=init)
 
 
 def _print_header(path: Path) -> dict[str, np.ndarray]:
