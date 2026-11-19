@@ -33,8 +33,6 @@ env:
   OPENBLAS_NUM_THREADS: 1
   MKL_NUM_THREADS: 1
   OMP_NUM_THREADS: 1
-  # The registration benchmarks run conda-forge's ANTs
-  ANTSPATH: /usr/share/miniconda/bin/
 
 jobs:
   compare:
@@ -72,18 +70,15 @@ jobs:
     - name: Test the report
       run: python -m pytest -p no:cacheprovider benchmarks/tests
 
+    # The registration benchmarks run conda-forge's ANTs
     - name: Install ANTs
-      run: |
-        # Override libiconv pre-installed from anaconda channel
-        # See https://github.com/conda-forge/libitk-feedstock/issues/98
-        conda install -c conda-forge ants=2.4 libitk=5.3 libiconv
+      uses: ./.github/actions/ants
 
     # The quality benchmarks analyze the CI phantom
     - uses: ./.github/actions/phantom-fixtures
 
     - name: Benchmark both commits
       run: |
-        # Last on the path: ANTSPATH also holds conda's python
         export PATH="$PATH:$ANTSPATH"
         asv machine --yes --config "$ASV_CONFIG" --machine "$ASV_MACHINE"
         # ASV reads the file relative to the directory of its configuration
@@ -131,11 +126,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install .[benchmark]
 
+    # The registration benchmarks run conda-forge's ANTs
     - name: Install ANTs
-      run: |
-        # Override libiconv pre-installed from anaconda channel
-        # See https://github.com/conda-forge/libitk-feedstock/issues/98
-        conda install -c conda-forge ants=2.4 libitk=5.3 libiconv
+      uses: ./.github/actions/ants
 
     - uses: ./.github/actions/phantom-fixtures
 
@@ -143,7 +136,6 @@ jobs:
       env:
         COMMITS: ${{ inputs.commits }}
       run: |
-        # Last on the path: ANTSPATH also holds conda's python
         export PATH="$PATH:$ANTSPATH"
         asv machine --yes --config "$ASV_CONFIG" --machine "$ASV_MACHINE"
         if [[ -n "$COMMITS" ]]; then
