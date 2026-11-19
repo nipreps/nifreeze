@@ -68,6 +68,7 @@ import nifreeze.registration.ants  # noqa: F401 (nipype, imported before the wor
 from nifreeze.analysis.phantoms import load_phantom
 from nifreeze.analysis.registration import FIXED, AntsRegistration, registration_accuracy
 from nifreeze.model.base import ModelFactory
+from nifreeze.registration.base import AFFINE, RIGID
 from nifreeze.registration.elastix import Elastix
 
 NOISE = 20261029
@@ -76,8 +77,8 @@ SEED = 12345
 """Seed of the registrations' random sampling."""
 MODEL = "gqi-krr"
 """The model of the ``unmoved`` and ``moved`` targets."""
-STAGES = {"rigid": "b0-to-b0_level0", "affine": "dwi-to-dwi_level1"}
-"""Each stage's settings, ANTs' and their direct mapping (the same names)."""
+STAGES = {"rigid": RIGID, "affine": AFFINE}
+"""Each stage's settings, ANTs' and their direct mapping (a section of the same file)."""
 ARMS = ("ants", "elastix")
 """The two registrations compared."""
 REPEAT = "elastix-again"
@@ -130,7 +131,7 @@ class _Stage:
 def _backend(arm: str, stage: str, workdir: Path) -> Any:
     if arm == "ants":
         settings = STAGES[stage]
-        return AntsRegistration(workdir / stage, seed=SEED, num_threads=1, ants_config=settings)
+        return AntsRegistration(workdir / stage, seed=SEED, num_threads=1, align_config=settings)
     return Elastix(STAGES[stage], seed=SEED, num_threads=1)
 
 
@@ -282,7 +283,7 @@ def main(argv: list[str] | None = None) -> int:
             "Model": MODEL,
             "Noise": NOISE,
             "Seed": SEED,
-            "Stages": STAGES,
+            "Stages": {stage: path.name for stage, path in STAGES.items()},
             "Arms": list(ARMS),
             "Repeat": args.repeat,
             "ThreadsPerRegistration": 1,

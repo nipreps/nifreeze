@@ -1,0 +1,37 @@
+# Example ANTs settings, never tested against the phantom truth. Use them with
+# `nifreeze --registration ants --align-config examples/registration/dwi-to-b0_level0.yaml`.
+# A section per backend, read by the backend of that name
+# (nifreeze.registration.base.load_config). To change a setting, copy and edit this file.
+
+# ANTs (antsRegistration, run through nipype).
+ants:
+  collapse_output_transforms: true
+  convergence_threshold: [1.0e-05, 1.0e-06]
+  convergence_window_size: [10, 2]
+  dimension: 3
+  initialize_transforms_per_stage: false
+  interpolation: Linear
+  metric: [Mattes, Mattes]
+  metric_weight: [1.0, 1.0]
+  number_of_iterations:
+  - [100, 50]
+  - [25]
+  radius_or_number_of_bins: [32, 32]
+  sampling_percentage: [0.2, 0.1]
+  sampling_strategy: [Regular, Random]
+  shrink_factors:
+  - [2, 1]
+  - [1]
+  sigma_units: [vox, vox]
+  smoothing_sigmas:
+  - [2.0, 0.0]
+  - [0.0]
+  transform_parameters:
+  - [0.01]
+  - [0.001]
+  transforms: [Rigid, Rigid]
+  use_histogram_matching: [true, true]
+  verbose: true
+  winsorize_lower_quantile: 0.0001
+  winsorize_upper_quantile: 0.9998
+  write_composite_transform: false

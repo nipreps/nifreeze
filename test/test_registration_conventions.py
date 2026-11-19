@@ -50,13 +50,14 @@ from nifreeze.data.base import BaseDataset
 from nifreeze.data.dmri import DWI
 from nifreeze.data.dmri.io import load_bvec_bval, load_rasb
 from nifreeze.data.dmri.utils import bvecs_from_ras
-from nifreeze.registration import RegistrationFactory
+from nifreeze.registration import AFFINE, RIGID, RegistrationFactory
 from nifreeze.registration.ants import (
     WINDOW_LEVELS,
     _prepare_registration_data,
     _to_nifti,
     generate_command,
 )
+from nifreeze.registration.base import load_config
 from nifreeze.registration.utils import displacements_within_mask
 
 SHAPE = (40, 40, 40)
@@ -78,9 +79,9 @@ NO_ELASTIX = not _installed("itk-elastix")
 SKIP_ANTS = pytest.mark.skipif(NO_ANTS, reason="ANTs is not installed")
 SKIP_ELASTIX = pytest.mark.skipif(NO_ELASTIX, reason="itk-elastix is not installed")
 BACKENDS = (
-    pytest.param(("ants", "b0-to-b0_level0"), id="ants", marks=SKIP_ANTS),
-    pytest.param(("elastix", "b0-to-b0_level0"), id="elastix-rigid", marks=SKIP_ELASTIX),
-    pytest.param(("elastix", "dwi-to-dwi_level1"), id="elastix-affine", marks=SKIP_ELASTIX),
+    pytest.param(("ants", RIGID), id="ants", marks=SKIP_ANTS),
+    pytest.param(("elastix", RIGID), id="elastix-rigid", marks=SKIP_ELASTIX),
+    pytest.param(("elastix", AFFINE), id="elastix-affine", marks=SKIP_ELASTIX),
 )
 """The backends and settings of the transform tests: ANTs' default, and elastix's two."""
 
@@ -144,12 +145,10 @@ def _error(mask: np.ndarray, affine: np.ndarray, estimated, expected) -> float:
     return float(displacements_within_mask(mask_img, Affine(estimated), Affine(expected)).mean())
 
 
-def _register(
-    fixed, moving, affine, mask, init=None, backend=("ants", "b0-to-b0_level0")
-) -> np.ndarray:
+def _register(fixed, moving, affine, mask, init=None, backend=("ants", RIGID)) -> np.ndarray:
     """Register with a backend by name, as the estimator does; return the matrix."""
     tool, settings = backend
-    register = RegistrationFactory.init(tool, settings=settings, seed=12345, num_threads=1)
+    register = RegistrationFactory.init(tool, align_config=settings, seed=12345, num_threads=1)
     return register(fixed, moving, affine, mask, 0, init=init).matrix
 
 
@@ -334,7 +333,7 @@ def test_an_initial_transform_requires_collapsed_outputs(tmp_path):
             tmp_path / "fixed.nii",
             tmp_path / "moving.nii",
             init_affine=tmp_path / "init.mat",
-            collapse_output_transforms=False,
+            align_config=load_config(None, "ants") | {"collapse_output_transforms": False},
         )
 
 

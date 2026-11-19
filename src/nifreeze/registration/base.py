@@ -25,8 +25,12 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
+from copy import deepcopy
 from importlib import import_module
+from importlib.metadata import PackageNotFoundError, version
 from io import BytesIO
+from os import PathLike
 from pathlib import Path
 from typing import Any
 from warnings import warn
@@ -34,6 +38,7 @@ from warnings import warn
 import nibabel as nb
 import nitransforms as nt
 import numpy as np
+import yaml
 
 from nifreeze.data.filtering import ClippingValueError, robust_window
 
@@ -46,20 +51,77 @@ BACKENDS = {
     "elastix": "nifreeze.registration.elastix:Elastix",
 }
 """The backends by name, as ``module:class`` (imported when first built)."""
+CONFIG = Path(__file__).parent / "config"
+"""The packaged settings, with a section per backend."""
+RIGID = CONFIG / "rigid.yaml"
+"""Rigid registration, the default (head motion)."""
+AFFINE = CONFIG / "affine.yaml"
+"""Affine registration, started from the rigid estimate (eddy currents)."""
+
+
+def default_backend() -> str:
+    """Elastix where ``itk-elastix`` is installed (as #672 found it), ANTs otherwise."""
+    try:
+        version("itk-elastix")
+    except PackageNotFoundError:
+        return "ants"
+    return "elastix"
+
+
+def load_config(align_config: Mapping | str | PathLike | None, backend: str) -> dict:
+    """
+    Read one backend's settings.
+
+    Parameters
+    ----------
+    align_config : :obj:`~collections.abc.Mapping` or :obj:`os.pathlike`, optional
+        The backend's settings, or a YAML file with a section per backend
+        (default: :data:`RIGID`).
+    backend : :obj:`str`
+        The section of a file to read.
+
+    Returns
+    -------
+    :obj:`dict`
+        A copy of the settings.
+
+    Examples
+    --------
+    >>> load_config(AFFINE, "elastix")["stages"][0]["parameters"]["Transform"]
+    ['AffineTransform']
+
+    >>> load_config(None, "ants") == load_config(RIGID, "ants")
+    True
+
+    >>> load_config(RIGID, "flirt")
+    Traceback (most recent call last):
+    ValueError: .../rigid.yaml has no settings for flirt (it has: ants, elastix).
+
+    """
+    if isinstance(align_config, Mapping):
+        return deepcopy(dict(align_config))
+    path = Path(RIGID if align_config is None else align_config)
+    sections = yaml.safe_load(path.read_text())
+    if backend not in sections:
+        raise ValueError(f"{path} has no settings for {backend} (it has: {', '.join(sections)}).")
+    return sections[backend]
 
 
 class RegistrationFactory:
     """Build a registration backend by name, as models are built by name."""
 
     @staticmethod
-    def init(name: str = "ants", **kwargs: Any) -> Registration:
+    def init(name: str | None = None, **kwargs: Any) -> Registration:
         """
         Build the backend ``name`` (of :data:`BACKENDS`, or any ``"module:class"``).
+
+        Without a name, the backend is that of :func:`default_backend`.
 
         >>> type(RegistrationFactory.init("nifreeze.registration.ants:Ants")).__name__
         'Ants'
 
         """
+        name = name or default_backend()
         module, _, cls = BACKENDS.get(name.lower(), name).partition(":")
         if not cls:
             raise ValueError(f"Unknown registration backend {name!r} (of {sorted(BACKENDS)}).")
@@ -75,9 +137,9 @@ class Registration(ABC):
 
     Parameters
     ----------
-    settings : :obj:`str`, :obj:`os.pathlike` or :obj:`dict`, optional
-        A configuration of the backend's own family, by name or path (:obj:`None`
-        selects the backend's default).
+    align_config : :obj:`~collections.abc.Mapping` or :obj:`os.pathlike`, optional
+        The backend's settings, or a YAML file with a section per backend, such as
+        :data:`RIGID` (the default) and :data:`AFFINE` (see :func:`load_config`).
     seed : :obj:`int`, optional
         Seed of the backend's random sampling.
     num_threads : :obj:`int`, optional
@@ -89,22 +151,19 @@ class Registration(ABC):
         Keep ``predicted_<index>.nii`` and ``sample_<index>.nii``, the values
         registered, and ``aligned_<index>.nii``, the sample with its affine corrected
         by the estimate (a viewer shows it on top of the prediction).
-    **overrides
-        Settings that override those of the configuration.
 
     """
 
     def __init__(
         self,
-        settings: Any = None,
+        align_config: Mapping | str | PathLike | None = None,
         *,
         seed: int | None = None,
         num_threads: int | None = None,
         clip: str | bool | None = "both",
         debug_dir: str | Path | None = None,
-        **overrides: Any,
     ) -> None:
-        self.settings = settings
+        self.align_config: Any = align_config  # each backend reads it as it likes
         self.seed = seed
         self.num_threads = num_threads
         clip = str(clip).lower()
@@ -113,7 +172,6 @@ class Registration(ABC):
         self.debug_dir = None if debug_dir is None else Path(debug_dir).absolute()
         if self.debug_dir is not None:
             self.debug_dir.mkdir(parents=True, exist_ok=True)
-        self.overrides = overrides
 
     def __call__(
         self,

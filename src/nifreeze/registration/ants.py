@@ -25,8 +25,7 @@
 from __future__ import annotations
 
 from collections import namedtuple
-from importlib.resources import files
-from json import loads
+from collections.abc import Mapping
 from pathlib import Path
 from shutil import rmtree
 from tempfile import mkdtemp
@@ -43,32 +42,15 @@ from nitransforms.linear import Affine
 from nifreeze.registration import base
 from nifreeze.registration.base import WINDOW_LEVELS, _write_aligned  # noqa: F401
 
-PARAMETERS_SINGLE_VALUE = {
-    "collapse_output_transforms",
-    "dimension",
-    "initial_moving_transform",
-    "initialize_transforms_per_stage",
-    "interpolation",
-    "output_transform_prefix",
-    "verbose",
-    "winsorize_lower_quantile",
-    "winsorize_upper_quantile",
-    "write_composite_transform",
-}
-
 PARAMETERS_SINGLE_LIST = {
     "radius_or_number_of_bins",
     "sampling_percentage",
     "metric",
     "sampling_strategy",
 }
-PARAMETERS_DOUBLE_LIST = {"shrink_factors", "smoothing_sigmas", "transform_parameters"}
 
 REGISTRATION_MALFORMED_SETTINGS_ERROR_MSG = "Malformed settings file (levels: {levels})"
 """Registration malformed settings error message."""
-
-REGISTRATION_UNKNOWN_SETTINGS_ERROR_MSG = "Unknown registration settings: {keys}"
-"""Unknown registration settings error message."""
 
 REGISTRATION_INIT_WITHOUT_COLLAPSE_ERROR_MSG = (
     "An initial transform requires 'collapse_output_transforms': otherwise the first "
@@ -201,39 +183,6 @@ def _prepare_registration_data(
     return predicted_path, sample_path, init_path
 
 
-def _get_ants_settings(settings: str | Path = "b0-to-b0_level0") -> Path:
-    """
-    Retrieve the path to ANTs settings configuration file.
-
-    Parameters
-    ----------
-    settings : :obj:`str` or :obj:`os.pathlike`, optional
-        A file of settings, or the name of a configuration of
-        ``nifreeze/registration/config`` (with or without ``.json``).
-
-    Returns
-    -------
-    :obj:`~pathlib.Path`
-        The path to the configuration file.
-
-    Examples
-    --------
-    >>> _get_ants_settings()
-    PosixPath('.../config/b0-to-b0_level0.json')
-
-    >>> _get_ants_settings("dwi-to-dwi_level1")
-    PosixPath('.../config/dwi-to-dwi_level1.json')
-
-    >>> _get_ants_settings("dwi-to-dwi_level1.json")
-    PosixPath('.../config/dwi-to-dwi_level1.json')
-
-    """
-    if (path := Path(settings)).is_file():
-        return path
-    name = str(settings).removesuffix(".json")
-    return Path(str(files("nifreeze.registration").joinpath(f"config/{name}.json")))
-
-
 def _massage_mask_path(mask_path: str | Path | list[str], nlevels: int) -> list[str]:
     """
     Generate nipype-compatible masks paths.
@@ -278,11 +227,11 @@ def generate_command(
     fixedmask_path: str | Path | list[str] | None = None,
     movingmask_path: str | Path | list[str] | None = None,
     init_affine: str | Path | None = None,
-    default: str | Path = "b0-to-b0_level0",
+    align_config: Mapping | str | Path | None = None,
     terminal_output: str | None = None,
     num_threads: int | None = None,
     environ: dict | None = None,
-    **kwargs,
+    output_transform_prefix: str | None = None,
 ) -> Registration:
     """
     Generate an ANTs' command line.
@@ -299,17 +248,17 @@ def generate_command(
         Path to the moving image mask.
     init_affine : :obj:`os.pathlike`, optional
         Initial affine transformation.
-    default : :obj:`str` or :obj:`os.pathlike`, optional
-        Default settings configuration: a file, or the name of a packaged one
-        (see :func:`_get_ants_settings`).
+    align_config : :obj:`~collections.abc.Mapping` or :obj:`os.pathlike`, optional
+        ANTs' settings, or a file with an ``ants`` section
+        (default: :data:`~nifreeze.registration.base.RIGID`).
     terminal_output : :obj:`str`, optional
         Redirect terminal output (Nipype configuration)
     environ : :obj:`dict`, optional
         Add environment variables to the execution.
     num_threads : :obj:`int`, optional
         Set the number of threads for ANTs' execution.
-    **kwargs : :obj:`dict`
-        Additional parameters for ANTs registration.
+    output_transform_prefix : :obj:`str`, optional
+        The prefix of the output transforms (default: nipype's).
 
     Returns
     -------
@@ -342,116 +291,46 @@ def generate_command(
     >>> generate_command(
     ...     fixed_path=repodata / 'fileA.nii.gz',
     ...     moving_path=repodata / 'fileB.nii.gz',
-    ...     default="dwi-to-b0_level0",
-    ... ).cmdline  # doctest: +NORMALIZE_WHITESPACE
-    'antsRegistration --collapse-output-transforms 1 --dimensionality 3 \
-    --initialize-transforms-per-stage 0 --interpolation Linear --output transform \
-    --transform Rigid[ 0.01 ] --metric Mattes[ \
-        .../fileA.nii.gz, \
-        .../fileB.nii.gz, \
-        1, 32, Regular, 0.2 \
-    ] --convergence [ 100x50, 1e-05, 10 ] --smoothing-sigmas 2.0x0.0vox \
-    --shrink-factors 2x1 --use-histogram-matching 1 --transform Rigid[ 0.001 ] \
-    --metric Mattes[ \
-        .../fileA.nii.gz, \
-        .../fileB.nii.gz, \
-        1, 32, Random, 0.1 \
-    ] --convergence [ 25, 1e-06, 2 ] --smoothing-sigmas 0.0vox --shrink-factors 1 \
-    --use-histogram-matching 1 -v --winsorize-image-intensities [ 0.0001, 0.9998 ] \
-    --write-composite-transform 0'
-
-    >>> generate_command(
-    ...     fixed_path=repodata / 'fileA.nii.gz',
-    ...     moving_path=repodata / 'fileB.nii.gz',
     ...     fixedmask_path=repodata / 'maskA.nii.gz',
-    ...     default="dwi-to-b0_level0",
+    ...     align_config=base.AFFINE,
     ... ).cmdline  # doctest: +NORMALIZE_WHITESPACE
     'antsRegistration --collapse-output-transforms 1 --dimensionality 3 \
     --initialize-transforms-per-stage 0 --interpolation Linear --output transform \
-    --transform Rigid[ 0.01 ] --metric Mattes[ \
-        .../fileA.nii.gz, \
-        .../fileB.nii.gz, \
-        1, 32, Regular, 0.2 ] \
-    --convergence [ 100x50, 1e-05, 10 ] --smoothing-sigmas 2.0x0.0vox --shrink-factors 2x1 \
-    --use-histogram-matching 1 --masks [ \
-        .../maskA.nii.gz, NULL ] \
-    --transform Rigid[ 0.001 ] --metric Mattes[ \
-        .../fileA.nii.gz, \
-        .../fileB.nii.gz, \
-        1, 32, Random, 0.1 ] \
-    --convergence [ 25, 1e-06, 2 ] --smoothing-sigmas 0.0vox --shrink-factors 1 \
-    --use-histogram-matching 1 --masks [ \
-        .../maskA.nii.gz, NULL ] \
-    -v --winsorize-image-intensities [ 0.0001, 0.9998 ]  --write-composite-transform 0'
-
-    >>> generate_command(
-    ...     fixed_path=repodata / 'fileA.nii.gz',
-    ...     moving_path=repodata / 'fileB.nii.gz',
-    ...     default="dwi-to-b0_level0",
-    ... ).cmdline  # doctest: +NORMALIZE_WHITESPACE
-    'antsRegistration --collapse-output-transforms 1 --dimensionality 3 \
-    --initialize-transforms-per-stage 0 --interpolation Linear --output transform \
-    --transform Rigid[ 0.01 ] --metric Mattes[ \
-        .../fileA.nii.gz, \
-        .../fileB.nii.gz, \
-        1, 32, Regular, 0.2 \
-    ] --convergence [ 100x50, 1e-05, 10 ] --smoothing-sigmas 2.0x0.0vox \
-    --shrink-factors 2x1 --use-histogram-matching 1 --transform Rigid[ 0.001 ] \
-    --metric Mattes[ \
-        .../fileA.nii.gz, \
-        .../fileB.nii.gz, \
-        1, 32, Random, 0.1 \
-    ] --convergence [ 25, 1e-06, 2 ] --smoothing-sigmas 0.0vox --shrink-factors 1 \
-    --use-histogram-matching 1 -v --winsorize-image-intensities [ 0.0001, 0.9998 ] \
-    --write-composite-transform 0'
+    --transform Affine[ 0.01 ] --metric Mattes[ .../fileA.nii.gz, .../fileB.nii.gz, 1, 32, \
+    Regular, 0.2 ] --convergence [ 100, 1e-06, 15 ] --smoothing-sigmas 2.0vox \
+    --shrink-factors 1 --use-histogram-matching 1 --masks [ .../maskA.nii.gz, NULL ] \
+    --transform Affine[ 0.001 ] --metric GC[ .../fileA.nii.gz, .../fileB.nii.gz, 1, 5, \
+    Random, 0.1 ] --convergence [ 50, 1e-07, 5 ] --smoothing-sigmas 0.0vox \
+    --shrink-factors 1 --use-histogram-matching 1 --masks [ .../maskA.nii.gz, NULL ] \
+    --winsorize-image-intensities [ 0.0001, 0.9998 ]  --write-composite-transform 0'
 
     >>> generate_command(
     ...     fixed_path=repodata / 'fileA.nii.gz',
     ...     moving_path=repodata / 'fileB.nii.gz',
     ...     fixedmask_path=[repodata / 'maskA.nii.gz'],
-    ...     default="dwi-to-b0_level0",
+    ...     align_config=base.AFFINE,
     ... ).cmdline  # doctest: +NORMALIZE_WHITESPACE
     'antsRegistration --collapse-output-transforms 1 --dimensionality 3 \
     --initialize-transforms-per-stage 0 --interpolation Linear --output transform \
-    --transform Rigid[ 0.01 ] --metric Mattes[ \
-        .../fileA.nii.gz, \
-        .../fileB.nii.gz, \
-        1, 32, Regular, 0.2 ] \
-    --convergence [ 100x50, 1e-05, 10 ] --smoothing-sigmas 2.0x0.0vox --shrink-factors 2x1 \
-    --use-histogram-matching 1 --masks [ NULL, NULL ] \
-    --transform Rigid[ 0.001 ] --metric Mattes[ \
-        .../fileA.nii.gz, \
-        .../fileB.nii.gz, \
-        1, 32, Random, 0.1 ] \
-    --convergence [ 25, 1e-06, 2 ] --smoothing-sigmas 0.0vox --shrink-factors 1 \
-    --use-histogram-matching 1 --masks [ \
-        .../maskA.nii.gz, NULL ] \
-    -v --winsorize-image-intensities [ 0.0001, 0.9998 ]  --write-composite-transform 0'
+    --transform Affine[ 0.01 ] --metric Mattes[ .../fileA.nii.gz, .../fileB.nii.gz, 1, 32, \
+    Regular, 0.2 ] --convergence [ 100, 1e-06, 15 ] --smoothing-sigmas 2.0vox \
+    --shrink-factors 1 --use-histogram-matching 1 --masks [ NULL, NULL ] --transform \
+    Affine[ 0.001 ] --metric GC[ .../fileA.nii.gz, .../fileB.nii.gz, 1, 5, Random, 0.1 ] \
+    --convergence [ 50, 1e-07, 5 ] --smoothing-sigmas 0.0vox --shrink-factors 1 \
+    --use-histogram-matching 1 --masks [ .../maskA.nii.gz, NULL ] \
+    --winsorize-image-intensities [ 0.0001, 0.9998 ]  --write-composite-transform 0'
 
     """
 
-    # Bootstrap settings from defaults file and override with single-valued parameters in args
-    settings = loads(_get_ants_settings(default).read_text()) | {
-        k: kwargs.pop(k) for k in PARAMETERS_SINGLE_VALUE if k in kwargs
-    }
-    if unknown := sorted(set(kwargs) - PARAMETERS_SINGLE_LIST - PARAMETERS_DOUBLE_LIST):
-        raise TypeError(REGISTRATION_UNKNOWN_SETTINGS_ERROR_MSG.format(keys=", ".join(unknown)))
+    settings = base.load_config(align_config, "ants")
+    if output_transform_prefix is not None:
+        settings["output_transform_prefix"] = output_transform_prefix
 
     # Determine number of levels and assert consistency of levels
     levels = {len(settings[p]) for p in PARAMETERS_SINGLE_LIST if p in settings}
     nlevels = levels.pop()
     if levels:
         raise RuntimeError(REGISTRATION_MALFORMED_SETTINGS_ERROR_MSG.format(levels=levels))
-
-    # Override list (and nested-list) parameters
-    for key, value in kwargs.items():
-        if key in PARAMETERS_DOUBLE_LIST:
-            value = [value]
-
-        if nlevels == 1:
-            settings[key] = [value]
-        else:
-            settings[key][-1] = value
 
     # Set fixed masks if provided
     if fixedmask_path is not None:
@@ -527,9 +406,6 @@ def _run_registration(
         environ = environ or {}
         environ["ANTS_RANDOM_SEED"] = str(seed)
 
-    if "ants_config" in kwargs:
-        align_kwargs["default"] = align_kwargs.pop("ants_config")
-
     registration = generate_command(
         fixed_path,
         moving_path,
@@ -563,22 +439,26 @@ class Ants(base.Registration):
 
     Parameters
     ----------
-    settings : :obj:`str` or :obj:`os.pathlike`, optional
-        A configuration of ``nifreeze/registration/config``, by name, or a file
-        (:obj:`None` selects the default of :func:`generate_command`).
+    align_config : :obj:`~collections.abc.Mapping` or :obj:`os.pathlike`, optional
+        ANTs' settings, or a file with an ``ants`` section
+        (default: :data:`~nifreeze.registration.base.RIGID`).
     workdir : :obj:`os.pathlike`, optional
         Where the files go without ``debug_dir`` (default: a temporary folder,
         removed with the backend).
     **kwargs
-        See :class:`~nifreeze.registration.base.Registration`; the overrides are those
-        of :func:`generate_command`.
+        See :class:`~nifreeze.registration.base.Registration`.
 
     """
 
     def __init__(
-        self, settings: Any = None, *, workdir: str | Path | None = None, **kwargs: Any
+        self,
+        align_config: Mapping | str | Path | None = None,
+        *,
+        workdir: str | Path | None = None,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(settings, **kwargs)
+        # Read once, so that a file without an ``ants`` section fails here
+        super().__init__(base.load_config(align_config, "ants"), **kwargs)
         folder = self.debug_dir or workdir
         if folder is None:
             folder = mkdtemp(prefix="nifreeze-ants-")
@@ -607,9 +487,6 @@ class Ants(base.Registration):
             window=window,
             init_affine=init,
         )
-        settings = dict(self.overrides)
-        if self.settings is not None:
-            settings["ants_config"] = self.settings
         xform = _run_registration(
             fixed_path,
             moving_path,
@@ -620,6 +497,6 @@ class Ants(base.Registration):
             output_transform_prefix=f"ants-{index:05d}",
             num_threads=self.num_threads,
             seed=self.seed,
-            **settings,
+            align_config=self.align_config,
         )
         return np.asarray(xform.matrix)

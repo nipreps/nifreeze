@@ -38,10 +38,17 @@ from nifreeze.data.pet.utils import compute_uptake_statistic
 from nifreeze.estimator import Estimator
 from nifreeze.model.base import BaseModel, ExpectationModel
 from nifreeze.model.pet import BSplinePETModel
+from nifreeze.registration.base import AFFINE, RIGID, load_config
 from nifreeze.utils import iterators
 from nifreeze.utils.ndimage import load_api
 
 DATAOBJ_SIZE = (7, 5, 5, 5)
+
+
+@pytest.fixture(autouse=True)
+def ants_by_default(monkeypatch):
+    """These tests patch ANTs' helpers: estimators that name no backend build ANTs."""
+    monkeypatch.setattr(nifreeze.registration.base, "default_backend", lambda: "ants")
 
 
 class DummyInsiderModel(BaseModel):
@@ -243,22 +250,17 @@ def test_estimator_registration_settings(request, monkeypatch, num_threads, expe
 
     first = Estimator(DummyInsiderModel(dataset=dataset), strategy="linear")
     second = Estimator(
-        DummyInsiderModel(dataset=dataset), strategy="linear", prev=first, metric="GC"
+        DummyInsiderModel(dataset=dataset), strategy="linear", prev=first, align_config=RIGID
     )
     threads = {} if num_threads is None else {"num_threads": num_threads}
-    second.run(
-        dataset,
-        align_kwargs={"ants_config": "dwi-to-dwi_level1", "metric": "Mattes"},
-        omp_nthreads=5,
-        **threads,
-    )
+    second.run(dataset, align_kwargs={"align_config": AFFINE}, omp_nthreads=5, **threads)
 
     n = len(dataset)
     assert len(received) == 2 * n
     assert all("align_kwargs" not in kwargs for kwargs in received)
-    assert all(kwargs["ants_config"] == "dwi-to-dwi_level1" for kwargs in received)
     assert all(kwargs["num_threads"] == expected for kwargs in received)
-    assert [kwargs["metric"] for kwargs in received] == ["Mattes"] * n + ["GC"] * n
+    configs = [load_config(AFFINE, "ants")] * n + [load_config(RIGID, "ants")] * n
+    assert [kwargs["align_config"] for kwargs in received] == configs
 
 
 def test_estimator_debug_dir(request, monkeypatch, tmp_path):

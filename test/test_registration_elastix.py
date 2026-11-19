@@ -22,10 +22,9 @@
 #
 """The elastix backend's settings (#671). Its conventions are tested with ANTs' (#619)."""
 
-import json
-
 import numpy as np
 import pytest
+import yaml
 from test_registration_conventions import (
     SKIP_ELASTIX,
     _affine,
@@ -45,10 +44,10 @@ def _stage(**fields):
     return {"parameters": {"Transform": ["EulerTransform"]}, **fields}
 
 
-def test_settings_by_name_path_or_mapping(tmp_path):
-    settings = get_settings("b0-to-b0_level0")
-    path = tmp_path / "settings.json"
-    path.write_text(json.dumps(settings))
+def test_settings_by_path_or_mapping(tmp_path):
+    settings = get_settings()
+    path = tmp_path / "settings.yaml"
+    path.write_text(yaml.safe_dump({"elastix": settings}))
 
     assert get_settings(path) == settings
     copy = get_settings(settings)
@@ -113,7 +112,7 @@ def test_values_set_in_the_parameters_are_kept():
 @SKIP_ELASTIX
 def test_a_settings_file_with_a_pyramid_registers(tmp_path):
     """Settings given by path, here a downsampling pyramid of three resolutions."""
-    settings = get_settings("b0-to-b0_level0")
+    settings = get_settings()
     stage = settings["stages"][-1]
     stage["sampling_percentage"] = [0.4, 0.2, 0.1]
     stage["smoothing_sigma"] = [2.0, 1.0, 0.0]
@@ -124,8 +123,8 @@ def test_a_settings_file_with_a_pyramid_registers(tmp_path):
         "MaximumNumberOfIterations": ["50"],
     }
     settings["stages"] = [stage]
-    path = tmp_path / "pyramid.json"
-    path.write_text(json.dumps(settings))
+    path = tmp_path / "pyramid.yaml"
+    path.write_text(yaml.safe_dump({"elastix": settings}))
     data, mask = _volume()
     affine = _affine("oblique")
     matrix = _motion()

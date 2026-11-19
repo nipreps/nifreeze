@@ -25,26 +25,7 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, Namespace
 from pathlib import Path
 
-import yaml
-
-
-def _parse_yaml_config(file_path: str) -> dict:
-    """
-    Parse YAML configuration file.
-
-    Parameters
-    ----------
-    file_path : :obj:`str`
-        Path to the YAML configuration file.
-
-    Returns
-    -------
-    :obj:`dict`
-        A dictionary containing the parsed YAML configuration.
-    """
-    with open(file_path, "r") as file:
-        config = yaml.safe_load(file)
-    return config
+from nifreeze.registration.base import AFFINE, BACKENDS
 
 
 def _build_parser() -> ArgumentParser:
@@ -73,16 +54,42 @@ def _build_parser() -> ArgumentParser:
     )
 
     parser.add_argument(
-        "--align-config",
+        "--registration",
         action="store",
-        type=_parse_yaml_config,
+        choices=sorted(BACKENDS),
         default=None,
         help=(
-            "Path to the yaml file containing the parameters "
-            "to configure the image registration process, at every level of the "
-            "cascade: 'ants_config' names a configuration of "
-            "nifreeze/registration/config or a file of settings, and the other keys "
-            "override its settings."
+            "The registration backend (default: elastix where itk-elastix is installed, "
+            "ANTs otherwise)."
+        ),
+    )
+    parser.add_argument(
+        "--align-config",
+        action="store",
+        type=Path,
+        metavar="FILE",
+        default=None,
+        help=(
+            "A YAML file of registration settings, with a section per backend, for "
+            "every level of the --models cascade (default: the packaged "
+            "nifreeze/registration/config/rigid.yaml). To change a setting, copy and "
+            "edit that file."
+        ),
+    )
+    parser.add_argument(
+        "--eddy",
+        action="store",
+        nargs="?",
+        type=Path,
+        const=AFFINE,
+        metavar="FILE",
+        default=None,
+        help=(
+            "Estimate eddy currents (dMRI): after the --models cascade, one more pass "
+            "of the last model, started from the motion estimates, with the settings "
+            "of FILE (default: the packaged nifreeze/registration/config/affine.yaml). "
+            "Its model should predict the diffusion signal: the trivial model registers "
+            "every volume to the b=0 reference."
         ),
     )
     parser.add_argument(

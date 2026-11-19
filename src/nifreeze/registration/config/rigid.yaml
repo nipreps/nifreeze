@@ -1,0 +1,89 @@
+# Rigid registration, NiFreeze's default for head motion.
+# A section per backend, read by the backend of that name
+# (nifreeze.registration.base.load_config). To change a setting, copy and edit this file.
+
+# ANTs (antsRegistration, run through nipype).
+ants:
+  collapse_output_transforms: true
+  convergence_threshold: [1.0e-06, 1.0e-07]
+  convergence_window_size: [4, 2]
+  dimension: 3
+  initialize_transforms_per_stage: false
+  interpolation: Linear
+  metric: [GC, GC]
+  metric_weight: [1.0, 1.0]
+  number_of_iterations:
+  - [20]
+  - [10]
+  radius_or_number_of_bins: [3, 4]
+  sampling_percentage: [0.4, 0.18]
+  sampling_strategy: [Random, Random]
+  shrink_factors:
+  - [3]
+  - [2]
+  sigma_units: [vox, vox]
+  smoothing_sigmas:
+  - [2.71]
+  - [0.0]
+  transform_parameters:
+  - [12.0]
+  - [1.96]
+  transforms: [Rigid, Rigid]
+  use_histogram_matching: [true, true]
+  verbose: true
+  winsorize_lower_quantile: 0.063
+  winsorize_upper_quantile: 0.991
+  write_composite_transform: false
+
+# Elastix: ANTs' stages mapped directly (#670), tested against the phantom truth (#672).
+elastix:
+  winsorize_lower_quantile: 0.063
+  winsorize_upper_quantile: 0.991
+  use_histogram_matching: true
+  stages:
+  - sampling_percentage: 0.4
+    shrink_factor: 3
+    smoothing_sigma: 2.71
+    parameters:
+      Registration: [MultiResolutionRegistration]
+      NumberOfResolutions: ['1']
+      FixedImagePyramid: [FixedGenericImagePyramid]
+      MovingImagePyramid: [MovingGenericImagePyramid]
+      ImagePyramidRescaleSchedule: ['1', '1', '1']
+      Transform: [EulerTransform]
+      AutomaticTransformInitialization: ['false']
+      AutomaticScalesEstimation: ['true']
+      HowToCombineTransforms: [Compose]
+      Metric: [AdvancedNormalizedCorrelation]
+      Interpolator: [LinearInterpolator]
+      ImageSampler: [RandomCoordinate]
+      NewSamplesEveryIteration: ['true']
+      ErodeMask: ['false']
+      Optimizer: [AdaptiveStochasticGradientDescent]
+      AutomaticParameterEstimation: ['true']
+      MaximumStepLength: ['12.0']
+      MaximumNumberOfIterations: ['20']
+      WriteResultImage: ['false']
+  - sampling_percentage: 0.18
+    shrink_factor: 2
+    smoothing_sigma: 0.0
+    parameters:
+      Registration: [MultiResolutionRegistration]
+      NumberOfResolutions: ['1']
+      FixedImagePyramid: [FixedGenericImagePyramid]
+      MovingImagePyramid: [MovingGenericImagePyramid]
+      ImagePyramidRescaleSchedule: ['1', '1', '1']
+      Transform: [EulerTransform]
+      AutomaticTransformInitialization: ['false']
+      AutomaticScalesEstimation: ['true']
+      HowToCombineTransforms: [Compose]
+      Metric: [AdvancedNormalizedCorrelation]
+      Interpolator: [LinearInterpolator]
+      ImageSampler: [RandomCoordinate]
+      NewSamplesEveryIteration: ['true']
+      ErodeMask: ['false']
+      Optimizer: [AdaptiveStochasticGradientDescent]
+      AutomaticParameterEstimation: ['true']
+      MaximumStepLength: ['1.96']
+      MaximumNumberOfIterations: ['10']
+      WriteResultImage: ['false']

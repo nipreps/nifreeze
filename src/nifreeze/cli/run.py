@@ -25,11 +25,13 @@
 import json
 import shutil
 import subprocess
+from importlib.metadata import version
 from pathlib import Path
 
 from nifreeze.cli.parser import parse_args
 from nifreeze.data import BaseDataset, load
 from nifreeze.estimator import Estimator
+from nifreeze.registration.base import default_backend
 
 
 def ants_version() -> str | None:
@@ -83,12 +85,24 @@ def main(argv: list[str] | None = None) -> None:
             prev=prev_model,
             single_fit=single_fit,
             model_kwargs=model_kwargs,
+            registration=args.registration,
         )
         prev_model = estimator
 
+    if args.eddy is not None:
+        # Eddy currents: one more pass of the last model, from the motion estimates
+        estimator = Estimator(
+            args.models[-1],
+            prev=estimator,
+            single_fit=single_fit,
+            model_kwargs=model_kwargs,
+            registration=args.registration,
+            align_config=args.eddy,
+        )
+
     _ = estimator.run(
         dataset,
-        align_kwargs=args.align_config,
+        align_kwargs=None if args.align_config is None else {"align_config": args.align_config},
         omp_nthreads=args.nthreads,
         n_jobs=args.n_jobs,
         debug_dir=args.debug_dir,
@@ -108,10 +122,14 @@ def main(argv: list[str] | None = None) -> None:
 
     dataset.to_nifti(output_path, write_hmxfms=True)
 
-    # Record which ANTs estimated the motion
+    # Record the version of the backend that registered
+    if (args.registration or default_backend()) == "ants":
+        provenance = {"ANTsVersion": ants_version()}
+    else:
+        provenance = {"ElastixVersion": version("itk-elastix")}
     output_json_filename = Path(Path(args.input_file).name).stem + ".json"
     output_json_path: Path = Path(args.output_dir) / output_json_filename
-    output_json_path.write_text(json.dumps({"ANTsVersion": ants_version()}, indent=2))
+    output_json_path.write_text(json.dumps(provenance, indent=2))
 
 
 if __name__ == "__main__":

@@ -22,11 +22,9 @@
 #
 """Unit tests exercising the estimator."""
 
-import json
 import os
 import re
 from collections.abc import Sized
-from importlib.resources import files
 from itertools import product
 from os import cpu_count
 from pathlib import Path
@@ -36,6 +34,7 @@ import nibabel as nb
 import nitransforms as nt
 import numpy as np
 import pytest
+import yaml
 from nibabel.affines import from_matvec
 from nibabel.arrayproxy import ArrayProxy
 from nibabel.eulerangles import euler2mat
@@ -48,11 +47,11 @@ from nifreeze.registration import ants
 from nifreeze.registration.ants import (
     REGISTRATION_INIT_WITHOUT_COLLAPSE_ERROR_MSG,
     REGISTRATION_MALFORMED_SETTINGS_ERROR_MSG,
-    REGISTRATION_UNKNOWN_SETTINGS_ERROR_MSG,
     _massage_mask_path,
     _prepare_registration_data,
     generate_command,
 )
+from nifreeze.registration.base import load_config
 from nifreeze.registration.utils import displacements_within_mask
 from nifreeze.utils.ndimage import load_api
 
@@ -67,18 +66,6 @@ def random_nifti_file(tmp_path, setup_random_uniform_spatial_data) -> Callable:
             filename = tmp_path / filename
         _img = nb.Nifti1Image(_data, _affine)
         _img.to_filename(filename)
-        return filename
-
-    return _make
-
-
-@pytest.fixture
-def json_file(tmp_path) -> Callable:
-    def _make(settings_dict, filename):
-        if not filename.is_absolute():
-            filename = tmp_path / filename
-        filename = Path(filename)
-        filename.write_text(json.dumps(settings_dict))
         return filename
 
     return _make
@@ -244,7 +231,7 @@ def test_write_aligned(tmp_path):
     assert np.allclose(np.asanyarray(viewed.dataobj), np.asanyarray(resampled.dataobj), atol=1e-3)
 
 
-def test_generate_command_malformed_settings(tmp_path, monkeypatch, random_nifti_file, json_file):
+def test_generate_command_malformed_settings(tmp_path, random_nifti_file):
     fixed = random_nifti_file(tmp_path / "fixed.nii.gz")
     moving = random_nifti_file(tmp_path / "moving.nii.gz")
 
@@ -253,7 +240,7 @@ def test_generate_command_malformed_settings(tmp_path, monkeypatch, random_nifti
     malformed_settings = {
         "metric": ["MattesLevel1", "MattesLevel2"],  # length 2
         "sampling_percentage": [0.2],  # length 1 -> inconsistency triggers the RuntimeError
-        # Include a few single-valued params so the JSON looks realistic
+        # Include a few single-valued params so the settings look realistic
         "collapse_output_transforms": 1,
         "dimension": 3,
         "initialize_transforms_per_stage": 0,
@@ -261,11 +248,6 @@ def test_generate_command_malformed_settings(tmp_path, monkeypatch, random_nifti
         "output_transform_prefix": "transform",
         "write_composite_transform": 0,
     }
-
-    settings_file = json_file(malformed_settings, tmp_path / "malformed_settings.json")
-
-    # Monkeypatch _get_ants_settings to return our controlled settings file
-    monkeypatch.setattr(ants, "_get_ants_settings", lambda settings="": Path(settings_file))
 
     # Required to avoid mypy errors about objects not having a Size mypy happy
     levels: Set[int] = set()
@@ -282,7 +264,7 @@ def test_generate_command_malformed_settings(tmp_path, monkeypatch, random_nifti
         RuntimeError,
         match=re.escape(REGISTRATION_MALFORMED_SETTINGS_ERROR_MSG.format(levels=levels)),
     ):
-        generate_command(fixed_path=fixed, moving_path=moving, default="unused")
+        generate_command(fixed_path=fixed, moving_path=moving, align_config=malformed_settings)
 
 
 def test_generate_command_basic(tmp_path, random_nifti_file):
@@ -300,52 +282,21 @@ def test_generate_command_basic(tmp_path, random_nifti_file):
     assert reg.inputs.moving_image[0] == str(Path(moving).absolute())
 
 
-def test_generate_command_unknown_settings(tmp_path, random_nifti_file):
-    """A setting that generate_command does not know raises instead of being dropped."""
-    fixed = random_nifti_file(tmp_path / "fixed.nii.gz")
-    moving = random_nifti_file(tmp_path / "moving.nii.gz")
-
-    message = REGISTRATION_UNKNOWN_SETTINGS_ERROR_MSG.format(
-        keys="align_kwargs, convergence_threshold"
-    )
-    with pytest.raises(TypeError, match=re.escape(message)):
-        generate_command(
-            fixed_path=fixed,
-            moving_path=moving,
-            align_kwargs={"metric": "GC"},
-            convergence_threshold=[1e-6],
-        )
-
-
-def test_get_ants_settings_from_a_file(tmp_path):
-    """A file of settings is used as it is; packaged names resolve with or without .json."""
-    packaged = ants._get_ants_settings()
-    assert packaged.name == "b0-to-b0_level0.json"
-    assert packaged.is_file()
-    assert ants._get_ants_settings("b0-to-b0_level0.json") == packaged
-
-    # The same name, in another folder
-    copied = tmp_path / "b0-to-b0_level0.json"
-    copied.write_text(packaged.read_text())
-    assert ants._get_ants_settings(copied) == copied
-    assert ants._get_ants_settings(str(copied)) == copied
-
-
 def test_generate_command_from_a_settings_file(tmp_path, random_nifti_file):
-    """A file of settings sets every level, and how many there are."""
+    """A file's ``ants`` section sets every level, and how many there are."""
     fixed = random_nifti_file(tmp_path / "fixed.nii.gz")
     moving = random_nifti_file(tmp_path / "moving.nii.gz")
 
     # A third level, at full resolution
-    settings = json.loads(ants._get_ants_settings().read_text())
+    settings = load_config(None, "ants")
     for value in settings.values():
         if isinstance(value, list):
             value.append(value[-1])
     settings["shrink_factors"][-1] = [1]
-    settings_file = tmp_path / "three-levels.json"
-    settings_file.write_text(json.dumps(settings))
+    settings_file = tmp_path / "three-levels.yaml"
+    settings_file.write_text(yaml.safe_dump({"ants": settings}))
 
-    cmdline = generate_command(fixed, moving, default=settings_file).cmdline
+    cmdline = generate_command(fixed, moving, align_config=settings_file).cmdline
     assert cmdline.count("--transform Rigid") == 3
     assert "--shrink-factors 3 " in cmdline
     assert "--shrink-factors 2 " in cmdline
@@ -353,7 +304,7 @@ def test_generate_command_from_a_settings_file(tmp_path, random_nifti_file):
 
 
 def test_run_registration_passes_a_settings_file(tmp_path, monkeypatch):
-    """``ants_config`` reaches generate_command as given, so a path is not mangled."""
+    """``align_config`` reaches generate_command as given, so a path is not mangled."""
     received = {}
 
     class Stop(Exception):
@@ -364,10 +315,10 @@ def test_run_registration_passes_a_settings_file(tmp_path, monkeypatch):
         raise Stop
 
     monkeypatch.setattr(ants, "generate_command", capture)
-    settings_file = str(tmp_path / "settings.json" / "variant.json")
+    settings_file = str(tmp_path / "settings.yaml" / "variant.yaml")
     with pytest.raises(Stop):
-        ants._run_registration("fixed.nii", "moving.nii", 0, tmp_path, ants_config=settings_file)
-    assert received["default"] == settings_file
+        ants._run_registration("fixed.nii", "moving.nii", 0, tmp_path, align_config=settings_file)
+    assert received["align_config"] == settings_file
 
 
 def test_generate_command_with_masks_init_and_threads(tmp_path, random_nifti_file):
@@ -436,115 +387,27 @@ def test_generate_command_threads_hold_over_the_environment(tmp_path, monkeypatc
     assert environ["ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS"] == "1"
 
 
-@pytest.mark.parametrize(
-    "settings_dict, shrink_override, metric_override, expected_shrink, expected_metric, case_name",
-    [
-        (
-            # Single-level settings (nlevels == 1)
-            {
-                "shrink_factors": [[3]],
-                "metric": ["Mattes"],
-                "collapse_output_transforms": True,
-                "dimension": 3,
-                "initialize_transforms_per_stage": False,
-                "interpolation": "Linear",
-                "output_transform_prefix": "transform",
-                "write_composite_transform": False,
-            },
-            5,
-            ["MI"],
-            [[5]],
-            [["MI"]],
-            "single",
-        ),
-        (
-            # Multi-level settings (nlevels == 2)
-            {
-                "shrink_factors": [[4], [2]],
-                "metric": [["MI"], ["MattesLevel2"]],
-                "collapse_output_transforms": True,
-                "dimension": 3,
-                "initialize_transforms_per_stage": False,
-                "interpolation": "Linear",
-                "output_transform_prefix": "transform",
-                "write_composite_transform": False,
-            },
-            9,
-            ["Demons"],
-            [[4], [9]],
-            [["MI"], ["Demons"]],
-            "multi",
-        ),
-    ],
-)
-def test_generate_command_override_nested_list_parameters(
-    tmp_path,
-    monkeypatch,
-    random_nifti_file,
-    json_file,
-    settings_dict,
-    shrink_override,
-    metric_override,
-    expected_shrink,
-    expected_metric,
-    case_name,
-):
-    """Ensure that generate_command applies overrides for:
-      - a PARAMETERS_DOUBLE_LIST key (shrink_factors)
-      - a PARAMETERS_SINGLE_LIST key (metric)
-
-    The test monkeypatches _get_ants_settings to return a controlled JSON file
-    so generate_command's mutation of settings is deterministic.
-    """
-    fixed = random_nifti_file(tmp_path / "fixed.nii.gz")
-    moving = random_nifti_file(tmp_path / "moving.nii.gz")
-
-    settings_file = json_file(settings_dict, tmp_path / f"settings_{case_name}.json")
-
-    # Monkeypatch the resolver
-    monkeypatch.setattr(ants, "_get_ants_settings", lambda settings="": Path(settings_file))
-
-    # Call generate_command with overrides that should affect the last level
-    reg = generate_command(
-        fixed_path=fixed,
-        moving_path=moving,
-        default="unused",
-        shrink_factors=shrink_override,
-        metric=metric_override,
-    )
-
-    # Assert the resulting Registration.inputs reflect the expected overrides
-    assert reg.inputs.shrink_factors[:] == expected_shrink
-    assert reg.inputs.metric[:] == expected_metric
-
-
-def test_generate_command_init_requires_collapse(
-    tmp_path, monkeypatch, random_nifti_file, json_file
-):
+def test_generate_command_init_requires_collapse(tmp_path, random_nifti_file):
     """An initial transform is only read back correctly if ANTs collapses the output."""
     fixed = random_nifti_file(tmp_path / "fixed.nii.gz")
     moving = random_nifti_file(tmp_path / "moving.nii.gz")
-    settings_file = json_file(
-        {
-            "shrink_factors": [[2]],
-            "metric": ["Mattes"],
-            "collapse_output_transforms": False,
-            "dimension": 3,
-            "interpolation": "Linear",
-            "output_transform_prefix": "transform",
-            "write_composite_transform": False,
-        },
-        tmp_path / "settings.json",
-    )
-    monkeypatch.setattr(ants, "_get_ants_settings", lambda settings="": Path(settings_file))
+    settings = {
+        "shrink_factors": [[2]],
+        "metric": ["Mattes"],
+        "collapse_output_transforms": False,
+        "dimension": 3,
+        "interpolation": "Linear",
+        "output_transform_prefix": "transform",
+        "write_composite_transform": False,
+    }
     init_path = tmp_path / "init.mat"
     init_path.write_text("ITK transform placeholder")
 
     # Without an initial transform, these settings are accepted
-    generate_command(fixed_path=fixed, moving_path=moving, default="unused")
+    generate_command(fixed_path=fixed, moving_path=moving, align_config=settings)
     with pytest.raises(ValueError, match=re.escape(REGISTRATION_INIT_WITHOUT_COLLAPSE_ERROR_MSG)):
         generate_command(
-            fixed_path=fixed, moving_path=moving, default="unused", init_affine=init_path
+            fixed_path=fixed, moving_path=moving, align_config=settings, init_affine=init_path
         )
 
 
@@ -558,7 +421,7 @@ def test_generate_command_init_requires_collapse(
     ],
 )
 def test_generate_command_masks_and_init_propagation(
-    tmp_path, monkeypatch, use_masks, use_init_affine, random_nifti_file, json_file
+    tmp_path, use_masks, use_init_affine, random_nifti_file
 ):
     """Ensure generate_command:
     - propagates fixed/moving masks into Registration.inputs as
@@ -580,11 +443,6 @@ def test_generate_command_masks_and_init_propagation(
         "output_transform_prefix": "transform",
         "write_composite_transform": False,
     }
-    settings_file = json_file(_settings, tmp_path / "settings.json")
-
-    # Monkeypatch the resolver
-    monkeypatch.setattr(ants, "_get_ants_settings", lambda settings="": Path(settings_file))
-
     fixed_mask = None
     moving_mask = None
     if use_masks:
@@ -599,7 +457,7 @@ def test_generate_command_masks_and_init_propagation(
     reg = generate_command(
         fixed_path=fixed,
         moving_path=moving,
-        default="unused",
+        align_config=_settings,
         fixedmask_path=fixed_mask if use_masks else None,
         movingmask_path=moving_mask if use_masks else None,
         init_affine=init_path if use_init_affine else None,
@@ -685,7 +543,7 @@ def test_ANTs_config_b0(datadir, tmp_path, dataset, r_x, r_y, r_z, t_x, t_y, t_z
 
     registration = Registration(
         terminal_output="file",
-        from_file=files("nifreeze.registration").joinpath("config/b0-to-b0_level0.json"),
+        **load_config(None, "ants"),
         fixed_image=str(fixed.absolute()),
         moving_image=str(moving.absolute()),
         fixed_image_masks=[str(fixed_mask)],

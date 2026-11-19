@@ -132,8 +132,8 @@ a median of 1.21 mm at *m* = 1, and 4.85 mm at *m* = 4.
 
 The ANTs settings
 ~~~~~~~~~~~~~~~~~
-*NiFreeze* builds its ANTs command from
-``src/nifreeze/registration/config/b0-to-b0_level0.json``.
+*NiFreeze* builds its ANTs command from the ``ants`` section of
+``src/nifreeze/registration/config/rigid.yaml``.
 This is the command of the benchmark, with the file names replaced by placeholders:
 ``fixed.nii`` is the oracle, ``moving.nii`` the moved volume and ``mask.nii`` the
 brain mask.

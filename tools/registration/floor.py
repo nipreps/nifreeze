@@ -81,7 +81,8 @@ from scipy.spatial.transform import Rotation
 
 from nifreeze.analysis.phantoms import load_phantom
 from nifreeze.data.filtering import robust_window
-from nifreeze.registration.ants import _get_ants_settings, _prepare_registration_data
+from nifreeze.registration.ants import _prepare_registration_data
+from nifreeze.registration.base import load_config
 from nifreeze.registration.utils import displacements_within_mask
 
 NOISE = 20261029
@@ -113,7 +114,7 @@ VARIANTS: list[dict[str, Any]] = [
 
 def ants_settings(variant: dict) -> dict:
     """The estimator's default settings, with the variant's finest level."""
-    settings = json.loads(_get_ants_settings().read_text())
+    settings = load_config(None, "ants")
     settings["shrink_factors"][-1] = [variant["shrink"]]
     changes = (LONGER if variant["optimizer"] == "longer" else {}) | (
         DENSE if variant["sampling"] == "dense" else {}

@@ -24,8 +24,12 @@
 """Test the runner."""
 
 import json
+from pathlib import Path
+
+import pytest
 
 from nifreeze.cli import run
+from nifreeze.registration.base import AFFINE
 
 
 class _Dataset:
@@ -34,10 +38,14 @@ class _Dataset:
 
 
 class _Estimator:
+    built: list["_Estimator"] = []
+
     def __init__(self, *args, **kwargs):
-        pass
+        self.args, self.kwargs, self.ran = args, kwargs, {}
+        _Estimator.built.append(self)
 
     def run(self, dataset, **kwargs):
+        self.ran = kwargs
         return dataset
 
 
@@ -53,15 +61,47 @@ def test_ants_version_without_ants(monkeypatch, tmp_path):
     assert run.ants_version() is None
 
 
-def test_main_records_ants_version(monkeypatch, tmp_path):
-    """The run writes the ANTs version into a sidecar beside its output."""
+@pytest.mark.parametrize(
+    ("backend", "expected"),
+    [("ants", {"ANTsVersion": "ANTs Version: 2.4.4"}), ("elastix", {"ElastixVersion": "0.25.4"})],
+)
+def test_main_records_the_backend_version(monkeypatch, tmp_path, backend, expected):
+    """The run writes the version of the backend that registered beside its output."""
     monkeypatch.setattr(run, "load", lambda *args, **kwargs: _Dataset())
     monkeypatch.setattr(run, "Estimator", _Estimator)
     monkeypatch.setattr(run, "ants_version", lambda: "ANTs Version: 2.4.4")
+    monkeypatch.setattr(run, "version", lambda distribution: "0.25.4")
+    monkeypatch.setattr(run, "default_backend", lambda: backend)
 
     input_file = tmp_path / "dwi.h5"
     input_file.touch()
     run.main([str(input_file), "--models", "avgdwi", "--output-dir", str(tmp_path)])
 
     sidecar = json.loads((tmp_path / "dwi.json").read_text())
-    assert sidecar == {"ANTsVersion": "ANTs Version: 2.4.4"}
+    assert sidecar == expected
+
+
+def test_main_appends_the_eddy_pass(monkeypatch, tmp_path):
+    """``--eddy`` chains one more pass of the last model, with the affine settings."""
+    monkeypatch.setattr(run, "load", lambda *args, **kwargs: _Dataset())
+    monkeypatch.setattr(run, "Estimator", _Estimator)
+    monkeypatch.setattr(_Estimator, "built", [])
+    monkeypatch.setattr(run, "ants_version", lambda: None)
+
+    input_file = tmp_path / "dwi.h5"
+    input_file.touch()
+    argv = [str(input_file), "--models", "avgdwi", "gqi-krr", "--output-dir", str(tmp_path)]
+    run.main([*argv, "--registration", "ants", "--align-config", "motion.yaml", "--eddy"])
+
+    first, second, eddy = _Estimator.built
+    assert [estimator.args[0] for estimator in _Estimator.built] == [
+        "avgdwi",
+        "gqi-krr",
+        "gqi-krr",
+    ]
+    assert eddy.kwargs["prev"] is second and second.kwargs["prev"] is first
+    assert eddy.kwargs["align_config"] == AFFINE
+    assert all(estimator.kwargs["registration"] == "ants" for estimator in _Estimator.built)
+    # The run's settings reach the motion passes; the eddy pass keeps its own
+    assert eddy.ran["align_kwargs"] == {"align_config": Path("motion.yaml")}
+    assert "align_config" not in first.kwargs
