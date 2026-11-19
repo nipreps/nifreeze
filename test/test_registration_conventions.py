@@ -46,11 +46,11 @@ from nitransforms.resampling import apply
 from scipy import ndimage
 from scipy.spatial.transform import Rotation
 
-from nifreeze.analysis.registration import AntsRegistration
 from nifreeze.data.base import BaseDataset
 from nifreeze.data.dmri import DWI
 from nifreeze.data.dmri.io import load_bvec_bval, load_rasb
 from nifreeze.data.dmri.utils import bvecs_from_ras
+from nifreeze.registration import RegistrationFactory
 from nifreeze.registration.ants import (
     WINDOW_LEVELS,
     _prepare_registration_data,
@@ -145,17 +145,12 @@ def _error(mask: np.ndarray, affine: np.ndarray, estimated, expected) -> float:
 
 
 def _register(
-    fixed, moving, affine, mask, workdir: Path, init=None, backend=("ants", "b0-to-b0_level0")
+    fixed, moving, affine, mask, init=None, backend=("ants", "b0-to-b0_level0")
 ) -> np.ndarray:
-    """Register as the estimator does (``Estimator.run``), or with elastix; return the matrix."""
+    """Register with a backend by name, as the estimator does; return the matrix."""
     tool, settings = backend
-    if tool == "elastix":
-        from nifreeze.registration.elastix import Elastix
-
-        return Elastix(settings, num_threads=1)(fixed, moving, affine, mask, 0, init=init)
-
-    register = AntsRegistration(workdir, num_threads=1, ants_config=settings)
-    return register(fixed, moving, affine, mask, 0, init=init)
+    register = RegistrationFactory.init(tool, settings=settings, seed=12345, num_threads=1)
+    return register(fixed, moving, affine, mask, 0, init=init).matrix
 
 
 def _print_header(path: Path) -> dict[str, np.ndarray]:
@@ -307,7 +302,7 @@ def test_the_estimate_maps_fixed_onto_moving(volume, tmp_path, kind, backend):
     matrix = _motion()
     moving = _move(data, affine, matrix)
 
-    estimated = _register(data, moving, affine, mask, tmp_path, backend=backend)
+    estimated = _register(data, moving, affine, mask, backend=backend)
 
     assert _error(mask, affine, estimated, matrix) < 0.5
     assert _error(mask, affine, estimated, np.linalg.inv(matrix)) > 2.0
@@ -326,7 +321,7 @@ def test_an_initialized_estimate_is_the_total_transform(volume, tmp_path, kind, 
     moving = _move(data, affine, matrix)
     partial = _motion(degrees=1.5, shift=(0.75, -0.5, 1.0))
 
-    estimated = _register(data, moving, affine, mask, tmp_path, init=partial, backend=backend)
+    estimated = _register(data, moving, affine, mask, init=partial, backend=backend)
 
     assert _error(mask, affine, estimated, matrix) < 0.5
     increment = matrix @ np.linalg.inv(partial)
@@ -524,5 +519,5 @@ def test_elastix_repeats_bit_for_bit(volume):
     moving = _move(data, affine, _motion())
     register = Elastix(num_threads=1)
 
-    first = register(data, moving, affine, mask, 0)
-    assert np.array_equal(first, register(data, moving, affine, mask, 0))
+    first = register(data, moving, affine, mask, 0).matrix
+    assert np.array_equal(first, register(data, moving, affine, mask, 0).matrix)

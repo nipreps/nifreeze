@@ -24,28 +24,18 @@
 
 from __future__ import annotations
 
-from concurrent.futures import Future, ThreadPoolExecutor
-from contextlib import nullcontext
 from os import cpu_count
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from timeit import default_timer as timer
 from typing import TypeVar
-from warnings import warn
 
-import nibabel as nb
 import numpy as np
 from tqdm import tqdm
 from typing_extensions import Self
 
 from nifreeze.data.base import BaseDataset
-from nifreeze.data.filtering import ClippingValueError, robust_window
 from nifreeze.model.base import BaseModel, ModelFactory, TrivialModel
-from nifreeze.registration.ants import (
-    _prepare_registration_data,
-    _run_registration,
-    _write_aligned,
-)
+from nifreeze.registration.base import Registration, RegistrationFactory
 from nifreeze.utils import iterators
 
 DatasetT = TypeVar("DatasetT", bound=BaseDataset)
@@ -104,6 +94,10 @@ class Estimator:
         First volume index to process.
     stop_index : :obj:`int`, optional
         One-past-last volume index to process (``None`` = to the end).
+    registration : :obj:`~nifreeze.registration.base.Registration` or :obj:`str`, optional
+        The registration backend, or the name of one
+        (:data:`~nifreeze.registration.base.BACKENDS`), built for each run from the
+        registration settings (default: ``"ants"``).
 
     """
 
@@ -116,6 +110,7 @@ class Estimator:
         "_align_kwargs",
         "_start_index",
         "_stop_index",
+        "_registration",
     )
 
     def __init__(
@@ -127,6 +122,7 @@ class Estimator:
         single_fit: bool = False,
         start_index: int = 0,
         stop_index: int | None = None,
+        registration: Registration | str | None = None,
         **kwargs,
     ):
         self._model = model
@@ -138,6 +134,7 @@ class Estimator:
 
         self._start_index = start_index
         self._stop_index = stop_index
+        self._registration = registration
 
     def run(self, dataset: DatasetT, **kwargs) -> Self:
         """
@@ -153,17 +150,13 @@ class Estimator:
             take precedence.
         clip : :obj:`str`, optional
             Clip the intensity of ``"sample"``, ``"predicted"``, ``"both"``
-            (default) or ``"none"`` of the images before registration.
-        clip_windows : :obj:`dict`, optional
-            Intensity windows by volume index. A volume's window is estimated
-            from the volume the first time it is registered, and then reused
-            for its prediction and by every later estimator of the chain.
+            (default) or ``"none"`` of the images to the sample's window before
+            registration.
         debug_dir : :obj:`os.pathlike`, optional
-            Keep the registration working files of each estimator of the chain
-            in a folder of ``debug_dir`` (instead of a temporary directory), with
-            an ``aligned_<index>.nii`` trace per volume: the registered sample
-            with its affine corrected by the estimated transform, which a viewer
-            shows on top of ``predicted_<index>.nii``.
+            Keep, in a folder of ``debug_dir`` per estimator of the chain, the images
+            each volume was registered with and an ``aligned_<index>.nii`` trace: the
+            sample with its affine corrected by the estimate, which a viewer shows on
+            top of ``predicted_<index>.nii``.
         instant_update : :obj:`bool`, optional
             Whether models train on the realigned view of the dataset (default):
             right after a volume is registered, the model sees it resampled once,
@@ -185,7 +178,6 @@ class Estimator:
 
         """
         # Shared with the previous estimators of the chain
-        windows = kwargs.setdefault("clip_windows", {})
         views = kwargs.setdefault("realigned", {})
         if self._prev is not None:
             result = self._prev.run(dataset, **kwargs)
@@ -267,20 +259,24 @@ class Estimator:
             model.fit_predict(None, **fit_pred_kwargs)
             print(f"Fitting 'single' model finished, elapsed {timer() - start}s.")
 
-        # Registration settings: the run's (shared by the chain), this estimator's, and
-        # then the run's other keyword arguments
-        kwargs = (kwargs.pop("align_kwargs", None) or {}) | self._align_kwargs | kwargs
-        kwargs.setdefault("num_threads", n_threads)
-        clip = kwargs.pop("clip", "both")
-        clipping = str(clip).lower() in ("sample", "predicted", "both", "true")
-        kwargs.pop("clip_windows", None)
-        kwargs.pop("realigned", None)
-
-        work_dir = None
-        if (debug_dir := kwargs.pop("debug_dir", None)) is not None:
-            # Absolute, because nipype runs ANTs from within the working directory
-            work_dir = Path(debug_dir).absolute() / self._debug_name(model)
-            work_dir.mkdir(parents=True, exist_ok=True)
+        # The backend given, or one built from the registration settings: the run's
+        # (shared by the chain), this estimator's, and then the run's other arguments
+        registration = self._registration
+        if not isinstance(registration, Registration):
+            options = (kwargs.pop("align_kwargs", None) or {}) | self._align_kwargs | kwargs
+            options.pop("realigned", None)
+            debug_dir = options.pop("debug_dir", None)
+            options |= {
+                "settings": options.pop("ants_config", None),
+                "num_threads": options.pop("num_threads", n_threads),
+                "debug_dir": None
+                if debug_dir is None
+                else Path(debug_dir) / self._debug_name(model),
+            }
+            # Unset options keep each backend's default
+            options = {key: value for key, value in options.items() if value is not None}
+            registration = RegistrationFactory.init(registration or "ants", **options)
+        print(f"Registration: {type(registration).__name__}.")
 
         # Calculate effective dataset length for progress bar
         if self._stop_index is not None:
@@ -288,97 +284,38 @@ class Estimator:
         else:
             dataset_length = len(dataset) - self._start_index
 
-        traces: list[Future] = []
-        with (
-            (
-                nullcontext(str(work_dir)) if work_dir is not None else TemporaryDirectory()
-            ) as tmp_dir,
-            ThreadPoolExecutor(max_workers=1) as tracer,
-        ):
-            print(f"Processing in <{tmp_dir}>")
-            ptmp_dir = Path(tmp_dir)
+        with tqdm(total=dataset_length, unit="vols.") as pbar:
+            # run an original-to-synthetic affine registration
+            for i in index_iter:
+                pbar.set_description_str(f"{FIT_MSG: <16} vol. <{i}>")
 
-            bmask_path = None
-            if dataset.brainmask is not None:
-                bmask_path = ptmp_dir / "brainmask.nii"
-                nb.Nifti1Image(
-                    dataset.brainmask.astype(np.uint8), dataset.affine, None
-                ).to_filename(bmask_path)
+                # fit the model
+                predicted = model.fit_predict(  # type: ignore[union-attr]
+                    i,
+                    **fit_pred_kwargs,
+                )
 
-            with tqdm(total=dataset_length, unit="vols.") as pbar:
-                # run an original-to-synthetic affine registration
-                for i in index_iter:
-                    pbar.set_description_str(f"{FIT_MSG: <16} vol. <{i}>")
+                # Start from the current estimate (left by a previous estimator of the
+                # chain, or stored in the dataset)
+                init_affine = None
+                if dataset.motion_affines is not None:
+                    # A copy: a backend may keep it, and the dataset's changes later
+                    current = np.array(dataset.motion_affines[i], dtype=float)
+                    if not np.allclose(current, np.eye(4)):
+                        init_affine = current
 
-                    # fit the model
-                    predicted = model.fit_predict(  # type: ignore[union-attr]
-                        i,
-                        **fit_pred_kwargs,
-                    )
+                pbar.set_description_str(f"{REG_MSG: <16} vol. <{i}>")
+                xform = registration(
+                    predicted, dataset[i][0], dataset.affine, dataset.brainmask, i, init_affine
+                )
 
-                    volume = dataset[i][0]  # Access the target volume
-                    if clipping and i not in windows:
-                        try:
-                            windows[i] = robust_window(volume, dataset.brainmask)
-                        except ClippingValueError as exc:
-                            warn(f"Registering volume {i} without clipping: {exc}", stacklevel=2)
-                            windows[i] = None
-                    window = windows.get(i)
-
-                    # Start from the current estimate (left by a previous estimator of the
-                    # chain, or stored in the dataset)
-                    init_affine = None
-                    if dataset.motion_affines is not None:
-                        current = np.asarray(dataset.motion_affines[i], dtype=float)
-                        if not np.allclose(current, np.eye(4)):
-                            init_affine = current
-
-                    # prepare data for running ANTs
-                    predicted_path, volume_path, init_path = _prepare_registration_data(
-                        volume,
-                        predicted,
-                        dataset.affine,
-                        i,
-                        ptmp_dir,
-                        clip=clip if window is not None else "none",
-                        window=window,
-                        init_affine=init_affine,
-                    )
-
-                    pbar.set_description_str(f"{REG_MSG: <16} vol. <{i}>")
-
-                    xform = _run_registration(
-                        predicted_path,
-                        volume_path,
-                        i,
-                        ptmp_dir,
-                        init_affine=init_path,
-                        fixedmask_path=bmask_path,
-                        output_transform_prefix=f"ants-{i:05d}",
-                        **kwargs,
-                    )
-
-                    # update
-                    dataset.set_transform(i, xform.matrix)
-                    if view is not None:
-                        # Instant update: the next predictions see this volume realigned
-                        dataset.realign_into(view, i)
-                        model.update(i)
-                    if work_dir is not None:
-                        # Debugging trace, written while the next volume is registered
-                        traces.append(
-                            tracer.submit(
-                                _write_aligned,
-                                volume_path,
-                                xform.matrix,
-                                ptmp_dir / f"aligned_{i:05d}.nii",
-                            )
-                        )
-                    pbar.update()
-
-            # Surface any error raised while writing a trace
-            for trace in traces:
-                trace.result()
+                # update
+                dataset.set_transform(i, xform.matrix)
+                if view is not None:
+                    # Instant update: the next predictions see this volume realigned
+                    dataset.realign_into(view, i)
+                    model.update(i)
+                pbar.update()
 
         return self
 
