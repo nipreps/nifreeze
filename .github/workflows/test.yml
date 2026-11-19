@@ -166,10 +166,6 @@ jobs:
           restore-keys: |
             data-v3-
             data-v2-
-      - name: Install TeX Live
-        run: |
-          sudo apt-get update
-          sudo apt install texlive texlive-latex-extra texlive-fonts-recommended cm-super dvipng
       - name: Install tox
         run: |
           uv tool install --with=tox-uv --with=tox-gh-actions tox
