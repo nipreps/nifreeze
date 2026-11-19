@@ -27,6 +27,7 @@ import os
 import re
 from collections.abc import Sized
 from importlib.resources import files
+from itertools import product
 from os import cpu_count
 from pathlib import Path
 from typing import Callable, Set
@@ -645,14 +646,29 @@ def test_generate_command_masks_and_init_propagation(
         )
 
 
-@pytest.mark.parametrize("r_x", [0.0, 0.1, 0.3])
-@pytest.mark.parametrize("r_y", [0.0, 0.1, 0.3])
-@pytest.mark.parametrize("r_z", [0.0, 0.1, 0.3])
-@pytest.mark.parametrize("t_x", [0.0, 1.0])
-@pytest.mark.parametrize("t_y", [0.0, 1.0])
-@pytest.mark.parametrize("t_z", [0.0, 1.0])
+_B0_ROTATIONS = (0.0, 0.1, 0.3)  # radians, about each axis
+_B0_TRANSLATIONS = (0.0, 1.0)  # millimeters, along each axis
+
+
+def _b0_motions():
+    """Every combination of the rotations and translations, as ``pytest.param``.
+
+    Only the corners run on pull requests and pushes: no motion, each axis alone at its
+    largest rotation or translation, and all six at their largest. The remaining 208
+    combinations are marked ``slow``, and the test workflow runs them weekly (#681).
+    """
+    r_max, t_max = max(_B0_ROTATIONS), max(_B0_TRANSLATIONS)
+    corners: set[tuple[float, ...]] = {(0.0,) * 6, (r_max,) * 3 + (t_max,) * 3}
+    for axis in range(3):
+        corners.add(tuple(r_max if i == axis else 0.0 for i in range(6)))
+        corners.add(tuple(t_max if i == axis + 3 else 0.0 for i in range(6)))
+
+    for motion in product(*(_B0_ROTATIONS,) * 3, *(_B0_TRANSLATIONS,) * 3):
+        yield pytest.param(*motion, marks=() if motion in corners else pytest.mark.slow)
+
+
+@pytest.mark.parametrize(("r_x", "r_y", "r_z", "t_x", "t_y", "t_z"), list(_b0_motions()))
 @pytest.mark.parametrize("dataset", ["hcph", "dwi"])
-# @pytest.mark.parametrize("dataset", ["dwi"])
 def test_ANTs_config_b0(datadir, tmp_path, dataset, r_x, r_y, r_z, t_x, t_y, t_z):
     """Check that the registration parameters for b=0
     gives a good estimate of known affine"""
