@@ -10,6 +10,7 @@ on:
     branches: ['main', 'maint/*']
     paths:
       - '.github/workflows/e2e.yml'
+      - '.github/actions/ants/**'
       - 'src/nifreeze/analysis/phantoms.py'
       - 'test/test_e2e_motion.py'
       - 'tools/e2e_summary.py'
@@ -17,6 +18,7 @@ on:
     branches: ['main', 'maint/*']
     paths:
       - '.github/workflows/e2e.yml'
+      - '.github/actions/ants/**'
       - 'src/nifreeze/analysis/phantoms.py'
       - 'test/test_e2e_motion.py'
       - 'tools/e2e_summary.py'
@@ -32,7 +34,6 @@ env:
   FORCE_COLOR: true
   TEST_OUTPUT_DIR: /home/runner/nifreeze-e2e/output
   ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS: 4
-  ANTSPATH: /usr/share/miniconda/bin/
   NIFREEZE_PHANTOMS: /home/runner/nifreeze-e2e/phantoms
   # Over SSH: GIN refuses anonymous HTTPS from GitHub's runners (HTTP 403)
   PHANTOMS_REPO: git@gin.g-node.org:/nipreps-data/nifreeze-trxscan.git
@@ -74,10 +75,7 @@ jobs:
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
       - name: Install ANTs
-        run: |
-          # Override libiconv pre-installed from anaconda channel
-          # See https://github.com/conda-forge/libitk-feedstock/issues/98
-          conda install -c conda-forge ants=2.4 libitk=5.3 libiconv
+        uses: ./.github/actions/ants
       - name: Install nifreeze
         run: uv pip install --python "${{ steps.setup-python.outputs.python-path }}" ".[test]"
       - name: Key the phantom's cache
@@ -145,7 +143,6 @@ jobs:
           key: ${{ steps.phantoms-key.outputs.KEY }}
       - name: Run the end-to-end tests
         run: |
-          # ANTSPATH also holds conda's python: call the job's interpreter explicitly
           export PATH=$ANTSPATH:$PATH
           mkdir -p "${TEST_OUTPUT_DIR}"
           "${{ steps.setup-python.outputs.python-path }}" -m pytest -m e2e -p no:cacheprovider \
