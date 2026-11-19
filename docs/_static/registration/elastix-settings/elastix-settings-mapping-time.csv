@@ -1,0 +1,5 @@
+Protocol,Stage,ANTs (s),Adaptive (kept) (s),Conjugate gradient (dropped) (s)
+Sherbrooke (2 mm),rigid,1.69,0.95,0.86
+Sherbrooke (2 mm),affine,6.39,2.41,1.39
+HCP-YA (1.25 mm),rigid,5.74,3.65,3.27
+HCP-YA (1.25 mm),affine,32.89,10.03,4.73
