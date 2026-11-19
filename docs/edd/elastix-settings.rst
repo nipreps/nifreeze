@@ -2,9 +2,11 @@
 
 Elastix's settings, mapped from ANTs
 ====================================
-*NiFreeze* registers each volume with ANTs, through files on disk and nipype.
-Elastix (`itk-elastix <https://github.com/InsightSoftwareConsortium/ITKElastix>`__)
-registers in memory, from Python
+*NiFreeze* registers each volume with ANTs, which reads the images from files on disk
+and runs as a subprocess, through nipype.
+Passing the images through the filesystem costs far more time than passing them in
+memory, and elastix (`itk-elastix <https://github.com/InsightSoftwareConsortium/ITKElastix>`__)
+takes them from memory, from Python
 (`#590 <https://github.com/nipreps/nifreeze/issues/590>`__).
 This report gathers the experiments behind elastix's settings in *NiFreeze*:
 how ANTs' default settings were mapped onto elastix's components
