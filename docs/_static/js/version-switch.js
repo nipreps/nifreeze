@@ -133,9 +133,10 @@
       prerelease: "a pre-release, " + (current.version || current.name),
     }[current.kind] || "an older release, " + (current.version || current.name);
 
-    // Furo's announcement bar, which every build's stylesheet has
+    // Furo's announcement bar, which every build's stylesheet has, wrapping on phones
     var content = document.createElement("aside");
     content.className = "announcement-content";
+    content.style.whiteSpace = "normal";
     content.appendChild(document.createTextNode("This is the documentation of " + what + ". "));
     content.appendChild(document.createTextNode("The latest release is "));
     content.appendChild(link(latest, latest.version || latest.name));
@@ -143,6 +144,8 @@
 
     var banner = document.createElement("div");
     banner.className = "announcement nf-version-banner";
+    banner.style.height = "auto";
+    banner.style.minHeight = "var(--header-height)";
     banner.appendChild(content);
 
     var page = document.querySelector(".page");
