@@ -21,7 +21,9 @@
 #     https://www.nipreps.org/community/licensing/
 #
 """
-Registration in memory with elastix, through ``itk-elastix`` (the ``elastix`` extra).
+Registration with elastix, through ``itk-elastix`` (the ``elastix`` extra).
+
+The images pass to elastix in memory: no files, unlike ANTs' command line.
 
 :class:`Elastix` is called as the accuracy harness calls
 :class:`~nifreeze.analysis.registration.AntsRegistration`:
@@ -238,7 +240,7 @@ def _lps_matrix(transform: Any) -> np.ndarray:
 
 
 class Elastix:
-    """Register in memory with elastix, as the harness registers with ANTs."""
+    """Register with elastix, given the images in memory, as the harness registers with ANTs."""
 
     def __init__(
         self,
