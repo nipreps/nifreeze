@@ -97,7 +97,14 @@ class Estimator:
     registration : :obj:`~nifreeze.registration.base.Registration` or :obj:`str`, optional
         The registration backend, or the name of one
         (:data:`~nifreeze.registration.base.BACKENDS`), built for each run from the
-        registration settings (default: ``"ants"``).
+        registration settings (default: elastix where ``itk-elastix`` is installed,
+        ANTs otherwise; see :func:`~nifreeze.registration.base.default_backend`).
+    **kwargs
+        Registration settings of this estimator, which take precedence over the run's
+        ``align_kwargs``: ``align_config`` (a mapping, or a file with a section per
+        backend, such as :data:`~nifreeze.registration.base.RIGID`, the default, and
+        :data:`~nifreeze.registration.base.AFFINE`), and the options of
+        :class:`~nifreeze.registration.base.Registration`.
 
     """
 
@@ -145,9 +152,9 @@ class Estimator:
         dataset : :obj:`~nifreeze.data.base.BaseDataset`
             The input dataset this estimator operates on.
         align_kwargs : :obj:`dict`, optional
-            Registration settings for every estimator of the chain (e.g., those of
-            ``--align-config``). The settings given to an estimator at construction
-            take precedence.
+            Registration settings for every estimator of the chain (e.g.,
+            ``{"align_config": <the file of --align-config>}``). The settings given to an
+            estimator at construction take precedence.
         clip : :obj:`str`, optional
             Clip the intensity of ``"sample"``, ``"predicted"``, ``"both"``
             (default) or ``"none"`` of the images to the sample's window before
@@ -267,7 +274,6 @@ class Estimator:
             options.pop("realigned", None)
             debug_dir = options.pop("debug_dir", None)
             options |= {
-                "settings": options.pop("ants_config", None),
                 "num_threads": options.pop("num_threads", n_threads),
                 "debug_dir": None
                 if debug_dir is None
@@ -275,7 +281,7 @@ class Estimator:
             }
             # Unset options keep each backend's default
             options = {key: value for key, value in options.items() if value is not None}
-            registration = RegistrationFactory.init(registration or "ants", **options)
+            registration = RegistrationFactory.init(registration, **options)
         print(f"Registration: {type(registration).__name__}.")
 
         # Calculate effective dataset length for progress bar

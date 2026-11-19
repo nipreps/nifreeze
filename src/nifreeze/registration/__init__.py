@@ -22,6 +22,6 @@
 #
 """Registration of each volume to its prediction, through interchangeable backends."""
 
-from nifreeze.registration.base import Registration, RegistrationFactory
+from nifreeze.registration.base import AFFINE, RIGID, Registration, RegistrationFactory
 
-__all__ = ["Registration", "RegistrationFactory"]
+__all__ = ["AFFINE", "RIGID", "Registration", "RegistrationFactory"]

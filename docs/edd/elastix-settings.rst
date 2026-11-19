@@ -34,7 +34,8 @@ The questions
 The direct mapping
 ------------------
 Each ANTs stage becomes one elastix parameter map
-(``src/nifreeze/registration/config/elastix/``).
+(the ``elastix`` sections of ``src/nifreeze/registration/config/rigid.yaml`` and
+``affine.yaml``).
 The values were read from the sources of ANTs 2.4.4, ITK 5.3.0 and elastix 5c71a233
 (the build of itk-elastix 0.25.4), which the pull request
 (`#674 <https://github.com/nipreps/nifreeze/pull/674>`__) cites by file and line.

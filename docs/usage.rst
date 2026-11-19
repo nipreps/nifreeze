@@ -96,6 +96,14 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
    - ``prev``: estimators can be stacked and be run sequentially.
    - ``single_fit``: when ``True``, fit the model once on all volumes instead of
      refitting per held-out volume. Use carefully.
+   - ``registration``: the registration backend, ``"elastix"`` or ``"ants"``
+     (default: elastix where ``itk-elastix``, the ``elastix`` extra, is installed,
+     ANTs otherwise).
+   - ``align_config``: the registration settings, a mapping or a YAML file with a
+     section per backend. NiFreeze ships two:
+     :data:`~nifreeze.registration.base.RIGID` (the default, for head motion) and
+     :data:`~nifreeze.registration.base.AFFINE` (for eddy currents). To change a
+     setting, copy one and edit it.
 
 4. **Fit the Models to Estimate the Affine Transformation**:
 
@@ -117,7 +125,8 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
    The ``run`` method employs the Leave-One-Volume-Out (LOVO) splitting technique to iteratively process DWI data volumes for each specified model: each volume is registered to a prediction fit on all the *other* volumes, so the target is independent of the volume being aligned. Affine transformations align the volumes, updating the `DWI` object with the estimated parameters. This method accepts several parameters:
 
    - ``dataset``: The target dataset, represented by this tool's internal type.
-   - ``align_kwargs``: Parameters to configure the image registration process.
+   - ``align_kwargs``: Registration settings for every estimator of a chain that
+     was not given its own, e.g. ``{"align_config": "my-settings.yaml"}``.
    - ``omp_nthreads``: Maximum number of threads an individual process may use.
    - ``n_jobs``: Number of parallel jobs.
    - ``seed``: Seed for the random number generator (necessary for deterministic estimation).
@@ -143,6 +152,15 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
           n_jobs=4,
           seed=42,
       )
+
+   Eddy currents are estimated by a second, affine pass, which starts from the
+   head-motion estimates stored in the dataset (on the command line, ``--eddy``):
+
+   .. code-block:: python
+
+      from nifreeze.registration import AFFINE
+
+      Estimator("gqi-krr", align_config=AFFINE).run(dataset, seed=42)
 
 5. **Save Results**: Once transformations are estimated, save the realigned data in your preferred output format, either :ref:`nfHDF5 <nfhdf5>` or NIfTI:
 

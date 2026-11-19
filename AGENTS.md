@@ -122,9 +122,9 @@ Three-layer design: **Data → Model → Estimator**
 
 - **Model** (`nifreeze/model/`): `BaseModel` ABC with `fit_predict(index, **kwargs) → ndarray`. `ModelFactory.init(model_name)` instantiates models. Implementations: DTI, DKI, AverageDWI, GP (in `dmri.py`), BSpline PET (`pet.py`), Gaussian Process Regression (`gpr.py`). Models operate in Leave-One-Volume-Out (LOVO) mode or single-fit mode.
 
-- **Estimator** (`nifreeze/estimator.py`): Orchestrates model fitting + ANTs registration per volume. Core method: `Estimator.run(dataset, ...)`. Supports chaining via `prev_model`. Uses joblib for parallel execution.
+- **Estimator** (`nifreeze/estimator.py`): Orchestrates model fitting + registration per volume, through a backend (`registration=`). Core method: `Estimator.run(dataset, ...)`. Supports chaining via `prev_model`. Uses joblib for parallel execution.
 
-- **Registration** (`nifreeze/registration/`): ANTs wrappers via nipype. Config YAML files in `registration/config/`.
+- **Registration** (`nifreeze/registration/`): the `Registration` interface (`base.py`), built by `RegistrationFactory.init(name)`, with two backends: elastix (`itk-elastix`, the `elastix` extra; the default where installed) and ANTs (through nipype). Settings are YAML files with a section per backend: `registration/config/rigid.yaml` (`RIGID`, the default) and `affine.yaml` (`AFFINE`).
 
 - **CLI**: Entry point `nifreeze` → `nifreeze.cli.run:main`, parser in `cli/parser.py`.
 

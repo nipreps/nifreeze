@@ -34,23 +34,21 @@ The images reach elastix with the values ANTs reads: clipped to the sample's win
 writes them), then winsorized and histogram-matched with ANTs' parameters, when the
 settings ask for it. Only the fixed image is masked.
 
-Settings are the JSON files of ``nifreeze/registration/config/elastix``, one elastix
-parameter map per stage, with the values that depend on the data filled at each call.
+Settings are the ``elastix`` sections of :data:`~nifreeze.registration.base.RIGID` and
+:data:`~nifreeze.registration.base.AFFINE` (or of any such file): one elastix parameter
+map per stage, with the values that depend on the data filled at each call.
 """
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping, Sequence
-from importlib.resources import files
 from os import PathLike
-from pathlib import Path
 from typing import Any
 
 import nibabel as nb
 import numpy as np
 
-from nifreeze.registration.base import WINDOW_LEVELS, Registration
+from nifreeze.registration.base import WINDOW_LEVELS, Registration, load_config
 
 LPS = np.diag([-1.0, -1.0, 1.0, 1.0])
 """The change between RAS+ and ITK's LPS world (its own inverse)."""
@@ -75,21 +73,20 @@ NO_STAGES_ERROR_MSG = "Elastix settings need at least one stage"
 """Settings without stages error message."""
 
 
-def get_settings(settings: str | PathLike | Mapping[str, Any] = "b0-to-b0_level0") -> dict:
+def get_settings(align_config: Mapping[str, Any] | str | PathLike | None = None) -> dict:
     """
     Read elastix settings.
 
     Parameters
     ----------
-    settings : :obj:`str`, :obj:`os.pathlike` or :obj:`~collections.abc.Mapping`
-        A file of settings, the name of a configuration of
-        ``nifreeze/registration/config/elastix`` (with or without ``.json``), or the
-        settings themselves.
+    align_config : :obj:`~collections.abc.Mapping` or :obj:`os.pathlike`, optional
+        Elastix's settings, or a file with an ``elastix`` section
+        (default: :data:`~nifreeze.registration.base.RIGID`).
 
     Returns
     -------
     :obj:`dict`
-        The settings, validated.
+        A copy of the settings, validated.
 
     Examples
     --------
@@ -97,7 +94,8 @@ def get_settings(settings: str | PathLike | Mapping[str, Any] = "b0-to-b0_level0
     >>> [stage["parameters"]["Transform"] for stage in settings["stages"]]
     [['EulerTransform'], ['EulerTransform']]
 
-    >>> get_settings("dwi-to-dwi_level1.json")["stages"][0]["parameters"]["Transform"]
+    >>> from nifreeze.registration import AFFINE
+    >>> get_settings(AFFINE)["stages"][0]["parameters"]["Transform"]
     ['AffineTransform']
 
     >>> get_settings({"stages": [{"parameters": {}, "smoothing": 1}]})
@@ -105,17 +103,7 @@ def get_settings(settings: str | PathLike | Mapping[str, Any] = "b0-to-b0_level0
     ValueError: Unknown elastix settings: ['smoothing']
 
     """
-    if isinstance(settings, Mapping):
-        loaded = json.loads(json.dumps(settings))  # a deep copy
-    else:
-        path = Path(settings)
-        if not path.is_file():
-            name = str(settings).removesuffix(".json")
-            path = Path(
-                str(files("nifreeze.registration").joinpath(f"config/elastix/{name}.json"))
-            )
-        loaded = json.loads(path.read_text())
-
+    loaded = load_config(align_config, "elastix")
     if not loaded.get("stages"):
         raise ValueError(NO_STAGES_ERROR_MSG)
     unknown = set(loaded) - SETTINGS_KEYS
@@ -244,8 +232,9 @@ class Elastix(Registration):
 
     Parameters
     ----------
-    settings : :obj:`str`, :obj:`os.pathlike` or :obj:`~collections.abc.Mapping`, optional
-        The settings (see :func:`get_settings`), which the overrides update.
+    align_config : :obj:`~collections.abc.Mapping` or :obj:`os.pathlike`, optional
+        Elastix's settings, or a file with an ``elastix`` section (see
+        :func:`get_settings`).
     seed : :obj:`int`, optional
         Seed of elastix's random sampling (``RandomSeed``); :obj:`None` leaves
         elastix's default.
@@ -256,10 +245,13 @@ class Elastix(Registration):
     """
 
     def __init__(
-        self, settings: Any = "b0-to-b0_level0", *, seed: int | None = 12345, **kwargs: Any
+        self,
+        align_config: Mapping[str, Any] | str | PathLike | None = None,
+        *,
+        seed: int | None = 12345,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(settings, seed=seed, **kwargs)
-        self.settings = get_settings(get_settings(settings) | self.overrides)
+        super().__init__(get_settings(align_config), seed=seed, **kwargs)
 
     def _register(self, fixed, moving, affine, mask, index, init, window) -> np.ndarray:
         import itk
@@ -271,7 +263,7 @@ class Elastix(Registration):
             else np.asarray(data, dtype="float32")
             for data, which in ((fixed, "predicted"), (moving, "sample"))
         )
-        settings = self.settings
+        settings = self.align_config
         if "winsorize_lower_quantile" in settings:
             lower = settings["winsorize_lower_quantile"]
             upper = settings["winsorize_upper_quantile"]

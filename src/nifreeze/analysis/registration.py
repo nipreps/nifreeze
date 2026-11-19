@@ -75,9 +75,9 @@ class AntsRegistration(Ants):
     """The estimator's ANTs path, in ``workdir`` and with seed 12345 by default."""
 
     def __init__(
-        self, workdir: Path | str, seed: int | None = 12345, ants_config: Any = None, **kwargs
+        self, workdir: Path | str, seed: int | None = 12345, align_config: Any = None, **kwargs
     ):
-        super().__init__(ants_config, seed=seed, workdir=workdir, **kwargs)
+        super().__init__(align_config, seed=seed, workdir=workdir, **kwargs)
 
 
 def registration_accuracy(

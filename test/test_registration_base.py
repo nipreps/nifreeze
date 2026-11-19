@@ -25,9 +25,12 @@
 import gc
 import subprocess
 import sys
+from importlib.metadata import PackageNotFoundError
+from pathlib import Path
 
 import numpy as np
 import pytest
+import yaml
 from test_registration_conventions import (
     SKIP_ANTS,
     SKIP_ELASTIX,
@@ -41,8 +44,11 @@ from test_registration_conventions import (
 from nifreeze.data.base import BaseDataset
 from nifreeze.estimator import Estimator
 from nifreeze.model.base import TrivialModel
-from nifreeze.registration import Registration, RegistrationFactory
-from nifreeze.registration.ants import Ants
+from nifreeze.registration import AFFINE, RIGID, Registration, RegistrationFactory, base
+from nifreeze.registration.ants import Ants, generate_command
+
+EXAMPLES = Path(__file__).parent.parent / "examples" / "registration"
+"""ANTs settings kept as examples, outside the package."""
 
 
 class Recorder(Registration):
@@ -74,6 +80,50 @@ def test_the_factory_builds_backends_by_name():
     assert type(RegistrationFactory.init("nifreeze.registration.ants:Ants")) is Ants
     with pytest.raises(ValueError, match="Unknown registration backend"):
         RegistrationFactory.init("flirt")
+
+
+def test_elastix_is_the_default_where_installed(monkeypatch):
+    def missing(distribution):
+        raise PackageNotFoundError(distribution)
+
+    monkeypatch.setattr(base, "version", lambda distribution: "0.25.4")
+    assert base.default_backend() == "elastix"
+    monkeypatch.setattr(base, "version", missing)
+    assert base.default_backend() == "ants"
+    assert type(RegistrationFactory.init()) is Ants
+
+
+def test_settings_are_a_mapping_or_a_section_of_a_file(tmp_path):
+    settings = base.load_config(RIGID, "ants")
+    assert base.load_config(None, "ants") == settings
+    assert base.load_config(AFFINE, "ants")["transforms"] == ["Affine", "Affine"]
+
+    copy = base.load_config(settings, "elastix")  # a mapping is the backend's own
+    copy["transforms"][0] = "Affine"
+    assert settings["transforms"] == ["Rigid", "Rigid"]
+
+    path = tmp_path / "ants-only.yaml"
+    path.write_text(yaml.safe_dump({"ants": settings}))
+    assert base.load_config(path, "ants") == settings
+    with pytest.raises(ValueError, match="has no settings for elastix"):
+        base.load_config(path, "elastix")
+
+
+@pytest.mark.parametrize("path", sorted(EXAMPLES.glob("*.yaml")), ids=lambda path: path.stem)
+def test_the_examples_build_an_ants_command(repodata, path):
+    fixed, moving = repodata / "fileA.nii.gz", repodata / "fileB.nii.gz"
+    command = generate_command(fixed, moving, align_config=path)
+    assert command.cmdline.startswith("antsRegistration")
+
+
+def test_ants_config_is_gone():
+    """A leftover ``ants_config`` raises, instead of being ignored."""
+    dataset, model, _ = _series()
+    estimator = Estimator(
+        model, strategy="linear", registration="ants", ants_config="dwi-to-dwi_level1"
+    )
+    with pytest.raises(TypeError, match="ants_config"):
+        estimator.run(dataset)
 
 
 def test_the_interface_imports_no_backend():

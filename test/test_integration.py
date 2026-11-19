@@ -36,11 +36,20 @@ from nibabel.affines import from_matvec
 from nibabel.eulerangles import euler2mat
 
 import nifreeze.registration.ants
+import nifreeze.registration.base
 from nifreeze.analysis.registration import AntsRegistration
 from nifreeze.data import dmri
 from nifreeze.estimator import Estimator
 from nifreeze.model.base import MASK_ABSENCE_WARN_MSG, TrivialModel
+from nifreeze.registration.base import AFFINE
 from nifreeze.registration.utils import displacements_within_mask
+
+
+@pytest.fixture(autouse=True)
+def ants_by_default(monkeypatch):
+    """These tests patch ANTs' helpers: estimators that name no backend build ANTs."""
+    monkeypatch.setattr(nifreeze.registration.base, "default_backend", lambda: "ants")
+
 
 EXPECTED_DWI_MOTION_SHA256 = "3ba55cc3acfd584a7738f9701724e284f54bdf72261bf535b5dae062d7c0c30e"
 
@@ -664,7 +673,7 @@ def test_stacked_estimators(datadir, tmp_path, monkeypatch):
 
     estimator1 = Estimator(
         TrivialModel(dwi_motion),
-        ants_config="dwi-to-dwi_level0.json",
+        align_config=AFFINE,
         clip=False,
     )
     estimator2 = Estimator(

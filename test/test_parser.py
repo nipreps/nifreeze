@@ -26,32 +26,40 @@
 from pathlib import Path
 
 import pytest
-import yaml
 
 from nifreeze.cli.parser import (
     _build_parser,
     _determine_single_fit_mode,
     _normalize_model_name,
-    _parse_yaml_config,
     parse_args,
 )
+from nifreeze.registration.base import AFFINE
 
 MIN_ARGS = ["data/dwi.h5"]
 
 
-def test_parse_yaml_config(tmp_path):
-    # Sample YAML content
-    yaml_content = {"key1": "value1", "key2": 2, "nested": {"subkey": "subvalue"}}
+def test_parser_registration(tmp_path):
+    """The backend, the settings file and the eddy-current pass, all off by default."""
+    input_file = tmp_path / "dwi.h5"
+    input_file.touch()
 
-    # Create a temporary YAML file
-    filename = tmp_path / "config_file.yaml"
-    with open(filename, "w") as f:
-        yaml.dump(yaml_content, f)
+    args, *_ = parse_args([str(input_file)])
+    assert (args.registration, args.align_config, args.eddy) == (None, None, None)
 
-    # Call the function
-    result = _parse_yaml_config(str(filename))
-    # Assert the result matches the original content
-    assert result == yaml_content
+    args, *_ = parse_args(
+        [str(input_file), "--registration", "ants", "--align-config", "rigid.yaml", "--eddy"]
+    )
+    assert (args.registration, args.align_config, args.eddy) == (
+        "ants",
+        Path("rigid.yaml"),
+        AFFINE,
+    )
+
+    args, *_ = parse_args([str(input_file), "--eddy", "eddy.yaml"])
+    assert args.eddy == Path("eddy.yaml")
+
+    with pytest.raises(SystemExit):
+        parse_args([str(input_file), "--registration", "flirt"])
 
 
 @pytest.mark.parametrize(

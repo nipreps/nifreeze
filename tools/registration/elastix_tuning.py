@@ -50,7 +50,7 @@ preconditioned one diverged in the pilot, with these steps and with elastix's de
 ``t-x1`` is the direct mapping itself. A registration that raises (such as elastix's
 samples mapped outside the moving image) is recorded as ``failed``, with the error of no
 correction. Each configuration is written to
-``<out>/settings/<name>.json`` and registered from that file. One thread per registration,
+``<out>/settings/<name>.yaml`` and registered from that file. One thread per registration,
 seed 12345, ``--jobs`` registrations at a time. Writes ``<out>/<protocol>.{tsv,json}``::
 
     uv run tools/registration/elastix_tuning.py --dataset <dataset> --protocol sherbrooke \\
@@ -58,7 +58,6 @@ seed 12345, ``--jobs`` registrations at a time. Writes ``<out>/<protocol>.{tsv,j
 """
 
 import argparse
-import json
 import tempfile
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from itertools import product
@@ -68,6 +67,7 @@ from time import perf_counter
 from typing import Any
 
 import numpy as np
+import yaml
 from experiments import provenance, subset, write_results
 
 import nifreeze.registration.ants  # noqa: F401 (nipype, imported before the workers fork)
@@ -78,6 +78,7 @@ from nifreeze.analysis.registration import (
     Register,
     registration_accuracy,
 )
+from nifreeze.registration.base import RIGID
 from nifreeze.registration.elastix import Elastix, get_settings
 
 NOISE = 20261029
@@ -86,7 +87,7 @@ SEED = 12345
 """Seed of the registrations' random sampling."""
 MODEL = "gqi-krr"
 """The model of the ``unmoved`` and ``moved`` targets."""
-SETTINGS = "b0-to-b0_level0"
+SETTINGS = RIGID
 """The rigid default, ANTs' and its direct mapping."""
 SCHEDULES = {"t": None, "p2": (2, 1), "p3": (4, 2, 1)}
 """The rescale factors of each schedule's pyramid (none for the direct mapping's)."""
@@ -204,9 +205,9 @@ def _register(task: tuple[float, str, list[int]]) -> list[dict[str, Any]]:
     with tempfile.TemporaryDirectory(prefix=f"{arm}-", dir=_SHARED["work"]) as workdir:
         backend: Register
         if arm == "ants":
-            backend = AntsRegistration(workdir, seed=SEED, num_threads=1, ants_config=SETTINGS)
+            backend = AntsRegistration(workdir, seed=SEED, num_threads=1, align_config=SETTINGS)
         else:
-            backend = Elastix(_SHARED["settings"] / f"{arm}.json", seed=SEED, num_threads=1)
+            backend = Elastix(_SHARED["settings"] / f"{arm}.yaml", seed=SEED, num_threads=1)
         register = _Failures(backend)
         rows = registration_accuracy(register, *data, model=MODEL, fixed=_SHARED["fixed"])
     # The harness registers in the order of its rows
@@ -236,8 +237,8 @@ def main(argv: list[str] | None = None) -> int:
     settings = args.out / "settings"
     settings.mkdir(parents=True, exist_ok=True)
     for name, factors in names.items():
-        path = settings / f"{name}.json"
-        path.write_text(json.dumps(configuration(*factors), indent=2) + "\n")
+        path = settings / f"{name}.yaml"
+        path.write_text(yaml.safe_dump({"elastix": configuration(*factors)}, sort_keys=False))
 
     start = perf_counter()
     clean, _ = load_phantom(args.dataset, args.protocol, counts=[])
