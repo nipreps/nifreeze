@@ -40,6 +40,18 @@ The results of each commit to ``main`` are published in the `nifreeze dashboard`
 ``benchmarks/README.rst`` describes the thresholds, how to run the benchmarks locally,
 and how to write new ones.
 
+Slow tests
+----------
+
+Tests marked ``slow`` check exhaustive grids of cases, such as every combination of
+rotations and translations in ``test_ANTs_config_b0``.
+A plain ``pytest`` runs them.
+The test workflow deselects them on pull requests and pushes, and runs them weekly and
+on demand.
+To deselect them locally::
+
+  pytest -m "not e2e and not slow"
+
 End-to-end tests
 ----------------
 
