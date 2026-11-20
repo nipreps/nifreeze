@@ -175,9 +175,9 @@ def to_nifti(
     The gradient table is written next to the NIfTI file, matching its volumes, twice:
     in FSL's convention for the output's affine (``.bvec`` and ``.bval``, see
     :func:`save_bvec_bval`), and in RAS+B (NiPreps' ``.tsv``, see :func:`save_rasb`).
-    If the DWI object has non-null
-    :attr:`~nifreeze.data.base.BaseDataset.motion` (i.e., following the
-    motion estimation), the b-vectors are turned into the reference's frame
+    If the DWI object has estimates (:attr:`~nifreeze.data.base.BaseDataset.motion`,
+    :attr:`~nifreeze.data.dmri.base.DWI.eddy`), the b-vectors are turned into the
+    reference's frame by the rotation of each volume's mapping
     (see :func:`~nifreeze.data.dmri.utils.realign_bvecs`).
 
     Parameters
@@ -188,8 +188,8 @@ def to_nifti(
     filename : :obj:`os.pathlike`, optional
         The output NIfTI file path.
     write_hmxfms : :obj:`bool`, optional
-        If ``True``, the head motion affines will be written out to filesystem
-        with BIDS' X5 format.
+        If ``True``, the mappings (every estimate composed) will be written out to
+        filesystem with BIDS' X5 format.
     order : :obj:`int`, optional
         The interpolation order to use when resampling the data.
         Defaults to 3 (cubic interpolation).
@@ -212,10 +212,11 @@ def to_nifti(
     bvals = dwi.bvals
     bvecs = dwi.bvecs
 
-    # Turn the b-vectors into the reference's frame if dwi.motion is not None
-    if dwi.motion is not None:
+    # Turn the b-vectors into the reference's frame if any estimate is set
+    mappings = [dwi.get_transform(i) for i in range(len(dwi))]
+    if any(mapping is not None for mapping in mappings):
         rotated = [
-            realign_bvecs(bvec, matrix) for bvec, matrix in zip(dwi.bvecs, dwi.motion, strict=True)
+            realign_bvecs(bvec, mapping) for bvec, mapping in zip(dwi.bvecs, mappings, strict=True)
         ]
         bvecs = np.asarray(rotated)
 

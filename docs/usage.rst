@@ -131,10 +131,11 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
    - ``n_jobs``: Number of parallel jobs.
    - ``seed``: Seed for the random number generator (necessary for deterministic estimation).
 
-   The estimated parameters encoding the deformations due to head motion and
-   eddy currents are stored as an :math:`N \times 4 \times 4` array of affine
-   matrices in the dataset object after the model fitting and prediction (done
-   under the hood by the estimator).
+   The estimates are stored in the dataset, each as an :math:`N \times 4 \times 4`
+   array of affine matrices: the head motion in ``motion``, and the eddy currents of
+   a DWI in ``eddy``. A volume's mapping composes them, ``eddy @ motion``
+   (:meth:`~nifreeze.data.base.BaseDataset.get_transform`), and the outputs are
+   resampled with it.
 
    Example:
 
@@ -154,13 +155,14 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
       )
 
    Eddy currents are estimated by a second, affine pass, which starts from the
-   head-motion estimates stored in the dataset (on the command line, ``--eddy``):
+   head-motion estimates stored in the dataset and stores what it adds in ``eddy``
+   (on the command line, ``--eddy``):
 
    .. code-block:: python
 
       from nifreeze.registration import AFFINE
 
-      Estimator("gqi-krr", align_config=AFFINE).run(dataset, seed=42)
+      Estimator("gqi-krr", align_config=AFFINE, estimates="eddy").run(dataset, seed=42)
 
 5. **Save Results**: Once transformations are estimated, save the realigned data in your preferred output format, either :ref:`nfHDF5 <nfhdf5>` or NIfTI:
 

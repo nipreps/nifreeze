@@ -28,7 +28,7 @@ from collections import namedtuple
 from copy import copy
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Any, Generic
+from typing import Any, ClassVar, Generic
 from warnings import warn
 
 import attrs
@@ -82,6 +82,9 @@ AFFINE_SHAPE_ERROR_MSG = "BaseDataset 'affine' must be a 2D numpy array (4 x 4)"
 
 BRAINMASK_SHAPE_MISMATCH_ERROR_MSG = "BaseDataset 'brainmask' shape ({brainmask_shape}) does not match dataset volumes ({data_shape})."
 """BaseDataset brainmask shape mismatch error message."""
+
+ESTIMATES_FIELD_ERROR_MSG = "{name} has no estimates {field!r} (it has: {fields})."
+"""Unknown field of estimates error message."""
 
 
 def _has_dim_size(value: Any, size: int) -> bool:
@@ -295,6 +298,10 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
     """
 
+    ESTIMATES: ClassVar[tuple[str, ...]] = ("motion",)
+    """The fields of per-volume estimates, in the order they apply: each maps the
+    reference, moved by the fields before it, into the volume (see :meth:`get_transform`)."""
+
     dataobj: np.ndarray = attrs.field(
         default=None,
         repr=_data_repr,
@@ -431,30 +438,79 @@ class BaseDataset(Generic[Unpack[Ts]]):
         """Get the filepath of the HDF5 file."""
         return self._filepath
 
-    def set_transform(self, index: int, affine: np.ndarray) -> None:
+    def _compose(self, index: int, names: tuple[str, ...]) -> np.ndarray | None:
+        """The estimates of some fields for volume ``index``, composed in their order."""
+        mapping = None
+        for name in names:
+            estimates = getattr(self, name)
+            if estimates is not None:
+                mapping = estimates[index] if mapping is None else estimates[index] @ mapping
+        return mapping
+
+    def get_transform(self, index: int) -> np.ndarray | None:
         """
-        Set an affine transform for a particular index and update the data object.
+        The RAS+ matrix that maps the reference into volume ``index``.
+
+        Every field of :attr:`ESTIMATES` that is set enters, each applied after the
+        ones before it: for a DWI volume, ``eddy @ motion``.
 
         Parameters
         ----------
         index : :obj:`int`
-            The volume index to transform.
-        affine : :obj:`~numpy.ndarray`
-            The 4x4 affine matrix to be applied.
+            The volume.
+
+        Returns
+        -------
+        :obj:`~numpy.ndarray` or :obj:`None`
+            The ``4 x 4`` matrix, or :obj:`None` if no estimate is set.
 
         """
-        # if head motion affines are to be used, initialized to identities
-        if self.motion is None:
-            self.motion = np.repeat(np.eye(4)[None, ...], len(self), axis=0)
+        return self._compose(index, self.ESTIMATES)
 
-        self.motion[index] = affine
+    def set_transform(self, index: int, affine: np.ndarray, field: str = "motion") -> None:
+        """
+        Store the estimate of one field of :attr:`ESTIMATES` for volume ``index``.
+
+        ``affine`` maps the reference into the volume with every estimate included, as
+        registration returns it when started from :meth:`get_transform`. The estimates
+        of the other fields are factored out of it, so that :meth:`get_transform`
+        returns ``affine``.
+
+        Parameters
+        ----------
+        index : :obj:`int`
+            The volume.
+        affine : :obj:`~numpy.ndarray`
+            The ``4 x 4`` RAS+ matrix that maps the reference into the volume.
+        field : :obj:`str`, optional
+            The field the estimate goes to (default: ``"motion"``).
+
+        """
+        if field not in self.ESTIMATES:
+            raise ValueError(
+                ESTIMATES_FIELD_ERROR_MSG.format(
+                    name=type(self).__name__, field=field, fields=", ".join(self.ESTIMATES)
+                )
+            )
+        position = self.ESTIMATES.index(field)
+        after = self._compose(index, self.ESTIMATES[position + 1 :])
+        if after is not None:
+            affine = np.linalg.solve(after, affine)
+        before = self._compose(index, self.ESTIMATES[:position])
+        if before is not None:
+            affine = affine @ np.linalg.inv(before)
+
+        # Volumes without an estimate keep the identity
+        if getattr(self, field) is None:
+            setattr(self, field, np.repeat(np.eye(4)[None, ...], len(self), axis=0))
+        getattr(self, field)[index] = affine
 
     def realigned(self, order: int = 3) -> Self:
         """
         Create the realigned view of the dataset, which models train on.
 
         The view is a shallow copy whose volumes are a disk-backed copy of this
-        dataset's volumes. Volumes with a motion estimate are moved into the
+        dataset's volumes. Volumes with an estimate are moved into the
         reference frame (see :meth:`realign_into`). This dataset is not modified.
 
         Parameters
@@ -473,20 +529,21 @@ class BaseDataset(Generic[Unpack[Ts]]):
             self.dataobj, np.ones(len(self), dtype=bool), name="realigned"
         )
         # The view's volumes are realigned already
-        view.motion = None
-        if self.motion is not None:
+        for name in self.ESTIMATES:
+            setattr(view, name, None)
+        if any(getattr(self, name) is not None for name in self.ESTIMATES):
             for index in range(len(self)):
                 self.realign_into(view, index, order=order)
         return view
 
     def realign_into(self, view: Self, index: int, order: int = 3) -> None:
         """
-        Write volume ``index`` into a realigned view, moved by its current estimate.
+        Write volume ``index`` into a realigned view, moved by its current estimates.
 
-        The original volume is resampled once with the estimate in
-        ``motion`` (the same mapping as :func:`to_nifti`). A new estimate
+        The original volume is resampled once with its mapping (see
+        :meth:`get_transform`, the same mapping as :func:`to_nifti`). A new estimate
         replaces the realigned volume: the realigned volume is never resampled
-        again. Volumes without a motion estimate are copied as they are.
+        again. Volumes without an estimate are copied as they are.
 
         Parameters
         ----------
@@ -499,7 +556,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
         """
         volume = np.asanyarray(self.dataobj[index])
-        matrix = None if self.motion is None else self.motion[index]
+        matrix = self.get_transform(index)
         if matrix is None or np.allclose(matrix, np.eye(4)):
             view.dataobj[index] = volume
             return
@@ -551,16 +608,17 @@ class BaseDataset(Generic[Unpack[Ts]]):
         """
         Write a NIfTI file to disk.
 
-        Volumes are resampled to the reference affine if motion affines have
-        been set, otherwise the original data are written.
+        Volumes are resampled into the reference with their mappings (see
+        :meth:`get_transform`) if any estimate has been set, otherwise the original
+        data are written.
 
         Parameters
         ----------
         filename : :obj:`os.pathlike`, optional
             The output NIfTI file path.
         write_hmxfms : :obj:`bool`, optional
-            If :obj:`True`, the head motion affines will be written out to
-            filesystem with BIDS' X5 format.
+            If :obj:`True`, the mappings (every estimate composed) will be written
+            out to filesystem with BIDS' X5 format.
         order : :obj:`int`, optional
             The interpolation order to use when resampling the data.
             Defaults to 3 (cubic interpolation).
@@ -588,8 +646,9 @@ def to_nifti(
     """
     Write a NIfTI file to disk.
 
-    Volumes are resampled to the reference affine if motion affines have
-    been set, otherwise the original data are written.
+    Volumes are resampled into the reference with their mappings (see
+    :meth:`~BaseDataset.get_transform`) if any estimate has been set, otherwise the
+    original data are written.
 
     Parameters
     ----------
@@ -598,8 +657,8 @@ def to_nifti(
     filename : :obj:`os.pathlike`, optional
         The output NIfTI file path.
     write_hmxfms : :obj:`bool`, optional
-        If :obj:`True`, the head motion affines will be written out to filesystem
-        with BIDS' X5 format.
+        If :obj:`True`, the mappings (every estimate composed) will be written out
+        to filesystem with BIDS' X5 format.
     order : :obj:`int`, optional
         The interpolation order to use when resampling the data.
         Defaults to 3 (cubic interpolation).
@@ -614,10 +673,13 @@ def to_nifti(
         warn("write_hmxfms is set to True, but no filename was provided.", stacklevel=2)
         write_hmxfms = False
 
-    if dataset.motion is not None:  # resampling is needed
+    # Once any estimate is set, every volume has a mapping
+    mappings = [dataset.get_transform(i) for i in range(len(dataset))]
+    if any(mapping is not None for mapping in mappings):  # resampling is needed
         reference = ImageGrid(shape=dataset.shape3d, affine=dataset.affine)
         resampled = np.empty_like(dataset.dataobj, dtype=dataset.dataobj.dtype)
-        xforms = LinearTransformsMapping(dataset.motion, reference=reference)
+        matrices = np.stack([np.eye(4) if m is None else m for m in mappings])
+        xforms = LinearTransformsMapping(matrices, reference=reference)
 
         # This loop could be replaced by nitransforms.resampling.apply() when
         # it is fixed (bug should only affect datasets with less than 9 orientations)
