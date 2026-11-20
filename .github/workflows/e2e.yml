@@ -55,7 +55,7 @@ concurrency:
 
 jobs:
   sherbrooke:
-    name: Sherbrooke with simulated motion
+    name: Sherbrooke with simulated motion (${{ matrix.registration }})
     # Skipped on pull requests that only change documentation (#611)
     if: >-
       !(startsWith(github.head_ref, 'doc/') || startsWith(github.head_ref, 'docs/')
@@ -63,6 +63,13 @@ jobs:
     # ubuntu-latest (26.04) has no Miniconda to install ANTs from (#638)
     runs-on: 'ubuntu-24.04'
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        # Elastix, the default backend, on every run; ANTs only on the schedule (#718)
+        registration: ${{ fromJSON(github.event_name == 'schedule' && '["elastix", "ants"]' || '["elastix"]') }}
+    env:
+      NIFREEZE_E2E_REGISTRATION: ${{ matrix.registration }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -75,9 +82,11 @@ jobs:
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
       - name: Install ANTs
+        if: matrix.registration == 'ants'
         uses: ./.github/actions/ants
       - name: Install nifreeze
-        run: uv pip install --python "${{ steps.setup-python.outputs.python-path }}" ".[test]"
+        run: |
+          uv pip install --python "${{ steps.setup-python.outputs.python-path }}" ".[test,elastix]"
       - name: Key the phantom's cache
         id: phantoms-key
         run: |
@@ -143,13 +152,13 @@ jobs:
           key: ${{ steps.phantoms-key.outputs.KEY }}
       - name: Run the end-to-end tests
         run: |
-          export PATH=$ANTSPATH:$PATH
+          if [[ -n "${ANTSPATH:-}" ]]; then export PATH=$ANTSPATH:$PATH; fi
           mkdir -p "${TEST_OUTPUT_DIR}"
           "${{ steps.setup-python.outputs.python-path }}" -m pytest -m e2e -p no:cacheprovider \
             --junitxml="${TEST_OUTPUT_DIR}/junit.xml" test/test_e2e_motion.py
       - name: Fail on skipped tests
         run: |
-          # Without ANTs or the phantom, the tests skip, and the job would pass
+          # Without the job's backend or the phantom, the tests skip, and the job would pass
           "${{ steps.setup-python.outputs.python-path }}" - "${TEST_OUTPUT_DIR}/junit.xml" <<'EOF'
           import sys
           import xml.etree.ElementTree as ET
@@ -166,6 +175,6 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
-          name: e2e-results
+          name: e2e-results-${{ matrix.registration }}
           path: ${{ env.TEST_OUTPUT_DIR }}/e2e
           if-no-files-found: warn

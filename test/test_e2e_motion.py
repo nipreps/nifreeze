@@ -31,15 +31,20 @@ truth. The protocol's noise is added on load. The gradients are those prescribed
 as a scanner writes them: the moved head turned under them, so even at the right
 position a volume differs from the one its model predicts. The truth is the
 motion of each volume, which is what the estimator reports. The tests
-are opt-in (``pytest -m e2e``), need ANTs, and need ``NIFREEZE_PHANTOMS`` to point
+are opt-in (``pytest -m e2e``) and need ``NIFREEZE_PHANTOMS`` to point
 to the phantom dataset (GIN ``nipreps-data/nifreeze-trxscan``).
 
-The model gates record the current single-pass accuracy: the models are fit on
-the moving volumes, so their targets mix anatomy at different positions (see
-nipreps/nifreeze#497). Tighten them when the instant update is in place.
+The tests register with the backend that ``NIFREEZE_E2E_REGISTRATION`` names (the CI
+job's), or with the default one, and skip if it is not installed. CI registers with
+elastix on every run, and with ANTs on its weekly schedule (nipreps/nifreeze#718).
+
+The model gates record the current single-pass accuracy, as set on ANTs: the models
+are fit on the moving volumes, so their targets mix anatomy at different positions
+(see nipreps/nifreeze#497). Tighten them when the instant update is in place.
 """
 
 import json
+import os
 import shutil
 from types import SimpleNamespace
 
@@ -52,13 +57,22 @@ from scipy.spatial.transform import Rotation
 from nifreeze.analysis.phantoms import load_phantom
 from nifreeze.cli.run import main
 from nifreeze.data import dmri
-from nifreeze.data.filtering import robust_window
-from nifreeze.registration.ants import _prepare_registration_data, _run_registration
+from nifreeze.registration.base import RegistrationFactory, default_backend
 from nifreeze.registration.utils import displacements_within_mask
+
+REGISTRATION = os.getenv("NIFREEZE_E2E_REGISTRATION") or default_backend()
+"""The backend the tests register with."""
+MISSING = {
+    "ants": shutil.which("antsRegistration") is None,
+    "elastix": default_backend() != "elastix",
+}
+"""Whether each backend is missing: ANTs from ``PATH``, or the ``elastix`` extra."""
 
 pytestmark = [
     pytest.mark.e2e,
-    pytest.mark.skipif(shutil.which("antsRegistration") is None, reason="ANTs is not installed"),
+    pytest.mark.skipif(
+        MISSING.get(REGISTRATION, False), reason=f"{REGISTRATION} is not installed"
+    ),
 ]
 
 PROTOCOL = "sherbrooke"
@@ -167,6 +181,9 @@ def test_e2e_registration_oracle(phantom_motion, outdir, tmp_path):
     """
     sim = phantom_motion
     maskdata = np.asanyarray(sim.mask.dataobj) > 0
+    # The sample's window clips both images, as the estimator does
+    options = {"workdir": tmp_path} if REGISTRATION == "ants" else {}
+    registration = RegistrationFactory.init(REGISTRATION, seed=12345, **options)
 
     # Four volumes per shell
     picks = np.arange(0, len(sim.clean), 16)
@@ -174,29 +191,12 @@ def test_e2e_registration_oracle(phantom_motion, outdir, tmp_path):
     for k in picks:
         sample = np.asarray(sim.moved.dataobj[k])
         target = np.asarray(sim.clean.dataobj[k], dtype="float32")
-        fixed_path, moving_path, _ = _prepare_registration_data(
-            sample,
-            target,
-            sim.affine,
-            int(k),
-            tmp_path,
-            clip="both",
-            window=robust_window(sample, maskdata),
-        )
-        xform = _run_registration(
-            fixed_path,
-            moving_path,
-            int(k),
-            tmp_path,
-            fixedmask_path=sim.mask_path,
-            output_transform_prefix=f"ants-{k:05d}",
-            seed=12345,
-        )
-        estimated.append(xform.matrix)
+        estimated.append(registration(target, sample, sim.affine, maskdata, int(k)).matrix)
 
     errors = _errors(sim.mask, np.stack(estimated), sim.truth[picks])
     result = {
         "model": "oracle",
+        "registration": REGISTRATION,
         "errors": _summary(errors, sim.shells[picks]),
         "gate": ORACLE_GATE,
     }
@@ -230,6 +230,8 @@ def test_e2e_motion(
             str(sim.mask_path),
             "--models",
             model,
+            "--registration",
+            REGISTRATION,
             "--seed",
             "12345",
             "--output-dir",
@@ -252,6 +254,7 @@ def test_e2e_motion(
         model,
         {
             "model": model,
+            "registration": REGISTRATION,
             "offset_mm": offset_mm,
             "motion": motion,
             "absolute": absolute,
