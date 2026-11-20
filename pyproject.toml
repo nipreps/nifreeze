@@ -257,7 +257,7 @@ markers = [
   "random_uniform_ndim_data: Custom marker for random multi-dimensional data tests",
   "random_uniform_spatial_data: Custom marker for random spatial data tests",
   "memory: Opt-in peak-RSS memory tests (heavier fixtures; run explicitly with -m memory)",
-  "e2e: Opt-in end-to-end tests on simulated motion (need ANTs; run explicitly with -m e2e)",
+  "e2e: Opt-in end-to-end tests on simulated motion (run explicitly with -m e2e)",
   "slow: Exhaustive grids of cases; CI deselects them on pull requests and pushes, and runs them weekly",
 ]
 filterwarnings = [

@@ -47,8 +47,11 @@ def main(results_dir: Path) -> str:
     shells = sorted(
         {shell for result in results.values() for shell in _errors(result)["shells"]}, key=int
     )
+    backends = sorted({r["registration"] for r in results.values() if "registration" in r})
     lines = [
-        "## End-to-end motion estimation (Sherbrooke, simulated motion)",
+        "## End-to-end motion estimation (Sherbrooke, simulated motion"
+        + "".join(f", {backend}" for backend in backends)
+        + ")",
         "",
         "Median / 95th percentile of the per-volume error (mm). Model-based targets are"
         " compared after removing their common offset.",
