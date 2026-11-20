@@ -151,7 +151,7 @@ def main(argv: list[str] | None = None) -> int:
             nb.Nifti1Image(mask.astype("uint8"), b0.affine),
         )
     moved = dmri.DWI.from_filename(data / "dmri_data" / "motion_test_data" / "dwi_motion.h5")
-    if moved.motion_affines is None:
+    if moved.motion is None:
         raise ValueError("dwi_motion.h5 does not record its motions")
     original = dmri.DWI.from_filename(data / "dwi.h5")
     mask = np.asanyarray(original.brainmask, dtype=bool)
@@ -171,7 +171,7 @@ def main(argv: list[str] | None = None) -> int:
         for rx, ry, rz, tx, ty, tz in product(ANGLES, ANGLES, ANGLES, SHIFTS, SHIFTS, SHIFTS)
     ]
     tasks = [(name, i, m) for name in ("hcph", "dwi") for i, m in enumerate(motions)]
-    tasks += [("dwi_motion", i, np.asarray(m)) for i, m in enumerate(moved.motion_affines)]
+    tasks += [("dwi_motion", i, np.asarray(m)) for i, m in enumerate(moved.motion)]
 
     rows = []
     with tempfile.TemporaryDirectory(dir=args.out) as work:

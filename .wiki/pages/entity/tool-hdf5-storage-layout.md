@@ -1,7 +1,7 @@
 ---
 title: "HDF5 storage layout and the direct-mmap technique (h5py)"
 entity_type: tool
-last_verified: 2026-10-20
+last_verified: 2026-11-20
 confidence_score: 0.9
 source_urls:
   - https://docs.h5py.org/en/3.12.1/high/dataset.html
@@ -22,15 +22,16 @@ raw data block can be memory-mapped directly ([[tool-numpy-memmap]],
 
 - *nfHDF5* names this layout: HDF5 shaped for nifreeze. The user-facing
   description is `docs/design.rst` (label `nfhdf5`).
-- File attrs `Format="nfHDF5"`, `Version` (uint16, `2`). A single group `/0`
+- File attrs `Format="nfHDF5"`, `Version` (uint16, `4`). A single group `/0`
   with a group attr `Type` (`"base dataset"`, DWI included, or `"pet"`); DWI
   files also carry a file attr `Type="dmri"`.
 - Version-1 files carry `Format="NFDH5"` ("NiFreeze Data HDF5"), or
   `"EMC/PET"` for PET. The loader tells the versions apart by the
   `volume_axis` attr on `dataobj`, never by `Format` or `Version`.
 - One dataset per data field under `/0` (`dataobj`, `affine`, `brainmask`,
-  `motion_affines`, and modality extras `gradients`/`midframe`). The 4D `dataobj`
-  dominates size.
+  `motion`, and modality extras `gradients`/`eddy`/`midframe`). The 4D `dataobj`
+  dominates size. Versions 1 to 3 name `motion` `motion_affines`, which the loader
+  reads as `motion` (#715).
 - The load path historically did `np.asanyarray(dset)` per field — an eager full
   read (the memory hog fixed by lazy `dataobj` loading).
 

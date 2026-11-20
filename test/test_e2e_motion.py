@@ -237,7 +237,7 @@ def test_e2e_motion(
             "--write-hdf5",
         ]
     )
-    estimated = dmri.DWI.from_filename(next(output_dir.glob("*.h5"))).motion_affines
+    estimated = dmri.DWI.from_filename(next(output_dir.glob("*.h5"))).motion
     assert estimated is not None
 
     corrected, common = _remove_offset(estimated, sim.truth)

@@ -226,10 +226,8 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path, p_error=20.0):
     dwi_motion = dmri.DWI.from_filename(dwi_motion_path)
     dwi_motion._filepath = tmp_path / "dwi_motion.h5"  # Prevent accidental overwriting
 
-    ground_truth_affines = (
-        np.copy(dwi_motion.motion_affines) if dwi_motion.motion_affines is not None else None
-    )
-    dwi_motion.motion_affines = None  # Erase ground truth for estimation
+    ground_truth_affines = np.copy(dwi_motion.motion) if dwi_motion.motion is not None else None
+    dwi_motion.motion = None  # Erase ground truth for estimation
 
     model = TrivialModel(dwi_motion)
     estimator = Estimator(model)
@@ -242,7 +240,7 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path, p_error=20.0):
 
     # # Uncomment to see the realigned dataset
     # nt.linear.LinearTransformsMapping(
-    #     dwi_motion.motion_affines,
+    #     dwi_motion.motion,
     #     reference=b0nii,
     # ).apply(moved_nii).to_filename(tmp_path / "realigned.nii.gz")
     dwi_orig = dmri.DWI.from_filename(datadir / "dwi.h5")
@@ -263,7 +261,7 @@ def test_proximity_estimator_trivial_model(datadir, tmp_path, p_error=20.0):
                 nt.linear.Affine(est),
                 nt.linear.Affine(truth),
             ).max()
-            for est, truth in zip(dwi_motion.motion_affines, ground_truth_affines, strict=False)  # type: ignore
+            for est, truth in zip(dwi_motion.motion, ground_truth_affines, strict=False)  # type: ignore
         ]
     )
 
@@ -296,9 +294,9 @@ def test_registration_initial_transform(datadir, tmp_path, perturb):
         datadir / "dmri_data" / "motion_test_data" / "dwi_motion.h5"
     )
     dwi_motion._filepath = tmp_path / "dwi_motion.h5"  # Prevent accidental overwriting
-    assert dwi_motion.motion_affines is not None and dwi_motion.bzero is not None
+    assert dwi_motion.motion is not None and dwi_motion.bzero is not None
     index = 3
-    truth = np.array(dwi_motion.motion_affines[index])
+    truth = np.array(dwi_motion.motion[index])
     init = truth.copy()
     if perturb:
         # About 1 degree and 0.8 mm away from the truth
@@ -421,8 +419,8 @@ def test_dmri_data_average_dwi_model_estimation(
             seed=42,
         )
 
-    assert dwi_data.motion_affines is not None
-    aff = np.asarray(dwi_data.motion_affines)
+    assert dwi_data.motion is not None
+    aff = np.asarray(dwi_data.motion)
     assert aff.ndim == 3
     assert aff.shape[0] == len(dwi_data)
     assert aff.shape[1:] == (4, 4)
@@ -517,8 +515,8 @@ def test_dmri_data_dti_model_estimation(
             seed=42,
         )
 
-    assert dwi_data.motion_affines is not None
-    aff = np.asarray(dwi_data.motion_affines)
+    assert dwi_data.motion is not None
+    aff = np.asarray(dwi_data.motion)
     assert aff.ndim == 3
     assert aff.shape[0] == len(dwi_data)
     assert aff.shape[1:] == (4, 4)
@@ -647,8 +645,8 @@ def test_dmri_data_dki_model_estimation(
             seed=42,
         )
 
-    assert dwi_data.motion_affines is not None
-    aff = np.asarray(dwi_data.motion_affines)
+    assert dwi_data.motion is not None
+    aff = np.asarray(dwi_data.motion)
     assert aff.ndim == 3
     assert aff.shape[0] == len(dwi_data)
     assert aff.shape[1:] == (4, 4)
@@ -664,7 +662,7 @@ def test_stacked_estimators(datadir, tmp_path, monkeypatch):
         datadir / "dmri_data" / "motion_test_data" / "dwi_motion.h5"
     )
     dwi_motion._filepath = tmp_path / "dwi_motion.h5"  # Prevent accidental overwriting
-    dwi_motion.motion_affines = None  # Erase ground truth for estimation
+    dwi_motion.motion = None  # Erase ground truth for estimation
 
     def mock_iterator(*_, **kwargs):
         return []

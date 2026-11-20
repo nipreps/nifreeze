@@ -133,11 +133,11 @@ class DummyImageGrid:
 
 
 class DummyDataset(BaseDataset):
-    def __init__(self, shape, datahdr=None, motion_affines=None, dtype=np.int16):
+    def __init__(self, shape, datahdr=None, motion=None, dtype=np.int16):
         self.dataobj = np.arange(np.prod(shape), dtype=dtype).reshape(shape)
         self.affine = np.eye(4)
         self.datahdr = datahdr
-        self.motion_affines = motion_affines
+        self.motion = motion
 
     def __getitem__(self, idx):
         # to_nifti expects dataset[idx] to return a sequence whose first item is the 3D frame
@@ -297,12 +297,12 @@ def test_getitem_volume_index(random_dataset: BaseDataset):
     """
     Test that __getitem__ returns the correct (volume, affine) tuple.
 
-    By default, motion_affines is None, so we expect to get None for the affine.
+    By default, motion is None, so we expect to get None for the affine.
     """
     # Single volume  # Note that the type ignore can be removed once we can use *Ts
     volume0, aff0, *_ = random_dataset[0]
     assert volume0.shape == (32, 32, 32)
-    # No transforms have been applied yet, so there's no motion_affines array
+    # No transforms have been applied yet, so there's no motion array
     assert aff0 is None
 
     # Slice of volumes
@@ -313,8 +313,8 @@ def test_getitem_volume_index(random_dataset: BaseDataset):
 
 def test_set_transform(random_dataset: BaseDataset):
     """
-    Test that calling set_transform changes the data and motion_affines.
-    For simplicity, we'll apply an identity transform and check that motion_affines is updated.
+    Test that calling set_transform changes the data and motion.
+    For simplicity, we'll apply an identity transform and check that motion is updated.
     """
     idx = 0
     data_before = np.copy(random_dataset.dataobj[idx])
@@ -326,9 +326,9 @@ def test_set_transform(random_dataset: BaseDataset):
     volume0, aff0, *_ = random_dataset[idx]
     assert np.allclose(data_before, volume0)
 
-    # motion_affines should be created and match the transform matrix.
-    assert random_dataset.motion_affines is not None
-    np.testing.assert_array_equal(random_dataset.motion_affines[idx], affine)
+    # motion should be created and match the transform matrix.
+    assert random_dataset.motion is not None
+    np.testing.assert_array_equal(random_dataset.motion[idx], affine)
     # The returned affine from __getitem__ should be the same.
     assert aff0 is not None
     np.testing.assert_array_equal(aff0, affine)
@@ -366,7 +366,7 @@ def test_realigned_copies_the_volumes():
     assert view is not dataset
     assert np.array_equal(view.dataobj, dataset.dataobj)
     assert not np.shares_memory(view.dataobj, dataset.dataobj)
-    assert view.motion_affines is None
+    assert view.motion is None
     assert np.array_equal(view.affine, dataset.affine)
 
 
@@ -432,7 +432,7 @@ def test_to_filename_and_from_filename(random_dataset: BaseDataset):
         assert h5_file.is_file()
         with h5py.File(h5_file, "r") as in_file:
             assert in_file.attrs["Format"] == "nfHDF5"
-            assert in_file.attrs["Version"] == 3
+            assert in_file.attrs["Version"] == 4
 
         # Read from filename
         ds2: BaseDataset[Any] = BaseDataset.from_filename(h5_file)
@@ -441,6 +441,21 @@ def test_to_filename_and_from_filename(random_dataset: BaseDataset):
         assert ds2.affine.shape == (4, 4)
         # Ensure the data is the same
         assert np.allclose(random_dataset.dataobj, ds2.dataobj)
+
+
+def test_from_filename_reads_motion_affines(tmp_path, random_dataset: BaseDataset):
+    """Versions 1 to 3 name the head-motion estimates ``motion_affines``."""
+    random_dataset.set_transform(1, from_matvec(np.eye(3), [1.5, 0.0, 0.0]))
+    assert random_dataset.motion is not None
+    h5_file = tmp_path / f"version3{NFHDF5_EXT}"
+    random_dataset.to_filename(h5_file)
+    with h5py.File(h5_file, "r+") as out_file:
+        out_file.attrs["Version"] = np.uint16(3)
+        out_file.move("/0/motion", "/0/motion_affines")
+
+    loaded: BaseDataset[Any] = BaseDataset.from_filename(h5_file)
+    assert loaded.motion is not None
+    assert np.array_equal(loaded.motion, random_dataset.motion)
 
 
 def test_from_filename_compressed_roundtrip(random_dataset: BaseDataset):
@@ -503,9 +518,9 @@ def test_to_nifti_warnings(
     n_frames = 3
     shape = (n_frames, 4, 4, 2)
 
-    motion_affines = [np.eye(4) for _ in range(n_frames)] if motion_affines_present else None
+    motion = [np.eye(4) for _ in range(n_frames)] if motion_affines_present else None
 
-    dataset = DummyDataset(shape, datahdr=None, motion_affines=motion_affines)
+    dataset = DummyDataset(shape, datahdr=None, motion=motion)
 
     filename = None
     if not filename_is_none:
@@ -542,11 +557,11 @@ def test_to_nifti(
         hdr.set_data_dtype(dtype)
         datahdr = hdr
 
-    motion_affines = None
+    motion = None
     if motion_affines_present:
-        motion_affines = [np.eye(4) for _ in range(n_frames)]
+        motion = [np.eye(4) for _ in range(n_frames)]
 
-    dataset = DummyDataset(shape, datahdr=datahdr, motion_affines=motion_affines, dtype=dtype)
+    dataset = DummyDataset(shape, datahdr=datahdr, motion=motion, dtype=dtype)
 
     filename = None
     if not filename_is_none:
@@ -591,7 +606,7 @@ def test_to_nifti(
     else:
         assert not any(tmp_path.iterdir()), "Directory is not empty"
 
-    # When motion_affines present and write_hmxfms True and filename provided,
+    # When motion present and write_hmxfms True and filename provided,
     # x5 files should be written
     if motion_affines_present and write_hmxfms and filename is not None:
         # One file with the transforms of all the volumes
@@ -609,14 +624,14 @@ def test_to_nifti(
 def test_to_nifti_writes_every_transform(tmp_path):
     """The X5 file holds the transforms of all the volumes."""
     n_frames = 3
-    motion_affines = np.stack([np.eye(4)] * n_frames)
-    motion_affines[:, :3, 3] = np.arange(3.0 * n_frames).reshape(n_frames, 3)
-    dataset = DummyDataset((n_frames, 6, 6, 4), motion_affines=motion_affines, dtype=np.float32)
+    motion = np.stack([np.eye(4)] * n_frames)
+    motion[:, :3, 3] = np.arange(3.0 * n_frames).reshape(n_frames, 3)
+    dataset = DummyDataset((n_frames, 6, 6, 4), motion=motion, dtype=np.float32)
 
     to_nifti(dataset, filename=tmp_path / "data.nii.gz", write_hmxfms=True, order=1)
 
     xforms = nt.linear.load(tmp_path / "data.x5", fmt="X5")
-    assert np.allclose(xforms.matrix, motion_affines)
+    assert np.allclose(xforms.matrix, motion)
 
 
 def test_load_hdf5(random_dataset: BaseDataset):

@@ -349,14 +349,14 @@ def setup_random_base_data(request):
     )
     base_dataobj = volumes_first(base_dataobj)
     brainmask_dataobj = rng.choice([True, False], size=vol_size).astype(bool)
-    motion_affines = rng.random((volumes, 4, 4))
+    motion = rng.random((volumes, 4, 4))
     datahdr = None
 
     return (
         base_dataobj,
         affine,
         brainmask_dataobj,
-        motion_affines,
+        motion,
         datahdr,
     )
 

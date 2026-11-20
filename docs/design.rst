@@ -67,12 +67,14 @@ nfHDF5 files
 :func:`~nifreeze.data.load` and
 :meth:`~nifreeze.data.base.BaseDataset.from_filename` read it back.
 
-- The file attributes ``Format`` (``"nfHDF5"``) and ``Version`` (``3``)
+- The file attributes ``Format`` (``"nfHDF5"``) and ``Version`` (``4``)
   identify the layout.
 - The group ``/0`` holds one HDF5 dataset per field of the dataset object:
-  ``dataobj``, ``affine``, ``brainmask`` and ``motion_affines``, plus the
-  modality's own fields, such as ``gradients`` and ``bzero`` (dMRI) or
+  ``dataobj``, ``affine``, ``brainmask`` and ``motion``, plus the
+  modality's own fields, such as ``gradients``, ``bzero`` and ``eddy`` (dMRI) or
   ``midframe`` and ``total_duration`` (PET).
+- ``motion`` (and ``eddy``, dMRI) store the estimates, ``(N, 4, 4)``: for each
+  volume, a RAS+ matrix that maps the reference into it.
 - ``dataobj`` stores the volumes on the first axis, ``(N, X, Y, Z)``, and has
   the attribute ``volume_axis`` set to ``0``.
   Each volume is one contiguous block, so the file is memory-mapped when
@@ -86,6 +88,9 @@ Files written by earlier versions of *NiFreeze* (version 1) store the volumes
 last, and their ``Format`` is ``"NFDH5"`` (``"EMC/PET"`` for PET).
 They still load, after a conversion into a temporary file;
 save them again with ``to_filename`` to skip that step.
+
+Files of versions 1 to 3 name the head-motion estimates ``motion_affines``,
+which loads as ``motion``.
 
 Files of versions 1 and 2 do not record the frame of their gradient table.
 :meth:`~nifreeze.data.dmri.DWI.from_filename` reads it as RAS+B, and warns.

@@ -304,9 +304,9 @@ class Estimator:
                 # Start from the current estimate (left by a previous estimator of the
                 # chain, or stored in the dataset)
                 init_affine = None
-                if dataset.motion_affines is not None:
+                if dataset.motion is not None:
                     # A copy: a backend may keep it, and the dataset's changes later
-                    current = np.array(dataset.motion_affines[i], dtype=float)
+                    current = np.array(dataset.motion[i], dtype=float)
                     if not np.allclose(current, np.eye(4)):
                         init_affine = current
 

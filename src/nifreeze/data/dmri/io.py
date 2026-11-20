@@ -176,7 +176,7 @@ def to_nifti(
     in FSL's convention for the output's affine (``.bvec`` and ``.bval``, see
     :func:`save_bvec_bval`), and in RAS+B (NiPreps' ``.tsv``, see :func:`save_rasb`).
     If the DWI object has non-null
-    :attr:`~nifreeze.data.base.BaseDataset.motion_affines` (i.e., following the
+    :attr:`~nifreeze.data.base.BaseDataset.motion` (i.e., following the
     motion estimation), the b-vectors are turned into the reference's frame
     (see :func:`~nifreeze.data.dmri.utils.realign_bvecs`).
 
@@ -212,11 +212,10 @@ def to_nifti(
     bvals = dwi.bvals
     bvecs = dwi.bvecs
 
-    # Turn the b-vectors into the reference's frame if dwi.motion_affines is not None
-    if dwi.motion_affines is not None:
+    # Turn the b-vectors into the reference's frame if dwi.motion is not None
+    if dwi.motion is not None:
         rotated = [
-            realign_bvecs(bvec, matrix)
-            for bvec, matrix in zip(dwi.bvecs, dwi.motion_affines, strict=True)
+            realign_bvecs(bvec, matrix) for bvec, matrix in zip(dwi.bvecs, dwi.motion, strict=True)
         ]
         bvecs = np.asarray(rotated)
 

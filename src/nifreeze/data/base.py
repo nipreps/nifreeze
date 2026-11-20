@@ -50,9 +50,9 @@ Ts = TypeVarTuple("Ts")
 
 NFHDF5_EXT = ".h5"
 
-NFHDF5_VERSION = 3
-"""The version of the :ref:`nfHDF5 <nfhdf5>` files written: 2 stores volumes first, and 3
-gradient tables in RAS+B."""
+NFHDF5_VERSION = 4
+"""The version of the :ref:`nfHDF5 <nfhdf5>` files written: 2 stores volumes first, 3
+gradient tables in RAS+B, and 4 names the estimates after their artifacts (``motion``)."""
 
 NFHDF5_RASB_VERSION = 3
 """The first :ref:`nfHDF5 <nfhdf5>` version whose gradient tables are known to be RAS+B."""
@@ -313,8 +313,9 @@ class BaseDataset(Generic[Unpack[Ts]]):
         default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp)
     )
     """A boolean ndarray object containing a corresponding brainmask."""
-    motion_affines: np.ndarray | None = attrs.field(default=None, eq=attrs.cmp_using(eq=_cmp))
-    """Array of :obj:`~nitransforms.linear.Affine` realigning the dataset."""
+    motion: np.ndarray | None = attrs.field(default=None, eq=attrs.cmp_using(eq=_cmp))
+    """The head-motion estimates, ``(N, 4, 4)``: for each volume, the RAS+ matrix that maps
+    the reference into it."""
     datahdr: nb.Nifti1Header | None = attrs.field(default=None)
     """A :obj:`~nibabel.Nifti1Header` header corresponding to the data."""
 
@@ -395,7 +396,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
         """
 
-        affine = self.motion_affines[idx] if self.motion_affines is not None else None
+        affine = self.motion[idx] if self.motion is not None else None
         return self.dataobj[idx, ...], affine, *self._getextra(idx)
 
     @property
@@ -443,10 +444,10 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
         """
         # if head motion affines are to be used, initialized to identities
-        if self.motion_affines is None:
-            self.motion_affines = np.repeat(np.eye(4)[None, ...], len(self), axis=0)
+        if self.motion is None:
+            self.motion = np.repeat(np.eye(4)[None, ...], len(self), axis=0)
 
-        self.motion_affines[index] = affine
+        self.motion[index] = affine
 
     def realigned(self, order: int = 3) -> Self:
         """
@@ -472,8 +473,8 @@ class BaseDataset(Generic[Unpack[Ts]]):
             self.dataobj, np.ones(len(self), dtype=bool), name="realigned"
         )
         # The view's volumes are realigned already
-        view.motion_affines = None
-        if self.motion_affines is not None:
+        view.motion = None
+        if self.motion is not None:
             for index in range(len(self)):
                 self.realign_into(view, index, order=order)
         return view
@@ -483,7 +484,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
         Write volume ``index`` into a realigned view, moved by its current estimate.
 
         The original volume is resampled once with the estimate in
-        ``motion_affines`` (the same mapping as :func:`to_nifti`). A new estimate
+        ``motion`` (the same mapping as :func:`to_nifti`). A new estimate
         replaces the realigned volume: the realigned volume is never resampled
         again. Volumes without a motion estimate are copied as they are.
 
@@ -498,7 +499,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
 
         """
         volume = np.asanyarray(self.dataobj[index])
-        matrix = None if self.motion_affines is None else self.motion_affines[index]
+        matrix = None if self.motion is None else self.motion[index]
         if matrix is None or np.allclose(matrix, np.eye(4)):
             view.dataobj[index] = volume
             return
@@ -613,10 +614,10 @@ def to_nifti(
         warn("write_hmxfms is set to True, but no filename was provided.", stacklevel=2)
         write_hmxfms = False
 
-    if dataset.motion_affines is not None:  # resampling is needed
+    if dataset.motion is not None:  # resampling is needed
         reference = ImageGrid(shape=dataset.shape3d, affine=dataset.affine)
         resampled = np.empty_like(dataset.dataobj, dtype=dataset.dataobj.dtype)
-        xforms = LinearTransformsMapping(dataset.motion_affines, reference=reference)
+        xforms = LinearTransformsMapping(dataset.motion, reference=reference)
 
         # This loop could be replaced by nitransforms.resampling.apply() when
         # it is fixed (bug should only affect datasets with less than 9 orientations)

@@ -558,7 +558,7 @@ def test_equality_operator(tmp_path, setup_random_pet_data):
 
 
 @pytest.mark.random_pet_data(4, (2, 2, 2), np.asarray([1.0, 2.0, 3.0, 4.0]))
-def test_pet_set_transform_updates_motion_affines(setup_random_pet_data):
+def test_pet_set_transform_updates_motion(setup_random_pet_data):
     pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
 
     pet_obj = PET(
@@ -576,13 +576,13 @@ def test_pet_set_transform_updates_motion_affines(setup_random_pet_data):
     pet_obj.set_transform(idx, affine)
 
     np.testing.assert_allclose(pet_obj.dataobj[idx], data_before)
-    assert pet_obj.motion_affines is not None
-    assert len(pet_obj.motion_affines) == len(pet_obj)
-    assert np.allclose(pet_obj.motion_affines[idx], affine)
+    assert pet_obj.motion is not None
+    assert len(pet_obj.motion) == len(pet_obj)
+    assert np.allclose(pet_obj.motion[idx], affine)
 
     vol, aff, time = pet_obj[idx]
     assert aff is not None
-    assert np.allclose(aff, pet_obj.motion_affines[idx])
+    assert np.allclose(aff, pet_obj.motion[idx])
 
 
 @pytest.mark.random_pet_data(4, (6, 6, 6), np.asarray([1.0, 2.0, 3.0, 4.0]))
@@ -603,15 +603,15 @@ def test_pet_set_transform_keeps_the_frames(tmp_path, setup_random_pet_data):
     pet_obj.set_transform(2, shift)
 
     assert np.array_equal(pet_obj.dataobj, original)
-    assert pet_obj.motion_affines is not None
-    assert np.allclose(pet_obj.motion_affines[2], shift)
-    assert np.allclose(pet_obj.motion_affines[[0, 1, 3]], np.eye(4))
+    assert pet_obj.motion is not None
+    assert np.allclose(pet_obj.motion[2], shift)
+    assert np.allclose(pet_obj.motion[[0, 1, 3]], np.eye(4))
 
     # The estimates can be saved
     pet_obj.to_filename(tmp_path / "pet.h5")
-    saved = PET.from_filename(tmp_path / "pet.h5").motion_affines
+    saved = PET.from_filename(tmp_path / "pet.h5").motion
     assert saved is not None
-    assert np.allclose(saved, pet_obj.motion_affines)
+    assert np.allclose(saved, pet_obj.motion)
 
     # Export resamples the original frame once
     frame = nb.Nifti1Image(original[2], pet_obj.affine)
