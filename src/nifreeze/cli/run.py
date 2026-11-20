@@ -121,7 +121,7 @@ def main(argv: list[str] | None = None) -> None:
         output_h5_path: Path = Path(args.output_dir) / output_h5_filename
         dataset.to_filename(output_h5_path)
 
-    dataset.to_nifti(output_path, write_hmxfms=True)
+    dataset.to_nifti(output_path, write_estimates=True)
 
     # Record the version of the backend that registered
     if (args.registration or default_backend()) == "ants":

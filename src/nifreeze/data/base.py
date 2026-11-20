@@ -36,6 +36,7 @@ import h5py
 import nibabel as nb
 import numpy as np
 from nitransforms.linear import Affine, LinearTransformsMapping
+from nitransforms.manip import TransformChain
 from nitransforms.resampling import apply
 from typing_extensions import Self, TypeVarTuple, Unpack
 
@@ -602,7 +603,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
     def to_nifti(
         self,
         filename: Path | str | None = None,
-        write_hmxfms: bool = False,
+        write_estimates: bool = False,
         order: int = 3,
     ) -> nb.nifti1.Nifti1Image:
         """
@@ -616,9 +617,10 @@ class BaseDataset(Generic[Unpack[Ts]]):
         ----------
         filename : :obj:`os.pathlike`, optional
             The output NIfTI file path.
-        write_hmxfms : :obj:`bool`, optional
-            If :obj:`True`, the mappings (every estimate composed) will be written
-            out to filesystem with BIDS' X5 format.
+        write_estimates : :obj:`bool`, optional
+            If :obj:`True`, the estimates are written next to the NIfTI file, into one
+            X5 file: a transform per field of :attr:`ESTIMATES`, head motion first,
+            chained in the order they apply when there are several.
         order : :obj:`int`, optional
             The interpolation order to use when resampling the data.
             Defaults to 3 (cubic interpolation).
@@ -632,7 +634,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
         return to_nifti(
             self,
             filename=filename,
-            write_hmxfms=write_hmxfms,
+            write_estimates=write_estimates,
             order=order,
         )
 
@@ -640,7 +642,7 @@ class BaseDataset(Generic[Unpack[Ts]]):
 def to_nifti(
     dataset: BaseDataset,
     filename: Path | str | None = None,
-    write_hmxfms: bool = False,
+    write_estimates: bool = False,
     order: int = 3,
 ) -> nb.nifti1.Nifti1Image:
     """
@@ -656,9 +658,10 @@ def to_nifti(
         The dataset to serialize.
     filename : :obj:`os.pathlike`, optional
         The output NIfTI file path.
-    write_hmxfms : :obj:`bool`, optional
-        If :obj:`True`, the mappings (every estimate composed) will be written out
-        to filesystem with BIDS' X5 format.
+    write_estimates : :obj:`bool`, optional
+        If :obj:`True`, the estimates are written next to the NIfTI file, into one X5
+        file: a transform per field of :attr:`~BaseDataset.ESTIMATES`, head motion first,
+        chained in the order they apply when there are several.
     order : :obj:`int`, optional
         The interpolation order to use when resampling the data.
         Defaults to 3 (cubic interpolation).
@@ -669,9 +672,9 @@ def to_nifti(
         NIfTI image written to disk.
     """
 
-    if filename is None and write_hmxfms:
-        warn("write_hmxfms is set to True, but no filename was provided.", stacklevel=2)
-        write_hmxfms = False
+    if filename is None and write_estimates:
+        warn("write_estimates is set to True, but no filename was provided.", stacklevel=2)
+        write_estimates = False
 
     # Once any estimate is set, every volume has a mapping
     mappings = [dataset.get_transform(i) for i in range(len(dataset))]
@@ -692,17 +695,16 @@ def to_nifti(
                 dtype=dataset.dataobj.dtype,
             )
 
-        if filename is not None and write_hmxfms:
-            # Write the transforms of all the volumes into one X5 file
+        if filename is not None and write_estimates:
             out_root = Path(filename).absolute()
             out_root = out_root.parent / out_root.name.replace("".join(out_root.suffixes), "")
-            xforms.to_filename(out_root.with_suffix(".x5"))
+            _write_estimates(dataset, out_root.with_suffix(".x5"), reference)
     else:
         resampled = dataset.dataobj
 
-        if write_hmxfms:
+        if write_estimates:
             warn(
-                "write_hmxfms is set to True, but no motion affines were found. Skipping.",
+                "write_estimates is set to True, but no estimates were found. Skipping.",
                 stacklevel=2,
             )
 
@@ -719,3 +721,30 @@ def to_nifti(
         nii.to_filename(filename)
 
     return nii
+
+
+def _write_estimates(dataset: BaseDataset, path: Path, reference: ImageGrid) -> None:
+    """
+    Write the estimates of every volume into one X5 file.
+
+    Each field of :attr:`~BaseDataset.ESTIMATES`, up to the last one set, becomes one
+    transform (identities for a field not set), so head motion comes first and plain
+    X5 readers get it. Several fields are chained in the order they apply, so the chain
+    maps each volume as :meth:`~BaseDataset.get_transform` does.
+    """
+    names = dataset.ESTIMATES
+    last = max(i for i, name in enumerate(names) if getattr(dataset, name) is not None)
+    identities = np.repeat(np.eye(4)[None, ...], len(dataset), axis=0)
+    xforms = [
+        LinearTransformsMapping(
+            identities if getattr(dataset, name) is None else np.asarray(getattr(dataset, name)),
+            reference=reference,
+        )
+        for name in names[: last + 1]
+    ]
+    if len(xforms) == 1:
+        xforms[0].to_filename(path)
+        return
+    # A chain is added to the file it is written to, if that exists
+    path.unlink(missing_ok=True)
+    TransformChain(xforms).to_filename(path)

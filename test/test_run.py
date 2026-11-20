@@ -36,7 +36,7 @@ import nifreeze.cli.run as cli_run
         True,
     ],
 )
-@pytest.mark.filterwarnings("ignore:write_hmxfms is set to True")
+@pytest.mark.filterwarnings("ignore:write_estimates is set to True")
 @pytest.mark.filterwarnings("ignore:.*does not record the frame:UserWarning")  # GIN's file
 @pytest.mark.filterwarnings("error")
 def test_run_call(tmp_path, monkeypatch, write_hdf5):
@@ -72,7 +72,7 @@ def test_run_call(tmp_path, monkeypatch, write_hdf5):
         out_filename = "dwi.nii.gz"
         with pytest.warns(
             UserWarning,
-            match="no motion affines were found",
+            match="no estimates were found",
         ):
             cli_run.main(argv)
 

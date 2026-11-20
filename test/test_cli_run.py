@@ -33,7 +33,7 @@ from nifreeze.registration.base import AFFINE
 
 
 class _Dataset:
-    def to_nifti(self, filename, write_hmxfms=False):
+    def to_nifti(self, filename, write_estimates=False):
         pass
 
 
