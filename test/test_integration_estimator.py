@@ -466,17 +466,21 @@ class _Composing(Registration):
         return self.matrix if init is None else self.matrix @ init
 
 
-def test_estimator_stores_eddy_currents_apart(request):
-    """An eddy pass starts from the motion estimates and stores only what it adds."""
-    rng = request.node.rng
+def _dwi(rng) -> DWI:
+    """A small DWI, with enough orientations."""
     bvecs = rng.normal(size=(DATAOBJ_SIZE[0] + 1, 3))
     bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
-    dwi = DWI(
+    return DWI(
         dataobj=rng.uniform(1.0, 2.0, (len(bvecs), *DATAOBJ_SIZE[1:])).astype("float32"),
         affine=np.eye(4),
         brainmask=np.ones(DATAOBJ_SIZE[1:], dtype=bool),
         gradients=np.column_stack([bvecs, np.full(len(bvecs), 1000.0)]),
     )
+
+
+def test_estimator_stores_eddy_currents_apart(request):
+    """An eddy pass starts from the motion estimates and stores only what it adds."""
+    dwi = _dwi(request.node.rng)
     motion = np.eye(4)
     motion[:3, 3] = (1.0, -0.5, 0.25)
     eddy = np.eye(4)
@@ -498,6 +502,37 @@ def test_estimator_stores_eddy_currents_apart(request):
     # The eddy pass starts from the head motion
     assert len(affine.inits) == len(dwi)
     assert all(init is not None and np.allclose(init, motion) for init in affine.inits)
+
+
+@pytest.mark.parametrize(
+    ("estimates", "given", "expected"),
+    [
+        ("motion", {}, "motion.yaml"),
+        ("eddy", {}, AFFINE),
+        ("eddy", {"align_config": "eddy.yaml"}, "eddy.yaml"),
+    ],
+    ids=["motion", "eddy", "eddy-own"],
+)
+def test_estimator_settings_follow_the_estimates(request, monkeypatch, estimates, given, expected):
+    """Eddy currents register with the affine settings, over the run's head-motion file."""
+
+    class Built(Exception):
+        """Stops the run once the backend is built."""
+
+    received: list = []
+
+    def fake_init(name, **options):
+        received.append(options.get("align_config"))
+        raise Built
+
+    monkeypatch.setattr(nifreeze.registration.base.RegistrationFactory, "init", fake_init)
+    dwi = _dwi(request.node.rng)
+    estimator = Estimator(
+        DummyInsiderModel(dataset=dwi), strategy="linear", estimates=estimates, **given
+    )
+    with pytest.raises(Built):
+        estimator.run(dwi, clip="none", align_kwargs={"align_config": "motion.yaml"})
+    assert received == [expected]
 
 
 def test_estimator_rejects_estimates_the_dataset_lacks():

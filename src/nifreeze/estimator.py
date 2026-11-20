@@ -35,12 +35,15 @@ from typing_extensions import Self
 
 from nifreeze.data.base import ESTIMATES_FIELD_ERROR_MSG, BaseDataset
 from nifreeze.model.base import BaseModel, ModelFactory, TrivialModel
-from nifreeze.registration.base import Registration, RegistrationFactory
+from nifreeze.registration.base import AFFINE, Registration, RegistrationFactory
 from nifreeze.utils import iterators
 
 DatasetT = TypeVar("DatasetT", bound=BaseDataset)
 
 DEFAULT_CHUNK_SIZE: int = int(1e6)
+ALIGN_CONFIGS = {"eddy": AFFINE}
+"""Default registration settings by field of estimates. Head motion takes the run's
+``align_config``, or the backend's default (:data:`~nifreeze.registration.base.RIGID`)."""
 FIT_MSG = "Fit&predict"
 REG_MSG = "Realign"
 
@@ -102,7 +105,9 @@ class Estimator:
     estimates : :obj:`str`, optional
         The field of the dataset this estimator's estimates go to, one of its
         :attr:`~nifreeze.data.base.BaseDataset.ESTIMATES`: ``"motion"`` (default), or
-        ``"eddy"`` for the eddy currents of a DWI (as ``--eddy`` does). Each volume is
+        ``"eddy"`` for the eddy currents of a DWI (as ``--eddy`` does), registered
+        with :data:`~nifreeze.registration.base.AFFINE` unless ``align_config`` is
+        given (see :data:`ALIGN_CONFIGS`). Each volume is
         registered from its mapping, every estimate composed
         (:meth:`~nifreeze.data.base.BaseDataset.get_transform`), and the other fields'
         estimates are factored out of the result
@@ -148,6 +153,8 @@ class Estimator:
         self._single_fit = single_fit
         self._model_kwargs = model_kwargs or {}
         self._align_kwargs = kwargs or {}
+        if estimates in ALIGN_CONFIGS:
+            self._align_kwargs.setdefault("align_config", ALIGN_CONFIGS[estimates])
 
         self._start_index = start_index
         self._stop_index = stop_index

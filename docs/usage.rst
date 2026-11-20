@@ -154,15 +154,14 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
           seed=42,
       )
 
-   Eddy currents are estimated by a second, affine pass, which starts from the
-   head-motion estimates stored in the dataset and stores what it adds in ``eddy``
-   (on the command line, ``--eddy``):
+   Eddy currents are estimated by a second pass, which starts from the head-motion
+   estimates stored in the dataset and stores what it adds in ``eddy`` (on the command
+   line, ``--eddy``). It registers with the affine settings,
+   :data:`~nifreeze.registration.base.AFFINE`, unless given its own ``align_config``:
 
    .. code-block:: python
 
-      from nifreeze.registration import AFFINE
-
-      Estimator("gqi-krr", align_config=AFFINE, estimates="eddy").run(dataset, seed=42)
+      Estimator("gqi-krr", estimates="eddy").run(dataset, seed=42)
 
 5. **Save Results**: Once transformations are estimated, save the realigned data in your preferred output format, either :ref:`nfHDF5 <nfhdf5>` or NIfTI:
 
