@@ -41,9 +41,10 @@ from nifreeze.utils import iterators
 DatasetT = TypeVar("DatasetT", bound=BaseDataset)
 
 DEFAULT_CHUNK_SIZE: int = int(1e6)
-ALIGN_CONFIGS = {"eddy": AFFINE}
-"""Default registration settings by field of estimates. Head motion takes the run's
-``align_config``, or the backend's default (:data:`~nifreeze.registration.base.RIGID`)."""
+ALIGN_CONFIGS = {"motion": None, "eddy": AFFINE}
+"""Default registration settings by field of estimates. ``None`` takes the run's
+``align_config``, or the backend's default (:data:`~nifreeze.registration.base.RIGID`):
+a default of the estimator's own would override the run's."""
 FIT_MSG = "Fit&predict"
 REG_MSG = "Realign"
 
@@ -153,8 +154,9 @@ class Estimator:
         self._single_fit = single_fit
         self._model_kwargs = model_kwargs or {}
         self._align_kwargs = kwargs or {}
-        if estimates in ALIGN_CONFIGS:
-            self._align_kwargs.setdefault("align_config", ALIGN_CONFIGS[estimates])
+        default = ALIGN_CONFIGS.get(estimates)
+        if default is not None:
+            self._align_kwargs.setdefault("align_config", default)
 
         self._start_index = start_index
         self._stop_index = stop_index
