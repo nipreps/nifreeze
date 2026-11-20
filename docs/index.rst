@@ -29,6 +29,7 @@ Contents
     citation
     developers
     phantoms
+    roadmap
     registration
     edd/index
     changes
