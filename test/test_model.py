@@ -186,12 +186,12 @@ def test_expectation_model(request):
 
 
 def test_factory_none_raises(setup_random_base_data):
-    dataobj, affine, brainmask, motion_affines, datahdr = setup_random_base_data
+    dataobj, affine, brainmask, motion, datahdr = setup_random_base_data
     dataset: BaseDataset = BaseDataset(
         dataobj=dataobj,
         affine=affine,
         brainmask=brainmask,
-        motion_affines=motion_affines,
+        motion=motion,
         datahdr=datahdr,
     )
     with pytest.raises(RuntimeError, match="No model identifier provided."):
@@ -218,7 +218,7 @@ def test_model_factory_invalid_model():
     ],
 )
 def test_factory_variants(name, expected_cls, setup_random_base_data, particular_case):
-    dataobj, affine, brainmask, motion_affines, datahdr = setup_random_base_data
+    dataobj, affine, brainmask, motion, datahdr = setup_random_base_data
 
     class BaseDatasetRef(BaseDataset):
         def __init__(self, *args, **kwargs):
@@ -237,7 +237,7 @@ def test_factory_variants(name, expected_cls, setup_random_base_data, particular
         dataobj=dataobj,
         affine=affine,
         brainmask=brainmask,
-        motion_affines=motion_affines,
+        motion=motion,
         datahdr=datahdr,
     )
     _kwargs = {}
@@ -247,7 +247,7 @@ def test_factory_variants(name, expected_cls, setup_random_base_data, particular
                 dataobj,
                 affine,
                 brainmask,
-                motion_affines,
+                motion,
                 datahdr,
                 reference=np.zeros(dataobj.shape[1:]),
             )
@@ -256,7 +256,7 @@ def test_factory_variants(name, expected_cls, setup_random_base_data, particular
                 dataobj,
                 affine,
                 brainmask,
-                motion_affines,
+                motion,
                 datahdr,
                 bzero=np.zeros(dataobj.shape[1:]),
             )

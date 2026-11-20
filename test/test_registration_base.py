@@ -143,7 +143,7 @@ def test_a_custom_backend_plugs_into_the_estimator():
 
     assert [call["index"] for call in backend.calls] == [0, 1, 2]
     assert all(call["window"] is not None for call in backend.calls)
-    assert np.allclose(dataset.motion_affines, backend.matrix)
+    assert np.allclose(dataset.motion, backend.matrix)
 
 
 def test_a_chain_starts_each_backend_from_the_previous_estimate():
@@ -191,7 +191,7 @@ def test_the_estimator_registers_with_a_backend_by_name(tmp_path, name):
         dataset, omp_nthreads=1, seed=12345, debug_dir=tmp_path
     )
 
-    for estimated, motion in zip(dataset.motion_affines, motions, strict=True):
+    for estimated, motion in zip(dataset.motion, motions, strict=True):
         assert _error(dataset.brainmask, dataset.affine, estimated, motion) < 0.5
     folder = tmp_path / "00-trivialmodel"
     for kind in ("predicted", "sample", "aligned"):

@@ -198,8 +198,8 @@ class DWI(BaseDataset[np.ndarray]):
         default=None, repr=_data_repr, eq=attrs.cmp_using(eq=_cmp)
     )
     """A *b=0* reference map, computed automatically when low-b frames are present."""
-    eddy_xfms: list = attrs.field(default=None)
-    """List of transforms to correct for estimated eddy current distortions."""
+    eddy: np.ndarray | None = attrs.field(default=None, eq=attrs.cmp_using(eq=_cmp))
+    """The eddy-current estimates, ``(N, 4, 4)``: for each volume, an affine RAS+ matrix."""
 
     def __attrs_post_init__(self) -> None:
         if self.dataobj.shape[0] != self.gradients.shape[0]:
@@ -262,7 +262,7 @@ class DWI(BaseDataset[np.ndarray]):
         super().realign_into(view, index, order=order)
 
         bvec = np.asarray(self.gradients[index, :3], dtype=float)
-        matrix = None if self.motion_affines is None else self.motion_affines[index]
+        matrix = None if self.motion is None else self.motion[index]
         if matrix is not None and not np.allclose(matrix, np.eye(4)):
             bvec = realign_bvecs(bvec, matrix)
 

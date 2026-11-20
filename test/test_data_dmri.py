@@ -730,7 +730,7 @@ def test_load_gradients_missing(tmp_path, setup_random_dwi_data):
 @pytest.mark.parametrize("bval_min, bval_max", [(800.0, 1200.0)])
 @pytest.mark.parametrize("provide_bzero", [False, True])
 @pytest.mark.parametrize("insert_b0", [False, True])
-@pytest.mark.parametrize("motion_affines", [None, 2 * np.eye(4)])
+@pytest.mark.parametrize("motion", [None, 2 * np.eye(4)])
 @pytest.mark.parametrize("bvals_dec_places, bvecs_dec_places", [(2, 6), (1, 4)])
 @pytest.mark.parametrize("file_basename", [None, "dwi.nii.gz"])
 def test_to_nifti(
@@ -743,7 +743,7 @@ def test_to_nifti(
     bval_max,
     provide_bzero,
     insert_b0,
-    motion_affines,
+    motion,
     bvals_dec_places,
     bvecs_dec_places,
     file_basename,
@@ -771,9 +771,7 @@ def test_to_nifti(
     # Optionally supply a bzero
     provided = None
     affine = np.eye(4)
-    _motion_affines = (
-        np.stack([motion_affines] * non_b0_count) if motion_affines is not None else None
-    )
+    _motion_affines = np.stack([motion] * non_b0_count) if motion is not None else None
     if provide_bzero:
         # Use a constant map so it's easy to assert equality
         provided = np.full((*vol_size, max(1, b0_count)), 42.0, dtype=float).squeeze()
@@ -785,14 +783,12 @@ def test_to_nifti(
             dwi_obj = DWI(
                 dataobj=dataobj,
                 affine=affine,
-                motion_affines=_motion_affines,
+                motion=_motion_affines,
                 gradients=gradients,
                 bzero=provided,
             )
     else:
-        dwi_obj = DWI(
-            dataobj=dataobj, affine=affine, motion_affines=_motion_affines, gradients=gradients
-        )
+        dwi_obj = DWI(dataobj=dataobj, affine=affine, motion=_motion_affines, gradients=gradients)
 
     _filename = tmp_path / file_basename if file_basename is not None else file_basename
 
@@ -896,7 +892,7 @@ def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
     dwi_nifti_path = tmp_path / "dwi.nii.gz"
     gradients_path = tmp_path / "dwi.tsv"
 
-    dwi_h5.motion_affines = (
+    dwi_h5.motion = (
         np.array([nb.affines.from_matvec(np.eye(3), (10, -5, -20))] * len(dwi_h5))
         if rotate_bvecs
         else None
@@ -922,7 +918,7 @@ def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
         bval_file=bvals_path,
     )
 
-    if not rotate_bvecs:  # If we set motion_affines, data WILL change
+    if not rotate_bvecs:  # If we set motion, data WILL change
         nifti_data_diff = (~np.isclose(dwi_h5.dataobj, nifti_data, atol=1e-4)).sum()
         assert np.allclose(dwi_h5.dataobj, nifti_data, atol=1e-4), (
             f"``to_nifti()`` changed data contents ({nifti_data_diff} differences found)."
@@ -956,7 +952,7 @@ def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
     # Try loading NIfTI + gradients table
     dwi_from_nifti2 = from_nii(dwi_nifti_path, gradients_file=gradients_path)
 
-    if not rotate_bvecs:  # If we set motion_affines, data WILL change
+    if not rotate_bvecs:  # If we set motion, data WILL change
         assert np.allclose(dwi_h5.dataobj, dwi_from_nifti2.dataobj)
     if insert_b0:
         assert dwi_h5.bzero is not None
@@ -985,7 +981,7 @@ def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
         b0_file=b0_file,
     )
 
-    if not rotate_bvecs:  # If we set motion_affines, data WILL change
+    if not rotate_bvecs:  # If we set motion, data WILL change
         assert np.allclose(dwi_h5.dataobj, dwi_from_nifti3.dataobj)
 
     assert dwi_h5.bzero is not None
@@ -998,7 +994,7 @@ def test_load(datadir, tmp_path, insert_b0, rotate_bvecs):  # noqa: C901
     # Try loading NIfTI + gradients table
     dwi_from_nifti4 = from_nii(dwi_nifti_path, gradients_file=gradients_path, b0_file=b0_file)
 
-    if not rotate_bvecs:  # If we set motion_affines, data WILL change
+    if not rotate_bvecs:  # If we set motion, data WILL change
         assert np.allclose(dwi_h5.dataobj, dwi_from_nifti4.dataobj)
 
     assert dwi_from_nifti4.bzero is not None
@@ -1129,7 +1125,7 @@ def test_from_filename_assumes_rasb_before_version_3(tmp_path, version):
     )
     dwi.to_filename(tmp_path / "dwi.h5")
     with h5py.File(tmp_path / "dwi.h5", "r+") as out_file:
-        assert out_file.attrs["Version"] == 3
+        assert out_file.attrs["Version"] == 4
         if version is None:
             del out_file.attrs["Version"]  # read as version 1
         else:
@@ -1143,7 +1139,7 @@ def test_from_filename_assumes_rasb_before_version_3(tmp_path, version):
     assert np.allclose(loaded.gradients, dwi.gradients)
 
 
-def test_from_filename_version_3_does_not_warn(tmp_path):
+def test_from_filename_rasb_versions_do_not_warn(tmp_path):
     dwi = DWI(
         dataobj=np.ones((len(B_MATRIX) - 1, 4, 4, 4), dtype="float32"),
         affine=np.eye(4),
@@ -1180,9 +1176,7 @@ def test_shells(setup_random_dwi_data):
 
     indices = [np.where(np.isin(dwi_obj.bvals, bvals))[0] for bvals in expected_bval_groups]
     expected_dwi_data = [dwi_obj.dataobj[idx] for idx in indices]
-    expected_motion_affines = [
-        dwi_obj.motion_affines[idx] if dwi_obj.motion_affines else None for idx in indices
-    ]
+    expected_motion_affines = [dwi_obj.motion[idx] if dwi_obj.motion else None for idx in indices]
     expected_gradients = [dwi_obj.gradients[idx, ...] for idx in indices]
 
     obtained_bval_est, obtained_indices = zip(*dwi_obj.get_shells(num_bins=num_bins), strict=True)

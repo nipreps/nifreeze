@@ -67,7 +67,7 @@ class DummyDWIDataset(BaseDataset):
         self.brainmask = brainmask_dataobj
         self.bzero = b0_dataobj
         self.gradients = gradients
-        self.motion_affines = None
+        self.motion = None
 
     def __len__(self):
         return self.dataobj.shape[0]
@@ -83,7 +83,7 @@ class DummyPETDataset(BaseDataset):
         self.brainmask = brainmask_dataobj
         self.midframe = midframe
         self.total_duration = total_duration
-        self.motion_affines = None
+        self.motion = None
 
     def __len__(self):
         return self.dataobj.shape[0]

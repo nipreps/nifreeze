@@ -289,6 +289,8 @@ def load_nfhdf5_fields(filename: Path | str, lazy_keys: tuple[str, ...] = ("data
             if not k.startswith("_") and k not in lazy_keys
         }
         present = [k for k in lazy_keys if k in root]
+    if "motion_affines" in data:  # versions 1 to 3
+        data["motion"] = data.pop("motion_affines")
     for key in present:
         data[key] = open_dataobj_memmap(filename, f"/0/{key}")
     return data
