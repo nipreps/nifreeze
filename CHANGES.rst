@@ -1,8 +1,9 @@
-26.0.0rc1 (November 19, 2026)
+26.0.0rc1 (November 20, 2026)
 =============================
 The first release candidate of *NiFreeze* 26.0.0, the first release with a calendar version.
 *NiFreeze* now holds b-vectors in world RAS+ coordinates, predicts GQI by ridge regression,
-and requires Python 3.13 or newer.
+registers with elastix wherever ``itk-elastix`` is installed, and requires Python 3.13 or
+newer.
 The candidate is for testing on real data, and its known limitations are listed below.
 
 .. warning::
@@ -33,6 +34,23 @@ The candidate is for testing on real data, and its known limitations are listed 
      at every level of a cascade, and a caller's ``num_threads`` is no longer replaced by
      ``omp_nthreads``.
      ``generate_command`` refuses unknown settings with a ``TypeError``.
+   - **Registration backends** (`#668 <https://github.com/nipreps/nifreeze/pull/668>`__, `#708 <https://github.com/nipreps/nifreeze/pull/708>`__).
+     The estimator and the CLI register with elastix wherever ``itk-elastix`` (the
+     ``elastix`` extra) is installed, and with ANTs otherwise: pass ``registration="ants"``
+     to ``Estimator``, or ``--registration ants`` to the CLI, to keep ANTs.
+     ``ants_config`` is now ``align_config``, and a leftover ``ants_config`` raises a
+     ``TypeError``: ``ants_config="dwi-to-dwi_level1"`` becomes ``align_config=AFFINE``
+     (``from nifreeze.registration import AFFINE``).
+     The settings ship as two YAML files with a section per backend:
+     ``nifreeze.registration.RIGID`` (the default, ANTs' ``b0-to-b0_level0``) and
+     ``AFFINE`` (ANTs' ``dwi-to-dwi_level1``).
+     The other three named settings moved to ``examples/registration/``, which is not
+     shipped.
+     Settings are no longer overridden one by one: ``align_config`` takes a mapping or a
+     file, so copy a file and edit it to change a setting.
+     ``--align-config`` takes such a file, for every level of the cascade.
+     ``generate_command`` takes ``align_config=`` instead of ``default=``, and
+     ``Estimator.run`` no longer takes ``clip_windows``.
    - **Python 3.13 or newer** (`#646 <https://github.com/nipreps/nifreeze/pull/646>`__), with the oldest versions of the dependencies set by
      `SPEC 0 <https://scientific-python.org/specs/spec-0000/>`__ and no cap on numpy (`#647 <https://github.com/nipreps/nifreeze/pull/647>`__).
      ``nest-asyncio`` moved to the ``notebooks`` extra.
@@ -45,9 +63,12 @@ The candidate is for testing on real data, and its known limitations are listed 
    - **Accuracy.** The work on the estimator has not started, so motion estimates do not
      yet reach the roadmap's target: a median error below 0.5 mm and a 95th percentile below
      1 mm, at 2° and 2 mm of motion.
-   - **Eddy currents** are approximated only by an affine registration, with the
-     ``dwi-to-dwi_level1`` settings (``Estimator(..., ants_config="dwi-to-dwi_level1")``, or
-     ``ants_config`` in the file of ``--align-config``).
+   - **Eddy currents** are approximated only by an affine registration: one more pass of
+     the last model, with the ``AFFINE`` settings, started from the motion estimates
+     (``--eddy`` on the command line, or ``Estimator(..., align_config=AFFINE)`` run on the
+     dataset after the motion pass).
+     Elastix's affine settings were mapped from ANTs', not tuned
+     (`#693 <https://github.com/nipreps/nifreeze/pull/693>`__).
      The smooth field along the phase-encoding axis is not implemented
      (`#591 <https://github.com/nipreps/nifreeze/issues/591>`__).
    - **Memory.** Only *nfHDF5* inputs are memory-mapped: NIfTI inputs are held in memory,
@@ -55,11 +76,15 @@ The candidate is for testing on real data, and its known limitations are listed 
      (`#594 <https://github.com/nipreps/nifreeze/issues/594>`__, `#513 <https://github.com/nipreps/nifreeze/issues/513>`__, `#171 <https://github.com/nipreps/nifreeze/issues/171>`__).
      MRIQC's draft head-motion correction peaked at 8.0 GB on a 0.41 GB series
      (`nipreps/mriqc#1518 <https://github.com/nipreps/mriqc/pull/1518>`__).
-   - **Registration** runs ANTs, which is installed apart from *NiFreeze*.
-     Volumes are registered one after another, and ANTs gets the images through files
+   - **Registration.** Volumes are registered one after another
      (`#590 <https://github.com/nipreps/nifreeze/issues/590>`__).
-     The estimator cannot use the elastix backend yet
-     (`#672 <https://github.com/nipreps/nifreeze/issues/672>`__).
+     ANTs, which is installed apart from *NiFreeze*, gets the images through files;
+     elastix gets them in memory.
+     The evidence for elastix as the default comes from the phantoms, at motions up to
+     4 mm and 4° (`#693 <https://github.com/nipreps/nifreeze/pull/693>`__).
+     The default backend depends on whether ``itk-elastix`` is installed, so two
+     environments can give different estimates: the CLI's sidecar records the backend
+     that ran (``ANTsVersion`` or ``ElastixVersion``).
 
 **Data**
 
@@ -72,24 +97,36 @@ The candidate is for testing on real data, and its known limitations are listed 
 
 **Registration**
 
-- Registration settings are read from a JSON file, as well as from a packaged name (`#632 <https://github.com/nipreps/nifreeze/pull/632>`__).
+- The estimator registers through one interface, ``nifreeze.registration.Registration``,
+  with ANTs and elastix behind it: ``Estimator(..., registration=...)`` takes a backend or
+  its name, and ``RegistrationFactory.init`` builds ``"ants"``, ``"elastix"`` or any
+  ``"module:class"`` (`#668 <https://github.com/nipreps/nifreeze/pull/668>`__).
+- An elastix backend, ``nifreeze.registration.elastix.Elastix``, is given the images in
+  memory (`#676 <https://github.com/nipreps/nifreeze/pull/676>`__), with ANTs' rigid and affine settings mapped onto elastix's
+  components (`#674 <https://github.com/nipreps/nifreeze/pull/674>`__).
+  It needs the new ``elastix`` extra (``itk-elastix``, `#673 <https://github.com/nipreps/nifreeze/pull/673>`__).
+- Elastix is the default backend wherever ``itk-elastix`` is installed (`#708 <https://github.com/nipreps/nifreeze/pull/708>`__).
+  On the phantoms' held-out volumes, it registered better than ANTs in 8 of 12
+  comparisons and not worse in the other 4, gave the same estimates bit for bit when run
+  again, and took 0.31 to 0.64 of ANTs' time (`#693 <https://github.com/nipreps/nifreeze/pull/693>`__).
+- Registration settings are YAML files with a section per backend, or a mapping
+  (`#632 <https://github.com/nipreps/nifreeze/pull/632>`__, `#708 <https://github.com/nipreps/nifreeze/pull/708>`__): ``RIGID`` (head motion, the default) and ``AFFINE`` (eddy
+  currents) ship with *NiFreeze*.
+- The CLI picks the backend with ``--registration``, and estimates eddy currents with
+  ``--eddy``, one more pass of the last model with the ``AFFINE`` settings (`#708 <https://github.com/nipreps/nifreeze/pull/708>`__).
 - ``generate_command(num_threads=...)`` also sets ITK's thread count, over a global
   setting (`#633 <https://github.com/nipreps/nifreeze/pull/633>`__).
-- The CLI writes the version of ``antsRegistration`` it ran into a JSON sidecar (`#634 <https://github.com/nipreps/nifreeze/pull/634>`__).
+- The CLI writes the version of the backend it ran (``ANTsVersion`` or
+  ``ElastixVersion``) into a JSON sidecar (`#634 <https://github.com/nipreps/nifreeze/pull/634>`__, `#708 <https://github.com/nipreps/nifreeze/pull/708>`__).
 - ``nifreeze.analysis.registration`` scores a registration against a phantom's known
   motion (`#598 <https://github.com/nipreps/nifreeze/pull/598>`__), and its ``AntsRegistration`` starts from an initial transform
   (``init``) as the estimator does (`#690 <https://github.com/nipreps/nifreeze/pull/690>`__).
-- An elastix backend, ``nifreeze.registration.elastix.Elastix``, is given the images in
-  memory (`#676 <https://github.com/nipreps/nifreeze/pull/676>`__), with the settings of ``b0-to-b0_level0`` and ``dwi-to-dwi_level1``
-  mapped onto elastix's components (`#674 <https://github.com/nipreps/nifreeze/pull/674>`__).
-  It needs the new ``elastix`` extra (``itk-elastix``, `#673 <https://github.com/nipreps/nifreeze/pull/673>`__).
-  Only the accuracy harness calls it: the estimator still registers with ANTs.
 
 **Validation**
 
 - Reports on what limits the registration error with a perfect target (`#610 <https://github.com/nipreps/nifreeze/pull/610>`__), on the
-  eddy-current truth of the experiments (`#623 <https://github.com/nipreps/nifreeze/pull/623>`__), and on elastix's settings against ANTs
-  (`#674 <https://github.com/nipreps/nifreeze/pull/674>`__, `#688 <https://github.com/nipreps/nifreeze/pull/688>`__).
+  eddy-current truth of the experiments (`#623 <https://github.com/nipreps/nifreeze/pull/623>`__), on elastix's settings against ANTs
+  (`#674 <https://github.com/nipreps/nifreeze/pull/674>`__, `#688 <https://github.com/nipreps/nifreeze/pull/688>`__), and on elastix against ANTs on held-out volumes (`#693 <https://github.com/nipreps/nifreeze/pull/693>`__).
 - Tests of the conventions by which data reach ANTs and estimates come back (`#622 <https://github.com/nipreps/nifreeze/pull/622>`__), of the
   amplitude of every model's prediction (`#602 <https://github.com/nipreps/nifreeze/pull/602>`__), and of the estimator with a mocked
   registration (`#600 <https://github.com/nipreps/nifreeze/pull/600>`__).
@@ -106,6 +143,10 @@ The candidate is for testing on real data, and its known limitations are listed 
 
 - A page on citing *NiFreeze* and writing papers about it, with its authors credited as the
   NiPreps guidelines say (`#663 <https://github.com/nipreps/nifreeze/pull/663>`__, `#666 <https://github.com/nipreps/nifreeze/pull/666>`__).
+- Every published version of the site has a working version menu.
+  The site opens on the latest release, and ``main`` and pre-releases carry a label and a
+  banner that points to it (`#696 <https://github.com/nipreps/nifreeze/pull/696>`__, `#698 <https://github.com/nipreps/nifreeze/pull/698>`__).
+  The home page opens with what *NiFreeze* does (`#704 <https://github.com/nipreps/nifreeze/pull/704>`__).
 
 **Maintenance**
 
@@ -117,6 +158,10 @@ The candidate is for testing on real data, and its known limitations are listed 
   Pull requests and pushes register 16 corners of the ANTs b=0 grid, and the weekly run all
   432 cases (`#682 <https://github.com/nipreps/nifreeze/pull/682>`__); the benchmarks compare only pull requests that change what
   they measure (`#686 <https://github.com/nipreps/nifreeze/pull/686>`__).
+- The documentation builds with Sphinx 9 (`#702 <https://github.com/nipreps/nifreeze/pull/702>`__), in about a minute when the citation has
+  not changed (`#706 <https://github.com/nipreps/nifreeze/pull/706>`__).
+  ``gh-pages`` keeps a single commit, so a clone of the repository fetches 241 MB instead
+  of 1.07 GB (`#700 <https://github.com/nipreps/nifreeze/pull/700>`__).
 - ``AGENTS.md`` holds the instructions for coding agents, and ``CLAUDE.md`` links to it
   (`#661 <https://github.com/nipreps/nifreeze/pull/661>`__).
 
