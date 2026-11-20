@@ -31,6 +31,7 @@ import pytest
 import nifreeze.registration.ants
 import nifreeze.registration.base
 from nifreeze.data.base import BaseDataset
+from nifreeze.data.dmri import DWI
 from nifreeze.data.dmri.utils import DEFAULT_LOWB_THRESHOLD
 from nifreeze.data.filtering import ClippingValueError
 from nifreeze.data.pet import PET
@@ -38,7 +39,7 @@ from nifreeze.data.pet.utils import compute_uptake_statistic
 from nifreeze.estimator import Estimator
 from nifreeze.model.base import BaseModel, ExpectationModel
 from nifreeze.model.pet import BSplinePETModel
-from nifreeze.registration.base import AFFINE, RIGID, load_config
+from nifreeze.registration.base import AFFINE, RIGID, Registration, load_config
 from nifreeze.utils import iterators
 from nifreeze.utils.ndimage import load_api
 
@@ -76,7 +77,7 @@ class DummyDataset(BaseDataset):
         # Return the indexed volume and a dummy value
         return self.dataobj[idx], None
 
-    def set_transform(self, idx, matrix):
+    def set_transform(self, idx, matrix, field="motion"):
         pass
 
 
@@ -150,7 +151,7 @@ def test_estimator_start_index(request, monkeypatch):
 
     dataset = DummyDataset(rng=request.node.rng)
 
-    def fake_set_transform(self, i, xform):
+    def fake_set_transform(self, i, xform, field="motion"):
         recorded_indices.append(i)
 
     monkeypatch.setattr(
@@ -452,6 +453,101 @@ def test_estimator_chain_initializes_from_previous_estimate(request, monkeypatch
     assert [init[0, 3] for init in second] == list(range(1, n + 1))
 
 
+class _Composing(Registration):
+    """A backend whose result includes its initialization: ``matrix @ init``."""
+
+    def __init__(self, matrix, **kwargs):
+        super().__init__(**kwargs)
+        self.matrix = matrix
+        self.inits: list[np.ndarray | None] = []
+
+    def _register(self, fixed, moving, affine, mask, index, init, window):
+        self.inits.append(init)
+        return self.matrix if init is None else self.matrix @ init
+
+
+def _dwi(rng) -> DWI:
+    """A small DWI, with enough orientations."""
+    bvecs = rng.normal(size=(DATAOBJ_SIZE[0] + 1, 3))
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+    return DWI(
+        dataobj=rng.uniform(1.0, 2.0, (len(bvecs), *DATAOBJ_SIZE[1:])).astype("float32"),
+        affine=np.eye(4),
+        brainmask=np.ones(DATAOBJ_SIZE[1:], dtype=bool),
+        gradients=np.column_stack([bvecs, np.full(len(bvecs), 1000.0)]),
+    )
+
+
+def test_estimator_stores_eddy_currents_apart(request):
+    """An eddy pass starts from the motion estimates and stores only what it adds."""
+    dwi = _dwi(request.node.rng)
+    motion = np.eye(4)
+    motion[:3, 3] = (1.0, -0.5, 0.25)
+    eddy = np.eye(4)
+    eddy[1, 0], eddy[1, 3] = 0.02, 0.5
+    rigid, affine = _Composing(motion), _Composing(eddy)
+
+    first = Estimator(DummyInsiderModel(dataset=dwi), strategy="linear", registration=rigid)
+    Estimator(
+        DummyInsiderModel(dataset=dwi),
+        strategy="linear",
+        prev=first,
+        registration=affine,
+        estimates="eddy",
+    ).run(dwi, clip="none")
+
+    assert dwi.motion is not None and dwi.eddy is not None
+    assert np.allclose(dwi.motion, motion)
+    assert np.allclose(dwi.eddy, eddy)
+    # The eddy pass starts from the head motion
+    assert len(affine.inits) == len(dwi)
+    assert all(init is not None and np.allclose(init, motion) for init in affine.inits)
+
+
+@pytest.mark.parametrize(
+    ("estimates", "given", "expected"),
+    [
+        ("motion", {}, "motion.yaml"),
+        ("eddy", {}, AFFINE),
+        ("eddy", {"align_config": "eddy.yaml"}, "eddy.yaml"),
+    ],
+    ids=["motion", "eddy", "eddy-own"],
+)
+def test_estimator_settings_follow_the_estimates(request, monkeypatch, estimates, given, expected):
+    """Eddy currents register with the affine settings, over the run's head-motion file."""
+
+    class Built(Exception):
+        """Stops the run once the backend is built."""
+
+    received: list = []
+
+    def fake_init(name, **options):
+        received.append(options.get("align_config"))
+        raise Built
+
+    monkeypatch.setattr(nifreeze.registration.base.RegistrationFactory, "init", fake_init)
+    dwi = _dwi(request.node.rng)
+    estimator = Estimator(
+        DummyInsiderModel(dataset=dwi), strategy="linear", estimates=estimates, **given
+    )
+    with pytest.raises(Built):
+        estimator.run(dwi, clip="none", align_kwargs={"align_config": "motion.yaml"})
+    assert received == [expected]
+
+
+def test_estimator_rejects_estimates_the_dataset_lacks():
+    """It fails before any estimator of the chain registers."""
+    dataset = _smooth_dataset()
+    backend = _Composing(np.eye(4))
+    first = Estimator("avg", strategy="linear", registration=backend)
+    eddy = Estimator("avg", prev=first, registration=backend, estimates="eddy")
+
+    message = "BaseDataset has no estimates 'eddy' (it has: motion)."
+    with pytest.raises(ValueError, match=re.escape(message)):
+        eddy.run(dataset, clip="none")
+    assert backend.inits == []
+
+
 def test_estimator_clip_degenerate_window(request, monkeypatch):
     """A volume whose window cannot be estimated is registered without clipping."""
     dataset = DummyDataset(rng=request.node.rng)
@@ -485,7 +581,7 @@ def test_estimator_start_and_end_index(request, monkeypatch):
 
     dataset = DummyDataset(rng=request.node.rng)
 
-    def fake_set_transform(self, i, xform):
+    def fake_set_transform(self, i, xform, field="motion"):
         recorded_indices.append(i)
 
     monkeypatch.setattr(
@@ -559,7 +655,7 @@ def test_estimator_iterator_index_match(
     recorded_matrices = []
 
     # Make this accept `self` so it behaves as a proper instance method
-    def fake_set_transform(self, i, xform):
+    def fake_set_transform(self, i, xform, field="motion"):
         recorded_indices.append(i)
         recorded_matrices.append(xform)
 

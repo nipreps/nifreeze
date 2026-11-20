@@ -56,7 +56,7 @@ class DummyDataset(BaseDataset):
         # Return the indexed volume and a dummy value
         return self.dataobj[idx], None
 
-    def set_transform(self, idx, matrix):
+    def set_transform(self, idx, matrix, field="motion"):
         pass
 
 

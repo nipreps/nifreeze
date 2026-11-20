@@ -33,14 +33,18 @@ import numpy as np
 from tqdm import tqdm
 from typing_extensions import Self
 
-from nifreeze.data.base import BaseDataset
+from nifreeze.data.base import ESTIMATES_FIELD_ERROR_MSG, BaseDataset
 from nifreeze.model.base import BaseModel, ModelFactory, TrivialModel
-from nifreeze.registration.base import Registration, RegistrationFactory
+from nifreeze.registration.base import AFFINE, Registration, RegistrationFactory
 from nifreeze.utils import iterators
 
 DatasetT = TypeVar("DatasetT", bound=BaseDataset)
 
 DEFAULT_CHUNK_SIZE: int = int(1e6)
+ALIGN_CONFIGS = {"motion": None, "eddy": AFFINE}
+"""Default registration settings by field of estimates. ``None`` takes the run's
+``align_config``, or the backend's default (:data:`~nifreeze.registration.base.RIGID`):
+a default of the estimator's own would override the run's."""
 FIT_MSG = "Fit&predict"
 REG_MSG = "Realign"
 
@@ -99,6 +103,16 @@ class Estimator:
         (:data:`~nifreeze.registration.base.BACKENDS`), built for each run from the
         registration settings (default: elastix where ``itk-elastix`` is installed,
         ANTs otherwise; see :func:`~nifreeze.registration.base.default_backend`).
+    estimates : :obj:`str`, optional
+        The field of the dataset this estimator's estimates go to, one of its
+        :attr:`~nifreeze.data.base.BaseDataset.ESTIMATES`: ``"motion"`` (default), or
+        ``"eddy"`` for the eddy currents of a DWI (as ``--eddy`` does), registered
+        with :data:`~nifreeze.registration.base.AFFINE` unless ``align_config`` is
+        given (see :data:`ALIGN_CONFIGS`). Each volume is
+        registered from its mapping, every estimate composed
+        (:meth:`~nifreeze.data.base.BaseDataset.get_transform`), and the other fields'
+        estimates are factored out of the result
+        (:meth:`~nifreeze.data.base.BaseDataset.set_transform`).
     **kwargs
         Registration settings of this estimator, which take precedence over the run's
         ``align_kwargs``: ``align_config`` (a mapping, or a file with a section per
@@ -118,6 +132,7 @@ class Estimator:
         "_start_index",
         "_stop_index",
         "_registration",
+        "_estimates",
     )
 
     def __init__(
@@ -130,6 +145,7 @@ class Estimator:
         start_index: int = 0,
         stop_index: int | None = None,
         registration: Registration | str | None = None,
+        estimates: str = "motion",
         **kwargs,
     ):
         self._model = model
@@ -138,10 +154,14 @@ class Estimator:
         self._single_fit = single_fit
         self._model_kwargs = model_kwargs or {}
         self._align_kwargs = kwargs or {}
+        default = ALIGN_CONFIGS.get(estimates)
+        if default is not None:
+            self._align_kwargs.setdefault("align_config", default)
 
         self._start_index = start_index
         self._stop_index = stop_index
         self._registration = registration
+        self._estimates = estimates
 
     def run(self, dataset: DatasetT, **kwargs) -> Self:
         """
@@ -184,6 +204,16 @@ class Estimator:
             The estimator, after fitting.
 
         """
+        # Before the previous estimators of the chain run
+        if self._estimates not in dataset.ESTIMATES:
+            raise ValueError(
+                ESTIMATES_FIELD_ERROR_MSG.format(
+                    name=type(dataset).__name__,
+                    field=self._estimates,
+                    fields=", ".join(dataset.ESTIMATES),
+                )
+            )
+
         # Shared with the previous estimators of the chain
         views = kwargs.setdefault("realigned", {})
         if self._prev is not None:
@@ -301,12 +331,13 @@ class Estimator:
                     **fit_pred_kwargs,
                 )
 
-                # Start from the current estimate (left by a previous estimator of the
-                # chain, or stored in the dataset)
+                # Start from the current mapping, every estimate composed (left by a
+                # previous estimator of the chain, or stored in the dataset)
                 init_affine = None
-                if dataset.motion is not None:
+                current = dataset.get_transform(i)
+                if current is not None:
                     # A copy: a backend may keep it, and the dataset's changes later
-                    current = np.array(dataset.motion[i], dtype=float)
+                    current = np.array(current, dtype=float)
                     if not np.allclose(current, np.eye(4)):
                         init_affine = current
 
@@ -316,7 +347,7 @@ class Estimator:
                 )
 
                 # update
-                dataset.set_transform(i, xform.matrix)
+                dataset.set_transform(i, xform.matrix, self._estimates)
                 if view is not None:
                     # Instant update: the next predictions see this volume realigned
                     dataset.realign_into(view, i)

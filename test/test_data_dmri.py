@@ -2042,3 +2042,99 @@ def test_dwi_realign_into_keeps_integer_tables_exact():
     expected = np.linalg.inv(_rotation_about_z(10.0)[:3, :3]) @ np.array([1.0, 0.0, 0.0])
     assert np.allclose(view.gradients[0, :3], expected)
     assert np.allclose(view.gradients[1:], dwi.gradients[1:])
+
+
+def _shear(amount: float, shift: float = 0.0) -> np.ndarray:
+    """An affine like eddy currents': a shear and a shift along y (phase encoding)."""
+    matrix = np.eye(4)
+    matrix[1, 0] = amount
+    matrix[1, 3] = shift
+    return matrix
+
+
+def _eddy_dwi() -> DWI:
+    rng = np.random.default_rng(1234)
+    bvecs = rng.normal(size=(DTI_MIN_ORIENTATIONS + 2, 3))
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+    return _small_dwi(np.column_stack([bvecs, np.full(len(bvecs), 1000.0)]))
+
+
+def test_dwi_stores_eddy_currents_apart_from_head_motion():
+    """An eddy pass returns ``eddy @ motion``; the motion stays, and the rest is eddy."""
+    dwi = _eddy_dwi()
+    motion = _rotation_about_z(10.0, (1.0, 0.0, 0.0))
+    dwi.set_transform(3, motion)
+    dwi.set_transform(3, _shear(0.02, 0.5) @ motion, "eddy")
+
+    assert dwi.motion is not None and dwi.eddy is not None
+    assert np.array_equal(dwi.motion[3], motion)
+    assert np.allclose(dwi.eddy[3], _shear(0.02, 0.5))
+    moved, still = dwi.get_transform(3), dwi.get_transform(2)
+    assert moved is not None and still is not None
+    assert np.allclose(moved, _shear(0.02, 0.5) @ motion)
+    # Volumes without an estimate keep the identity
+    assert np.array_equal(dwi.eddy[2], np.eye(4))
+    assert np.array_equal(still, np.eye(4))
+
+
+def test_dwi_head_motion_after_eddy_currents():
+    """A head-motion pass after an eddy pass factors the eddy currents out."""
+    dwi = _eddy_dwi()
+    dwi.set_transform(3, _shear(0.02, 0.5), "eddy")
+    motion = _rotation_about_z(-5.0, (0.0, 2.0, 0.0))
+    dwi.set_transform(3, _shear(0.02, 0.5) @ motion)
+
+    assert dwi.motion is not None and dwi.eddy is not None
+    assert np.allclose(dwi.motion[3], motion)
+    assert np.allclose(dwi.eddy[3], _shear(0.02, 0.5))
+
+
+def test_dwi_realigns_and_exports_the_whole_mapping(tmp_path):
+    """The view and the export use ``eddy @ motion``, as with the mapping stored whole."""
+    motion = _rotation_about_z(10.0, (1.0, 0.0, 0.0))
+    whole = _shear(0.02, 0.5) @ motion
+    split, joined = _eddy_dwi(), _eddy_dwi()
+    split.set_transform(3, motion)
+    split.set_transform(3, whole, "eddy")
+    joined.set_transform(3, whole)
+
+    view, expected = split.realigned(), joined.realigned()
+    assert view.motion is None and view.eddy is None
+    assert np.allclose(view.dataobj, expected.dataobj, atol=1e-5)
+    assert np.allclose(view.gradients, expected.gradients)
+
+    split.to_nifti(tmp_path / "split.nii.gz", write_hmxfms=True)
+    joined.to_nifti(tmp_path / "joined.nii.gz", write_hmxfms=True)
+    names = ("split", "joined")
+    data = [
+        np.asanyarray(load_api(tmp_path / f"{n}.nii.gz", nb.Nifti1Image).dataobj) for n in names
+    ]
+    assert np.allclose(data[0], data[1], atol=1e-5)
+    bvecs = [np.loadtxt(tmp_path / f"{n}.bvec") for n in names]
+    assert np.allclose(bvecs[0], bvecs[1])
+    x5 = [_x5_numbers(tmp_path / f"{n}.x5") for n in names]
+    assert np.allclose(x5[0], x5[1])
+
+
+def _x5_numbers(path) -> np.ndarray:
+    """Every number an X5 file holds, in the order of its datasets."""
+    numbers: list[np.ndarray] = []
+
+    def collect(_, obj):
+        if isinstance(obj, h5py.Dataset) and obj.dtype.kind in "fiu":
+            numbers.append(np.ravel(obj).astype(float))
+
+    with h5py.File(path, "r") as x5:
+        x5.visititems(collect)
+    return np.concatenate(numbers)
+
+
+def test_dwi_nfhdf5_keeps_the_eddy_currents(tmp_path):
+    dwi = _eddy_dwi()
+    dwi.set_transform(3, _shear(0.02, 0.5), "eddy")
+    dwi.to_filename(tmp_path / "dwi.h5")
+
+    loaded = DWI.from_filename(tmp_path / "dwi.h5")
+    assert loaded.motion is None
+    assert loaded.eddy is not None and dwi.eddy is not None
+    assert np.array_equal(loaded.eddy, dwi.eddy)

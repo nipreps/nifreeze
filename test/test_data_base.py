@@ -405,6 +405,35 @@ def test_realigned_resumes_from_stored_estimates():
     assert np.array_equal(view.dataobj[:2], dataset.dataobj[:2])
 
 
+def test_get_transform_is_none_until_an_estimate_is_set():
+    """Once one volume has an estimate, the others map with the identity."""
+    dataset = _blob_dataset()
+    assert dataset.get_transform(1) is None
+
+    dataset.set_transform(1, _translation(1.5))
+    moved, still = dataset.get_transform(1), dataset.get_transform(0)
+    assert moved is not None and still is not None
+    assert np.array_equal(moved, _translation(1.5))
+    assert np.array_equal(still, np.eye(4))
+
+
+def test_set_transform_rejects_unknown_estimates():
+    dataset = _blob_dataset()
+    message = "BaseDataset has no estimates 'eddy' (it has: motion)."
+    with pytest.raises(ValueError, match=re.escape(message)):
+        dataset.set_transform(1, _translation(1.5), "eddy")
+
+
+def test_realigned_view_has_no_estimates():
+    """The view's volumes are realigned already."""
+    dataset = _blob_dataset()
+    dataset.set_transform(2, _translation(0.0, 1.2))
+
+    view = dataset.realigned()
+    assert view.motion is None
+    assert dataset.motion is not None
+
+
 def test_realign_into_rounds_integer_volumes():
     """Integer volumes are realigned to the nearest representable values."""
     blob = _blob_dataset()

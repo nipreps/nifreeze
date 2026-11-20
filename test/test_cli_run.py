@@ -101,6 +101,8 @@ def test_main_appends_the_eddy_pass(monkeypatch, tmp_path):
     ]
     assert eddy.kwargs["prev"] is second and second.kwargs["prev"] is first
     assert eddy.kwargs["align_config"] == AFFINE
+    assert eddy.kwargs["estimates"] == "eddy"
+    assert "estimates" not in first.kwargs and "estimates" not in second.kwargs
     assert all(estimator.kwargs["registration"] == "ants" for estimator in _Estimator.built)
     # The run's settings reach the motion passes; the eddy pass keeps its own
     assert eddy.ran["align_kwargs"] == {"align_config": Path("motion.yaml")}

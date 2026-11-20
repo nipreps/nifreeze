@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 from warnings import warn
 
 import attrs
@@ -185,6 +185,9 @@ def validate_gradients(
 class DWI(BaseDataset[np.ndarray]):
     """Data representation structure for dMRI data."""
 
+    ESTIMATES: ClassVar[tuple[str, ...]] = ("motion", "eddy")
+    """Head motion, then eddy currents: a volume's mapping is ``eddy @ motion``."""
+
     gradients: np.ndarray = attrs.field(
         default=None,
         repr=_data_repr,
@@ -199,7 +202,9 @@ class DWI(BaseDataset[np.ndarray]):
     )
     """A *b=0* reference map, computed automatically when low-b frames are present."""
     eddy: np.ndarray | None = attrs.field(default=None, eq=attrs.cmp_using(eq=_cmp))
-    """The eddy-current estimates, ``(N, 4, 4)``: for each volume, an affine RAS+ matrix."""
+    """The eddy-current estimates, ``(N, 4, 4)``: for each volume, the affine RAS+ matrix
+    that maps the reference, as the head moved (:attr:`~BaseDataset.motion`), into the
+    volume. It acts in the scanner, where the volume's phase encoding runs."""
 
     def __attrs_post_init__(self) -> None:
         if self.dataobj.shape[0] != self.gradients.shape[0]:
@@ -254,7 +259,8 @@ class DWI(BaseDataset[np.ndarray]):
 
         Besides the volume (see :meth:`BaseDataset.realign_into
         <nifreeze.data.base.BaseDataset.realign_into>`), the original b-vector is
-        turned into the reference's frame by the estimate's rotation, as at export
+        turned into the reference's frame by the rotation of the volume's mapping
+        (see :meth:`~nifreeze.data.base.BaseDataset.get_transform`), as at export
         (see :func:`~nifreeze.data.dmri.utils.realign_bvecs`). The view's whole
         gradient table is reassigned, so an integer table is never truncated.
 
@@ -262,7 +268,7 @@ class DWI(BaseDataset[np.ndarray]):
         super().realign_into(view, index, order=order)
 
         bvec = np.asarray(self.gradients[index, :3], dtype=float)
-        matrix = None if self.motion is None else self.motion[index]
+        matrix = self.get_transform(index)
         if matrix is not None and not np.allclose(matrix, np.eye(4)):
             bvec = realign_bvecs(bvec, matrix)
 
@@ -422,8 +428,8 @@ class DWI(BaseDataset[np.ndarray]):
         filename : :obj:`os.pathlike`, optional
             The output NIfTI file path.
         write_hmxfms : :obj:`bool`, optional
-            If ``True``, the head motion affines will be written out to filesystem
-            with BIDS' X5 format.
+            If ``True``, the mappings (every estimate composed) will be written out to
+            filesystem with BIDS' X5 format.
         order : :obj:`int`, optional
             The interpolation order to use when resampling the data.
             Defaults to 3 (cubic interpolation).

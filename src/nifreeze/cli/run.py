@@ -97,6 +97,7 @@ def main(argv: list[str] | None = None) -> None:
             single_fit=single_fit,
             model_kwargs=model_kwargs,
             registration=args.registration,
+            estimates="eddy",
             align_config=args.eddy,
         )
 
