@@ -42,12 +42,16 @@ env:
     AAAAC3NzaC1lZDI1NTE5AAAAIPaM8/WkCBR2wIcGgVgDzmA37qKGp+c+6zjlFSS14EVZ
   # The commit of PHANTOMS_REPO that the gates of test/test_e2e_motion.py were set on
   PHANTOMS_COMMIT: 2249c4df27227071b0cacf22c33a5eafb2e0aa1d
-  # The annexed files that the tests read: the reference, its mask, and the copy with
-  # every volume moved by 2° and 2 mm (the sidecars are in git, which the clone brings)
+  # The annexed files that the tests read: the reference, its mask, the copy with every
+  # volume moved by 2° and 2 mm, the same copy with eddy currents of up to 4 mm, and the
+  # eddy currents alone, which the loader assembles it from (the sidecars are in git,
+  # which the clone brings)
   PHANTOMS_PATHS: >-
     sub-60501/dwi/sub-60501_acq-sherbrooke_rec-clean_dwi.nii.gz
     sub-60501/dwi/sub-60501_acq-sherbrooke_desc-brain_mask.nii.gz
     derivatives/perturbations/sub-60501/dwi/sub-60501_acq-sherbrooke_desc-m2s0_dwi.nii.gz
+    derivatives/perturbations/sub-60501/dwi/sub-60501_acq-sherbrooke_desc-m2s0e2_dwi.nii.gz
+    derivatives/perturbations/sub-60501/dwi/sub-60501_acq-sherbrooke_desc-e2_dwi.nii.gz
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
