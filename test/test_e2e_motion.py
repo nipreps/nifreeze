@@ -71,7 +71,6 @@ from nitransforms.manip import TransformChain
 from scipy.spatial.transform import Rotation
 
 from nifreeze.analysis.phantoms import load_phantom
-from nifreeze.analysis.sensitivity import Distortion
 from nifreeze.cli.run import main
 from nifreeze.data import dmri
 from nifreeze.registration.base import RegistrationFactory, default_backend
@@ -163,24 +162,6 @@ def _write(clean, moved, perturbation, work: Path, name: str) -> SimpleNamespace
     )
 
 
-def _eddy_matrices(distortion: Distortion) -> np.ndarray:
-    """
-    Each volume's eddy currents as a matrix, exact for displacements linear in position.
-
-    The readout shows at :math:`y - d(y) u` what lies at :math:`y`, so the matrix
-    takes :math:`y` there: its displacement at the origin and its slopes come from the
-    displacement at the origin and at the three unit points.
-    """
-    values, _ = distortion.basis(np.hstack([np.zeros((3, 1)), np.eye(3)]))
-    displacements = distortion.coefficients @ values
-    u = distortion.direction
-    slopes = displacements[:, 1:] - displacements[:, :1]
-    matrices = np.repeat(np.eye(4)[np.newaxis], len(displacements), axis=0)
-    matrices[:, :3, :3] -= u[np.newaxis, :, np.newaxis] * slopes[:, np.newaxis, :]
-    matrices[:, :3, 3] -= u[np.newaxis, :] * displacements[:, :1]
-    return matrices
-
-
 @pytest.fixture(scope="module")
 def phantom_motion(phantom_copies, tmp_path_factory):
     """The phantom with every diffusion-weighted volume moved, written for the CLI."""
@@ -201,12 +182,11 @@ def phantom_eddy(phantom_copies, tmp_path_factory):
     perturbation, load = _choose(clean, cells, EDDY_MM)
     distortion = perturbation.distortion
     assert distortion is not None
-    if distortion.degree != 1:
-        pytest.fail(f"The eddy currents have degree {distortion.degree}, which no affine matches.")
     sim = _write(
         clean, load(), perturbation, tmp_path_factory.mktemp("phantom_eddy"), "phantom_eddy"
     )
-    sim.eddy = _eddy_matrices(distortion)
+    # Exact for the phantom's field, of degree 1 (raises for higher degrees)
+    sim.eddy = distortion.matrices()
     sim.whole = sim.eddy @ sim.truth
     return sim
 

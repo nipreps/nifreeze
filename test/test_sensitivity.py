@@ -465,6 +465,41 @@ def test_eddy_distortion_follows_the_gradient():
     assert np.abs(coefficients @ values).max() == pytest.approx(2.0)
 
 
+@pytest.mark.parametrize("readout", [False, True])
+def test_a_distortion_of_degree_1_is_affine(readout):
+    """Each volume's matrix takes a point to where the distorted volume shows it."""
+    dataset, _ = _copies(np.random.default_rng(1234))
+    distortion = pert.eddy_distortion(
+        dataset, 2.0, axis=1, degree=1, gradients=_table(np.random.default_rng(0), 9)
+    )
+    if readout:
+        distortion = _epi(distortion)
+    points = np.random.default_rng(1).uniform(-40.0, 40.0, size=(3, 50))
+    u = distortion.direction[:, np.newaxis]
+    values, _ = distortion.basis(points)
+
+    matrices = distortion.matrices()
+
+    assert matrices.shape == (len(dataset), 4, 4)
+    for coefficients, matrix in zip(distortion.coefficients, matrices, strict=True):
+        if readout:
+            # The readout puts the signal from y at y - d(y) u
+            source, shown = points, points - u * (coefficients @ values)
+        else:
+            # Resampling shows at x what lies at x + d(x) u
+            shown, source = points, points + u * (coefficients @ values)
+        assert np.allclose(matrix[:3, :3] @ source + matrix[:3, 3:], shown, atol=1e-9)
+
+
+def test_a_distortion_of_degree_2_is_not_affine():
+    dataset, _ = _copies(np.random.default_rng(1234))
+    distortion = pert.eddy_distortion(
+        dataset, 2.0, axis=1, degree=2, gradients=_table(np.random.default_rng(0), 9)
+    )
+    with pytest.raises(ValueError, match="degree 2"):
+        distortion.matrices()
+
+
 def test_distortions_need_diffusion_gradients():
     dataset, _ = _copies(np.random.default_rng(1234), n_volumes=3)
     with pytest.raises(ValueError, match="diffusion gradient"):
