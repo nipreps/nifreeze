@@ -180,6 +180,46 @@ class Distortion:
             )
         return np.array(values), np.array(derivatives)
 
+    def matrices(self) -> np.ndarray:
+        r"""
+        Each volume's distortion as a RAS+ matrix, exact up to degree 1.
+
+        The matrix takes each point :math:`y` to where the distorted volume shows what
+        lies at :math:`y`. With ``readout``, that is :math:`y - d_i(y) u`, where the
+        readout puts the signal from :math:`y` (:math:`u` is :attr:`direction`). By
+        resampling, it is the point :math:`x` with :math:`x + d_i(x) u = y`, through the
+        inverse matrix. After a head motion :math:`M`, the distortion acts in the
+        scanner's frame, so a volume's whole mapping is :math:`E M`.
+
+        Returns
+        -------
+        :obj:`~numpy.ndarray`
+            One ``4 x 4`` matrix per volume, of shape ``(n_volumes, 4, 4)``.
+
+        Raises
+        ------
+        :obj:`ValueError`
+            If the degree is above 1, where no affine matches the displacement.
+
+        """
+        if self.degree > 1:
+            raise ValueError(f"A displacement of degree {self.degree} is not affine.")
+        # The displacement at the origin, and its slope along each world axis
+        values, _ = self.basis(np.hstack([np.zeros((3, 1)), np.eye(3)]))
+        displacements = self.coefficients @ values
+        u = self.direction
+        slopes = displacements[:, 1:] - displacements[:, :1]
+        shear = u[np.newaxis, :, np.newaxis] * slopes[:, np.newaxis, :]
+        shift = u[np.newaxis, :] * displacements[:, :1]
+        matrices = np.repeat(np.eye(4)[np.newaxis], len(displacements), axis=0)
+        if self.readout is not None:
+            matrices[:, :3, :3] -= shear
+            matrices[:, :3, 3] -= shift
+            return matrices
+        matrices[:, :3, :3] += shear
+        matrices[:, :3, 3] += shift
+        return np.linalg.inv(matrices)
+
     def distort(
         self,
         volume: np.ndarray,
