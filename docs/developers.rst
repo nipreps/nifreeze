@@ -67,13 +67,17 @@ End-to-end tests
 ``test/test_e2e_motion.py`` moves every diffusion-weighted volume of DIPY's
 *Sherbrooke* dataset by a known random rigid transform, runs the command line with
 several models, and compares the estimated motion with the ground truth.
+On a copy with eddy currents too, it runs a cascade of models and then an
+eddy-current pass (``--eddy``), and compares the head motion, the eddy currents and
+the whole mapping with their ground truth.
 These tests are deselected by default. They register with the default backend, or
 with the one ``NIFREEZE_E2E_REGISTRATION`` names, and run with::
 
   NIFREEZE_E2E_REGISTRATION=ants pytest -m e2e test/test_e2e_motion.py
 
 The *End-to-end tests* workflow runs them weekly, on demand, and on pull requests
-that change them, and lists the errors of every model in its job summary.
+that change them, and lists the errors of every model and of the cascade in its job
+summary.
 Every run registers with elastix, and the weekly run with ANTs as well.
 
 Library API (application program interface)

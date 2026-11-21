@@ -34,6 +34,16 @@ motion of each volume, which is what the estimator reports. The tests
 are opt-in (``pytest -m e2e``) and need ``NIFREEZE_PHANTOMS`` to point
 to the phantom dataset (GIN ``nipreps-data/nifreeze-trxscan``).
 
+A second copy adds the eddy currents of the phantom's smallest set (``desc-e2``).
+After its motion, each volume was formed by an EPI readout under a field linear in
+position, which shows at :math:`y - d(y) u` what lies at :math:`y` (:math:`u` is the
+phase-encoding direction, and :math:`d` the sidecar's displacement, up to 4 mm within
+the mask). Each volume thus shows at :math:`M x - d(M x) u` what the reference shows
+at :math:`x`, as the audit of nipreps/nifreeze#626 checked. Since :math:`d` is
+linear, that is the affine :math:`E M`, with :math:`M` the head motion and :math:`E`
+the eddy currents. A cascade of models and then an eddy-current pass, through the
+command line, must recover the two apart (nipreps/nifreeze#712).
+
 The tests register with the backend that ``NIFREEZE_E2E_REGISTRATION`` names (the CI
 job's), or with the default one, and skip if it is not installed. CI registers with
 elastix on every run, and with ANTs on its weekly schedule (nipreps/nifreeze#718).
@@ -41,20 +51,27 @@ elastix on every run, and with ANTs on its weekly schedule (nipreps/nifreeze#718
 The model gates record the current single-pass accuracy, as set on ANTs: the models
 are fit on the moving volumes, so their targets mix anatomy at different positions
 (see nipreps/nifreeze#497). Tighten them when the instant update is in place.
+The cascade's head motion must pass the gate of its last model on head motion without
+eddy currents, and the eddy-current pass must improve on the head motion it starts from. The gates
+of the eddy currents and of the whole mapping record their accuracy on both backends.
 """
 
 import json
 import os
 import shutil
+from pathlib import Path
 from types import SimpleNamespace
 
 import nibabel as nb
 import nitransforms as nt
 import numpy as np
 import pytest
+from nitransforms.linear import LinearTransformsMapping
+from nitransforms.manip import TransformChain
 from scipy.spatial.transform import Rotation
 
 from nifreeze.analysis.phantoms import load_phantom
+from nifreeze.analysis.sensitivity import Distortion
 from nifreeze.cli.run import main
 from nifreeze.data import dmri
 from nifreeze.registration.base import RegistrationFactory, default_backend
@@ -83,27 +100,47 @@ SEED = 20261020
 """Seed of the noise."""
 ORACLE_GATE = {"max_median": 0.45, "max": 0.6}
 """Largest median and maximum error (mm) of the registrations to the unmoved original."""
+EDDY_MM = 4.0
+"""Largest displacement (mm) of the eddy currents within the mask (``desc-e2``)."""
+CASCADE = ("gqi-krr", "gp-loo")
+"""The models of the cascade. The eddy-current pass repeats the last one."""
+CASCADE_GATE = {
+    # The gate of the cascade's last model on head motion alone
+    "head_motion": {"max_median": 1.55, "max_p95": 2.5},
+    # Set on both backends (worst: ANTs, 1.47 / 2.38 and 1.34 / 2.14)
+    "eddy_currents": {"max_median": 1.85, "max_p95": 3.0},
+    "whole": {"max_median": 1.7, "max_p95": 2.7},
+}
+"""Largest median and 95th percentile (mm) of each score of the cascade, over all shells."""
 
 
 @pytest.fixture(scope="module")
-def phantom_motion(phantoms, tmp_path_factory):
-    """The phantom with every diffusion-weighted volume moved, written for the CLI."""
+def phantom_copies(phantoms):
+    """The noise-free reference, and the noisy copies (each loads when asked)."""
     clean, _ = load_phantom(phantoms, PROTOCOL)
     _, cells = load_phantom(phantoms, PROTOCOL, noise=SEED)
+    return clean, cells
+
+
+def _choose(clean, cells, eddy_mm: float | None):
+    """The copy with every volume moved, and with the eddy currents of ``eddy_mm``."""
     chosen = [
         (perturbation, load)
         for perturbation, load in cells
         if perturbation.magnitude == MAGNITUDE
-        and perturbation.distortion is None
         and perturbation.count == len(clean)
+        and (None if perturbation.distortion is None else perturbation.distortion.magnitude)
+        == eddy_mm
     ]
     if not chosen:
-        pytest.skip(f"the phantom moves no copy's every volume by {MAGNITUDE:g}° and mm")
-    perturbation, load = chosen[0]
-    moved = load()
+        eddy = "" if eddy_mm is None else f", with eddy currents of {eddy_mm:g} mm"
+        pytest.skip(f"the phantom moves no copy's every volume by {MAGNITUDE:g}° and mm{eddy}")
+    return chosen[0]
 
-    work = tmp_path_factory.mktemp("phantom_motion")
-    dwi_path = work / "phantom_motion.h5"
+
+def _write(clean, moved, perturbation, work: Path, name: str) -> SimpleNamespace:
+    """A copy written for the CLI, with its brain mask and the head motion of each volume."""
+    dwi_path = work / f"{name}.h5"
     moved.to_filename(dwi_path)
     mask_img = nb.Nifti1Image(np.asarray(clean.brainmask, dtype="uint8"), clean.affine)
     mask_path = work / "brainmask.nii"
@@ -118,13 +155,60 @@ def phantom_motion(phantoms, tmp_path_factory):
     return SimpleNamespace(
         dwi_path=dwi_path,
         clean=clean,
-        moved=moved,
         mask=mask_img,
         mask_path=mask_path,
         affine=clean.affine,
         shells=np.round(clean.gradients[:, 3], -2),
         truth=truth,
     )
+
+
+def _eddy_matrices(distortion: Distortion) -> np.ndarray:
+    """
+    Each volume's eddy currents as a matrix, exact for displacements linear in position.
+
+    The readout shows at :math:`y - d(y) u` what lies at :math:`y`, so the matrix
+    takes :math:`y` there: its displacement at the origin and its slopes come from the
+    displacement at the origin and at the three unit points.
+    """
+    values, _ = distortion.basis(np.hstack([np.zeros((3, 1)), np.eye(3)]))
+    displacements = distortion.coefficients @ values
+    u = distortion.direction
+    slopes = displacements[:, 1:] - displacements[:, :1]
+    matrices = np.repeat(np.eye(4)[np.newaxis], len(displacements), axis=0)
+    matrices[:, :3, :3] -= u[np.newaxis, :, np.newaxis] * slopes[:, np.newaxis, :]
+    matrices[:, :3, 3] -= u[np.newaxis, :] * displacements[:, :1]
+    return matrices
+
+
+@pytest.fixture(scope="module")
+def phantom_motion(phantom_copies, tmp_path_factory):
+    """The phantom with every diffusion-weighted volume moved, written for the CLI."""
+    clean, cells = phantom_copies
+    perturbation, load = _choose(clean, cells, None)
+    moved = load()
+    sim = _write(
+        clean, moved, perturbation, tmp_path_factory.mktemp("phantom_motion"), "phantom_motion"
+    )
+    sim.moved = moved
+    return sim
+
+
+@pytest.fixture(scope="module")
+def phantom_eddy(phantom_copies, tmp_path_factory):
+    """The moved phantom with eddy currents too, written for the CLI, and their truth."""
+    clean, cells = phantom_copies
+    perturbation, load = _choose(clean, cells, EDDY_MM)
+    distortion = perturbation.distortion
+    assert distortion is not None
+    if distortion.degree != 1:
+        pytest.fail(f"The eddy currents have degree {distortion.degree}, which no affine matches.")
+    sim = _write(
+        clean, load(), perturbation, tmp_path_factory.mktemp("phantom_eddy"), "phantom_eddy"
+    )
+    sim.eddy = _eddy_matrices(distortion)
+    sim.whole = sim.eddy @ sim.truth
+    return sim
 
 
 def _errors(mask: nb.Nifti1Image, estimated: np.ndarray, truth: np.ndarray) -> np.ndarray:
@@ -274,3 +358,80 @@ def test_e2e_motion(
     ):
         assert stats["median"] < max_median
         assert stats["p95"] < max_p95
+
+
+def test_e2e_cascade_eddy(phantom_eddy, outdir, tmp_path):
+    """A cascade, then an eddy-current pass, recover head motion and eddy currents apart."""
+    sim = phantom_eddy
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    main(
+        [
+            str(sim.dwi_path),
+            "--brainmask",
+            str(sim.mask_path),
+            "--models",
+            *CASCADE,
+            "--eddy",
+            "--registration",
+            REGISTRATION,
+            "--seed",
+            "12345",
+            "--output-dir",
+            str(output_dir),
+            "--write-hdf5",
+        ]
+    )
+    dataset = dmri.DWI.from_filename(next(output_dir.glob("*.h5")))
+    motion, eddy = dataset.motion, dataset.eddy
+    assert motion is not None
+    assert eddy is not None
+    whole = eddy @ motion
+
+    # The X5 file carries them apart too: head motion first, then the eddy currents
+    x5 = next(output_dir.glob("*.x5"))
+    assert np.allclose(LinearTransformsMapping.from_filename(x5, fmt="X5").matrix, motion)
+    chain = TransformChain.from_filename(x5)
+    assert np.allclose(chain.transforms[1].matrix @ chain.transforms[0].matrix, whole)
+
+    # Each estimate against its truth, without the transform its volumes share (the
+    # frame of the model's targets). That frame cancels from the eddy currents
+    # (whole @ inv(motion)), which are evaluated where the head is.
+    head_motion, head_offset = _remove_offset(motion, sim.truth)
+    corrected, whole_offset = _remove_offset(whole, sim.whole)
+    started, _ = _remove_offset(motion, sim.whole)
+    scores = {
+        "head_motion": _summary(_errors(sim.mask, head_motion, sim.truth), sim.shells),
+        "eddy_currents": _summary(_errors(sim.mask, eddy @ sim.truth, sim.whole), sim.shells),
+        "whole": _summary(_errors(sim.mask, corrected, sim.whole), sim.shells),
+        # The mapping that a run without --eddy gives, where the eddy-current pass starts
+        "without_eddy": _summary(_errors(sim.mask, started, sim.whole), sim.shells),
+    }
+    identity = np.stack([np.eye(4)] * len(sim.truth))
+    applied = {
+        "whole": _summary(_errors(sim.mask, identity, sim.whole), sim.shells),
+        "eddy_currents": _summary(_errors(sim.mask, sim.truth, sim.whole), sim.shells),
+    }
+    _record(
+        outdir,
+        "cascade-eddy",
+        {
+            "kind": "cascade",
+            "models": [*CASCADE, f"{CASCADE[-1]} (eddy currents)"],
+            "registration": REGISTRATION,
+            "offset_mm": {
+                name: float(displacements_within_mask(sim.mask, nt.linear.Affine(common)).max())
+                for name, common in (("head_motion", head_offset), ("whole", whole_offset))
+            },
+            "applied": applied,
+            **scores,
+            "gate": CASCADE_GATE,
+        },
+    )
+
+    for name, gate in CASCADE_GATE.items():
+        assert scores[name]["all"]["median"] < gate["max_median"], name
+        assert scores[name]["all"]["p95"] < gate["max_p95"], name
+    # The eddy-current pass improves on the head motion it starts from
+    for stat in ("median", "p95"):
+        assert scores["whole"]["all"][stat] < scores["without_eddy"]["all"][stat], stat
