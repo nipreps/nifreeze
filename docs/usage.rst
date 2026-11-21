@@ -156,8 +156,9 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
       )
 
    Eddy currents are estimated by a second pass, which starts from the head-motion
-   estimates stored in the dataset and stores what it adds in ``eddy`` (on the command
-   line, ``--eddy``). It registers with the affine settings,
+   estimates stored in the dataset and stores what it adds in ``eddy``. On the command
+   line, ``--eddy`` runs it with the cascade's last model, and ``--eddy-model`` with
+   another (``--models gp-loo --eddy-model gqi-krr``). It registers with the affine settings,
    :data:`~nifreeze.registration.base.AFFINE`, unless given its own ``align_config``:
 
    .. code-block:: python
