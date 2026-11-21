@@ -521,21 +521,26 @@ def test_object_to_nifti(random_dataset: BaseDataset):
 
 
 @pytest.mark.parametrize(
-    "filename_is_none, motion_affines_present, write_hmxfms, expected_message",
+    "filename_is_none, motion_affines_present, write_estimates, expected_message",
     [
-        # write_hmxfms True but no filename
-        (True, True, True, "write_hmxfms is set to True, but no filename was provided."),
-        # write_hmxfms True, filename given, but no motion affines
+        # write_estimates True but no filename
+        (True, True, True, "write_estimates is set to True, but no filename was provided."),
+        # write_estimates True, filename given, but no motion affines
         (
             False,
             False,
             True,
-            "write_hmxfms is set to True, but no motion affines were found. Skipping.",
+            "write_estimates is set to True, but no estimates were found. Skipping.",
         ),
     ],
 )
 def test_to_nifti_warnings(
-    tmp_path, monkeypatch, filename_is_none, motion_affines_present, write_hmxfms, expected_message
+    tmp_path,
+    monkeypatch,
+    filename_is_none,
+    motion_affines_present,
+    write_estimates,
+    expected_message,
 ):
     # Monkeypatch the helpers in the module where to_nifti is defined
     import nifreeze.data.base as base_mod
@@ -557,17 +562,22 @@ def test_to_nifti_warnings(
 
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
-        _ = to_nifti(dataset, filename=filename, write_hmxfms=write_hmxfms, order=1)
+        _ = to_nifti(dataset, filename=filename, write_estimates=write_estimates, order=1)
 
     assert any(expected_message in str(x.message) for x in w)
 
 
 @pytest.mark.parametrize(
-    "filename_is_none, write_hmxfms, motion_affines_present, datahdr_present",
+    "filename_is_none, write_estimates, motion_affines_present, datahdr_present",
     list(itertools.product([True, False], repeat=4)),
 )
 def test_to_nifti(
-    tmp_path, monkeypatch, filename_is_none, write_hmxfms, motion_affines_present, datahdr_present
+    tmp_path,
+    monkeypatch,
+    filename_is_none,
+    write_estimates,
+    motion_affines_present,
+    datahdr_present,
 ):
     # Monkeypatch the helpers in the module where to_nifti is defined
     import nifreeze.data.base as base_mod
@@ -599,7 +609,7 @@ def test_to_nifti(
     # Suppress warnings in this test
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        nii = to_nifti(dataset, filename=filename, write_hmxfms=write_hmxfms, order=1)
+        nii = to_nifti(dataset, filename=filename, write_estimates=write_estimates, order=1)
 
     # Check returned data
     assert isinstance(nii, nb.Nifti1Image)
@@ -635,9 +645,9 @@ def test_to_nifti(
     else:
         assert not any(tmp_path.iterdir()), "Directory is not empty"
 
-    # When motion present and write_hmxfms True and filename provided,
+    # When motion present and write_estimates True and filename provided,
     # x5 files should be written
-    if motion_affines_present and write_hmxfms and filename is not None:
+    if motion_affines_present and write_estimates and filename is not None:
         # One file with the transforms of all the volumes
         found_x5 = list(tmp_path.glob("*.x5"))
         assert len(found_x5) == 1
@@ -657,7 +667,7 @@ def test_to_nifti_writes_every_transform(tmp_path):
     motion[:, :3, 3] = np.arange(3.0 * n_frames).reshape(n_frames, 3)
     dataset = DummyDataset((n_frames, 6, 6, 4), motion=motion, dtype=np.float32)
 
-    to_nifti(dataset, filename=tmp_path / "data.nii.gz", write_hmxfms=True, order=1)
+    to_nifti(dataset, filename=tmp_path / "data.nii.gz", write_estimates=True, order=1)
 
     xforms = nt.linear.load(tmp_path / "data.x5", fmt="X5")
     assert np.allclose(xforms.matrix, motion)

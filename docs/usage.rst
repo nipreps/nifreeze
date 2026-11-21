@@ -135,7 +135,8 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
    array of affine matrices: the head motion in ``motion``, and the eddy currents of
    a DWI in ``eddy``. A volume's mapping composes them, ``eddy @ motion``
    (:meth:`~nifreeze.data.base.BaseDataset.get_transform`), and the outputs are
-   resampled with it.
+   resampled with it. The b-vectors turn with the head motion alone: eddy currents
+   displace the image without turning the head.
 
    Example:
 
@@ -177,7 +178,11 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
 
      # Save realigned DWI data in NIfTI format
      output_filename = "/path/to/save/your/output.nii.gz"
-     dataset.to_nifti(output_filename)
+     dataset.to_nifti(output_filename, write_estimates=True)
+
+   With ``write_estimates=True``, the estimates are written next to it, into one X5
+   file (``output.x5``): the head motion first, which plain X5 readers get, and the
+   eddy currents after it, chained in the order they apply (``eddy @ motion``).
 
 6. **Plotting**: Visualize data and results:
 

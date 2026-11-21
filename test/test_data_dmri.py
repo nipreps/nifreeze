@@ -33,6 +33,8 @@ import nibabel as nb
 import numpy as np
 import pytest
 from dipy.core.geometry import normalized_vector
+from nitransforms.linear import LinearTransformsMapping
+from nitransforms.manip import TransformChain
 
 from nifreeze.data import load
 from nifreeze.data.dmri.base import (
@@ -794,8 +796,8 @@ def test_to_nifti(
 
     # Monkeypatch the to_nifti alias to only perform essential operations for
     # the purpose of this test
-    def simple_to_nifti(_dataset, filename=None, write_hmxfms=None, order=None):
-        _ = write_hmxfms
+    def simple_to_nifti(_dataset, filename=None, write_estimates=None, order=None):
+        _ = write_estimates
         _ = order
         # Offset, standing in for the resampling, so the output tells the two apart
         _nii = nb.Nifti1Image(np.moveaxis(_dataset.dataobj + 1.0, 0, -1), _dataset.affine)
@@ -809,7 +811,7 @@ def test_to_nifti(
         nii = to_nifti(
             dwi_obj,
             _filename,
-            write_hmxfms=False,
+            write_estimates=False,
             order=3,
             insert_b0=insert_b0,
             bvals_dec_places=bvals_dec_places,
@@ -2090,43 +2092,69 @@ def test_dwi_head_motion_after_eddy_currents():
 
 
 def test_dwi_realigns_and_exports_the_whole_mapping(tmp_path):
-    """The view and the export use ``eddy @ motion``, as with the mapping stored whole."""
+    """Volumes move with ``eddy @ motion``; b-vectors turn with the head motion alone."""
     motion = _rotation_about_z(10.0, (1.0, 0.0, 0.0))
     whole = _shear(0.02, 0.5) @ motion
-    split, joined = _eddy_dwi(), _eddy_dwi()
+    split, joined, still = _eddy_dwi(), _eddy_dwi(), _eddy_dwi()
     split.set_transform(3, motion)
     split.set_transform(3, whole, "eddy")
     joined.set_transform(3, whole)
+    still.set_transform(3, motion)
 
-    view, expected = split.realigned(), joined.realigned()
+    view = split.realigned()
     assert view.motion is None and view.eddy is None
-    assert np.allclose(view.dataobj, expected.dataobj, atol=1e-5)
-    assert np.allclose(view.gradients, expected.gradients)
+    assert np.allclose(view.dataobj, joined.realigned().dataobj, atol=1e-5)
+    assert np.array_equal(view.gradients, still.realigned().gradients)
+    # The shear would turn the b-vector by about half its size
+    assert not np.allclose(view.gradients[3], joined.realigned().gradients[3])
 
-    split.to_nifti(tmp_path / "split.nii.gz", write_hmxfms=True)
-    joined.to_nifti(tmp_path / "joined.nii.gz", write_hmxfms=True)
-    names = ("split", "joined")
-    data = [
-        np.asanyarray(load_api(tmp_path / f"{n}.nii.gz", nb.Nifti1Image).dataobj) for n in names
-    ]
-    assert np.allclose(data[0], data[1], atol=1e-5)
-    bvecs = [np.loadtxt(tmp_path / f"{n}.bvec") for n in names]
-    assert np.allclose(bvecs[0], bvecs[1])
-    x5 = [_x5_numbers(tmp_path / f"{n}.x5") for n in names]
-    assert np.allclose(x5[0], x5[1])
+    for dwi, name in ((split, "split"), (joined, "joined"), (still, "still")):
+        dwi.to_nifti(tmp_path / f"{name}.nii.gz", write_estimates=True)
+    data = {
+        n: np.asanyarray(load_api(tmp_path / f"{n}.nii.gz", nb.Nifti1Image).dataobj)
+        for n in ("split", "joined")
+    }
+    assert np.allclose(data["split"], data["joined"], atol=1e-5)
+    assert np.array_equal(np.loadtxt(tmp_path / "split.bvec"), np.loadtxt(tmp_path / "still.bvec"))
+    assert not np.allclose(
+        np.loadtxt(tmp_path / "split.bvec"), np.loadtxt(tmp_path / "joined.bvec")
+    )
+
+    # Plain X5 readers get the head motion; the chain maps the whole mapping
+    first = LinearTransformsMapping.from_filename(tmp_path / "split.x5", fmt="X5")
+    assert still.motion is not None
+    assert np.allclose(first.matrix, still.motion)
+    chain = TransformChain.from_filename(tmp_path / "split.x5")
+    assert len(chain.transforms) == 2
+    assert np.allclose(chain.transforms[1].matrix[3] @ chain.transforms[0].matrix[3], whole)
 
 
-def _x5_numbers(path) -> np.ndarray:
-    """Every number an X5 file holds, in the order of its datasets."""
-    numbers: list[np.ndarray] = []
+def test_dwi_writes_eddy_currents_after_identities(tmp_path):
+    """Without head motion, the X5 file's first transform is the identity."""
+    dwi = _eddy_dwi()
+    dwi.set_transform(3, _shear(0.02, 0.5), "eddy")
+    dwi.to_nifti(tmp_path / "dwi.nii.gz", write_estimates=True)
 
-    def collect(_, obj):
-        if isinstance(obj, h5py.Dataset) and obj.dtype.kind in "fiu":
-            numbers.append(np.ravel(obj).astype(float))
+    chain = TransformChain.from_filename(tmp_path / "dwi.x5")
+    assert np.allclose(chain.transforms[0].matrix, np.eye(4))
+    assert dwi.eddy is not None
+    assert np.allclose(chain.transforms[1].matrix, dwi.eddy)
 
-    with h5py.File(path, "r") as x5:
-        x5.visititems(collect)
-    return np.concatenate(numbers)
+
+def test_dwi_rewrites_the_x5_chain(tmp_path):
+    """Writing again replaces the file: one chain of two transforms."""
+    dwi = _eddy_dwi()
+    dwi.set_transform(3, _rotation_about_z(10.0))
+    dwi.set_transform(3, _shear(0.02, 0.5) @ _rotation_about_z(10.0), "eddy")
+    dwi.to_nifti(tmp_path / "dwi.nii.gz", write_estimates=True)
+    dwi.set_transform(2, _rotation_about_z(-4.0))
+    dwi.to_nifti(tmp_path / "dwi.nii.gz", write_estimates=True)
+
+    with h5py.File(tmp_path / "dwi.x5", "r") as x5:
+        assert list(x5["TransformGroup"]) == ["0", "1"]
+        assert list(x5["TransformChain"]) == ["0"]
+    chain = TransformChain.from_filename(tmp_path / "dwi.x5")
+    assert np.allclose(chain.transforms[0].matrix[2], _rotation_about_z(-4.0))
 
 
 def test_dwi_nfhdf5_keeps_the_eddy_currents(tmp_path):

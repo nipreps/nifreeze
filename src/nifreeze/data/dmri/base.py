@@ -204,7 +204,8 @@ class DWI(BaseDataset[np.ndarray]):
     eddy: np.ndarray | None = attrs.field(default=None, eq=attrs.cmp_using(eq=_cmp))
     """The eddy-current estimates, ``(N, 4, 4)``: for each volume, the affine RAS+ matrix
     that maps the reference, as the head moved (:attr:`~BaseDataset.motion`), into the
-    volume. It acts in the scanner, where the volume's phase encoding runs."""
+    volume. It acts in the scanner, where the volume's phase encoding runs. Eddy currents
+    displace the image without turning the head, so they do not turn the b-vectors."""
 
     def __attrs_post_init__(self) -> None:
         if self.dataobj.shape[0] != self.gradients.shape[0]:
@@ -259,8 +260,8 @@ class DWI(BaseDataset[np.ndarray]):
 
         Besides the volume (see :meth:`BaseDataset.realign_into
         <nifreeze.data.base.BaseDataset.realign_into>`), the original b-vector is
-        turned into the reference's frame by the rotation of the volume's mapping
-        (see :meth:`~nifreeze.data.base.BaseDataset.get_transform`), as at export
+        turned into the reference's frame by the rotation of the head motion alone
+        (:attr:`~nifreeze.data.base.BaseDataset.motion`), as at export
         (see :func:`~nifreeze.data.dmri.utils.realign_bvecs`). The view's whole
         gradient table is reassigned, so an integer table is never truncated.
 
@@ -268,7 +269,7 @@ class DWI(BaseDataset[np.ndarray]):
         super().realign_into(view, index, order=order)
 
         bvec = np.asarray(self.gradients[index, :3], dtype=float)
-        matrix = self.get_transform(index)
+        matrix = None if self.motion is None else self.motion[index]
         if matrix is not None and not np.allclose(matrix, np.eye(4)):
             bvec = realign_bvecs(bvec, matrix)
 
@@ -414,7 +415,7 @@ class DWI(BaseDataset[np.ndarray]):
     def to_nifti(
         self,
         filename: Path | str | None = None,
-        write_hmxfms: bool = False,
+        write_estimates: bool = False,
         order: int = 3,
         insert_b0: bool = False,
         bvals_dec_places: int = 2,
@@ -427,9 +428,9 @@ class DWI(BaseDataset[np.ndarray]):
         ----------
         filename : :obj:`os.pathlike`, optional
             The output NIfTI file path.
-        write_hmxfms : :obj:`bool`, optional
-            If ``True``, the mappings (every estimate composed) will be written out to
-            filesystem with BIDS' X5 format.
+        write_estimates : :obj:`bool`, optional
+            If ``True``, the estimates are written next to the NIfTI file, into one X5
+            file (see :func:`~nifreeze.data.base.to_nifti`).
         order : :obj:`int`, optional
             The interpolation order to use when resampling the data.
             Defaults to 3 (cubic interpolation).
@@ -451,7 +452,7 @@ class DWI(BaseDataset[np.ndarray]):
         return to_nifti(
             self,
             filename=filename,
-            write_hmxfms=write_hmxfms,
+            write_estimates=write_estimates,
             order=order,
             insert_b0=insert_b0,
             bvals_dec_places=bvals_dec_places,
