@@ -1,0 +1,7 @@
+nifreeze.analysis.measure\_agreement module
+===========================================
+
+.. automodule:: nifreeze.analysis.measure_agreement
+   :members:
+   :undoc-members:
+   :show-inheritance:

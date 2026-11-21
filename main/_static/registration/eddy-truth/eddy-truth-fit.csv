@@ -1,0 +1,21 @@
+Protocol,Copy,Against the,Volumes,"p95, median","p95, worst",p95 above 0.05,"Largest difference, linear terms (mm)","Largest difference, constant term (mm)"
+Sherbrooke (2 mm),e2,sidecar's,64,0.012,0.08,9,0.0047,0.006
+Sherbrooke (2 mm),e2,inverted,64,0.0032,0.012,0,0.00069,0.006
+Sherbrooke (2 mm),e4,sidecar's,64,0.034,0.32,25,0.019,0.0022
+Sherbrooke (2 mm),e4,inverted,64,0.0022,0.0052,0,0.00027,0.0022
+Sherbrooke (2 mm),e8,sidecar's,64,0.14,1.4,46,0.085,0.0041
+Sherbrooke (2 mm),e8,inverted,64,0.0018,0.0072,0,0.0003,0.0041
+Sherbrooke (2 mm),m1s0e4,sidecar's,64,0.034,0.32,25,0.019,0.0027
+Sherbrooke (2 mm),m1s0e4,inverted,64,0.0021,0.0058,0,0.00028,0.0027
+Sherbrooke (2 mm),m4s0e4,sidecar's,64,0.034,0.32,26,0.019,0.0035
+Sherbrooke (2 mm),m4s0e4,inverted,64,0.0021,0.0062,0,0.00032,0.0035
+HCP-YA (1.25 mm),e2,sidecar's,30,0.008,0.036,0,0.00089,0.0017
+HCP-YA (1.25 mm),e2,inverted,30,0.0046,0.012,0,0.00023,0.0017
+HCP-YA (1.25 mm),e4,sidecar's,30,0.0096,0.14,3,0.0036,0.00095
+HCP-YA (1.25 mm),e4,inverted,30,0.002,0.0059,0,0.00012,0.00095
+HCP-YA (1.25 mm),e8,sidecar's,30,0.048,0.6,13,0.015,0.001
+HCP-YA (1.25 mm),e8,inverted,30,0.0017,0.0039,0,8.7e-05,0.001
+HCP-YA (1.25 mm),m1s0e4,sidecar's,30,0.0088,0.14,3,0.0036,0.0013
+HCP-YA (1.25 mm),m1s0e4,inverted,30,0.0025,0.0069,0,0.00013,0.0013
+HCP-YA (1.25 mm),m4s0e4,sidecar's,30,0.0092,0.14,3,0.0036,0.0017
+HCP-YA (1.25 mm),m4s0e4,inverted,30,0.0026,0.0064,0,0.00013,0.0017

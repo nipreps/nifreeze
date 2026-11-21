@@ -1,0 +1,7 @@
+nifreeze.analysis.filtering module
+==================================
+
+.. automodule:: nifreeze.analysis.filtering
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,7 @@
+nifreeze.data.pet.base module
+=============================
+
+.. automodule:: nifreeze.data.pet.base
+   :members:
+   :undoc-members:
+   :show-inheritance:

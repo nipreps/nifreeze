@@ -1,0 +1,3 @@
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 RAYON_NUM_THREADS=1 /usr/bin/time -v -o logs/error-audit-sherbrooke.time taskset -c 0-5,18-23 uv run code/nifreeze/tools/registration/error_audit.py --dataset . --protocol sherbrooke --out derivatives/registration/error-audit --jobs 12 > logs/error-audit-sherbrooke.log 2>&1
+
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 RAYON_NUM_THREADS=1 /usr/bin/time -v -o logs/error-audit-hcpya.time taskset -c 0-5,18-23 uv run code/nifreeze/tools/registration/error_audit.py --dataset . --protocol hcpya --out derivatives/registration/error-audit --jobs 12 > logs/error-audit-hcpya.log 2>&1

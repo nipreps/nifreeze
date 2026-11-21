@@ -1,0 +1,7 @@
+nifreeze.registration.base module
+=================================
+
+.. automodule:: nifreeze.registration.base
+   :members:
+   :show-inheritance:
+   :undoc-members:

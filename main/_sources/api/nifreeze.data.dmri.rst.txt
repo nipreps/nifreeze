@@ -1,0 +1,17 @@
+nifreeze.data.dmri package
+==========================
+
+.. automodule:: nifreeze.data.dmri
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   nifreeze.data.dmri.base
+   nifreeze.data.dmri.io
+   nifreeze.data.dmri.utils

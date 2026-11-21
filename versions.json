@@ -1,0 +1,29 @@
+{
+    "latest": "0.2",
+    "versions": [
+        {
+            "name": "main",
+            "version": "26.1.0.dev15",
+            "path": "main",
+            "kind": "dev"
+        },
+        {
+            "name": "26.0",
+            "version": "26.0.0rc1",
+            "path": "26.0",
+            "kind": "prerelease"
+        },
+        {
+            "name": "0.2",
+            "version": "0.2.0",
+            "path": "0.2",
+            "kind": "release"
+        },
+        {
+            "name": "0.1",
+            "version": "0.1.0",
+            "path": "0.1",
+            "kind": "release"
+        }
+    ]
+}

@@ -1,0 +1,7 @@
+nifreeze.utils.ndimage module
+=============================
+
+.. automodule:: nifreeze.utils.ndimage
+   :members:
+   :undoc-members:
+   :show-inheritance:

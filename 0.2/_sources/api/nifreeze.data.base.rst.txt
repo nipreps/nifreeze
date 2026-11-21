@@ -1,0 +1,7 @@
+nifreeze.data.base module
+=========================
+
+.. automodule:: nifreeze.data.base
+   :members:
+   :undoc-members:
+   :show-inheritance:

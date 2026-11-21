@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Page not found - NiFreeze documentation</title>
+  <script>
+    (function () {
+      var base = "/nifreeze/";
+      var folders = ["main", "26.0", "0.2", "0.1"];
+      var path = window.location.pathname;
+      var target = base;
+      if (path.indexOf(base) === 0) {
+        var first = decodeURIComponent(path.slice(base.length).split("/")[0]);
+        if (folders.indexOf(first) !== -1) target = base + first + "/";
+      }
+      // Never send a missing index back to itself
+      if (target === path || target + "index.html" === path) target = base;
+      window.location.replace(target);
+    })();
+  </script>
+</head>
+<body>
+  <p>This page does not exist.
+  Go to the <a href="/nifreeze/">documentation of <em>NiFreeze</em></a>.</p>
+</body>
+</html>

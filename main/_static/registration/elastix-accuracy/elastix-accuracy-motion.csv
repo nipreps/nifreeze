@@ -1,0 +1,13 @@
+Protocol,Stage,Fixed image,0.5 mm,1 mm,2 mm,4 mm
+Sherbrooke (2 mm),rigid,Oracle,"-0.063, better","-0.065, better","-0.051, better","-0.055, better"
+Sherbrooke (2 mm),rigid,"Prediction, unmoved data","-0.047, better","-0.049, better","-0.024, not worse","-0.026, not worse"
+Sherbrooke (2 mm),rigid,"Prediction, moved data","-0.050, better","-0.071, better","-0.036, not worse","-0.043, inconclusive"
+Sherbrooke (2 mm),affine,Oracle,"-0.070, better","-0.013, not worse","-0.031, better","-0.030, better"
+Sherbrooke (2 mm),affine,"Prediction, unmoved data","-0.059, better","-0.010, not worse","-0.024, better","-0.019, not worse"
+Sherbrooke (2 mm),affine,"Prediction, moved data","-0.062, better","-0.006, inconclusive","+0.001, inconclusive","-0.012, inconclusive"
+HCP-YA (1.25 mm),rigid,Oracle,"-0.032, better","-0.021, better","-0.011, not worse","-0.004, inconclusive"
+HCP-YA (1.25 mm),rigid,"Prediction, unmoved data","-0.033, better","-0.019, better","-0.021, better","+0.017, inconclusive"
+HCP-YA (1.25 mm),rigid,"Prediction, moved data","+0.006, inconclusive","+0.021, inconclusive","-0.040, inconclusive","-0.016, inconclusive"
+HCP-YA (1.25 mm),affine,Oracle,"-0.017, better","-0.009, not worse","-0.005, not worse","+0.002, not worse"
+HCP-YA (1.25 mm),affine,"Prediction, unmoved data","-0.009, not worse","-0.007, not worse","-0.008, not worse","-0.002, not worse"
+HCP-YA (1.25 mm),affine,"Prediction, moved data","-0.021, better","-0.005, not worse","+0.005, inconclusive","+0.014, inconclusive"

@@ -1,0 +1,10 @@
+Configuration,Oracle,"Prediction, unmoved data","Prediction, moved data",Median seconds
+"Direct mapping, 1x iterations","-0.055 [-0.068, -0.039], better","-0.045 [-0.056, -0.034], better","-0.046 [-0.067, -0.026], better",0.97
+"Direct mapping, 4x iterations","-0.091 [-0.103, -0.081], better","-0.091 [-0.111, -0.076], better","-0.055 [-0.085, -0.037], better",1.08
+"Direct mapping, 16x iterations","-0.121 [-0.136, -0.108], better","-0.120 [-0.135, -0.103], better","-0.052 [-0.069, -0.029], better",1.49
+"Two-level pyramid, 1x iterations","-0.138 [-0.147, -0.120], better","-0.129 [-0.143, -0.122], better","-0.074 [-0.096, -0.045], better",1.16
+"Two-level pyramid, 4x iterations","-0.147 [-0.156, -0.136], better","-0.150 [-0.165, -0.134], better","-0.070 [-0.090, -0.045], better",1.62
+"Two-level pyramid, 16x iterations","-0.139 [-0.158, -0.129], better","-0.153 [-0.164, -0.137], better","-0.060 [-0.090, -0.041], better",3.52
+"Three-level pyramid, 1x iterations","-0.133 [-0.147, -0.119], better","-0.137 [-0.148, -0.122], better","-0.070 [-0.091, -0.054], better",1.29
+"Three-level pyramid, 4x iterations","-0.146 [-0.157, -0.137], better","-0.149 [-0.161, -0.135], better","-0.063 [-0.084, -0.044], better",1.77
+"Three-level pyramid, 16x iterations","-0.146 [-0.159, -0.134], better","-0.153 [-0.167, -0.137], better","-0.060 [-0.086, -0.045], better",3.75
