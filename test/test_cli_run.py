@@ -107,3 +107,34 @@ def test_main_appends_the_eddy_pass(monkeypatch, tmp_path):
     # The run's settings reach the motion passes; the eddy pass keeps its own
     assert eddy.ran["align_kwargs"] == {"align_config": Path("motion.yaml")}
     assert "align_config" not in first.kwargs
+
+
+def test_main_chooses_the_eddy_model(monkeypatch, tmp_path):
+    """``--eddy-model`` runs the eddy-current pass with its own model and fit mode."""
+    monkeypatch.setattr(run, "load", lambda *args, **kwargs: _Dataset())
+    monkeypatch.setattr(run, "Estimator", _Estimator)
+    monkeypatch.setattr(_Estimator, "built", [])
+    monkeypatch.setattr(run, "ants_version", lambda: None)
+
+    input_file = tmp_path / "dwi.h5"
+    input_file.touch()
+    run.main(
+        [
+            str(input_file),
+            "--models",
+            "singlegp-loo",
+            "--eddy-model",
+            "gqi-krr",
+            "--registration",
+            "ants",
+            "--output-dir",
+            str(tmp_path),
+        ]
+    )
+
+    motion, eddy = _Estimator.built
+    assert (motion.args[0], eddy.args[0]) == ("gp-loo", "gqi-krr")
+    assert (motion.kwargs["single_fit"], eddy.kwargs["single_fit"]) == (True, False)
+    assert eddy.kwargs["prev"] is motion
+    assert eddy.kwargs["estimates"] == "eddy"
+    assert eddy.kwargs["align_config"] == AFFINE

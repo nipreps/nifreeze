@@ -63,6 +63,27 @@ def test_parser_registration(tmp_path):
 
 
 @pytest.mark.parametrize(
+    ("argv", "eddy", "model", "single_fit"),
+    [
+        ([], None, None, False),
+        (["--models", "dti", "singlegp-loo", "--eddy"], AFFINE, "gp-loo", True),
+        (["--eddy-model", "gqi-krr"], AFFINE, "gqi-krr", False),
+        (["--models", "gp-loo", "--eddy-model", "singleDTI"], AFFINE, "dti", True),
+        (["--models", "singlegqi-krr", "--eddy-model", "gqi-krr"], AFFINE, "gqi-krr", False),
+        (["--eddy", "eddy.yaml", "--eddy-model", "gqi-krr"], Path("eddy.yaml"), "gqi-krr", False),
+    ],
+    ids=["off", "last-model", "own-model", "own-single", "own-fit-mode", "own-settings"],
+)
+def test_parser_eddy_model(tmp_path, argv, eddy, model, single_fit):
+    """The eddy-current pass's model: its own, which turns the pass on, or the cascade's last."""
+    input_file = tmp_path / "dwi.h5"
+    input_file.touch()
+
+    args, *_ = parse_args([str(input_file), *argv])
+    assert (args.eddy, args.eddy_model, args.eddy_single_fit) == (eddy, model, single_fit)
+
+
+@pytest.mark.parametrize(
     ("model_name", "single_fit"),
     [("singleDTI", True), ("PET", False)],
 )

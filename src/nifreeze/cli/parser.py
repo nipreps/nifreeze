@@ -85,11 +85,24 @@ def _build_parser() -> ArgumentParser:
         metavar="FILE",
         default=None,
         help=(
-            "Estimate eddy currents (dMRI): after the --models cascade, one more pass "
-            "of the last model, started from the motion estimates, with the settings "
-            "of FILE (default: the packaged nifreeze/registration/config/affine.yaml). "
-            "Its model should predict the diffusion signal: the trivial model registers "
-            "every volume to the b=0 reference."
+            "Estimate eddy currents (dMRI): after the --models cascade, one more pass, "
+            "started from the motion estimates, with the settings of FILE (default: the "
+            "packaged nifreeze/registration/config/affine.yaml). Its model is the one "
+            "--eddy-model names, or else the cascade's last, and should predict the "
+            "diffusion signal: the trivial model registers every volume to the b=0 "
+            "reference."
+        ),
+    )
+    parser.add_argument(
+        "--eddy-model",
+        action="store",
+        metavar="MODEL",
+        default=None,
+        help=(
+            "The model of the eddy-current pass, apart from the --models cascade (as "
+            "named there, the 'single' prefix included). It turns --eddy on, with its "
+            "default settings unless --eddy FILE is given (default: the cascade's last "
+            "model)."
         ),
     )
     parser.add_argument(
@@ -344,4 +357,32 @@ def parse_args(argv: list[str] | None = None) -> tuple[Namespace, dict, dict, di
         args.models[idx] = model_name
         estimator_kwargs[model_name] = {"single_fit": single_fit}
 
+    _eddy_pass(args, estimator_kwargs)
+
     return args, extra_kwargs, estimator_kwargs, model_kwargs
+
+
+def _eddy_pass(args: Namespace, estimator_kwargs: dict) -> None:
+    """
+    Resolve the model of the eddy-current pass, and its fit mode, in ``args``.
+
+    The model is the one ``--eddy-model`` names, which turns the pass on, or else the
+    cascade's last (already normalized), each in its own fit mode.
+
+    Parameters
+    ----------
+    args : :obj:`~argparse.Namespace`
+        The parsed arguments, which get ``eddy_model`` and ``eddy_single_fit``.
+    estimator_kwargs : :obj:`dict`
+        The fit mode of each model of the cascade.
+
+    """
+    if args.eddy_model is not None:
+        args.eddy = AFFINE if args.eddy is None else args.eddy
+        args.eddy_single_fit = _determine_single_fit_mode(args.eddy_model)
+        args.eddy_model = _normalize_model_name(args.eddy_model)
+    elif args.eddy is not None:
+        args.eddy_model = args.models[-1]
+        args.eddy_single_fit = estimator_kwargs[args.eddy_model]["single_fit"]
+    else:
+        args.eddy_single_fit = False

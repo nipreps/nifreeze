@@ -90,11 +90,11 @@ def main(argv: list[str] | None = None) -> None:
         prev_model = estimator
 
     if args.eddy is not None:
-        # Eddy currents: one more pass of the last model, from the motion estimates
+        # Eddy currents: one more pass, from the motion estimates
         estimator = Estimator(
-            args.models[-1],
+            args.eddy_model,
             prev=estimator,
-            single_fit=single_fit,
+            single_fit=args.eddy_single_fit,
             model_kwargs=model_kwargs,
             registration=args.registration,
             estimates="eddy",
