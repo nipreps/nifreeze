@@ -14,13 +14,26 @@ In the end-to-end test of `#712 <https://github.com/nipreps/nifreeze/issues/712>
 the pass left a median largest displacement of 1.185 to 1.648 mm of eddy currents on
 the three shells (the reproduction table below), and at b=1000 the whole mapping ended further from the truth than without
 the pass (`#721 <https://github.com/nipreps/nifreeze/pull/721>`__).
-This report splits the pass's error into steps, from an oracle to the pass, under rules
-posted before the run (`#723 <https://github.com/nipreps/nifreeze/issues/723>`__).
+Three tests on `#723 <https://github.com/nipreps/nifreeze/issues/723>`__ follow that error, each under rules posted before its
+run:
+
+Test 1
+    It splits the pass's error into steps, from an oracle to the pass.
+    It found no single step that makes the floor, and found that the pass drifts: its
+    registrations share an expansion, which the instant update feeds back.
+Test 2
+    It asks why the registrations expand, and finds the noise in the moving volume.
+Test 3
+    It asks whether a registration with 9 parameters, head motion and a field along
+    phase encoding, does better than the affine.
+
+Test 1: what the targets carry
+------------------------------
 The *floor* is the pass's error minus the oracle's, on the mean error of the whole
 mapping defined below.
 
 The question
-------------
+~~~~~~~~~~~~
 Do the targets of the eddy-current pass carry the eddy currents it should correct?
 The working hypothesis asked two questions:
 
@@ -35,7 +48,7 @@ The working hypothesis asked two questions:
    cascade and in the pass.
 
 Data
-----
+~~~~
 The copy
     Sherbrooke ``m2s0e2`` (:doc:`../phantoms`): 192 diffusion-weighted volumes at 2 mm,
     in three shells (b=1000, 2000 and 3500) that share the same 64 directions.
@@ -57,7 +70,7 @@ The cascade
     Its head motion ``m̂`` is the start of the arms that start from the cascade.
 
 The arms
---------
+~~~~~~~~
 Each arm registers the copy's noisy volume, for all 192 volumes, to a target and from a
 start, with the pass's settings (:data:`~nifreeze.registration.base.AFFINE`, elastix,
 one thread, seed 12345).
@@ -98,7 +111,7 @@ a weighted sum of the other volumes of a realigned copy of the data
      - ``m̂``
 
 How the results are judged
---------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 The error of a registration is its estimated whole mapping ``W`` against the truth
 ``E M``: the mean, within the brain mask, of
 :func:`~nifreeze.registration.utils.displacements_within_mask`, in the frame of the
@@ -191,7 +204,7 @@ The checks, posted with the rules: the truth must apply within 1e-9 mm, the pass
 reproduce #721's run within 0.05 mm on every median of the end-to-end test's scores.
 
 Results
--------
+~~~~~~~
 By the rules, no step makes the floor, and hypothesis 2 fails in the opposite
 direction: the instant update makes the pass worse the later a volume comes.
 The answer to the question is partly yes: the targets carry part of the field at b=2000
@@ -343,7 +356,7 @@ not tested.
    :widths: auto
 
 Post hoc: why the instant update hurts
---------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Two probes ran after the results; they are not in the working hypothesis
 (`posted on #723 <https://github.com/nipreps/nifreeze/issues/723#issuecomment-7076489123>`__).
 
@@ -414,7 +427,7 @@ The pass drifts
    :widths: auto
 
 Consequences
-------------
+~~~~~~~~~~~~
 * By the rules, Test 2 tries targets free of the field, starting with targets that
   leave out the volumes along the same direction, and #591 waits for Test 2.
 * The post hoc probes weaken that start: the same direction carries little of a
@@ -430,7 +443,7 @@ Consequences
   rigid levels.
 
 Open questions
---------------
+~~~~~~~~~~~~~~
 * Why do the affine registrations to model predictions carry an expansion, even
   without the instant update?
 * Do the cascade's rigid levels absorb part of each volume's field into the head motion
@@ -440,7 +453,7 @@ Open questions
 * Only Sherbrooke's ``m2s0e2`` was run; HCP-YA's shells do not share their directions.
 
 Deviations from the registration
---------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 None from the rules.
 The opening of #723 named the eddy-current score as the error; the pilot changed it to
 the whole mapping before the rules were posted, as Test 1's working hypothesis explains:
@@ -449,7 +462,7 @@ The rules leave open which reading of "worse" their fallback uses; the results g
 both.
 
 Reproducing
------------
+~~~~~~~~~~~
 The run was made outside the phantom dataset, without a ``datalad run`` record, and
 its results are kept outside the repository.
 The dataset stood at commit 826e611 at the start and the end.
@@ -472,3 +485,133 @@ commit that adds this page::
 
 ``e2e-record-721.json`` is the ``cascade-eddy.json`` record that #721's end-to-end test
 wrote locally, kept with the results for the reproduction check.
+
+Test 2: why the registrations expand
+------------------------------------
+Test 1 found that the pass's estimates share an expansion.
+A check after Test 1 found that it starts before any model is involved: even the
+oracle's registrations, each of a volume to its own noise-free original from its true
+head motion, enlarge the volume by a median of +0.33%.
+Test 2 asked where that comes from, before any remedy was chosen
+(`working hypothesis <https://github.com/nipreps/nifreeze/issues/723#issuecomment-7077326152>`__,
+`results <https://github.com/nipreps/nifreeze/issues/723#issuecomment-7077725428>`__).
+
+The cells
+~~~~~~~~~
+Every volume of four copies of Sherbrooke is registered to its noise-free original, from
+its true head motion, with the pass's settings
+(:data:`~nifreeze.registration.base.AFFINE`, elastix, one thread, seed 12345):
+
+``unmoved``
+    The reference itself: noise-free, the moving image *is* its target.
+``m2s0``
+    Head motion only (2 mm and 2°).
+``e2``
+    Eddy currents only (up to 4 mm).
+``m2s0e2``
+    Both: Test 1's copy.
+
+Each copy is used noise-free and with the end-to-end test's noise.
+On ``m2s0e2`` and ``unmoved``, with the noise, the settings also run with one
+ingredient removed: the histogram matching of the moving volume to the target, the
+winsorizing, the clipping of both images to the moving volume's window, the target's
+brain mask (the moving volume has none), or the smoothed first stage.
+That makes 18 cells of 192 volumes: 3,456 registrations.
+
+How the results are judged
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+Each volume's residual is ``R = W T⁻¹``, with ``W`` the estimate and ``T = E M`` the
+copy's true mapping.
+Its *volume change* is ``det(L)^(1/3) − 1`` of its linear part ``L``: positive when the
+estimate makes the volume larger than the truth.
+The margin, 0.037%, is the volume change that moves the brain's mean radius (53.4 mm)
+by 0.01 voxel.
+Comparisons are paired by volume (``experiments.paired_comparison`` on the volume
+change, stratified by shell, 10,000 resamples, seed 0).
+
+R0, an image onto itself
+    The noise-free ``unmoved`` cell's median must have its 95% interval within the
+    margin.
+R1, the data
+    With the default settings, each factor with against without: the noise, the noise
+    alone (on ``unmoved``), the eddy currents and the head motion.
+    A factor *drives* the expansion if it is "worse" and, without it, the median has
+    its interval within the margin.
+    A factor that is "worse" while the expansion stays without it *modulates* it.
+R2, the settings
+    On noisy ``m2s0e2``, each variant against the default.
+    A setting *causes* the expansion if removing it is "better" and the variant's
+    median has its interval within the margin.
+
+Results
+~~~~~~~
+.. figure:: ../_static/registration/eddy-targets/eddy-expansion-cells.png
+   :alt: The median volume change of each cell, overall and by shell.
+
+   The median volume change of each cell's residuals: all shells (black, with its 95%
+   interval) and each shell.
+   The dotted lines are the margin.
+   Without noise, no copy expands; with it, every copy does, unless the target's mask
+   is removed, which turns b=2000 and b=3500 into a contraction.
+
+* **R0 holds.** The noise-free ``unmoved`` volume registered onto itself changes volume
+  by +0.000%.
+* **The noise drives the expansion.** With minus without, on ``m2s0e2``: +0.328%
+  [+0.320, +0.341], "worse"; without it, the median is −0.003%, within the margin.
+  On the volume that never moved, the noise alone gives +0.286%.
+* **The eddy currents play no part** (+0.003%, "not worse"), and **the head motion
+  modulates it** (+0.055%, "worse", while the expansion stays without it).
+* **No setting causes it.** Removing the mask turns it into a contraction (−0.150% on
+  ``m2s0e2``); removing the clipping or the histogram matching takes a little off
+  (−0.066% and −0.054%); the winsorizing and the smoothed stage change nothing.
+* **By shell,** the expansion is largest at b=1000 and smallest at b=3500 in every noisy
+  cell with the mask (+0.60%, +0.33% and +0.11% on ``m2s0e2``).
+* **What the noise costs the oracle:** on ``m2s0e2``, a median error of 0.189 mm with
+  it and 0.033 mm without it.
+
+.. csv-table:: The data's factors (R1): the median difference of the volume change,
+   with minus without, paired by volume.
+   :file: ../_static/registration/eddy-targets/eddy-expansion-data.csv
+   :header-rows: 1
+   :widths: auto
+
+.. csv-table:: The settings (R2): each variant minus the default, paired by volume.
+   :file: ../_static/registration/eddy-targets/eddy-expansion-settings.csv
+   :header-rows: 1
+   :widths: auto
+
+.. csv-table:: Every cell: the median volume change with its 95% interval, by shell,
+   the share of volumes expanded beyond the margin, and the median error.
+   :file: ../_static/registration/eddy-targets/eddy-expansion-cells.csv
+   :header-rows: 1
+   :widths: auto
+
+Consequences
+~~~~~~~~~~~~
+* Registering a noisy volume to a smoother target expands it.
+  The pass's targets, model predictions, are smoother than its volumes, so the bias
+  applies to the pass.
+* By the rules, the next test holds the eddy estimates' shared transform at the
+  identity.
+  Test 3 takes first a registration with 9 parameters, which cannot express any
+  deformation across phase encoding: in Test 1's oracle, the strain is +0.31% along x,
+  +0.25% along phase encoding and +0.44% along z, so that model removes two thirds of
+  the expansion by construction.
+* Not tested: *why* noise expands the registration.
+  The mask turns the sign at b=2000 and b=3500, so the brain's boundary is involved,
+  but nothing here isolates how.
+
+Reproducing
+~~~~~~~~~~~
+The run was made outside the phantom dataset, without a ``datalad run`` record, with the
+dataset at commit 826e611 at the start and the end.
+The *NiFreeze* commit, clean, was 7f7a8012, with itk-elastix 0.25.4; it took 35 min,
+with 6 single-threaded workers on 6 physical cores.
+Noisy ``m2s0e2`` with the default settings repeats Test 1's oracle bit for bit.
+From the repository's root::
+
+    OMP_NUM_THREADS=6 uv run tools/registration/eddy_targets_expansion.py \
+        --dataset <dataset> --out <results> --jobs 6
+    uv run tools/registration/eddy_targets_expansion_figures.py --results <results> \
+        --test1 <Test 1's results>/sherbrooke.npz \
+        --out docs/_static/registration/eddy-targets --figures

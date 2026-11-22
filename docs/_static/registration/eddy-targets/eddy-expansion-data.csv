@@ -1,0 +1,5 @@
+Factor (with minus without),Median difference [95% interval],Verdict
+noise,"+0.328% [+0.320%, +0.341%]",worse
+"noise, unmoved","+0.286% [+0.278%, +0.295%]",worse
+eddy currents,"+0.003% [-0.002%, +0.006%]",not worse
+head motion,"+0.055% [+0.047%, +0.062%]",worse
