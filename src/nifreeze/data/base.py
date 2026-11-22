@@ -506,6 +506,38 @@ class BaseDataset(Generic[Unpack[Ts]]):
             setattr(self, field, np.repeat(np.eye(4)[None, ...], len(self), axis=0))
         getattr(self, field)[index] = affine
 
+    def set_estimates(self, index: int, **estimates: np.ndarray) -> None:
+        """
+        Store the estimates of several fields of :attr:`ESTIMATES` for volume ``index``.
+
+        Each matrix is the field's own estimate, as stored, not a mapping with the other
+        fields included (unlike :meth:`set_transform`). A registration that estimates
+        head motion and eddy currents together stores both this way, and
+        :meth:`get_transform` then returns their composition.
+
+        Parameters
+        ----------
+        index : :obj:`int`
+            The volume.
+        **estimates : :obj:`~numpy.ndarray`
+            A ``4 x 4`` RAS+ matrix per field (e.g., ``motion=..., eddy=...``).
+
+        """
+        unknown = set(estimates) - set(self.ESTIMATES)
+        if unknown:
+            raise ValueError(
+                ESTIMATES_FIELD_ERROR_MSG.format(
+                    name=type(self).__name__,
+                    field=", ".join(sorted(unknown)),
+                    fields=", ".join(self.ESTIMATES),
+                )
+            )
+        for field, matrix in estimates.items():
+            # Volumes without an estimate keep the identity
+            if getattr(self, field) is None:
+                setattr(self, field, np.repeat(np.eye(4)[None, ...], len(self), axis=0))
+            getattr(self, field)[index] = matrix
+
     def realigned(self, order: int = 3) -> Self:
         """
         Create the realigned view of the dataset, which models train on.
