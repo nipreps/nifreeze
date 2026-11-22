@@ -32,6 +32,8 @@ Test 3
     instant update.
     It does better, in the same or less time, most at b=1000; and the rules chose the
     *delayed update* for its pass, which applies its estimates only after the pass.
+    On HCP-YA that pass still beats today's, but by little (0.019 mm), and it is worse
+    at b=3000.
 
 Test 1: what the targets carry
 ------------------------------
@@ -868,15 +870,25 @@ pass).
 
 Results on HCP-YA
 ~~~~~~~~~~~~~~~~~
-By the rule, the confirmation holds, by a small margin.
+By the rule, the confirmation holds, but the gain is small (`results
+<https://github.com/nipreps/nifreeze/issues/723#issuecomment-7083335667>`__).
 The pass that Sherbrooke chose, ``pass-i9`` (9 parameters, delayed update), is
 "better" than today's pass, ``pass-e12-u`` (elastix's affine, instant update), over
 HCP-YA's 270 volumes: −0.019 mm [−0.022, −0.013], with a margin of 0.0125 mm.
+That is about 5% of today's median error (0.414 mm).
 On the oracle, the 9-parameter registration takes 0.62 times elastix's time (6.32 against
 10.16 s per registration).
 Every check holds: the truth is exact to 4.3e-14 mm and in the family to 4.4e-16; phase
 encoding lies along world x; the chosen pass stores its split to 5.0e-14 mm; no
 registration failed.
+
+.. figure:: ../_static/registration/eddy-targets/eddy-model-hcpya-comparisons.png
+   :alt: The confirmation and the oracle on HCP-YA, overall and by shell.
+
+   The confirmation (first row) and the oracle (second row, reported): the median
+   difference of the error, candidate minus reference (black, all shells, with its 95%
+   interval) and each shell's.
+   The dotted lines are the margin, 0.0125 mm; left of them, the candidate is better.
 
 .. csv-table:: The confirmation, and the oracle (reported, not a rule): candidate minus
    reference, median difference of the error (mm), overall and by shell.
@@ -891,15 +903,17 @@ registration failed.
   On the oracle, where no model and no update are involved, the 9 parameters beat
   elastix's 12 overall (−0.039 mm) and at b=1000 and b=2000, but not at b=3000
   (+0.013 mm, "inconclusive").
-  So the pass's loss at b=3000 is partly the registration on this protocol, and possibly
-  partly the delayed update, which gives up what the instant update brings the highest
-  shell (below).
+  So the pass's loss at b=3000 may come partly from the registration on this protocol,
+  and partly from the delayed update, which gives up what the instant update brings the
+  highest shell (below); this run has no arm that separates the two.
   A possible reason, not tested: the 9-parameter registration's second stage samples a
   fixed 17,000 points, 2.4% of HCP-YA's brain voxels against 10% of Sherbrooke's, and
   b=3000 has the lowest signal-to-noise; elastix draws new points at every iteration.
 * **The expansion falls on every shell.**
-  The volume change falls by 0.29% against today's pass (from +0.41% to +0.10%); across
-  phase encoding the strain is zero, and along it +0.31% against today's +0.41%.
+  The volume change falls by 0.29% against today's pass (from +0.41% to +0.10%), and
+  across phase encoding the strain is zero.
+  Along phase encoding, the two registrations stretch alike on the oracle (+0.170%
+  against +0.176%); on Sherbrooke the 9 parameters stretched more.
 
 .. csv-table:: The volume change (reported, not a rule): candidate minus reference,
    median difference.
@@ -948,18 +962,18 @@ Consequences
   That change is the maintainers' decision.
 * The gain is largest at b=1000 on both phantoms (−0.30 mm on Sherbrooke and −0.13 mm on
   HCP-YA, against today's pass), the shell that most protocols include.
-  At the highest shell it is small or negative, partly through the registration
-  (HCP-YA's oracle at b=3000) and possibly through giving up the instant update.
+  At the highest shell it is small or negative; on HCP-YA, the oracle suggests the
+  registration plays a part at b=3000, and giving up the instant update may too.
 * The noise's bias remains: the 9 parameters take away the stretch across phase
   encoding, but the volume still grows along it.
   Holding the eddy estimates' shared transform at the identity, which Test 2's rules
   named, stays open.
 * With the delayed update, the volumes of a pass no longer depend on each other, so they
   can be registered in parallel.
-  The registration takes 85 to 90% of a pass's time, so repeated delayed levels, each
-  refining from the last, could fit in today's time; whether they recover what the
-  instant update brings the highest shell, without its harm at b=1000, is the next
-  question.
+  On HCP-YA the registration takes about 80 to 90% of a pass's time, so repeated
+  delayed levels, each refining from the last, could fit in today's time; whether they
+  recover what the instant update brings the highest shell, without its harm at b=1000
+  (and with elastix at b=2000), is the next question.
 * The instant update's command-line switch, ``--no-instant-update``, trains every level
   on the original volumes, which is neither the instant nor the delayed update; a setting
   per pass, in the settings files, would replace it.
@@ -970,9 +984,12 @@ The runs were made outside the phantom dataset, without a ``datalad run`` record
 the dataset at commit 826e611 at the start and the end, and itk-elastix 0.25.4, on CPUs
 0-5.
 Sherbrooke's run took 62 min, and HCP-YA's 2 h 44 min.
-The scripts are those of oesteban/nifreeze@476893223; the runs' recorded commits
-(c3aca0322 and 470ee996b, clean) add only the report, the figures and type annotations,
-which re-score Sherbrooke's arms to identical tables.
+The runs used the harness of oesteban/nifreeze@476893223, the commit the rules cite;
+their recorded commits (c3aca0322 and 470ee996b, clean) change it only by type
+annotations, which re-score Sherbrooke's arms to identical tables.
+The rules' code is unchanged since 476893223, but the tables, the figures and the
+analysis after the results come from later scripts: the commands below reproduce this
+page from b4a8c6053 or later.
 Sherbrooke starts from Test 1's cascade.
 From the repository's root::
 
