@@ -31,7 +31,9 @@ phase-encoding row of :math:`E`; see
 ``restrict: phase-encoding``. Otherwise it estimates a full affine (12 parameters).
 With ``motion: fixed`` as well, the head motion stays as the start gives it (in the
 eddy-current pass, the head-motion step's estimate), and only the field's 3 parameters
-are estimated.
+are estimated, about the grid's centre. The estimates are then not split: the
+eddy-current pass stores them as it stores elastix's, with the head motion it holds
+factored out and kept unchanged.
 
 The images reach ITK in their voxel frame (identity direction, origin zero, the voxel
 spacing), so ITK's physical axes are the voxel axes, and the restriction to the
@@ -244,11 +246,22 @@ class ITK(Registration):
         """Whether the field is restricted to the phase-encoding direction."""
         return self.align_config.get("restrict") == "phase-encoding"
 
+    @property
+    def fixed_motion(self) -> bool:
+        """Whether the head motion stays as the start gives it (``motion: fixed``)."""
+        return self.align_config.get("motion") == "fixed"
+
     def split(
         self, matrix: np.ndarray, affine: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray] | None:
-        """See :meth:`~nifreeze.registration.base.Registration.split`."""
-        if not self.restricted or self.phase_encoding is None:
+        """
+        See :meth:`~nifreeze.registration.base.Registration.split`.
+
+        With ``motion: fixed``, the head motion was not estimated, so there is nothing to
+        split: the field, about the grid's centre, carries its own shift along phase
+        encoding, which the split would move into the head motion.
+        """
+        if not self.restricted or self.phase_encoding is None or self.fixed_motion:
             return None
         return split_phase_encoding(matrix, phase_encoding_vector(self.phase_encoding, affine))
 
@@ -355,7 +368,7 @@ class ITK(Registration):
         # The optimized parameters: the rigid ones, then E's matrix (row-major) and offset
         row = np.zeros((3, 3))
         row[axis] = 1.0
-        rigid_weight = 0.0 if self.align_config.get("motion") == "fixed" else 1.0
+        rigid_weight = 0.0 if self.fixed_motion else 1.0
         weights = [rigid_weight] * 6 + row.ravel().tolist() + [0.0, 0.0, 0.0]
         return composite, [eddy, rigid], weights
 
