@@ -357,11 +357,35 @@ def tables(decision: dict[str, Any], out: Path) -> None:
     """Each arm's medians, the comparisons, and (Sherbrooke) the volume change and drift."""
     protocol = decision["protocol"]
     arms = decision["summary"]
-    keys = list(next(iter(arms.values())))
+    shells = [key for key in next(iter(arms.values())) if key.startswith(f"{PRIMARY}/")]
     _write(
         out / f"eddy-model-{protocol}-arms.csv",
-        ["arm", *keys],
-        [[arm, *(f"{values[k]:.6g}" for k in keys)] for arm, values in arms.items()],
+        [
+            "Arm",
+            "Error (mm)",
+            *(f"b={key.split('/')[1]}" for key in shells),
+            "Volume change",
+            "Strain along PE",
+            "Strain across PE",
+            "Head motion (mm)",
+            "Field (mm)",
+            "Time (s)",
+        ],
+        [
+            [
+                arm,
+                f"{values[PRIMARY]:.3f}",
+                *(f"{values[key]:.3f}" for key in shells),
+                *(
+                    f"{100 * values[key] + 0.0:+.3f}%"
+                    for key in ("volume_change", "strain_pe", "strain_across")
+                ),
+                f"{values['motion_mean']:.3f}",
+                f"{values['field_mean']:.3f}",
+                "" if np.isnan(values["seconds"]) else f"{values['seconds']:.2f}",
+            ]
+            for arm, values in arms.items()
+        ],
     )
     first = comparisons(decision)[0][1]
     shells = list(first["shells"])
