@@ -30,6 +30,8 @@ Test 3
     It asks whether a registration with 9 parameters, head motion and a field along
     phase encoding, does better than the affine, and whether the pass can then keep the
     instant update.
+    It does better, in the same or less time, most at b=1000; and the rules chose the
+    *delayed update* for its pass, which applies its estimates only after the pass.
 
 Test 1: what the targets carry
 ------------------------------
@@ -863,3 +865,126 @@ pass).
    :file: ../_static/registration/eddy-targets/eddy-model-sherbrooke-arms.csv
    :header-rows: 1
    :widths: auto
+
+Results on HCP-YA
+~~~~~~~~~~~~~~~~~
+By the rule, the confirmation holds, by a small margin.
+The pass that Sherbrooke chose, ``pass-i9`` (9 parameters, delayed update), is
+"better" than today's pass, ``pass-e12-u`` (elastix's affine, instant update), over
+HCP-YA's 270 volumes: −0.019 mm [−0.022, −0.013], with a margin of 0.0125 mm.
+On the oracle, the 9-parameter registration takes 0.62 times elastix's time (6.32 against
+10.16 s per registration).
+Every check holds: the truth is exact to 4.3e-14 mm and in the family to 4.4e-16; phase
+encoding lies along world x; the chosen pass stores its split to 5.0e-14 mm; no
+registration failed.
+
+.. csv-table:: The confirmation, and the oracle (reported, not a rule): candidate minus
+   reference, median difference of the error (mm), overall and by shell.
+   :file: ../_static/registration/eddy-targets/eddy-model-hcpya-comparisons.csv
+   :header-rows: 1
+   :widths: auto
+
+* **The gain is at b=1000.**
+  By shell, the chosen pass is "better" at b=1000 (−0.129 mm), "not worse" at b=2000
+  (−0.001 mm) and "worse" at b=3000 (+0.022 mm).
+* **At b=3000, the model itself does no better here** (reported, not a rule).
+  On the oracle, where no model and no update are involved, the 9 parameters beat
+  elastix's 12 overall (−0.039 mm) and at b=1000 and b=2000, but not at b=3000
+  (+0.013 mm, "inconclusive").
+  So the pass's loss at b=3000 is partly the registration on this protocol, and possibly
+  partly the delayed update, which gives up what the instant update brings the highest
+  shell (below).
+  A possible reason, not tested: the 9-parameter registration's second stage samples a
+  fixed 17,000 points, 2.4% of HCP-YA's brain voxels against 10% of Sherbrooke's, and
+  b=3000 has the lowest signal-to-noise; elastix draws new points at every iteration.
+* **The expansion falls on every shell.**
+  The volume change falls by 0.29% against today's pass (from +0.41% to +0.10%); across
+  phase encoding the strain is zero, and along it +0.31% against today's +0.41%.
+
+.. csv-table:: The volume change (reported, not a rule): candidate minus reference,
+   median difference.
+   :file: ../_static/registration/eddy-targets/eddy-model-hcpya-expansion.csv
+   :header-rows: 1
+   :widths: auto
+
+.. csv-table:: Each arm's medians on HCP-YA (every volume).
+   :file: ../_static/registration/eddy-targets/eddy-model-hcpya-arms.csv
+   :header-rows: 1
+   :widths: auto
+
+After the results: the instant update against the order
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+An analysis after the results, not in the rules
+(`post hoc <https://github.com/nipreps/nifreeze/issues/723#issuecomment-7083346553>`__),
+asked whether, within each shell of Sherbrooke, the instant update's effect depends on
+when a volume was registered.
+For every volume (64 per shell), the change is its error with the instant update minus
+its error with the delayed update; the table gives its median in each third of the shell's
+order of registration, and Spearman's ρ with the position in the order.
+The delayed update's own error against the order is the control: its targets do not
+depend on the order.
+
+.. csv-table:: The change in error with the instant update (mm; positive: the instant
+   update made the error larger), by third of the order within each shell.
+   :file: ../_static/registration/eddy-targets/eddy-model-sherbrooke-posthoc-order.csv
+   :header-rows: 1
+   :widths: auto
+
+The instant update's effect builds up with the number of volumes already fed back: the
+later a volume comes, the more the update hurts it at b=1000 (+0.22 mm in the last third
+with the 9 parameters, +0.47 mm with elastix) and the more it helps it at b=3500 (−0.13
+and −0.11 mm).
+The controls show no trend.
+Why is not tested.
+The fed-back volumes may carry the registration's own bias into the training data, which
+weighs most at b=1000, where the distortion is smallest; or the feedback may deepen a
+local minimum of the registration's cost that high signal-to-noise volumes fall into.
+
+Consequences
+~~~~~~~~~~~~
+* By the rules, H1, H2 and the confirmation hold: a follow-up core change would make the
+  9-parameter registration the eddy-current pass's default, with the delayed update and
+  a per-pass setting for it.
+  That change is the maintainers' decision.
+* The gain is largest at b=1000 on both phantoms (−0.30 mm on Sherbrooke and −0.13 mm on
+  HCP-YA, against today's pass), the shell that most protocols include.
+  At the highest shell it is small or negative, partly through the registration
+  (HCP-YA's oracle at b=3000) and possibly through giving up the instant update.
+* The noise's bias remains: the 9 parameters take away the stretch across phase
+  encoding, but the volume still grows along it.
+  Holding the eddy estimates' shared transform at the identity, which Test 2's rules
+  named, stays open.
+* With the delayed update, the volumes of a pass no longer depend on each other, so they
+  can be registered in parallel.
+  The registration takes 85 to 90% of a pass's time, so repeated delayed levels, each
+  refining from the last, could fit in today's time; whether they recover what the
+  instant update brings the highest shell, without its harm at b=1000, is the next
+  question.
+* The instant update's command-line switch, ``--no-instant-update``, trains every level
+  on the original volumes, which is neither the instant nor the delayed update; a setting
+  per pass, in the settings files, would replace it.
+
+Reproducing
+~~~~~~~~~~~
+The runs were made outside the phantom dataset, without a ``datalad run`` record, with
+the dataset at commit 826e611 at the start and the end, and itk-elastix 0.25.4, on CPUs
+0-5.
+Sherbrooke's run took 62 min, and HCP-YA's 2 h 44 min.
+The scripts are those of oesteban/nifreeze@476893223; the runs' recorded commits
+(c3aca0322 and 470ee996b, clean) add only the report, the figures and type annotations,
+which re-score Sherbrooke's arms to identical tables.
+Sherbrooke starts from Test 1's cascade.
+From the repository's root::
+
+    OMP_NUM_THREADS=6 uv run tools/registration/eddy_targets_model.py --dataset <dataset> \
+        --out <results> --cascade <Test 1's results>/sherbrooke.npz --jobs 6 --threads 6
+    OMP_NUM_THREADS=6 uv run tools/registration/eddy_targets_model.py --dataset <dataset> \
+        --protocol hcpya --out <results> \
+        --arms oracle-e12 oracle-i9 pass-e12-u pass-i9 --jobs 6 --threads 6
+    uv run tools/registration/eddy_targets_model_figures.py --results <results> \
+        --out docs/_static/registration/eddy-targets --figures
+    uv run tools/registration/eddy_targets_model_figures.py --results <results> \
+        --protocol hcpya --chosen pass-i9 --out docs/_static/registration/eddy-targets \
+        --figures
+    uv run tools/registration/eddy_targets_model_posthoc.py --results <results> \
+        --out docs/_static/registration/eddy-targets
