@@ -1,0 +1,10 @@
+Comparison,Median difference (mm) [95% interval],Verdict,b=1000,b=2000,b=3500
+H1: oracle-i9-clean against oracle-e12-clean,"-0.006 [-0.009, -0.003]",not worse,-0.012 (not worse),-0.005 (not worse),-0.003 (not worse)
+H2: pass-i9-u against pass-e12-u,"-0.110 [-0.139, -0.075]",better,-0.246 (better),-0.075 (better),-0.022 (not worse)
+H2: pass-i9 against pass-e12,"-0.061 [-0.082, -0.053]",better,-0.130 (better),-0.027 (better),-0.060 (better)
+H3: pass-i9-u against pass-i9,"+0.011 [-0.001, +0.039]",inconclusive,+0.093 (worse),-0.003 (inconclusive),-0.025 (not worse)
+"Backend, oracle: i12 against e12","+0.018 [+0.007, +0.029]",inconclusive,+0.003 (inconclusive),+0.034 (worse),+0.005 (not worse)
+"Backend, pass: i12-u against e12-u","+0.052 [+0.046, +0.064]",worse,+0.042 (inconclusive),+0.104 (worse),-0.003 (inconclusive)
+"Model, oracle: i9 against i12","-0.072 [-0.080, -0.064]",better,-0.119 (better),-0.069 (better),-0.014 (not worse)
+"Model, pass: i9-u against i12-u","-0.163 [-0.212, -0.121]",better,-0.259 (better),-0.178 (better),-0.017 (not worse)
+Chosen (pass-i9) against today's pass,"-0.120 [-0.165, -0.057]",better,-0.295 (better),-0.054 (better),-0.013 (inconclusive)

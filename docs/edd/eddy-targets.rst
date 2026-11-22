@@ -12,20 +12,24 @@ into it, head motion and eddy currents composed.
 
 In the end-to-end test of `#712 <https://github.com/nipreps/nifreeze/issues/712>`__,
 the pass left a median largest displacement of 1.185 to 1.648 mm of eddy currents on
-the three shells (the reproduction table below), and at b=1000 the whole mapping ended further from the truth than without
-the pass (`#721 <https://github.com/nipreps/nifreeze/pull/721>`__).
-Three tests on `#723 <https://github.com/nipreps/nifreeze/issues/723>`__ follow that error, each under rules posted before its
-run:
+the three shells (the reproduction table below), and at b=1000 the whole mapping ended
+further from the truth than without the pass
+(`#721 <https://github.com/nipreps/nifreeze/pull/721>`__).
+Three tests on `#723 <https://github.com/nipreps/nifreeze/issues/723>`__ follow that
+error, each under rules posted before its run:
 
 Test 1
     It splits the pass's error into steps, from an oracle to the pass.
-    It found no single step that makes the floor, and found that the pass drifts: its
-    registrations share an expansion, which the instant update feeds back.
+    No single step accounts for most of it.
+    The pass drifts: its registrations share an expansion, which the *instant update*
+    (each volume, once registered, enters the model's training data realigned) feeds
+    back into the targets.
 Test 2
     It asks why the registrations expand, and finds the noise in the moving volume.
 Test 3
     It asks whether a registration with 9 parameters, head motion and a field along
-    phase encoding, does better than the affine.
+    phase encoding, does better than the affine, and whether the pass can then keep the
+    instant update.
 
 Test 1: what the targets carry
 ------------------------------
@@ -533,8 +537,12 @@ R0, an image onto itself
     The noise-free ``unmoved`` cell's median must have its 95% interval within the
     margin.
 R1, the data
-    With the default settings, each factor with against without: the noise, the noise
-    alone (on ``unmoved``), the eddy currents and the head motion.
+    With the default settings, each factor with against without: the noise (noisy
+    against noise-free ``m2s0e2``), the noise alone (the same on ``unmoved``), the eddy
+    currents (``m2s0e2`` against ``m2s0``, both noisy) and the head motion (``m2s0e2``
+    against ``e2``, both noisy).
+    The verdicts are Test 1's ("better", "not worse", "worse" or "inconclusive", from
+    the interval of the median difference and the margin).
     A factor *drives* the expansion if it is "worse" and, without it, the median has
     its interval within the margin.
     A factor that is "worse" while the expansion stays without it *modulates* it.
@@ -561,9 +569,10 @@ Results
   On the volume that never moved, the noise alone gives +0.286%.
 * **The eddy currents play no part** (+0.003%, "not worse"), and **the head motion
   modulates it** (+0.055%, "worse", while the expansion stays without it).
-* **No setting causes it.** Removing the mask turns it into a contraction (−0.150% on
-  ``m2s0e2``); removing the clipping or the histogram matching takes a little off
-  (−0.066% and −0.054%); the winsorizing and the smoothed stage change nothing.
+* **No setting causes it.** Removing the mask turns it into a contraction: the cell's
+  median is −0.150% on ``m2s0e2``, a difference of −0.400% from the default.
+  Removing the clipping or the histogram matching takes a little off (differences of
+  −0.066% and −0.054%); the winsorizing and the smoothed stage change nothing.
 * **By shell,** the expansion is largest at b=1000 and smallest at b=3500 in every noisy
   cell with the mask (+0.60%, +0.33% and +0.11% on ``m2s0e2``).
 * **What the noise costs the oracle:** on ``m2s0e2``, a median error of 0.189 mm with
@@ -588,15 +597,18 @@ Results
 
 Consequences
 ~~~~~~~~~~~~
-* Registering a noisy volume to a smoother target expands it.
-  The pass's targets, model predictions, are smoother than its volumes, so the bias
-  applies to the pass.
-* By the rules, the next test holds the eddy estimates' shared transform at the
-  identity.
-  Test 3 takes first a registration with 9 parameters, which cannot express any
-  deformation across phase encoding: in Test 1's oracle, the strain is +0.31% along x,
-  +0.25% along phase encoding and +0.44% along z, so that model removes two thirds of
-  the expansion by construction.
+* Registering a noisy volume to a noise-free target expands it.
+  The rules read this as applying to the pass, whose targets, model predictions, are
+  smoother than its volumes; Test 2 did not register to predictions.
+* By the rules, the next test holds the transform that the eddy estimates share (their
+  common offset from the truth) at the identity.
+  A second candidate came from a discussion after Test 1, outside the rules: a
+  registration with 9 parameters, which cannot stretch the volume across phase
+  encoding.
+  In Test 1's oracle, the strain is +0.31% along x, +0.25% along phase encoding and
+  +0.44% along z, so three quarters of it lies across phase encoding.
+  Test 3 takes that candidate first; the shared transform stays open if the expansion
+  remains.
 * Not tested: *why* noise expands the registration.
   The mask turns the sign at b=2000 and b=3500, so the brain's boundary is involved,
   but nothing here isolates how.
@@ -615,3 +627,236 @@ From the repository's root::
     uv run tools/registration/eddy_targets_expansion_figures.py --results <results> \
         --test1 <Test 1's results>/sherbrooke.npz \
         --out docs/_static/registration/eddy-targets --figures
+
+Test 3: an eddy-current registration with 9 parameters
+------------------------------------------------------
+A linear field from eddy currents moves each point only along the phase-encoding
+direction ``u``.
+So each volume's mapping is head motion followed by such a field, ``W = E M``, with
+``M`` rigid (6 parameters) and ``E = I − u sᵀ`` (3: a scaling along phase encoding and
+two shears), and the split of ``W`` into ``M`` and ``E`` is unique
+(:func:`~nifreeze.registration.utils.split_phase_encoding`).
+An affine also has 3 more parameters, which can stretch the volume across phase
+encoding, where three quarters of the strain that Test 2 traced to the noise lies.
+Test 3 asked three questions, under rules posted before the run
+(`working hypothesis <https://github.com/nipreps/nifreeze/issues/723#issuecomment-7079966873>`__,
+`results <https://github.com/nipreps/nifreeze/issues/723#issuecomment-7080809180>`__):
+
+H1
+    Can ITK's transforms, combined, reproduce the model, with the frozen parameters set
+    in the image's voxel axes, and give the decoupled transform: head motion plus a
+    3-parameter field?
+H2
+    Does the model improve the accuracy without longer run times, and take out the
+    expansion?
+H3
+    Without the parameters that let the volume expand, can the pass keep the instant
+    update?
+
+The registration
+~~~~~~~~~~~~~~~~
+The ITK backend (:class:`~nifreeze.registration.itk_backend.ITK`, `#730
+<https://github.com/nipreps/nifreeze/issues/730>`__) runs ITK 5's registration
+framework, which optimizes several transforms together; elastix's does not.
+It composes an ``Euler3DTransform`` (head motion, applied first) with an
+``AffineTransform`` (the field), and the optimizer's weights freeze all of the field
+but its phase-encoding row.
+The images reach ITK in their voxel frame, so the phase-encoding axis, a voxel axis
+(`#727 <https://github.com/nipreps/nifreeze/issues/727>`__), is exact on oblique data.
+Its settings, the ``itk`` section of :data:`~nifreeze.registration.base.AFFINE`, were set
+by a pilot on development volumes: Mattes mutual information on a regular 20% of a
+half-resolution grid, then normalized correlation at 17,000 random points within the
+mask.
+The eddy-current pass stores the split: the head motion it refined, and the field.
+
+Three registrations are compared, each with one thread and seed 12345:
+
+``e12``
+    elastix, ``AFFINE`` (today's pass).
+``i12``
+    ITK with the ``itk`` section, without its restriction: a full affine, which
+    separates the backend from the model.
+``i9``
+    ITK with the ``itk`` section as packaged: head motion and a field along phase
+    encoding.
+
+The arms
+~~~~~~~~
+The copy is Test 1's, Sherbrooke ``m2s0e2`` with the end-to-end test's noise; its phase
+encoding is along ``j`` (world y).
+
+``oracle-<registration>``, ``oracle-<registration>-clean``
+    Each volume registered to its noise-free original from its true head motion ``M``,
+    as Test 1's oracle; ``-clean`` registers the noise-free copy.
+``pass-<registration>-u``
+    The eddy-current pass (gp-loo) from the cascade's head motion ``m̂`` (Test 1's), with
+    the instant update.
+``pass-<registration>``
+    The same pass with its targets held: its model is built on the copy realigned by
+    ``m̂``, which the pass never updates. These are Test 1's ``cascade-corrected``
+    targets.
+    The command line's ``--no-instant-update`` is different: it trains every level on
+    the original volumes.
+
+The arms are ``oracle-e12``, ``oracle-e12-clean``, ``oracle-i12``, ``oracle-i9``,
+``oracle-i9-clean``, ``pass-e12-u``, ``pass-e12``, ``pass-i12-u``, ``pass-i9-u`` and
+``pass-i9``.
+Each runs in a process of its own: once the ITK backend has run in a process, elastix's
+later estimates and times change there (`#732 <https://github.com/nipreps/nifreeze/issues/732>`__).
+HCP-YA ``m2s0e2`` (eddy currents up to 2.5 mm, phase encoding along world x) confirms the
+decision with its own cascade and four arms: ``oracle-e12``, ``oracle-i9``,
+``pass-e12-u`` and the pass H3 chose.
+
+How the results are judged
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+The error is Test 1's: the whole mapping against ``E M``, in the frame of the arm's
+targets (mean displacement within the brain, mm).
+The volume change and the normal strains are taken from the residual
+``R = W F⁻¹ T⁻¹``, with ``F`` the frame of the arm's targets, as Test 2 takes them; the
+strain across phase encoding is the mean of the two axes across it.
+The *family* distance is how far an estimate lies from head motion followed by a field
+along phase encoding.
+The split's errors compare the estimate's head motion and field with the truth's split,
+in which the field's constant shift along phase encoding counts as head motion.
+Comparisons are paired by volume, stratified by shell, with margins of 0.01 voxel on the
+error and Test 2's 0.037% on the volume change.
+On Sherbrooke they use the confirmation subset (64 volumes), because the pilot set the
+ITK stages on development volumes; on HCP-YA, every volume.
+
+H1
+    Every ``i9`` estimate lies in the family within 1e-6 mm; and ``oracle-i9-clean`` is
+    "better" or "not worse" than ``oracle-e12-clean``, with the medians of its head
+    motion and field errors no larger than ``oracle-e12-clean``'s median error.
+H2
+    For both settings of the instant update, the 9-parameter pass is "better" or "not
+    worse" than elastix's with the same setting on the error, and "better" on the volume
+    change without contracting beyond the margin; and ``oracle-i9``'s median time per
+    registration is at most 1.1 times ``oracle-e12``'s, over every volume.
+H3
+    ``pass-i9-u`` is "better" or "not worse" than ``pass-i9``, and does not drift: its
+    gain against the held pass does not grow with the order of registration (Test 1's
+    statistics, in the direction of a drift).
+    If H3 holds, the pass keeps the instant update; otherwise it holds its targets.
+The confirmation
+    On HCP-YA, the pass H3 chose is "better" or "not worse" than ``pass-e12-u``, and
+    ``oracle-i9``'s median time is at most 1.1 times ``oracle-e12``'s.
+
+If H1, H2 and the confirmation hold, a follow-up core change makes the 9-parameter
+registration the eddy-current pass's default; if H3 chose held targets, that change also
+adds a per-pass switch for them.
+Otherwise the default stays, and the report says which rule failed.
+
+Results on Sherbrooke
+~~~~~~~~~~~~~~~~~~~~~
+By the rules, H1 and H2 hold and H3 fails.
+The 9-parameter registration is more accurate than elastix's affine, in about the same
+time, and the pass holds its targets.
+
+.. figure:: ../_static/registration/eddy-targets/eddy-model-sherbrooke-comparisons.png
+   :alt: The median difference of the error for each comparison, overall and by shell.
+
+   Each comparison on the error, candidate minus reference: the median difference
+   (black, all shells, with its 95% interval) and each shell's.
+   The dotted lines are the margin, 0.02 mm.
+   Left of them, the candidate is better.
+   The first four rows are the rules'; the others are reported.
+
+* **H1 holds.**
+  Every ``i9`` estimate is head motion followed by a field along phase encoding, to
+  1.5e-13 mm.
+  On the noise-free copy, ``oracle-i9-clean`` is "not worse" than ``oracle-e12-clean``
+  (−0.006 mm [−0.009, −0.003]), and its split recovers the head motion to 0.025 mm and
+  the field to 0.013 mm (medians), below elastix's median error on the noise-free copy,
+  0.036 mm.
+* **H2 holds.**
+  The 9-parameter pass is "better" than elastix's with the instant update
+  (−0.110 mm [−0.139, −0.075]) and with its targets held (−0.061 mm [−0.082, −0.053]),
+  most at b=1000 (−0.246 and −0.130 mm).
+  Its volume change is "better" (−0.504% and −0.297%), and neither pass contracts;
+  the expansion is reduced, not removed (+0.276% and +0.173% remain).
+  On the oracle, its median time per registration is 0.99 times elastix's, over every
+  volume (2.40 against 2.42 s).
+* **H3 fails.**
+  With the 9 parameters, the instant update against held targets is "inconclusive"
+  (+0.011 mm [−0.001, +0.039]) and "worse" at b=1000 (+0.093 mm).
+  So the pass holds its targets, and HCP-YA's confirmation tests ``pass-i9``.
+* **Against today's pass** (reported, not a rule), the chosen ``pass-i9`` is "better":
+  −0.120 mm
+  [−0.165, −0.057], with −0.295 mm at b=1000, −0.054 mm at b=2000 and −0.013 mm at
+  b=3500 ("inconclusive").
+
+.. csv-table:: Each comparison on the error, candidate minus reference (mm), overall and
+   by shell, with its verdict.
+   :file: ../_static/registration/eddy-targets/eddy-model-sherbrooke-comparisons.csv
+   :header-rows: 1
+   :widths: auto
+
+The expansion moves onto phase encoding
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This section and the next two are reported beside the rules; they decide nothing.
+
+.. figure:: ../_static/registration/eddy-targets/eddy-model-sherbrooke-expansion.png
+   :alt: Each arm's median volume change and strains along and across phase encoding.
+
+   Each arm's median volume change, and the normal strains of its residual along and
+   across phase encoding (black, all shells, with the 95% interval; each shell below).
+   The dotted lines are Test 2's margin.
+   The 9-parameter arms have no strain across phase encoding, but more along it than
+   elastix's.
+
+The 9 parameters cannot stretch the volume across phase encoding, and on the oracle
+the volume change falls by about two thirds (from +0.348% to +0.131%).
+They do not take the noise's bias away: along phase encoding, the 9-parameter arms
+stretch more than elastix's (+0.39% against +0.27% on the oracle, +0.52% against +0.35%
+with held targets, +0.83% against +0.72% with the instant update), and the volume still
+grows by +0.17% with held targets, beyond the margin.
+
+.. csv-table:: The rule on the volume change: each 9-parameter pass's median volume change,
+   and its difference from elastix's with the same setting of the instant update.
+   :file: ../_static/registration/eddy-targets/eddy-model-sherbrooke-expansion.csv
+   :header-rows: 1
+   :widths: auto
+
+The instant update and the order of registration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. figure:: ../_static/registration/eddy-targets/eddy-model-sherbrooke-order.png
+   :alt: The change in error with the instant update against the order of registration.
+
+   The change in each volume's error with the instant update (the pass with it minus the
+   pass with its targets held), against the volume's position in the order of
+   registration, with each third's median (black), on the 64 confirmation volumes.
+   Above zero, the instant update made the volume's error larger.
+   Left, the 9 parameters; right, elastix's 12.
+
+By the rules' definition, the 9-parameter pass does not drift: the last third's median
+gain exceeds the first third's by +0.145 mm, but the interval of that difference,
+[−0.012, +0.221], reaches below the margin.
+The trend is there all the same (Spearman's ρ +0.23, one-sided p 0.032), mostly at
+b=1000.
+Elastix drifts, as in Test 1: on these 64 volumes, ρ +0.36 (p 0.002), and +0.220 mm
+[+0.059, +0.451] between the thirds (Test 1, on all 192 volumes: ρ +0.27).
+With either registration, held targets have the lower median error (0.495 against
+0.604 mm with elastix, 0.423 against 0.503 mm with the 9 parameters); with the 9
+parameters, the paired comparison is "inconclusive" (H3).
+
+.. csv-table:: The instant update's gain against the order: Spearman's ρ and its
+   one-sided p, the first and last thirds' median gains, and their difference.
+   :file: ../_static/registration/eddy-targets/eddy-model-sherbrooke-drift.csv
+   :header-rows: 1
+   :widths: auto
+
+The backend and the model
+~~~~~~~~~~~~~~~~~~~~~~~~~
+The gain comes from the model, not from ITK.
+With 12 parameters, ITK is no better than elastix (+0.018 mm on the oracle,
+"inconclusive"; +0.052 mm on the pass, "worse").
+With 9, it does better than its own 12 (−0.072 mm on the oracle, −0.163 mm on the
+pass).
+
+.. csv-table:: Each arm's medians on the confirmation volumes: the error, overall and by
+   shell; the residual's volume change and strains; the split's head motion and field
+   errors (for the 12-parameter arms, of their estimates' split); and the time per
+   registration (oracle arms).
+   :file: ../_static/registration/eddy-targets/eddy-model-sherbrooke-arms.csv
+   :header-rows: 1
+   :widths: auto
