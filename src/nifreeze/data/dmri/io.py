@@ -22,6 +22,7 @@
 #
 """Input/Output utilities for DWI objects."""
 
+import json
 from pathlib import Path
 from warnings import warn
 
@@ -66,6 +67,7 @@ def from_nii(
     bvec_file: Path | str | None = None,
     bval_file: Path | str | None = None,
     b0_file: Path | str | None = None,
+    phase_encoding: str | None = None,
 ) -> DWI:
     """
     Load DWI data from NIfTI and construct a DWI object.
@@ -93,6 +95,11 @@ def from_nii(
     b0_file : :obj:`os.pathlike`, optional
         A NIfTI file containing a b=0 volume (possibly averaged or reference).
         If not provided, and the data contains at least one b=0 volume, one will be computed.
+    phase_encoding : :obj:`str`, optional
+        The phase-encoding direction, in BIDS's form (``i``, ``j`` or ``k``, with an
+        optional ``-``; see :attr:`~nifreeze.data.dmri.DWI.phase_encoding`). If not
+        provided, ``PhaseEncodingDirection`` is read from the BIDS sidecar next to the
+        data (the same name, with ``.json``), when there is one.
 
     Returns
     -------
@@ -157,7 +164,34 @@ def from_nii(
         gradients=gradients[~b0_mask],
         bzero=b0_data,
         brainmask=brainmask_data,
+        phase_encoding=phase_encoding or sidecar_phase_encoding(filename),
     )
+
+
+def sidecar_phase_encoding(filename: Path | str) -> str | None:
+    """
+    Read ``PhaseEncodingDirection`` from the BIDS sidecar of a NIfTI file.
+
+    The sidecar has the data's name with ``.json`` in place of ``.nii`` or ``.nii.gz``.
+    Sidecars inherited from higher levels of a BIDS dataset are not read.
+
+    Parameters
+    ----------
+    filename : :obj:`os.pathlike`
+        The NIfTI file.
+
+    Returns
+    -------
+    :obj:`str` or :obj:`None`
+        The direction, or :obj:`None` if there is no sidecar or it does not say.
+
+    """
+    filename = Path(filename)
+    stem = filename.name.removesuffix(".gz").removesuffix(".nii")
+    sidecar = filename.with_name(f"{stem}.json")
+    if not sidecar.is_file():
+        return None
+    return json.loads(sidecar.read_text()).get("PhaseEncodingDirection")
 
 
 def to_nifti(

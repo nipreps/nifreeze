@@ -53,6 +53,7 @@ from nifreeze.data.dmri.utils import (
     GRADIENT_VOLUME_DIMENSIONALITY_MISMATCH_ERROR,
     find_shelling_scheme,
     format_gradients,
+    format_phase_encoding,
     realign_bvecs,
 )
 from nifreeze.data.utils import stream_select_volumes
@@ -206,6 +207,10 @@ class DWI(BaseDataset[np.ndarray]):
     that maps the reference, as the head moved (:attr:`~BaseDataset.motion`), into the
     volume. It acts in the scanner, where the volume's phase encoding runs. Eddy currents
     displace the image without turning the head, so they do not turn the b-vectors."""
+    phase_encoding: str | None = attrs.field(default=None, converter=format_phase_encoding)
+    """The phase-encoding direction, as BIDS writes ``PhaseEncodingDirection``: an axis of
+    the data array (``i``, ``j`` or ``k``) and, with a trailing ``-``, the reverse sign.
+    :obj:`None` if unknown (see :func:`~nifreeze.data.dmri.utils.format_phase_encoding`)."""
 
     def __attrs_post_init__(self) -> None:
         if self.dataobj.shape[0] != self.gradients.shape[0]:

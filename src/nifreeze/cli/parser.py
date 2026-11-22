@@ -25,6 +25,7 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, Namespace
 from pathlib import Path
 
+from nifreeze.data.dmri.utils import PHASE_ENCODING_DIRECTIONS
 from nifreeze.registration.base import AFFINE, BACKENDS
 
 
@@ -231,6 +232,19 @@ def _build_parser() -> ArgumentParser:
         "--ignore-b0",
         action="store_true",
         help="Ignore the low-b reference and use the robust signal maximum",
+    )
+    g_dmri.add_argument(
+        "--phase-encoding",
+        action="store",
+        choices=PHASE_ENCODING_DIRECTIONS,
+        metavar="DIRECTION",
+        default=None,
+        help=(
+            "The phase-encoding direction, as BIDS's PhaseEncodingDirection: an axis of "
+            "the data array (i, j or k: its first, second or third), with a trailing '-' "
+            "for the reverse sign (e.g., j-). It overrides the input's metadata (default: "
+            "PhaseEncodingDirection from the input's BIDS sidecar, or from its nfHDF5 file)."
+        ),
     )
 
     g_pet = parser.add_argument_group("Options for PET inputs")

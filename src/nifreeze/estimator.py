@@ -112,7 +112,11 @@ class Estimator:
         registered from its mapping, every estimate composed
         (:meth:`~nifreeze.data.base.BaseDataset.get_transform`), and the other fields'
         estimates are factored out of the result
-        (:meth:`~nifreeze.data.base.BaseDataset.set_transform`).
+        (:meth:`~nifreeze.data.base.BaseDataset.set_transform`). A backend that
+        estimates head motion and the field together
+        (:meth:`~nifreeze.registration.base.Registration.split`, such as
+        :class:`~nifreeze.registration.itk_backend.ITK` restricted to phase encoding)
+        stores both instead: the head motion it refined, and the field.
     **kwargs
         Registration settings of this estimator, which take precedence over the run's
         ``align_kwargs``: ``align_config`` (a mapping, or a file with a section per
@@ -305,6 +309,10 @@ class Estimator:
             debug_dir = options.pop("debug_dir", None)
             options |= {
                 "num_threads": options.pop("num_threads", n_threads),
+                # The backends that restrict a field to phase encoding need its direction
+                "phase_encoding": options.pop(
+                    "phase_encoding", getattr(dataset, "phase_encoding", None)
+                ),
                 "debug_dir": None
                 if debug_dir is None
                 else Path(debug_dir) / self._debug_name(model),
@@ -347,7 +355,7 @@ class Estimator:
                 )
 
                 # update
-                dataset.set_transform(i, xform.matrix, self._estimates)
+                self._store(dataset, registration, i, xform.matrix)
                 if view is not None:
                     # Instant update: the next predictions see this volume realigned
                     dataset.realign_into(view, i)
@@ -355,6 +363,22 @@ class Estimator:
                 pbar.update()
 
         return self
+
+    def _store(
+        self, dataset: BaseDataset, registration: Registration, index: int, matrix: np.ndarray
+    ) -> None:
+        """
+        Store a volume's estimate in this estimator's field of the dataset.
+
+        A backend that estimates head motion and the field together
+        (:meth:`~nifreeze.registration.base.Registration.split`) refines the head motion
+        and stores the field; otherwise the other fields are factored out of the estimate.
+        """
+        parts = registration.split(matrix, dataset.affine) if self._estimates != "motion" else None
+        if parts is None:
+            dataset.set_transform(index, matrix, self._estimates)
+        else:
+            dataset.set_estimates(index, motion=parts[0], **{self._estimates: parts[1]})
 
     def _debug_name(self, model: BaseModel) -> str:
         """Name this estimator's folder of ``debug_dir`` by position in the chain and model."""

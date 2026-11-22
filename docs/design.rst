@@ -83,6 +83,9 @@ nfHDF5 files
   decompressed into a temporary file first.
 - ``gradients`` (dMRI) holds the table in RAS+B, as
   :class:`~nifreeze.data.dmri.DWI` does.
+- ``phase_encoding`` (dMRI, when known) holds the phase-encoding direction as BIDS
+  writes ``PhaseEncodingDirection`` (``i``, ``j`` or ``k``, with an optional ``-``).
+  Files without it load with the direction unknown.
 
 Files written by earlier versions of *NiFreeze* (version 1) store the volumes
 last, and their ``Format`` is ``"NFDH5"`` (``"EMC/PET"`` for PET).

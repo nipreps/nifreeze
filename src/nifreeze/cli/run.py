@@ -30,6 +30,7 @@ from pathlib import Path
 
 from nifreeze.cli.parser import parse_args
 from nifreeze.data import BaseDataset, load
+from nifreeze.data.dmri import DWI
 from nifreeze.estimator import Estimator
 from nifreeze.registration.base import default_backend
 
@@ -76,6 +77,11 @@ def main(argv: list[str] | None = None) -> None:
         brainmask_file=args.brainmask if args.brainmask else None,
         **extra_kwargs,
     )
+    if args.phase_encoding is not None:
+        # Over the input's metadata, whether it was read from NIfTI or nfHDF5
+        if not isinstance(dataset, DWI):
+            raise ValueError("--phase-encoding applies to dMRI inputs only.")
+        dataset.phase_encoding = args.phase_encoding
 
     prev_model: Estimator | None = None
     for _model in args.models:

@@ -173,3 +173,101 @@ def extract_motion_parameters(affine: np.ndarray) -> Tuple[np.ndarray, np.ndarra
     )
     rotation_deg = np.rad2deg(rotation_rad)
     return *translation, *rotation_deg
+
+
+def phase_encoding_vector(phase_encoding: str, affine: np.ndarray) -> np.ndarray:
+    """
+    The phase-encoding direction in world (RAS+) coordinates, as a unit vector.
+
+    Parameters
+    ----------
+    phase_encoding : :obj:`str`
+        The direction as BIDS writes ``PhaseEncodingDirection``: an axis of the data
+        array (``i``, ``j`` or ``k``) and, with a trailing ``-``, the reverse sign.
+    affine : :obj:`~numpy.ndarray`
+        The voxel-to-RAS+ affine of the data.
+
+    Returns
+    -------
+    :obj:`~numpy.ndarray`
+        The direction, shape ``(3,)``.
+
+    Examples
+    --------
+    >>> affine = np.diag([-2.0, 2.0, 2.0, 1.0])
+    >>> phase_encoding_vector("j-", affine).tolist(), phase_encoding_vector("i", affine).tolist()
+    ([0.0, -1.0, 0.0], [-1.0, 0.0, 0.0])
+
+    """
+    column = np.asarray(affine, dtype=float)[:3, "ijk".index(phase_encoding[0])]
+    sign = -1.0 if phase_encoding.endswith("-") else 1.0
+    return sign * column / np.linalg.norm(column) + 0.0  # no negative zeros
+
+
+def split_phase_encoding(
+    matrix: np.ndarray, direction: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Split a mapping into head motion, then a field along phase encoding.
+
+    A field of eddy currents linear in position moves points only along the
+    phase-encoding direction :math:`u`, so a volume's mapping is :math:`W = E M`, with
+    :math:`M` rigid and :math:`E = I - u s^T` (a scaling along :math:`u` and two shears;
+    a translation along :math:`u` belongs to :math:`M`). The split is unique. Every
+    :math:`v \\perp u` has :math:`v^T A = v^T R` (:math:`A`, :math:`R` the linear parts
+    of :math:`W`, :math:`M`), so :math:`R`'s rows across :math:`u` are :math:`A`'s, and
+    its row along :math:`u` is their cross product; then
+    :math:`s^T = (u^T R - u^T A) R^T`, and :math:`M`'s translation is
+    :math:`E^{-1} t_W`. A mapping outside this family is projected: its part across
+    :math:`u` is taken as rigid.
+
+    Parameters
+    ----------
+    matrix : :obj:`~numpy.ndarray`
+        The mapping :math:`W`, a ``4 x 4`` RAS+ matrix.
+    direction : :obj:`~numpy.ndarray`
+        The phase-encoding direction :math:`u` in world coordinates (its sign does not
+        matter).
+
+    Returns
+    -------
+    motion, field : :obj:`~numpy.ndarray`
+        :math:`M` and :math:`E`, each a ``4 x 4`` RAS+ matrix, with ``field @ motion``
+        equal to ``matrix`` when it is in the family.
+
+    Examples
+    --------
+    >>> motion = np.eye(4)
+    >>> motion[:3, :3] = [[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]
+    >>> motion[:3, 3] = [1.0, 2.0, 3.0]
+    >>> field = np.eye(4)
+    >>> field[1, :3] = [0.02, 0.97, -0.01]
+    >>> found = split_phase_encoding(field @ motion, np.array([0.0, 1.0, 0.0]))
+    >>> np.allclose(found[0], motion), np.allclose(found[1], field)
+    (True, True)
+
+    """
+    matrix = np.asarray(matrix, dtype=float)
+    u = np.asarray(direction, dtype=float)
+    u = u / np.linalg.norm(u)
+    # An orthonormal, right-handed basis {u, v1, v2}
+    helper = np.eye(3)[np.argmin(np.abs(u))]
+    v1 = np.cross(u, helper)
+    v1 /= np.linalg.norm(v1)
+    v2 = np.cross(u, v1)
+
+    linear = matrix[:3, :3]
+    across = np.stack([v1 @ linear, v2 @ linear])
+    # The rows across u of a rotation are orthonormal: project them if they are not
+    left, _, right = np.linalg.svd(across, full_matrices=False)
+    across = left @ right
+    basis = np.stack([u, v1, v2])
+    rotation = basis.T @ np.vstack([np.cross(across[0], across[1]), across])
+
+    slope = (u @ rotation - u @ linear) @ rotation.T
+    field = np.eye(4)
+    field[:3, :3] -= np.outer(u, slope)
+    motion = np.eye(4)
+    motion[:3, :3] = rotation
+    motion[:3, 3] = np.linalg.solve(field[:3, :3], matrix[:3, 3])
+    return motion, field
