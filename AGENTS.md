@@ -124,7 +124,7 @@ Three-layer design: **Data → Model → Estimator**
 
 - **Estimator** (`nifreeze/estimator.py`): Orchestrates model fitting + registration per volume, through a backend (`registration=`), and fills one field of the dataset's estimates (`estimates=`: `motion`, or `eddy` for DWI, registered with `AFFINE` by default). Core method: `Estimator.run(dataset, ...)`. Supports chaining via `prev_model`. Uses joblib for parallel execution.
 
-- **Registration** (`nifreeze/registration/`): the `Registration` interface (`base.py`), built by `RegistrationFactory.init(name)`, with two backends: elastix (`itk-elastix`, the `elastix` extra; the default where installed) and ANTs (through nipype). Settings are YAML files with a section per backend: `registration/config/rigid.yaml` (`RIGID`, the default) and `affine.yaml` (`AFFINE`).
+- **Registration** (`nifreeze/registration/`): the `Registration` interface (`base.py`), built by `RegistrationFactory.init(name)`, with three backends: elastix (`itk-elastix`, the `elastix` extra; the default where installed), ANTs (through nipype), and ITK's registration framework (`itk_backend.py`, the same extra), which estimates eddy currents as head motion and a field along phase encoding (9 parameters). Settings are YAML files with a section per backend: `registration/config/rigid.yaml` (`RIGID`, the default) and `affine.yaml` (`AFFINE`).
 
 - **CLI**: Entry point `nifreeze` → `nifreeze.cli.run:main`, parser in `cli/parser.py`.
 

@@ -40,6 +40,7 @@ import nitransforms as nt
 import numpy as np
 import yaml
 
+from nifreeze.data.dmri.utils import format_phase_encoding
 from nifreeze.data.filtering import ClippingValueError, robust_window
 
 WINDOW_LEVELS = 4095
@@ -49,6 +50,7 @@ CLIPPING = ("sample", "predicted", "both")
 BACKENDS = {
     "ants": "nifreeze.registration.ants:Ants",
     "elastix": "nifreeze.registration.elastix:Elastix",
+    "itk": "nifreeze.registration.itk_backend:ITK",
 }
 """The backends by name, as ``module:class`` (imported when first built)."""
 CONFIG = Path(__file__).parent / "config"
@@ -151,6 +153,10 @@ class Registration(ABC):
         Keep ``predicted_<index>.nii`` and ``sample_<index>.nii``, the values
         registered, and ``aligned_<index>.nii``, the sample with its affine corrected
         by the estimate (a viewer shows it on top of the prediction).
+    phase_encoding : :obj:`str`, optional
+        The images' phase-encoding direction, as BIDS writes
+        ``PhaseEncodingDirection`` (``i``, ``j`` or ``k``, with an optional ``-``).
+        Only backends whose settings restrict a field to it use it (see :meth:`split`).
 
     """
 
@@ -162,8 +168,10 @@ class Registration(ABC):
         num_threads: int | None = None,
         clip: str | bool | None = "both",
         debug_dir: str | Path | None = None,
+        phase_encoding: str | None = None,
     ) -> None:
         self.align_config: Any = align_config  # each backend reads it as it likes
+        self.phase_encoding = format_phase_encoding(phase_encoding)
         self.seed = seed
         self.num_threads = num_threads
         clip = str(clip).lower()
@@ -218,6 +226,32 @@ class Registration(ABC):
                 self.debug_dir / f"aligned_{index:05d}.nii",
             )
         return nt.linear.Affine(matrix)
+
+    def split(
+        self, matrix: np.ndarray, affine: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray] | None:
+        """
+        Split an estimate into head motion and a field, when the backend models both.
+
+        A backend whose settings restrict the field to the phase-encoding direction
+        estimates each mapping as head motion, then that field, and returns the two
+        (see :func:`~nifreeze.registration.utils.split_phase_encoding`). The others
+        return :obj:`None`, and the estimate is stored whole.
+
+        Parameters
+        ----------
+        matrix : :obj:`~numpy.ndarray`
+            An estimate of this backend, a ``4 x 4`` RAS+ matrix.
+        affine : :obj:`~numpy.ndarray`
+            The voxel-to-RAS+ affine of the images it was estimated on.
+
+        Returns
+        -------
+        :obj:`tuple` or :obj:`None`
+            The head motion and the field, each a ``4 x 4`` RAS+ matrix; or :obj:`None`.
+
+        """
+        return None
 
     @abstractmethod
     def _register(

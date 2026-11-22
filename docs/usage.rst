@@ -98,7 +98,12 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
      refitting per held-out volume. Use carefully.
    - ``registration``: the registration backend, ``"elastix"`` or ``"ants"``
      (default: elastix where ``itk-elastix``, the ``elastix`` extra, is installed,
-     ANTs otherwise).
+     ANTs otherwise). With the same extra, ``"itk"`` estimates eddy currents as head
+     motion followed by a field along the phase-encoding direction (9 parameters,
+     :class:`~nifreeze.registration.itk_backend.ITK`), from the ``itk`` section of
+     :data:`~nifreeze.registration.base.AFFINE`; the dataset must know its
+     phase-encoding direction, and the eddy-current pass then refines the head
+     motion and stores the field.
    - ``align_config``: the registration settings, a mapping or a YAML file with a
      section per backend. NiFreeze ships two:
      :data:`~nifreeze.registration.base.RIGID` (the default, for head motion) and

@@ -85,3 +85,33 @@ elastix:
       AutomaticParameterEstimation: ['true']
       MaximumNumberOfIterations: ['50']
       WriteResultImage: ['false']
+
+# ITK's registration framework (#730): the ANTs stages above (also ITK's framework),
+# with head motion and a field along phase encoding estimated together (9 parameters)
+# when `restrict: phase-encoding`; a full affine without it. The optimizer is ITK's
+# regular-step gradient descent, whose steps are set on phantoms (#723).
+itk:
+  winsorize_lower_quantile: 0.0001
+  winsorize_upper_quantile: 0.9998
+  use_histogram_matching: false
+  restrict: phase-encoding
+  stages:
+  - metric: mattes
+    bins: 32
+    sampling: regular
+    sampling_percentage: 0.2
+    smoothing_sigma: 1.0
+    shrink_factor: 2
+    iterations: 100
+    learning_rate: 0.5
+    relaxation: 0.8
+    minimum_step: 0.00001
+  - metric: correlation
+    sampling: random
+    samples: 17000
+    smoothing_sigma: 0.0
+    shrink_factor: 1
+    iterations: 50
+    learning_rate: 0.1
+    relaxation: 0.8
+    minimum_step: 0.00001
