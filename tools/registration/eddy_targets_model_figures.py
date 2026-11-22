@@ -63,7 +63,8 @@ The confirmation, on HCP-YA (``--chosen``, H3's choice on Sherbrooke)
 
 Reported beside: the backend (``i12`` against ``e12``) and the model (``i9`` against
 ``i12``), Test 1's drift on ``e12``, and each arm's medians. Writes
-``<out>/eddy-model-<protocol>-decision.json`` and its tables::
+``<out>/eddy-model-<protocol>-decision.json`` and its tables, and with ``--figures`` the
+report's figures::
 
     uv run tools/registration/eddy_targets_model_figures.py --results <results> \\
         --out <out>
@@ -329,15 +330,246 @@ def _write(path: Path, header: list[str], table: list[list[Any]]) -> None:
         writer.writerows(table)
 
 
+def _interval(value: float, low: float, high: float, scale: float = 1.0, unit: str = "") -> str:
+    return f"{value * scale:+.3f}{unit} [{low * scale:+.3f}, {high * scale:+.3f}]"
+
+
+def comparisons(decision: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
+    """The comparisons on the error, labelled: the rules' first, then those reported."""
+    if "chosen" in decision and "h1" not in decision:
+        return [(f"Confirmation: {decision['chosen']} against pass-e12-u", decision["error"])]
+    pairs = decision["h2"]["pairs"]
+    reported = decision["reported"]
+    return [
+        ("H1: oracle-i9-clean against oracle-e12-clean", decision["h1"]["clean"]),
+        ("H2: pass-i9-u against pass-e12-u", pairs["pass-i9-u"]["error"]),
+        ("H2: pass-i9 against pass-e12", pairs["pass-i9"]["error"]),
+        ("H3: pass-i9-u against pass-i9", decision["h3"]["update"]),
+        ("Backend, oracle: i12 against e12", reported["backend/oracle"]),
+        ("Backend, pass: i12-u against e12-u", reported["backend/pass"]),
+        ("Model, oracle: i9 against i12", reported["model/oracle"]),
+        ("Model, pass: i9-u against i12-u", reported["model/pass"]),
+        (f"Chosen ({decision['h3']['chosen']}) against today's pass", reported["chosen/today"]),
+    ]
+
+
 def tables(decision: dict[str, Any], out: Path) -> None:
-    """Each arm's medians, as a table."""
+    """Each arm's medians, the comparisons, and (Sherbrooke) the volume change and drift."""
+    protocol = decision["protocol"]
     arms = decision["summary"]
     keys = list(next(iter(arms.values())))
     _write(
-        out / f"eddy-model-{decision['protocol']}-arms.csv",
+        out / f"eddy-model-{protocol}-arms.csv",
         ["arm", *keys],
         [[arm, *(f"{values[k]:.6g}" for k in keys)] for arm, values in arms.items()],
     )
+    first = comparisons(decision)[0][1]
+    shells = list(first["shells"])
+    _write(
+        out / f"eddy-model-{protocol}-comparisons.csv",
+        ["Comparison", "Median difference (mm) [95% interval]", "Verdict"]
+        + [f"b={s}" for s in shells],
+        [
+            [
+                label,
+                _interval(c["median"], c["median_low"], c["median_high"]),
+                c["verdict"],
+                *(
+                    f"{c['shells'][s]['median']:+.3f} ({c['shells'][s]['verdict']})"
+                    for s in shells
+                ),
+            ]
+            for label, c in comparisons(decision)
+        ],
+    )
+    if "h2" not in decision:
+        return
+    table = []
+    for arm, pair in decision["h2"]["pairs"].items():
+        change, own = pair["volume_change"], pair["own_volume_change"]
+        table.append(
+            [
+                arm,
+                _interval(own["median"], own["low"], own["high"], 100, "%"),
+                _interval(change["median"], change["median_low"], change["median_high"], 100, "%"),
+                change["verdict"],
+            ]
+        )
+    _write(
+        out / f"eddy-model-{protocol}-expansion.csv",
+        ["Pass", "Its median volume change [95% interval]", "Against elastix 12", "Verdict"],
+        table,
+    )
+    _write(
+        out / f"eddy-model-{protocol}-drift.csv",
+        [
+            "Instant update",
+            "Spearman's rho",
+            "p (rho above zero)",
+            "First third (mm)",
+            "Last third (mm)",
+            "Last minus first [95% interval]",
+            "Drifts",
+        ],
+        [
+            [
+                f"{d['updated']} against {d['held']}",
+                f"{d['rho']:+.3f}",
+                f"{d['p_above']:.4f}",
+                f"{d['first_third_median']:+.3f}",
+                f"{d['last_third_median']:+.3f}",
+                _interval(d["difference"], d["difference_low"], d["difference_high"]),
+                "yes" if d["drifts"] else "no",
+            ]
+            for d in (decision["h3"]["drift"], decision["reported"]["drift/e12"])
+        ],
+    )
+
+
+def forest(decision: dict[str, Any], out: Path) -> None:
+    """Each comparison's median difference of the error, overall and by shell."""
+    from eddy_targets_figures import INK, SHELL_COLORS, SHELL_MARKERS, _margins, _style
+
+    plt = _style()
+    labelled = comparisons(decision)
+    shells = list(labelled[0][1]["shells"])
+    fig, ax = plt.subplots(figsize=(7.5, 0.5 * len(labelled) + 1.2), layout="constrained")
+    _margins(ax, decision["margin_mm"])
+    offsets = np.linspace(-0.27, 0.27, len(shells) + 1)
+    ys = np.arange(len(labelled))[::-1].astype(float)
+    for y, (_, c) in zip(ys, labelled, strict=True):
+        ax.plot([c["median_low"], c["median_high"]], [y + offsets[0]] * 2, color=INK, lw=2)
+        ax.scatter([c["median"]], [y + offsets[0]], color=INK, s=30, marker="D", zorder=3)
+        for k, shell in enumerate(shells):
+            value = c["shells"][shell]
+            ax.plot(
+                [value["median_low"], value["median_high"]],
+                [y + offsets[k + 1]] * 2,
+                color=SHELL_COLORS[k],
+                lw=1.6,
+            )
+            ax.scatter(
+                [value["median"]],
+                [y + offsets[k + 1]],
+                color=SHELL_COLORS[k],
+                marker=SHELL_MARKERS[k],
+                s=24,
+                zorder=3,
+            )
+        ax.text(
+            1.01,
+            y,
+            c["verdict"],
+            transform=ax.get_yaxis_transform(),
+            va="center",
+            color=INK,
+            fontsize=8,
+        )
+    ax.set_yticks(ys, [label for label, _ in labelled])
+    ax.tick_params(axis="y", length=0)
+    ax.spines["left"].set_visible(False)
+    handles = [
+        plt.Line2D([], [], color=INK, marker="D", lw=2, label="All shells"),
+        *[
+            plt.Line2D(
+                [], [], color=SHELL_COLORS[k], marker=SHELL_MARKERS[k], lw=1.6, label=f"b={s}"
+            )
+            for k, s in enumerate(shells)
+        ],
+    ]
+    fig.legend(
+        handles=handles, loc="outside upper center", ncols=len(handles), frameon=False, fontsize=8
+    )
+    ax.set_xlabel("Candidate minus reference, median difference of the error (mm)")
+    fig.savefig(out / f"eddy-model-{decision['protocol']}-comparisons.png", dpi=200)
+    plt.close(fig)
+
+
+def expansion_figure(rows: list[dict[str, Any]], decision: dict[str, Any], out: Path) -> None:
+    """Each arm's median volume change and strains, with its interval."""
+    from eddy_targets_figures import INK, MUTED, SHELL_COLORS, SHELL_MARKERS, _style
+
+    plt = _style()
+    subset, margin = decision["subset"], decision["volume_change_margin"]
+    arms = list(decision["summary"])
+    keys = (
+        ("volume_change", "Volume change"),
+        ("strain_pe", "Strain along phase encoding"),
+        ("strain_across", "Strain across phase encoding"),
+    )
+    fig, axes = plt.subplots(
+        1, len(keys), figsize=(7.5, 0.32 * len(arms) + 1.4), layout="constrained", sharey=True
+    )
+    ys = np.arange(len(arms))[::-1].astype(float)
+    for ax, (key, title) in zip(axes, keys, strict=True):
+        ax.axvline(0, color=MUTED, linewidth=0.8, zorder=0)
+        for value in (-margin, margin):
+            ax.axvline(100 * value, color=MUTED, linewidth=0.7, linestyle=":", zorder=0)
+        for y, arm in zip(ys, arms, strict=True):
+            median = _median(rows, arm, key, subset)
+            ax.plot([100 * median["low"], 100 * median["high"]], [y, y], color=INK, lw=2)
+            ax.scatter([100 * median["median"]], [y], color=INK, marker="D", s=24, zorder=3)
+            chosen = _arm(rows, arm, subset).values()
+            for k, shell in enumerate(sorted({row["shell"] for row in chosen})):
+                values = [row[key] for row in chosen if row["shell"] == shell]
+                ax.scatter(
+                    [100 * np.median(values)],
+                    [y - 0.25],
+                    color=SHELL_COLORS[k],
+                    marker=SHELL_MARKERS[k],
+                    s=14,
+                    zorder=3,
+                    label=f"b={int(shell)}" if (ax is axes[0] and y == ys[0]) else None,
+                )
+        ax.set_title(title, color=INK, fontsize=9, loc="left")
+        ax.set_xlabel("Median (%)")
+    axes[0].set_yticks(ys, arms)
+    axes[0].tick_params(axis="y", length=0)
+    fig.legend(loc="outside upper center", ncols=3, frameon=False, fontsize=8)
+    fig.savefig(out / f"eddy-model-{decision['protocol']}-expansion.png", dpi=200)
+    plt.close(fig)
+
+
+def order_figure(rows: list[dict[str, Any]], decision: dict[str, Any], out: Path) -> None:
+    """The instant update's gain against the order, for ITK's 9 and elastix's 12."""
+    from eddy_targets_figures import INK, RULE, SHELL_COLORS, SHELL_MARKERS, _style
+
+    plt = _style()
+    subset = decision["subset"]
+    panels = (decision["h3"]["drift"], decision["reported"]["drift/e12"])
+    fig, axes = plt.subplots(1, 2, figsize=(7.5, 3.4), layout="constrained", sharey=True)
+    for ax, result in zip(axes, panels, strict=True):
+        updated = _arm(rows, result["updated"], subset)
+        held = _arm(rows, result["held"], subset)
+        common = sorted(set(updated) & set(held), key=lambda index: updated[index]["rank"])
+        ax.axhline(0, color=RULE, linewidth=0.8, zorder=0)
+        for k, shell in enumerate(sorted({updated[i]["shell"] for i in common})):
+            members = [i for i in common if updated[i]["shell"] == shell]
+            ax.scatter(
+                [updated[i]["rank"] for i in members],
+                [updated[i][PRIMARY] - held[i][PRIMARY] for i in members],
+                color=SHELL_COLORS[k],
+                marker=SHELL_MARKERS[k],
+                s=16,
+                edgecolors="white",
+                linewidths=0.4,
+                label=f"b={int(shell)}",
+            )
+        for third in np.array_split(np.array(common), 3):
+            ranks = [updated[i]["rank"] for i in third]
+            gain = np.median([updated[i][PRIMARY] - held[i][PRIMARY] for i in third])
+            ax.plot([min(ranks), max(ranks)], [gain, gain], color=INK, lw=2)
+        ax.set_title(
+            f"{result['updated']} against {result['held']}: rho {result['rho']:+.2f}",
+            color=INK,
+            fontsize=9,
+            loc="left",
+        )
+        ax.set_xlabel("Position in the order of registration")
+    axes[0].set_ylabel("Change in error with the instant update (mm)")
+    axes[0].legend(loc="upper left", frameon=False, fontsize=8)
+    fig.savefig(out / f"eddy-model-{decision['protocol']}-order.png", dpi=200)
+    plt.close(fig)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -346,6 +578,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--protocol", default="sherbrooke", choices=sorted(DECISION_SUBSET))
     parser.add_argument("--chosen", help="H3's choice on Sherbrooke (the confirmation)")
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--figures", action="store_true", help="and the report's figures")
     args = parser.parse_args(argv)
 
     meta = json.loads((args.results / f"{args.protocol}.json").read_text())
@@ -361,6 +594,11 @@ def main(argv: list[str] | None = None) -> int:
     path = args.out / f"eddy-model-{args.protocol}-decision.json"
     path.write_text(json.dumps(decision, indent=2) + "\n")
     tables(decision, args.out)
+    if args.figures:
+        forest(decision, args.out)
+        if args.chosen is None:
+            expansion_figure(rows, decision, args.out)
+            order_figure(rows, decision, args.out)
     print(json.dumps(brief, indent=2))
     return 0
 
