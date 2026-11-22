@@ -22,6 +22,9 @@
 #
 """Head motion and a field along phase encoding, estimated together (#730)."""
 
+import warnings
+
+import nibabel as nb
 import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation
@@ -126,6 +129,100 @@ def test_itk_needs_the_phase_encoding_to_restrict():
     data, mask = _volume()
     with pytest.raises(ValueError, match=NO_PHASE_ENCODING_ERROR_MSG[:40]):
         ITK(_settings(), num_threads=1)(data, data, _affine("ras"), mask, 0, None)
+
+
+def _moved() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """A volume and mask on an oblique grid, a truth (phase encoding ``j``), the moved one."""
+    data, mask = _volume()
+    affine = _affine("oblique")
+    truth = _field(phase_encoding_vector("j", affine)) @ _motion()
+    return data, mask, affine, truth, _move(data, affine, truth)
+
+
+@SKIP_ELASTIX
+def test_itk_keeps_the_values_it_registers(tmp_path):
+    """With ``debug_dir``, the backend writes the prepared images it registered."""
+    from nifreeze.registration.elastix import _winsorize
+    from nifreeze.registration.itk_backend import ITK
+
+    data, mask, affine, _, moving = _moved()
+    settings = _settings()
+    register = ITK(settings, num_threads=1, phase_encoding="j", clip="none", debug_dir=tmp_path)
+
+    register(data, moving, affine, mask, 3, None)
+
+    quantiles = settings["winsorize_lower_quantile"], settings["winsorize_upper_quantile"]
+    for name, values in (("predicted", data), ("sample", moving)):
+        image = nb.Nifti1Image.from_filename(tmp_path / f"{name}_00003.nii")
+        assert np.allclose(image.affine, affine)
+        assert np.allclose(image.get_fdata(), _winsorize(values, *quantiles))
+    assert (tmp_path / "aligned_00003.nii").exists()
+
+
+@SKIP_ELASTIX
+def test_itk_registers_without_winsorizing_and_with_histogram_matching():
+    """The optional preprocessing, with ITK's own seed: the estimate still finds the truth."""
+    from nifreeze.registration.itk_backend import ITK
+
+    data, mask, affine, truth, moving = _moved()
+    settings = _settings()
+    del settings["winsorize_lower_quantile"], settings["winsorize_upper_quantile"]
+    settings["use_histogram_matching"] = True
+    register = ITK(settings, seed=None, num_threads=1, phase_encoding="j", clip="none")
+
+    estimate = register(data, moving, affine, mask, 0, None).matrix
+
+    assert _error(mask, affine, estimate, truth) < 0.05
+
+
+@SKIP_ELASTIX
+@pytest.mark.parametrize("num_threads", [None, 1])
+def test_itk_restores_the_thread_counts(num_threads):
+    """ITK's thread counts are process-wide: a registration leaves them as it found them."""
+    import itk
+
+    from nifreeze.registration.itk_backend import ITK
+
+    threader = itk.MultiThreaderBase
+    data, mask, affine, _, moving = _moved()
+    before = (
+        threader.GetGlobalMaximumNumberOfThreads(),
+        threader.GetGlobalDefaultNumberOfThreads(),
+    )
+
+    ITK(_settings(), num_threads=num_threads, phase_encoding="j", clip="none")(
+        data, moving, affine, mask, 0, None
+    )
+
+    after = (
+        threader.GetGlobalMaximumNumberOfThreads(),
+        threader.GetGlobalDefaultNumberOfThreads(),
+    )
+    assert after == before
+
+
+@SKIP_ELASTIX
+def test_itk_starts_from_the_projection_of_a_mapping_outside_the_family():
+    """
+    A start outside the 9-parameter family (e.g., an earlier 12-parameter estimate) warns,
+    and the registration starts from its projection; a start in the family does not warn.
+    """
+    from nifreeze.registration.itk_backend import ITK, OUTSIDE_FAMILY_WARN_MSG
+
+    data, mask, affine, truth, moving = _moved()
+    frame = affine[:3, :3] / np.linalg.norm(affine[:3, :3], axis=0)
+    across = np.eye(4)
+    across[:3, :3] = frame @ np.diag([1.03, 1.0, 1.0]) @ frame.T  # a scaling along i
+    register = ITK(_settings(), num_threads=1, phase_encoding="j", clip="none")
+
+    with pytest.warns(UserWarning, match=OUTSIDE_FAMILY_WARN_MSG.format(index=4)[:40]):
+        estimate = register(data, moving, affine, mask, 4, across @ _motion()).matrix
+    assert _error(mask, affine, estimate, truth) < 0.05
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        register(data, moving, affine, mask, 4, truth)
+    assert not [w for w in caught if "initial mapping" in str(w.message)]
 
 
 @pytest.mark.parametrize(
