@@ -32,3 +32,4 @@ approach.
    error-audit
    elastix-settings
    elastix-accuracy
+   eddy-targets
