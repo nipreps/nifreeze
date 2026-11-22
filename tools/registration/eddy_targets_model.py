@@ -231,11 +231,9 @@ def run_cascade(args: argparse.Namespace) -> None:
     seconds: dict[str, float] = {}
     run = {"omp_nthreads": args.threads, "n_jobs": args.threads, "seed": SEED}
     levels = _cascade(load(), run, seconds)
-    np.savez_compressed(
-        _path(args, "cascade"),
-        **{f"cascade/{model}": value for model, value in levels.items()},
-        seconds=np.array([seconds[f"cascade/{model}"] for model in CASCADE]),
-    )
+    arrays: dict[str, Any] = {f"cascade/{model}": value for model, value in levels.items()}
+    arrays["seconds"] = np.array([seconds[f"cascade/{model}"] for model in CASCADE])
+    np.savez_compressed(_path(args, "cascade"), **arrays)
 
 
 def run_arm(args: argparse.Namespace, arm: str, cascade: np.ndarray | None) -> None:
@@ -278,14 +276,14 @@ def run_arm(args: argparse.Namespace, arm: str, cascade: np.ndarray | None) -> N
         seconds = np.full(len(data), np.nan)
         failed = np.zeros(len(data), dtype=bool)
         extra = {"motion": np.asarray(data.motion), "eddy": np.asarray(data.eddy)}
-    np.savez_compressed(
-        _path(args, arm),
-        estimates=estimates,
-        seconds=seconds,
-        failed=failed,
-        wall=perf_counter() - began,
+    arrays: dict[str, Any] = {
+        "estimates": estimates,
+        "seconds": seconds,
+        "failed": failed,
+        "wall": perf_counter() - began,
         **extra,
-    )
+    }
+    np.savez_compressed(_path(args, arm), **arrays)
     print(f"{arm}: {perf_counter() - began:.0f} s", flush=True)
 
 
@@ -528,13 +526,9 @@ def main(argv: list[str] | None = None) -> int:
             "Provenance": provenance() | {"ItkElastix": version("itk-elastix")},
         },
     )
-    np.savez_compressed(
-        args.out / f"{args.protocol}.npz",
-        **estimates,
-        cascade=cascade,
-        **{f"truth/{name}": value for name, value in truth.items()},
-        order=np.asarray(order),
-    )
+    arrays: dict[str, Any] = {**estimates, "cascade": cascade, "order": np.asarray(order)}
+    arrays |= {f"truth/{name}": value for name, value in truth.items()}
+    np.savez_compressed(args.out / f"{args.protocol}.npz", **arrays)
     print(f"wrote {table}; checks {checks}", flush=True)
     return 0
 
