@@ -56,7 +56,7 @@ H3, the instant update
     one-sided permutation p below 0.05, and the last third's median gain above the first
     third's by more than the margin, the bootstrap interval of the difference entirely
     above it (Test 1's statistics, in the direction of a drift). If H3 holds, the pass
-    keeps the instant update; otherwise it holds its targets.
+    keeps the instant update; otherwise it takes the delayed update.
 The confirmation, on HCP-YA (``--chosen``, H3's choice on Sherbrooke)
     The chosen pass against ``pass-e12-u``: "better" or "not worse" on the error; and
     ``oracle-i9``'s median time at most :data:`TIME_RATIO` times ``oracle-e12``'s.

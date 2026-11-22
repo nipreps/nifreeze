@@ -692,9 +692,10 @@ encoding is along ``j`` (world y).
     The eddy-current pass (gp-loo) from the cascade's head motion ``m̂`` (Test 1's), with
     the instant update.
 ``pass-<registration>``
-    The same pass with its targets held: its model is built on the copy realigned by
-    ``m̂``, which the pass never updates. These are Test 1's ``cascade-corrected``
-    targets.
+    The same pass with the *delayed update*: its model is built on the copy realigned
+    by ``m̂``, and the pass's estimates are applied only after the pass, so every
+    volume's target is predicted from the same training data. These are Test 1's
+    ``cascade-corrected`` targets.
     The command line's ``--no-instant-update`` is different: it trains every level on
     the original volumes.
 
@@ -734,23 +735,24 @@ H2
     registration is at most 1.1 times ``oracle-e12``'s, over every volume.
 H3
     ``pass-i9-u`` is "better" or "not worse" than ``pass-i9``, and does not drift: its
-    gain against the held pass does not grow with the order of registration (Test 1's
-    statistics, in the direction of a drift).
-    If H3 holds, the pass keeps the instant update; otherwise it holds its targets.
+    gain against the delayed update does not grow with the order of registration
+    (Test 1's statistics, in the direction of a drift).
+    If H3 holds, the pass keeps the instant update; otherwise it takes the delayed
+    update.
 The confirmation
     On HCP-YA, the pass H3 chose is "better" or "not worse" than ``pass-e12-u``, and
     ``oracle-i9``'s median time is at most 1.1 times ``oracle-e12``'s.
 
 If H1, H2 and the confirmation hold, a follow-up core change makes the 9-parameter
-registration the eddy-current pass's default; if H3 chose held targets, that change also
-adds a per-pass switch for them.
+registration the eddy-current pass's default; if H3 chose the delayed update, that
+change also adds a per-pass switch for it.
 Otherwise the default stays, and the report says which rule failed.
 
 Results on Sherbrooke
 ~~~~~~~~~~~~~~~~~~~~~
 By the rules, H1 and H2 hold and H3 fails.
 The 9-parameter registration is more accurate than elastix's affine, in about the same
-time, and the pass holds its targets.
+time, and the pass takes the delayed update.
 
 .. figure:: ../_static/registration/eddy-targets/eddy-model-sherbrooke-comparisons.png
    :alt: The median difference of the error for each comparison, overall and by shell.
@@ -770,16 +772,17 @@ time, and the pass holds its targets.
   0.036 mm.
 * **H2 holds.**
   The 9-parameter pass is "better" than elastix's with the instant update
-  (−0.110 mm [−0.139, −0.075]) and with its targets held (−0.061 mm [−0.082, −0.053]),
+  (−0.110 mm [−0.139, −0.075]) and with the delayed update (−0.061 mm
+  [−0.082, −0.053]),
   most at b=1000 (−0.246 and −0.130 mm).
   Its volume change is "better" (−0.504% and −0.297%), and neither pass contracts;
   the expansion is reduced, not removed (+0.276% and +0.173% remain).
   On the oracle, its median time per registration is 0.99 times elastix's, over every
   volume (2.40 against 2.42 s).
 * **H3 fails.**
-  With the 9 parameters, the instant update against held targets is "inconclusive"
-  (+0.011 mm [−0.001, +0.039]) and "worse" at b=1000 (+0.093 mm).
-  So the pass holds its targets, and HCP-YA's confirmation tests ``pass-i9``.
+  With the 9 parameters, the instant update against the delayed update is
+  "inconclusive" (+0.011 mm [−0.001, +0.039]) and "worse" at b=1000 (+0.093 mm).
+  So the pass takes the delayed update, and HCP-YA's confirmation tests ``pass-i9``.
 * **Against today's pass** (reported, not a rule), the chosen ``pass-i9`` is "better":
   −0.120 mm
   [−0.165, −0.057], with −0.295 mm at b=1000, −0.054 mm at b=2000 and −0.013 mm at
@@ -808,8 +811,8 @@ The 9 parameters cannot stretch the volume across phase encoding, and on the ora
 the volume change falls by about two thirds (from +0.348% to +0.131%).
 They do not take the noise's bias away: along phase encoding, the 9-parameter arms
 stretch more than elastix's (+0.39% against +0.27% on the oracle, +0.52% against +0.35%
-with held targets, +0.83% against +0.72% with the instant update), and the volume still
-grows by +0.17% with held targets, beyond the margin.
+with the delayed update, +0.83% against +0.72% with the instant update), and the volume
+still grows by +0.17% with the delayed update, beyond the margin.
 
 .. csv-table:: The rule on the volume change: each 9-parameter pass's median volume change,
    and its difference from elastix's with the same setting of the instant update.
@@ -823,7 +826,7 @@ The instant update and the order of registration
    :alt: The change in error with the instant update against the order of registration.
 
    The change in each volume's error with the instant update (the pass with it minus the
-   pass with its targets held), against the volume's position in the order of
+   pass with the delayed update), against the volume's position in the order of
    registration, with each third's median (black), on the 64 confirmation volumes.
    Above zero, the instant update made the volume's error larger.
    Left, the 9 parameters; right, elastix's 12.
@@ -835,7 +838,7 @@ The trend is there all the same (Spearman's ρ +0.23, one-sided p 0.032), mostly
 b=1000.
 Elastix drifts, as in Test 1: on these 64 volumes, ρ +0.36 (p 0.002), and +0.220 mm
 [+0.059, +0.451] between the thirds (Test 1, on all 192 volumes: ρ +0.27).
-With either registration, held targets have the lower median error (0.495 against
+With either registration, the delayed update has the lower median error (0.495 against
 0.604 mm with elastix, 0.423 against 0.503 mm with the 9 parameters); with the 9
 parameters, the paired comparison is "inconclusive" (H3).
 
