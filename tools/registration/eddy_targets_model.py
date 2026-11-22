@@ -51,9 +51,10 @@ The arms:
     ``estimates="eddy"``, one thread per registration) from the cascade's head motion
     ``m̂``, with the instant update: as Test 1's ``pass``.
 ``pass-<registration>``
-    The same pass with its targets held: its model is built on the copy realigned by
+    The same pass with the delayed update: its model is built on the copy realigned by
     ``m̂``, which the pass leaves as it is (a model built on another dataset keeps reading
-    it). Its targets are Test 1's ``cascade-corrected``.
+    it), so its estimates apply only after the pass. Its targets are Test 1's
+    ``cascade-corrected``.
 
 The phase-encoding direction is the copy's (its distortion's axis, as BIDS writes it).
 ``m̂`` is Test 1's (``--cascade``, Test 1's ``.npz``) or this script's (the cascade of
@@ -264,7 +265,7 @@ def run_arm(args: argparse.Namespace, arm: str, cascade: np.ndarray | None) -> N
         data = load()
         data.phase_encoding = pe
         data.motion = cascade.copy()
-        # Held targets: a model built on the copy realigned by m̂ keeps reading that view
+        # Delayed update: a model built on the copy realigned by m̂ keeps reading that view
         model = MODEL if flag else ModelFactory.init(model=MODEL, dataset=data.realigned())
         Estimator(
             model,
