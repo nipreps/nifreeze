@@ -276,7 +276,7 @@ def decide(rows: list[dict[str, Any]], meta: dict[str, Any]) -> dict[str, Any]:
     }
     update = compare(rows, "pass-i9-u", "pass-i9", PRIMARY, margin, subset)
     moving = drift(rows, "pass-i9-u", "pass-i9", margin, subset)
-    h3 = {
+    h3: dict[str, Any] = {
         "update": update,
         "drift": moving,
         "holds": bool(_ok(update) and not moving["drifts"]),

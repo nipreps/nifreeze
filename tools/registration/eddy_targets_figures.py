@@ -207,9 +207,9 @@ def outcome(result: list[dict[str, Any]]) -> dict[str, Any]:
         chosen = max(qualified, key=lambda step: step["median"])
         return {"step": chosen["step"], "means": OUTCOMES[chosen["step"]], "reaches_half": True}
     worse = [s for s in result if s["step"] != "total" and s["verdict"] == "worse"]
-    chosen = max(worse, key=lambda step: step["median"]) if worse else None
+    largest = max(worse, key=lambda step: step["median"]) if worse else None
     return {
-        "step": None if chosen is None else chosen["step"],
+        "step": None if largest is None else largest["step"],
         "means": "no step reaches half: Test 2 takes the largest step that is worse",
         "reaches_half": False,
     }
@@ -295,10 +295,10 @@ def reported(
             result["kappa"][key] = kappas
         passed = _column(rows, "pass", model, PRIMARY)
         rank = _column(rows, "pass", model, "rank")
-        shell = _column(rows, "pass", model, "shell")
+        shell_of = _column(rows, "pass", model, "shell")
         result["pass_order"][model] = {}
-        for value in sorted(set(shell.values())):
-            members = [i for i in passed if shell[i] == value]
+        for value in sorted(set(shell_of.values())):
+            members = [i for i in passed if shell_of[i] == value]
             rho, p = stats.spearmanr([rank[i] for i in members], [passed[i] for i in members])
             result["pass_order"][model][str(int(value))] = {"rho": float(rho), "p": float(p)}
         start = _column(rows, "cascade-corrected", model, PRIMARY)
