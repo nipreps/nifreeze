@@ -1,0 +1,3 @@
+Model,Spearman's rho,One-sided p (rho < 0),Two-sided p,First third (mm),Last third (mm),Difference (mm),Holds
+gp-loo,+0.27,1.00,2.0e-04,+0.008,+0.131,"+0.123 [+0.060, +0.237]",no
+gqi-krr,+0.51,1.00,2.2e-14,+0.018,+0.213,"+0.194 [+0.123, +0.263]",no

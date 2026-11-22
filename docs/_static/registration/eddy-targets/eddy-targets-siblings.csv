@@ -1,0 +1,7 @@
+Model,Same-direction volumes registered before,Volumes,Median change (mm)
+gp-loo,0,64,+0.009
+gp-loo,1,64,+0.035
+gp-loo,2,64,+0.128
+gqi-krr,0,64,+0.020
+gqi-krr,1,64,+0.069
+gqi-krr,2,64,+0.199

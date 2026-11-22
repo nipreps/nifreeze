@@ -32,7 +32,7 @@
 Reads ``<protocol>.{tsv,json}`` and ``<protocol>-cascade.tsv``, which
 ``tools/registration/eddy_targets.py`` wrote, and applies the rules of Test 1's working
 hypothesis to the deciding model (the first of the run's models), on the error per
-volume of the whole mapping, in the frame of its start (:data:`PRIMARY`):
+volume of the whole mapping, in the frame of its targets (:data:`PRIMARY`):
 
 steps
     Each step compares consecutive arms by :func:`~experiments.paired_comparison`,
@@ -71,8 +71,15 @@ from scipy import stats
 MARGIN = 0.01
 """The margin of the comparisons, in voxels."""
 PRIMARY = "whole_frame_mean"
-"""The error the rules use: the whole mapping, in the frame of its start (mean, mm)."""
-ERRORS = ("whole_frame_mean", "whole_frame_max", "eddy_mean", "eddy_max")
+"""The error the rules use: the whole mapping, in the frame of its targets (mean, mm)."""
+ERRORS = (
+    "whole_frame_mean",
+    "whole_frame_max",
+    "whole_offset_mean",
+    "whole_offset_max",
+    "eddy_mean",
+    "eddy_max",
+)
 """The errors whose medians the report gives."""
 NONE = "none"
 """The model of the oracle's arms."""
@@ -237,6 +244,7 @@ def order(rows: list[dict[str, Any]], model: str, margin: float) -> dict[str, An
     return {
         "n": len(common),
         "rho": rho,
+        "p_two_sided": float(stats.spearmanr(ranks, gains).pvalue),
         "p_permutation": p,
         "first_third_median": float(np.median(first)),
         "last_third_median": float(np.median(last)),
@@ -305,6 +313,7 @@ def reported(
             for count in sorted({before[i] for i in start})
         }
         result.setdefault("steps", {})[model] = steps(rows, model, margin)
+        result.setdefault("order", {})[model] = order(rows, model, margin)
     result["cascade_order"] = {}
     for model in dict.fromkeys(row["model"] for row in cascade):
         level = [row for row in cascade if row["model"] == model]
@@ -342,33 +351,48 @@ def _write(path: Path, header: list[str], rows: list[list[Any]]) -> None:
 
 
 def _interval(value: float, low: float, high: float) -> str:
-    return f"{value:+.3f} [{low:+.3f}, {high:+.3f}]"
+    def signed(number: float) -> str:
+        # Adding zero turns a rounded -0.0 into 0.0
+        return f"{round(number, 3) + 0.0:+.3f}"
+
+    return f"{signed(value)} [{signed(low)}, {signed(high)}]"
 
 
 def tables(decision: dict[str, Any], extra: dict[str, Any], out: Path) -> None:
     """The report's tables."""
     shells = list(decision["steps"][0]["shells"])
-    _write(
-        out / "eddy-targets-steps.csv",
-        ["Step", "Measures", "Overall (mm)", *[f"b={s} (mm)" for s in shells], "Share", "Verdict"],
-        [
+    for model, steps_ in extra["steps"].items():
+        # The deciding model's table, and one per other model
+        suffix = "" if model == decision["model"] else f"-{model}"
+        _write(
+            out / f"eddy-targets-steps{suffix}.csv",
             [
-                step["step"],
-                step["name"],
-                _interval(step["median"], step["median_low"], step["median_high"]),
-                *[
-                    _interval(v["median"], v["median_low"], v["median_high"])
-                    for v in step["shells"].values()
-                ],
-                f"{step['share']:.2f}",
-                step["verdict"],
-            ]
-            for step in decision["steps"]
-        ],
-    )
+                "Step",
+                "Measures",
+                "All volumes (mm)",
+                *[f"b={s} (mm)" for s in shells],
+                "Share",
+                "Holm p",
+            ],
+            [
+                [
+                    step["step"],
+                    step["name"],
+                    *[
+                        _interval(v["median"], v["median_low"], v["median_high"])
+                        + f" {v['verdict']}"
+                        for v in (step, *step["shells"].values())
+                    ],
+                    f"{round(step['share'], 2) + 0.0:.2f}",
+                    f"{step['holm_p']:.1e}",
+                ]
+                for step in steps_
+            ],
+        )
     medians = extra["medians"]
     for name, mean, largest in (
         ("whole", "whole_frame_mean", "whole_frame_max"),
+        ("offset", "whole_offset_mean", "whole_offset_max"),
         ("eddy", "eddy_mean", "eddy_max"),
     ):
         _write(
@@ -391,6 +415,74 @@ def tables(decision: dict[str, Any], extra: dict[str, Any], out: Path) -> None:
             for key, values in extra["kappa"].items()
         ],
     )
+    _write(
+        out / "eddy-targets-order.csv",
+        [
+            "Model",
+            "Spearman's rho",
+            "One-sided p (rho < 0)",
+            "Two-sided p",
+            "First third (mm)",
+            "Last third (mm)",
+            "Difference (mm)",
+            "Holds",
+        ],
+        [
+            [
+                model,
+                f"{o['rho']:+.2f}",
+                f"{o['p_permutation']:.2f}",
+                f"{o['p_two_sided']:.1e}",
+                f"{o['first_third_median']:+.3f}",
+                f"{o['last_third_median']:+.3f}",
+                _interval(o["difference"], o["difference_low"], o["difference_high"]),
+                "yes" if o["holds"] else "no",
+            ]
+            for model, o in extra["order"].items()
+        ],
+    )
+    _write(
+        out / "eddy-targets-order-shells.csv",
+        ["Model", *[f"b={s}" for s in shells]],
+        [
+            [model, *[f"{v['rho']:+.2f} (p {v['p']:.1e})" for v in values.values()]]
+            for model, values in extra["pass_order"].items()
+        ],
+    )
+    _write(
+        out / "eddy-targets-order-cascade.csv",
+        ["Cascade level", "Spearman's rho", "p"],
+        [
+            [f"{level + 1}: {model}", f"{v['rho']:+.2f}", f"{v['p']:.1e}"]
+            for level, (model, v) in enumerate(extra["cascade_order"].items())
+        ],
+    )
+    _write(
+        out / "eddy-targets-siblings.csv",
+        ["Model", "Same-direction volumes registered before", "Volumes", "Median change (mm)"],
+        [
+            [model, count, v["n"], f"{v['median_gain']:+.3f}"]
+            for model, counts in extra["siblings"].items()
+            for count, v in counts.items()
+        ],
+    )
+    if "reproduction" in decision:
+        _write(
+            out / "eddy-targets-reproduction.csv",
+            ["Score", "Shells", "This run (mm)", "#721 (mm)", "Difference (mm)"],
+            [
+                [
+                    name,
+                    which if which == "all" else f"b={which}",
+                    f"{v['here']:.3f}",
+                    f"{v['record']:.3f}",
+                    f"{v['difference']:+.3f}",
+                ]
+                for name, shells_ in decision["reproduction"].items()
+                if name != "within_tolerance"
+                for which, v in shells_.items()
+            ],
+        )
 
 
 INK, MUTED, RULE = "#0b0b0b", "#52514e", "#d9d8d4"
@@ -452,7 +544,7 @@ def forest(decision: dict[str, Any], out: Path) -> None:
         ax.text(
             1.01,
             y,
-            f"{step['verdict']}, share {step['share']:.2f}",
+            f"{step['verdict']}, share {round(step['share'], 2) + 0.0:.2f}",
             transform=ax.get_yaxis_transform(),
             va="center",
             color=INK,
@@ -516,7 +608,7 @@ def order_figure(
         loc="left",
     )
     ax.set_xlabel("Position in the order of registration")
-    ax.set_ylabel("Gain of the instant update (mm)")
+    ax.set_ylabel("Change in error with the instant update (mm)")
     ax.legend(loc="lower left", frameon=False, fontsize=8)
     fig.savefig(out / "eddy-targets-order.png", dpi=200, facecolor="white")
     plt.close(fig)

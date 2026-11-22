@@ -1,0 +1,13 @@
+Arm,Model,All,b=1000,b=2000,b=3500
+oracle,none,1.00,1.01,1.00,1.00
+oracle-cascade,none,1.00,1.00,1.00,1.00
+reference,gp-loo,1.00,1.01,1.00,0.99
+corrected,gp-loo,1.00,1.01,1.01,1.00
+motion-corrected,gp-loo,0.74,0.91,0.69,0.69
+cascade-corrected,gp-loo,0.78,0.91,0.72,0.76
+pass,gp-loo,0.84,0.88,0.76,0.86
+reference,gqi-krr,0.99,0.99,1.00,0.99
+corrected,gqi-krr,1.00,1.00,1.00,1.00
+motion-corrected,gqi-krr,0.77,0.88,0.75,0.75
+cascade-corrected,gqi-krr,0.79,0.90,0.75,0.77
+pass,gqi-krr,0.85,0.91,0.79,0.84
