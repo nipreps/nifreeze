@@ -38,7 +38,9 @@ clipped to the sample's window and coded to 12 bits (as ``clip`` selects), then
 winsorized and histogram-matched when the settings ask. Only the fixed image is masked.
 
 Settings are the ``itk`` sections of :data:`~nifreeze.registration.base.AFFINE` (or of
-any such file), with one registration per stage.
+any such file), with one registration per stage. A stage samples its metric on a share of
+the grid (``sampling_percentage``), or at a number of points within the mask
+(``samples``), as elastix's random samplers do: its cost then does not grow with the grid.
 """
 
 from __future__ import annotations
@@ -74,6 +76,7 @@ STAGE_KEYS = {
     "bins",
     "sampling",
     "sampling_percentage",
+    "samples",
     "smoothing_sigma",
     "shrink_factor",
     "iterations",
@@ -89,6 +92,8 @@ NO_STAGES_ERROR_MSG = "ITK settings need at least one stage"
 """Settings without stages error message."""
 UNKNOWN_VALUE_ERROR_MSG = "Unknown ITK {key} {value!r}: expected one of {values}"
 """Unknown value of a setting error message."""
+BOTH_SAMPLINGS_ERROR_MSG = "An ITK stage takes sampling_percentage or samples, not both"
+"""A stage with both a share and a count of samples error message."""
 NO_PHASE_ENCODING_ERROR_MSG = (
     "The settings restrict the field to phase encoding, but its direction is unknown: "
     "give the backend phase_encoding (the dataset's, as BIDS writes it)."
@@ -139,6 +144,8 @@ def get_settings(align_config: Mapping[str, Any] | str | PathLike | None = None)
         ("restrict", loaded.get("restrict"), (None, *RESTRICTIONS))
     ]
     for stage in loaded["stages"]:
+        if {"sampling_percentage", "samples"} <= set(stage):
+            raise ValueError(BOTH_SAMPLINGS_ERROR_MSG)
         checks += [
             ("metric", stage.get("metric"), METRICS),
             ("sampling", stage.get("sampling", "none"), SAMPLINGS),
@@ -282,8 +289,11 @@ class ITK(Registration):
             mask_object.Update()
 
             transform, members, weights = self._transform(start, centre, index)
+            inside = int(mask.sum())
             self.stops = [
-                self._stage(stage, fixed_image, moving_image, mask_object, transform, weights)
+                self._stage(
+                    stage, fixed_image, moving_image, (mask_object, inside), transform, weights
+                )
                 for stage in settings["stages"]
             ]
             total = np.eye(4)
@@ -335,13 +345,18 @@ class ITK(Registration):
         stage: Mapping[str, Any],
         fixed: Any,
         moving: Any,
-        mask: Any,
+        mask: tuple[Any, int],
         transform: Any,
         weights: list[float] | None,
     ) -> tuple[int, str]:
-        """Optimize ``transform`` in place with one stage's settings; how it stopped."""
+        """
+        Optimize ``transform`` in place with one stage's settings; how it stopped.
+
+        ``mask`` is the fixed image's mask, and how many voxels it holds.
+        """
         import itk
 
+        mask, inside = mask
         image_type = type(fixed)
         if stage["metric"] == "mattes":
             metric = itk.MattesMutualInformationImageToImageMetricv4[image_type, image_type].New()
@@ -379,7 +394,12 @@ class ITK(Registration):
                 "random": strategies.MetricSamplingStrategy_RANDOM,
             }[stage.get("sampling", "none")]
         )
-        method.SetMetricSamplingPercentage(float(stage.get("sampling_percentage", 1.0)))
+        percentage = float(stage.get("sampling_percentage", 1.0))
+        if "samples" in stage:
+            # ITK draws a share of the (shrunk) grid and drops the points outside the mask
+            shrink = int(stage.get("shrink_factor", 1))
+            percentage = min(1.0, int(stage["samples"]) * shrink**3 / max(inside, 1))
+        method.SetMetricSamplingPercentage(percentage)
         if self.seed is not None:
             method.MetricSamplingReinitializeSeed(int(self.seed))
         method.Update()

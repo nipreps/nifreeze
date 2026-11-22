@@ -44,16 +44,10 @@ def _field(direction: np.ndarray, slope: np.ndarray = SLOPE) -> np.ndarray:
 
 
 def _settings(restrict: bool = True) -> dict:
-    """
-    The packaged ITK stages, without histogram matching.
-
-    The matching thresholds at the mean intensity, which leaves out real data's
-    background but half of a synthetic volume that has none.
-    """
+    """The packaged ITK stages, with or without the restriction to phase encoding."""
     from nifreeze.registration.itk_backend import get_settings
 
     settings = get_settings()
-    settings.pop("use_histogram_matching")
     if not restrict:
         settings.pop("restrict")
     return settings
@@ -140,6 +134,10 @@ def test_itk_needs_the_phase_encoding_to_restrict():
         ({"smoothing": 1.0}, r"Unknown ITK settings: \['smoothing'\]"),
         ({"restrict": "readout"}, "Unknown ITK restrict 'readout'"),
         ({"stages": []}, "at least one stage"),
+        (
+            {"stages": [{"metric": "correlation", "sampling_percentage": 0.1, "samples": 100}]},
+            "sampling_percentage or samples, not both",
+        ),
     ],
 )
 def test_itk_settings_are_validated(change, message):
