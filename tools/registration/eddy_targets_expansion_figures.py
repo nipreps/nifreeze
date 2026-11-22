@@ -257,12 +257,14 @@ def figure(decision: dict[str, Any], out: Path) -> None:
     ys = np.arange(len(keys))[::-1]
     for y, key in zip(ys, keys, strict=True):
         c = decision["cells"][key]
-        ax.plot([100 * c["all"]["low"], 100 * c["all"]["high"]], [y, y], color=INK, lw=2)
-        ax.scatter([100 * c["all"]["median"]], [y], color=INK, marker="D", s=26, zorder=3)
+        ax.plot(
+            [100 * c["all"]["low"], 100 * c["all"]["high"]], [y + 0.27, y + 0.27], color=INK, lw=2
+        )
+        ax.scatter([100 * c["all"]["median"]], [y + 0.27], color=INK, marker="D", s=26, zorder=3)
         for k, s in enumerate(shells):
             ax.scatter(
                 [100 * c[s]["median"]],
-                [y],
+                [y + 0.09 - 0.18 * k],
                 color=SHELL_COLORS[k],
                 marker=SHELL_MARKERS[k],
                 s=16,
