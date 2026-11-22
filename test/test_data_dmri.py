@@ -22,6 +22,7 @@
 #
 """Unit tests exercising the dMRI data structure."""
 
+import json
 import re
 import tracemalloc
 import warnings
@@ -661,6 +662,59 @@ def test_from_nii_drops_b0_while_loading(tmp_path, row_major_gradients, with_b0_
     assert dwi.bzero is not None
     assert np.allclose(dwi.bzero, expected_bzero)
     assert peak < 1.4 * data.nbytes
+
+
+@pytest.mark.parametrize(
+    ("sidecar", "argument", "expected"),
+    [
+        (None, None, None),
+        ({"RepetitionTime": 3.0}, None, None),
+        ({"PhaseEncodingDirection": "j-"}, None, "j-"),
+        ({"PhaseEncodingDirection": "j-"}, "i", "i"),
+        (None, "k", "k"),
+    ],
+    ids=["none", "sidecar-silent", "sidecar", "argument-over-sidecar", "argument"],
+)
+def test_phase_encoding_loads_and_round_trips(tmp_path, sidecar, argument, expected):
+    """The direction comes from the argument, or else the BIDS sidecar, and nfHDF5 keeps it."""
+    rng = np.random.default_rng(1234)
+    n_volumes = 8
+    bvecs = rng.standard_normal((n_volumes, 3))
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+    np.savetxt(tmp_path / "grads.txt", np.column_stack((bvecs, np.full(n_volumes, 1000.0))))
+    nb.Nifti1Image(rng.random((6, 6, 4, n_volumes), dtype=np.float32), np.eye(4)).to_filename(
+        tmp_path / "sub-01_dwi.nii.gz"
+    )
+    if sidecar is not None:
+        (tmp_path / "sub-01_dwi.json").write_text(json.dumps(sidecar))
+
+    dwi = from_nii(
+        tmp_path / "sub-01_dwi.nii.gz",
+        gradients_file=tmp_path / "grads.txt",
+        phase_encoding=argument,
+    )
+    assert dwi.phase_encoding == expected
+
+    dwi.to_filename(tmp_path / "dwi.h5")
+    assert DWI.from_filename(tmp_path / "dwi.h5").phase_encoding == expected
+
+
+def test_phase_encoding_is_validated(tmp_path):
+    """A direction that is not BIDS's, from a sidecar or set later, raises."""
+    rng = np.random.default_rng(1234)
+    bvecs = rng.standard_normal((6, 3))
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+    np.savetxt(tmp_path / "grads.txt", np.column_stack((bvecs, np.full(6, 1000.0))))
+    nb.Nifti1Image(rng.random((6, 6, 4, 6), dtype=np.float32), np.eye(4)).to_filename(
+        tmp_path / "dwi.nii"
+    )
+    (tmp_path / "dwi.json").write_text(json.dumps({"PhaseEncodingDirection": "AP"}))
+    with pytest.raises(ValueError, match="Unknown phase-encoding direction 'AP'"):
+        from_nii(tmp_path / "dwi.nii", gradients_file=tmp_path / "grads.txt")
+
+    dwi = from_nii(tmp_path / "dwi.nii", gradients_file=tmp_path / "grads.txt", phase_encoding="j")
+    with pytest.raises(ValueError, match="Unknown phase-encoding direction 'y'"):
+        dwi.phase_encoding = "y"
 
 
 @pytest.mark.random_gtab_data(10, (1000, 2000), 1)
