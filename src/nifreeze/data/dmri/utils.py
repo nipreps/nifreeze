@@ -21,6 +21,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import numpy.typing as npt
 
@@ -72,6 +74,61 @@ BVEC_FRAMES = ("fsl", "voxel")
 
 BVEC_FRAME_ERROR_MSG = "Unknown b-vector frame {frame!r}: expected one of {frames}."
 """Unknown b-vector frame error message."""
+
+PHASE_ENCODING_DIRECTIONS = ("i", "i-", "j", "j-", "k", "k-")
+"""BIDS's ``PhaseEncodingDirection`` values: an axis of the data array, and its sign."""
+
+PHASE_ENCODING_ERROR_MSG = (
+    "Unknown phase-encoding direction {value!r}: expected one of "
+    + ", ".join(PHASE_ENCODING_DIRECTIONS)
+    + " (BIDS's PhaseEncodingDirection)."
+)
+"""Unknown phase-encoding direction error message."""
+
+
+def format_phase_encoding(value: Any) -> str | None:
+    """
+    Validate a phase-encoding direction, as BIDS writes ``PhaseEncodingDirection``.
+
+    The letter names an axis of the data array (``i``, ``j`` or ``k``, its first,
+    second and third), and a trailing ``-`` reverses the direction. As HDF5 returns a
+    stored string as bytes or a 0-d array, both are accepted.
+
+    Parameters
+    ----------
+    value : :obj:`str`, :obj:`bytes`, :obj:`~numpy.ndarray` or :obj:`None`
+        The direction, or :obj:`None` if unknown.
+
+    Returns
+    -------
+    :obj:`str` or :obj:`None`
+        The direction, one of :data:`PHASE_ENCODING_DIRECTIONS`.
+
+    Raises
+    ------
+    :exc:`ValueError`
+        If the value is not a BIDS phase-encoding direction.
+
+    Examples
+    --------
+    >>> format_phase_encoding("j-"), format_phase_encoding(b"k"), format_phase_encoding(None)
+    ('j-', 'k', None)
+    >>> format_phase_encoding(np.array(b"i"))
+    'i'
+    >>> format_phase_encoding("AP")  # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+    ValueError: Unknown phase-encoding direction 'AP': expected one of i, i-, j, j-, k, k- ...
+
+    """
+    if value is None:
+        return None
+    if isinstance(value, np.ndarray):
+        value = value.item()
+    if isinstance(value, bytes):
+        value = value.decode()
+    if value not in PHASE_ENCODING_DIRECTIONS:
+        raise ValueError(PHASE_ENCODING_ERROR_MSG.format(value=value))
+    return str(value)
 
 
 def find_shelling_scheme(

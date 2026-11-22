@@ -26,9 +26,11 @@
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from nifreeze.cli import run
+from nifreeze.data.dmri import DWI
 from nifreeze.registration.base import AFFINE
 
 
@@ -138,3 +140,53 @@ def test_main_chooses_the_eddy_model(monkeypatch, tmp_path):
     assert eddy.kwargs["prev"] is motion
     assert eddy.kwargs["estimates"] == "eddy"
     assert eddy.kwargs["align_config"] == AFFINE
+
+
+def _dwi(phase_encoding):
+    rng = np.random.default_rng(1234)
+    bvecs = rng.standard_normal((6, 3))
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+    return DWI(
+        dataobj=rng.random((6, 5, 5, 4), dtype=np.float32),
+        affine=np.eye(4),
+        gradients=np.column_stack((bvecs, np.full(6, 1000.0))),
+        phase_encoding=phase_encoding,
+    )
+
+
+@pytest.mark.parametrize(
+    ("metadata", "argument", "expected"),
+    [(None, None, None), ("j", None, "j"), ("j", "i-", "i-"), (None, "k", "k")],
+    ids=["unknown", "metadata", "argument-over-metadata", "argument"],
+)
+def test_main_takes_the_phase_encoding(monkeypatch, tmp_path, metadata, argument, expected):
+    """``--phase-encoding`` overrides the direction the input's metadata gives."""
+    dataset = _dwi(metadata)
+    monkeypatch.setattr(run, "load", lambda *args, **kwargs: dataset)
+    monkeypatch.setattr(run, "Estimator", _Estimator)
+    monkeypatch.setattr(_Estimator, "built", [])
+    monkeypatch.setattr(run, "ants_version", lambda: None)
+    monkeypatch.setattr(DWI, "to_nifti", lambda self, *args, **kwargs: None)
+
+    input_file = tmp_path / "dwi.h5"
+    input_file.touch()
+    extra = [] if argument is None else ["--phase-encoding", argument]
+    run.main([str(input_file), "--registration", "ants", "--output-dir", str(tmp_path), *extra])
+
+    assert dataset.phase_encoding == expected
+
+
+def test_main_refuses_the_phase_encoding_of_other_data(monkeypatch, tmp_path):
+    """Only a dMRI dataset has a phase-encoding direction to set."""
+    monkeypatch.setattr(run, "load", lambda *args, **kwargs: _Dataset())
+    input_file = tmp_path / "pet.h5"
+    input_file.touch()
+    with pytest.raises(ValueError, match="dMRI inputs only"):
+        run.main([str(input_file), "--phase-encoding", "j", "--output-dir", str(tmp_path)])
+
+
+def test_parser_rejects_an_unknown_phase_encoding(tmp_path, capsys):
+    """The direction must be one of BIDS's six."""
+    with pytest.raises(SystemExit):
+        run.parse_args([str(tmp_path / "dwi.h5"), "--phase-encoding", "AP"])
+    assert "invalid choice: 'AP'" in capsys.readouterr().err
