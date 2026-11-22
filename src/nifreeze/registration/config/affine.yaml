@@ -90,6 +90,8 @@ elastix:
 # with head motion and a field along phase encoding estimated together (9 parameters)
 # when `restrict: phase-encoding`; a full affine without it. The optimizer is ITK's
 # regular-step gradient descent, whose steps are set on phantoms (#723).
+# With `motion: fixed` too, the head motion stays as the start gives it, and only the
+# field is estimated (3 parameters, #736); the default is `motion: refine`.
 itk:
   winsorize_lower_quantile: 0.0001
   winsorize_upper_quantile: 0.9998
