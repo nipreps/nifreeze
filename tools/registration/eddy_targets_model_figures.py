@@ -310,14 +310,26 @@ def confirm(rows: list[dict[str, Any]], meta: dict[str, Any], chosen: str) -> di
     margin = MARGIN_VOXELS * float(np.mean(meta["VoxelSize"]))
     error = compare(rows, chosen, "pass-e12-u", PRIMARY, margin, subset)
     ratio = _time_ratio(rows)
+    change_margin = margin / meta["MeanRadiusMm"]
+    reported = {
+        "model/oracle": compare(rows, "oracle-i9", "oracle-e12", PRIMARY, margin, subset),
+        "volume_change/pass": compare(
+            rows, chosen, "pass-e12-u", "volume_change", change_margin, subset
+        ),
+        "volume_change/oracle": compare(
+            rows, "oracle-i9", "oracle-e12", "volume_change", change_margin, subset
+        ),
+    }
     return {
         "protocol": meta["Protocol"],
         "subset": subset,
         "margin_mm": margin,
+        "volume_change_margin": change_margin,
         "chosen": chosen,
         "error": error,
         "time_ratio": ratio,
         "holds": bool(_ok(error) and ratio <= TIME_RATIO),
+        "reported": reported,
         "summary": summary(rows, subset),
         "checks": meta["Checks"],
     }
@@ -337,7 +349,10 @@ def _interval(value: float, low: float, high: float, scale: float = 1.0, unit: s
 def comparisons(decision: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
     """The comparisons on the error, labelled: the rules' first, then those reported."""
     if "chosen" in decision and "h1" not in decision:
-        return [(f"Confirmation: {decision['chosen']} against pass-e12-u", decision["error"])]
+        return [
+            (f"Confirmation: {decision['chosen']} against pass-e12-u", decision["error"]),
+            ("Oracle: i9 against e12", decision["reported"]["model/oracle"]),
+        ]
     pairs = decision["h2"]["pairs"]
     reported = decision["reported"]
     return [
@@ -407,6 +422,24 @@ def tables(decision: dict[str, Any], out: Path) -> None:
         ],
     )
     if "h2" not in decision:
+        _write(
+            out / f"eddy-model-{protocol}-expansion.csv",
+            ["Comparison", "Median difference of the volume change [95% interval]", "Verdict"],
+            [
+                [
+                    label,
+                    _interval(c["median"], c["median_low"], c["median_high"], 100, "%"),
+                    c["verdict"],
+                ]
+                for label, c in (
+                    (
+                        f"{decision['chosen']} against pass-e12-u",
+                        decision["reported"]["volume_change/pass"],
+                    ),
+                    ("oracle-i9 against oracle-e12", decision["reported"]["volume_change/oracle"]),
+                )
+            ],
+        )
         return
     table = []
     for arm, pair in decision["h2"]["pairs"].items():
