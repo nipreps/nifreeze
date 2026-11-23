@@ -23,6 +23,7 @@
 """Head motion and a field along phase encoding, estimated together (#730)."""
 
 import warnings
+from typing import Any
 
 import nibabel as nb
 import numpy as np
@@ -33,7 +34,11 @@ from test_registration_conventions import SKIP_ELASTIX, _affine, _error, _motion
 from nifreeze.data.dmri import DWI
 from nifreeze.estimator import Estimator
 from nifreeze.registration.base import Registration, RegistrationFactory
-from nifreeze.registration.utils import phase_encoding_vector, split_phase_encoding
+from nifreeze.registration.utils import (
+    phase_encoding_vector,
+    remove_shared_field,
+    split_phase_encoding,
+)
 
 SLOPE = np.array([0.015, -0.025, 0.02])
 """A field's slope (mm per mm) along each world axis."""
@@ -73,6 +78,97 @@ def test_split_recovers_motion_and_field():
 
         assert np.allclose(found_motion, motion, atol=1e-12)
         assert np.allclose(found_field, field, atol=1e-12)
+
+
+def _shells_on_a_half_sphere(rng: np.random.Generator) -> np.ndarray:
+    """Three shells of 16 b-vectors each, all on one half of the sphere (not balanced)."""
+    vectors = rng.normal(size=(48, 3))
+    vectors[:, 2] = np.abs(vectors[:, 2])
+    vectors /= np.linalg.norm(vectors, axis=1, keepdims=True)
+    return np.column_stack([vectors, np.repeat([995.0, 2005.0, 3000.0], 16)])
+
+
+def _stretch_about(direction: np.ndarray, shared: np.ndarray, centre: np.ndarray):
+    """A field along ``direction`` about ``centre``: ``x - u a^T (x - c)``."""
+    field = _field(direction, shared)
+    field[:3, 3] = direction * (shared @ centre)
+    return field
+
+
+def test_remove_shared_field_recovers_the_field_that_follows_the_gradient():
+    """A shared field after one linear in the b-vector is removed exactly, per shell."""
+    rng = np.random.default_rng(1)
+    centre = np.array([-1.5, -18.5, 6.5])
+    for seed in range(20):
+        gradients = _shells_on_a_half_sphere(rng)
+        direction = Rotation.random(random_state=seed).as_matrix()[:, seed % 3]
+        shells = np.round(gradients[:, 3], -2)
+        truth, stored = [], []
+        coefficients = {b: rng.normal(scale=0.01, size=(3, 3)) for b in np.unique(shells)}
+        shared = {b: rng.normal(scale=0.005, size=3) for b in np.unique(shells)}
+        for g, b in zip(gradients[:, :3], shells, strict=True):
+            motion = np.eye(4)
+            motion[:3, :3] = Rotation.from_rotvec(rng.normal(scale=0.03, size=3)).as_matrix()
+            motion[:3, 3] = rng.normal(scale=2.0, size=3)
+            field = _field(direction, coefficients[b] @ g)
+            truth.append((motion, field))
+            biased = _stretch_about(direction, shared[b], centre) @ field @ motion
+            stored.append(split_phase_encoding(biased, direction))
+        motions, fields = (np.stack(part) for part in zip(*stored, strict=True))
+
+        found_motion, found_field = remove_shared_field(
+            motions, fields, gradients, direction, centre
+        )
+
+        assert np.allclose(found_motion, [m for m, _ in truth], atol=1e-10)
+        assert np.allclose(found_field, [f for _, f in truth], atol=1e-12)
+
+
+def test_remove_shared_field_keeps_a_field_that_follows_the_gradient():
+    """With nothing shared, the fields stay, though the shells' mean slope is not zero."""
+    rng = np.random.default_rng(2)
+    gradients = _shells_on_a_half_sphere(rng)
+    direction = np.array([0.0, -1.0, 0.0])
+    coefficients = rng.normal(scale=0.01, size=(3, 3))
+    fields = np.stack([_field(direction, coefficients @ g) for g in gradients[:, :3]])
+    motion = np.repeat(np.eye(4)[np.newaxis], len(fields), axis=0)
+    slopes = (direction @ (np.eye(3) - fields[:, :3, :3])).reshape(-1, 3)
+    assert np.abs(slopes.mean(axis=0)).max() > 1e-3  # removing the mean would change them
+
+    found_motion, found_field = remove_shared_field(
+        motion, fields, gradients, direction, np.zeros(3), shells=gradients[:, 3] > 1500
+    )
+
+    assert np.allclose(found_field, fields, atol=1e-12)
+    assert np.allclose(found_motion, motion, atol=1e-12)
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        ("eddy", "both be"),
+        ("gradients", "one row per volume"),
+        ("shells", "one label per volume"),
+        ("plane", "do not span three dimensions"),
+    ],
+)
+def test_remove_shared_field_validates_its_inputs(change, message):
+    rng = np.random.default_rng(3)
+    gradients = _shells_on_a_half_sphere(rng)
+    identity = np.repeat(np.eye(4)[np.newaxis], len(gradients), axis=0)
+    arguments: dict[str, Any] = {
+        "motion": identity,
+        "eddy": identity[:-1] if change == "eddy" else identity,
+        "gradients": gradients[:, :3] if change == "gradients" else gradients,
+        "direction": np.array([0.0, 1.0, 0.0]),
+        "centre": np.zeros(3),
+        "shells": np.zeros(3) if change == "shells" else None,
+    }
+    if change == "plane":
+        arguments["gradients"] = gradients.copy()
+        arguments["gradients"][:16, 2] = 0.0
+    with pytest.raises(ValueError, match=message):
+        remove_shared_field(**arguments)
 
 
 def test_phase_encoding_vector_follows_the_voxel_axis():

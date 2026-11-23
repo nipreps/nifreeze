@@ -271,3 +271,105 @@ def split_phase_encoding(
     motion[:3, :3] = rotation
     motion[:3, 3] = np.linalg.solve(field[:3, :3], matrix[:3, 3])
     return motion, field
+
+
+def remove_shared_field(
+    motion: np.ndarray,
+    eddy: np.ndarray,
+    gradients: np.ndarray,
+    direction: np.ndarray,
+    centre: np.ndarray,
+    shells: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Remove the part of each shell's field that does not follow the diffusion gradient.
+
+    Eddy currents come from the diffusion gradient, so within a shell a volume's field
+    :math:`E = I - u s^T` (see :func:`split_phase_encoding`) is linear in its b-vector
+    :math:`g`: :math:`s = C g`, with no part that every volume of the shell shares. A
+    registration's bias is shared instead: noise makes it stretch every volume along
+    phase encoding alike. Within each shell, the slopes are fit as
+    :math:`s \\approx a + C g` by least squares, and the shared part :math:`a`, as a
+    field about ``centre`` (:math:`x \\mapsto x - u\\, a^T (x - c)`), is taken out of
+    every volume's mapping, which is split again. A mapping with that shared field
+    applied after a field linear in :math:`g` gets the latter back exactly.
+
+    Parameters
+    ----------
+    motion : :obj:`~numpy.ndarray`
+        The head motion of each volume, ``(N, 4, 4)``, as the eddy-current pass stores
+        it (:attr:`~nifreeze.data.base.BaseDataset.motion`).
+    eddy : :obj:`~numpy.ndarray`
+        The field of each volume, ``(N, 4, 4)``
+        (:attr:`~nifreeze.data.dmri.base.DWI.eddy`): a volume's mapping is
+        ``eddy @ motion``.
+    gradients : :obj:`~numpy.ndarray`
+        The gradient table, ``(N, 4)``: a unit b-vector in world RAS+ coordinates, then
+        the b-value.
+    direction : :obj:`~numpy.ndarray`
+        The phase-encoding direction :math:`u` in world coordinates.
+    centre : :obj:`~numpy.ndarray`
+        The point :math:`c` (world, mm) that the shared field leaves in place, such as
+        the brain's centroid.
+    shells : :obj:`~numpy.ndarray`, optional
+        A label of each volume's shell; by default, its b-value rounded to the nearest
+        100 s/mm².
+
+    Returns
+    -------
+    motion, eddy : :obj:`~numpy.ndarray`
+        The head motion and the field of each volume, with the shared part taken out.
+
+    Raises
+    ------
+    ValueError
+        If the shapes do not match, or a shell's b-vectors do not span three
+        dimensions (the shared part is then not determined).
+
+    Examples
+    --------
+    >>> rng = np.random.default_rng(0)
+    >>> b_vectors = rng.normal(size=(12, 3))
+    >>> b_vectors /= np.linalg.norm(b_vectors, axis=1, keepdims=True)
+    >>> gradients = np.column_stack([b_vectors, np.full(12, 1000.0)])
+    >>> u, centre = np.array([0.0, 1.0, 0.0]), np.array([0.0, -18.0, 6.0])
+    >>> fields = np.repeat(np.eye(4)[np.newaxis], 12, axis=0)
+    >>> fields[:, 1, :3] -= 0.01 * b_vectors  # a field linear in the b-vector
+    >>> motion = np.repeat(np.eye(4)[np.newaxis], 12, axis=0)
+    >>> found_motion, found = remove_shared_field(motion, fields, gradients, u, centre)
+    >>> np.allclose(found, fields), np.allclose(found_motion, motion)
+    (True, True)
+
+    """
+    motion = np.asarray(motion, dtype=float)
+    eddy = np.asarray(eddy, dtype=float)
+    gradients = np.asarray(gradients, dtype=float)
+    if motion.shape != eddy.shape or motion.shape[1:] != (4, 4):
+        raise ValueError("motion and eddy must both be (N, 4, 4)")
+    if gradients.shape != (len(motion), 4):
+        raise ValueError("gradients must be (N, 4), one row per volume")
+    u = np.asarray(direction, dtype=float)
+    u = u / np.linalg.norm(u)
+    centre = np.asarray(centre, dtype=float)
+    labels = np.round(gradients[:, 3], -2) if shells is None else np.asarray(shells)
+    if labels.shape != (len(motion),):
+        raise ValueError("shells must have one label per volume")
+
+    found_motion, found_eddy = motion.copy(), eddy.copy()
+    for label in np.unique(labels):
+        chosen = np.flatnonzero(labels == label)
+        design = np.column_stack([np.ones(len(chosen)), gradients[chosen, :3]])
+        if np.linalg.matrix_rank(design) < 4:
+            raise ValueError(f"the b-vectors of shell {label} do not span three dimensions")
+        # E = I - u s^T, so s^T = u^T (I - E)
+        slopes = (u @ (np.eye(3) - eddy[chosen, :3, :3])).reshape(len(chosen), 3)
+        shared = np.linalg.lstsq(design, slopes, rcond=None)[0][0]
+        removed = np.eye(4)
+        removed[:3, :3] -= np.outer(u, shared)
+        removed[:3, 3] = u * (shared @ centre)
+        inverse = np.linalg.inv(removed)
+        for index in chosen:
+            found_motion[index], found_eddy[index] = split_phase_encoding(
+                inverse @ eddy[index] @ motion[index], u
+            )
+    return found_motion, found_eddy
