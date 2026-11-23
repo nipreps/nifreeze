@@ -46,11 +46,11 @@ def _field(direction: np.ndarray, slope: np.ndarray = SLOPE) -> np.ndarray:
     return field
 
 
-def _settings(restrict: bool = True) -> dict:
+def _settings(restrict: bool = True, motion: str = "refine") -> dict:
     """The packaged ITK stages, with or without the restriction to phase encoding."""
     from nifreeze.registration.itk_backend import get_settings
 
-    settings = get_settings()
+    settings = get_settings() | {"motion": motion}
     if not restrict:
         settings.pop("restrict")
     return settings
@@ -225,6 +225,106 @@ def test_itk_starts_from_the_projection_of_a_mapping_outside_the_family():
     assert not [w for w in caught if "initial mapping" in str(w.message)]
 
 
+CENTRE = np.array([12.0, -20.0, 7.0])
+"""Where an off-centre grid's centre lies (mm, RAS+): away from the world's origin."""
+
+
+def _off_centre() -> np.ndarray:
+    """The oblique grid, moved so that its centre is at :data:`CENTRE`."""
+    affine = _affine("oblique")
+    affine[:3, 3] += CENTRE
+    return affine
+
+
+def _field_about(direction: np.ndarray, centre: np.ndarray, slope=SLOPE) -> np.ndarray:
+    """A field along ``direction``, linear in position and zero at ``centre``."""
+    field = _field(direction, slope)
+    field[:3, 3] = (np.eye(3) - field[:3, :3]) @ centre
+    return field
+
+
+def _across(matrix: np.ndarray, direction: np.ndarray) -> float:
+    """How far ``matrix`` moves points across ``direction`` (zero for a field along it)."""
+    across = np.eye(3) - np.outer(direction, direction)
+    return float(np.abs(across @ (matrix - np.eye(4))[:3]).max())
+
+
+@SKIP_ELASTIX
+@pytest.mark.parametrize("phase_encoding", ["i", "j-", "k"])
+def test_itk_with_fixed_motion_recovers_the_field_on_oblique_data(phase_encoding):
+    """With the head motion kept at the truth's, the 3 parameters find the field."""
+    from nifreeze.registration.itk_backend import ITK
+
+    data, mask = _volume()
+    affine = _off_centre()
+    u = phase_encoding_vector(phase_encoding, affine)
+    motion = _motion()
+    field = _field_about(u, CENTRE)
+    moving = _move(data, affine, field @ motion)
+    register = ITK(
+        _settings(motion="fixed"), num_threads=1, phase_encoding=phase_encoding, clip="none"
+    )
+
+    estimate = register(data, moving, affine, mask, 0, motion).matrix
+
+    assert _error(mask, affine, estimate, field @ motion) < 0.05
+    assert register.split(estimate, affine) is None  # stored with the motion factored out
+    found = estimate @ np.linalg.inv(motion)
+    assert _across(found, u) < 1e-9  # the start's motion, then a field along u
+    assert np.abs(found[:3, :3] - field[:3, :3]).max() < 2e-3
+
+
+@SKIP_ELASTIX
+def test_itk_with_fixed_motion_keeps_a_wrong_motion():
+    """The head motion stays as the start gives it, even when it is wrong."""
+    from nifreeze.registration.itk_backend import ITK
+
+    data, mask = _volume()
+    affine = _off_centre()
+    u = phase_encoding_vector("j", affine)
+    truth = _field_about(u, CENTRE) @ _motion()
+    wrong = _motion(degrees=1.0, shift=(0.5, 0.5, -0.5))
+    register = ITK(_settings(motion="fixed"), num_threads=1, phase_encoding="j", clip="none")
+
+    estimate = register(data, _move(data, affine, truth), affine, mask, 0, wrong).matrix
+
+    assert _across(estimate @ np.linalg.inv(wrong), u) < 1e-9
+    assert _error(mask, affine, estimate, truth) > 0.1  # the motion's error stays
+
+
+@SKIP_ELASTIX
+def test_the_eddy_pass_with_fixed_motion_keeps_the_head_motion():
+    """With ``motion: fixed``, the eddy pass stores the head-motion step's motion unchanged."""
+    from nifreeze.registration.itk_backend import ITK
+
+    data, mask = _volume()
+    affine = _off_centre()
+    u = phase_encoding_vector("j-", affine)
+    rng = np.random.default_rng(1234)
+    bvecs = rng.standard_normal((8, 3))
+    bvecs /= np.linalg.norm(bvecs, axis=1, keepdims=True)
+    fields = [_field_about(u, CENTRE, 0.5 * SLOPE * b) for b in bvecs[:, 0]]
+    dwi = DWI(
+        dataobj=np.stack([_move(data, affine, f @ _motion()) for f in fields]),
+        affine=affine,
+        brainmask=mask,
+        gradients=np.column_stack((bvecs, np.full(8, 1000.0))),
+        phase_encoding="j-",
+    )
+    dwi.motion = np.repeat(_motion()[np.newaxis], 8, axis=0)
+    before = dwi.motion.copy()
+    register = ITK(_settings(motion="fixed"), num_threads=1, phase_encoding="j-", clip="none")
+
+    Estimator("avg", estimates="eddy", registration=register).run(
+        dwi, n_jobs=1, omp_nthreads=1, instant_update=False
+    )
+
+    assert dwi.eddy is not None
+    assert np.array_equal(dwi.motion, before)
+    assert max(_across(eddy, u) for eddy in dwi.eddy) < 1e-9
+    assert not np.allclose(dwi.eddy, np.eye(4))
+
+
 @pytest.mark.parametrize(
     ("change", "message"),
     [
@@ -235,6 +335,8 @@ def test_itk_starts_from_the_projection_of_a_mapping_outside_the_family():
             {"stages": [{"metric": "correlation", "sampling_percentage": 0.1, "samples": 100}]},
             "sampling_percentage or samples, not both",
         ),
+        ({"motion": "frozen"}, "Unknown ITK motion 'frozen'"),
+        ({"restrict": None, "motion": "fixed"}, "head motion fixed only with restrict"),
     ],
 )
 def test_itk_settings_are_validated(change, message):

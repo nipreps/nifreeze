@@ -29,6 +29,11 @@ the phase-encoding direction, :math:`W = E M`, with 9 parameters (6 rigid, and t
 phase-encoding row of :math:`E`; see
 :func:`~nifreeze.registration.utils.split_phase_encoding`), when the settings say
 ``restrict: phase-encoding``. Otherwise it estimates a full affine (12 parameters).
+With ``motion: fixed`` as well, the head motion stays as the start gives it (in the
+eddy-current pass, the head-motion step's estimate), and only the field's 3 parameters
+are estimated, about the grid's centre. The estimates are then not split: the
+eddy-current pass stores them as it stores elastix's, with the head motion it holds
+factored out and kept unchanged.
 
 The images reach ITK in their voxel frame (identity direction, origin zero, the voxel
 spacing), so ITK's physical axes are the voxel axes, and the restriction to the
@@ -59,6 +64,8 @@ from nifreeze.registration.utils import phase_encoding_vector, split_phase_encod
 
 RESTRICTIONS = ("phase-encoding",)
 """The fields a setting ``restrict`` can name."""
+MOTIONS = ("refine", "fixed")
+"""What a restricted registration does with the head motion: refine it, or keep the start's."""
 METRICS = ("mattes", "correlation")
 """The metrics of a stage: Mattes' mutual information, or normalized correlation."""
 SAMPLINGS = ("none", "regular", "random")
@@ -66,6 +73,7 @@ SAMPLINGS = ("none", "regular", "random")
 SETTINGS_KEYS = {
     "stages",
     "restrict",
+    "motion",
     "winsorize_lower_quantile",
     "winsorize_upper_quantile",
     "use_histogram_matching",
@@ -94,6 +102,10 @@ UNKNOWN_VALUE_ERROR_MSG = "Unknown ITK {key} {value!r}: expected one of {values}
 """Unknown value of a setting error message."""
 BOTH_SAMPLINGS_ERROR_MSG = "An ITK stage takes sampling_percentage or samples, not both"
 """A stage with both a share and a count of samples error message."""
+FIXED_MOTION_ERROR_MSG = (
+    "ITK settings keep the head motion fixed only with restrict: phase-encoding"
+)
+"""Fixed head motion without the restriction error message."""
 NO_PHASE_ENCODING_ERROR_MSG = (
     "The settings restrict the field to phase encoding, but its direction is unknown: "
     "give the backend phase_encoding (the dataset's, as BIDS writes it)."
@@ -131,6 +143,9 @@ def get_settings(align_config: Mapping[str, Any] | str | PathLike | None = None)
     Traceback (most recent call last):
     ValueError: Unknown ITK settings: ['smoothing']
 
+    >>> get_settings(settings | {"motion": "fixed"})["motion"]
+    'fixed'
+
     """
     loaded = load_config(AFFINE if align_config is None else align_config, "itk")
     if not loaded.get("stages"):
@@ -141,7 +156,8 @@ def get_settings(align_config: Mapping[str, Any] | str | PathLike | None = None)
     if unknown:
         raise ValueError(UNKNOWN_SETTINGS_ERROR_MSG.format(keys=sorted(unknown)))
     checks: list[tuple[str, Any, tuple[Any, ...]]] = [
-        ("restrict", loaded.get("restrict"), (None, *RESTRICTIONS))
+        ("restrict", loaded.get("restrict"), (None, *RESTRICTIONS)),
+        ("motion", loaded.get("motion", "refine"), MOTIONS),
     ]
     for stage in loaded["stages"]:
         if {"sampling_percentage", "samples"} <= set(stage):
@@ -153,6 +169,8 @@ def get_settings(align_config: Mapping[str, Any] | str | PathLike | None = None)
     for key, value, values in checks:
         if value not in values:
             raise ValueError(UNKNOWN_VALUE_ERROR_MSG.format(key=key, value=value, values=values))
+    if loaded.get("motion") == "fixed" and loaded.get("restrict") is None:
+        raise ValueError(FIXED_MOTION_ERROR_MSG)
     return loaded
 
 
@@ -228,11 +246,22 @@ class ITK(Registration):
         """Whether the field is restricted to the phase-encoding direction."""
         return self.align_config.get("restrict") == "phase-encoding"
 
+    @property
+    def fixed_motion(self) -> bool:
+        """Whether the head motion stays as the start gives it (``motion: fixed``)."""
+        return self.align_config.get("motion") == "fixed"
+
     def split(
         self, matrix: np.ndarray, affine: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray] | None:
-        """See :meth:`~nifreeze.registration.base.Registration.split`."""
-        if not self.restricted or self.phase_encoding is None:
+        """
+        See :meth:`~nifreeze.registration.base.Registration.split`.
+
+        With ``motion: fixed``, the head motion was not estimated, so there is nothing to
+        split: the field, about the grid's centre, carries its own shift along phase
+        encoding, which the split would move into the head motion.
+        """
+        if not self.restricted or self.phase_encoding is None or self.fixed_motion:
             return None
         return split_phase_encoding(matrix, phase_encoding_vector(self.phase_encoding, affine))
 
@@ -312,7 +341,9 @@ class ITK(Registration):
 
         Restricted, it is the composite of a field ``E`` and head motion ``M`` (applied
         first), with every parameter of ``E`` but its phase-encoding row frozen, in the
-        voxel frame. Otherwise it is a full affine.
+        voxel frame; with ``motion: fixed``, ``M``'s are frozen too. ``E`` keeps the
+        start's shift along phase encoding: none when the start has no field, so that the
+        field then turns about the grid's centre. Otherwise it is a full affine.
         """
         import itk
 
@@ -337,7 +368,8 @@ class ITK(Registration):
         # The optimized parameters: the rigid ones, then E's matrix (row-major) and offset
         row = np.zeros((3, 3))
         row[axis] = 1.0
-        weights = [1.0] * 6 + row.ravel().tolist() + [0.0, 0.0, 0.0]
+        rigid_weight = 0.0 if self.fixed_motion else 1.0
+        weights = [rigid_weight] * 6 + row.ravel().tolist() + [0.0, 0.0, 0.0]
         return composite, [eddy, rigid], weights
 
     def _stage(
