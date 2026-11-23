@@ -50,12 +50,16 @@ def main(results_dir: Path) -> str:
     if not results:
         return "No end-to-end results were found.\n"
 
-    motion = {name: r for name, r in results.items() if r.get("kind") != "cascade"}
+    motion = {
+        name: r for name, r in results.items() if r.get("kind") not in ("cascade", "eddy-field")
+    }
     backends = sorted({r["registration"] for r in motion.values() if "registration" in r})
     lines = _motion(motion, backends) if motion else []
     for result in results.values():
         if result.get("kind") == "cascade":
             lines += _cascade(result)
+        elif result.get("kind") == "eddy-field":
+            lines += _field(result)
     return "\n".join(lines) + "\n"
 
 
@@ -149,6 +153,37 @@ def _cascade(result: dict) -> list:
         f" {_cell(applied['eddy_currents']['all'])} mm of eddy currents alone (median /"
         " 95th percentile).",
     ]
+    return lines
+
+
+def _field(result: dict) -> list:
+    """The table of one field model fitted to every volume (nipreps/nifreeze#740)."""
+    shells = sorted(result["whole"]["shells"], key=int)
+    gates = result.get("gate", {})
+    exponent = gates.get("exponent", {})
+    lines = [
+        "",
+        "## One eddy-current field for every volume (Sherbrooke, simulated motion and eddy"
+        " currents, the true head motion and noise-free targets)",
+        "",
+        f"Exponent of the b-value: {result['exponent']:.3f}"
+        + (f" (gate: {exponent['value']} ± {exponent['max_error']})" if exponent else "")
+        + f", in {sum(result['evaluations'])} evaluations of the cost. Median / 95th"
+        " percentile of the per-volume error (mm).",
+        "",
+        "| Score | All | " + " | ".join(f"b={shell}" for shell in shells) + " | Gate |",
+        "|---|---|" + "---|" * len(shells) + "---|",
+    ]
+    for key in ("eddy_currents", "whole"):
+        errors = result[key]
+        gate = gates.get(key)
+        gate_text = "" if gate is None else f"< {gate['max_median']} / {gate['max_p95']}"
+        cells = [_cell(errors["shells"][shell]) for shell in shells]
+        lines.append(
+            f"| {SCORES[key]} | {_cell(errors['all'])} | "
+            + " | ".join(cells)
+            + f" | {gate_text} |"
+        )
     return lines
 
 

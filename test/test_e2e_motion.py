@@ -111,6 +111,16 @@ CASCADE_GATE = {
     "whole": {"max_median": 1.7, "max_p95": 2.7},
 }
 """Largest median and 95th percentile (mm) of each score of the cascade, over all shells."""
+EDDY_FIELD_GATE = {
+    # TRXScan 0.3.0 scales the phantom's field with the b-value (PennLINC/TRXScan#27)
+    "exponent": {"value": 1.0, "max_error": 0.05},
+    # Set on the first run (0.019 / 0.042 and 0.044 / 0.11), with room for the platform
+    "eddy_currents": {"max_median": 0.05, "max_p95": 0.1},
+    "whole": {"max_median": 0.1, "max_p95": 0.25},
+}
+"""The field model's exponent (0.993 on the first run), and the largest median and 95th
+percentile (mm) of its scores, with the true head motion and noise-free targets
+(nipreps/nifreeze#740)."""
 
 
 @pytest.fixture(scope="module")
@@ -182,9 +192,12 @@ def phantom_eddy(phantom_copies, tmp_path_factory):
     perturbation, load = _choose(clean, cells, EDDY_MM)
     distortion = perturbation.distortion
     assert distortion is not None
+    moved = load()
     sim = _write(
-        clean, load(), perturbation, tmp_path_factory.mktemp("phantom_eddy"), "phantom_eddy"
+        clean, moved, perturbation, tmp_path_factory.mktemp("phantom_eddy"), "phantom_eddy"
     )
+    sim.moved = moved
+    sim.phase_encoding = "ijk"[distortion.axis]
     # Exact for the phantom's field, of degree 1 (raises for higher degrees)
     sim.eddy = distortion.matrices()
     sim.whole = sim.eddy @ sim.truth
@@ -415,3 +428,64 @@ def test_e2e_cascade_eddy(phantom_eddy, outdir, tmp_path):
     # The eddy-current pass improves on the head motion it starts from
     for stat in ("median", "p95"):
         assert scores["whole"]["all"][stat] < scores["without_eddy"]["all"][stat], stat
+
+
+def test_e2e_eddy_field_oracle(phantom_eddy, outdir):
+    """With the true head motion and noise-free targets, one field model finds the phantom's.
+
+    One matrix and one exponent of the b-value give every volume's field
+    (:class:`~nifreeze.registration.eddy_field.EddyFieldFit`), and each volume's shift
+    along phase encoding is estimated with them. The field is scored without its
+    translation, which belongs to the head motion, against the true field split the
+    same way; the whole mapping is scored as it is.
+    """
+    pytest.importorskip("itk", reason="the field fit needs ITK (the elastix extra)")
+    from nifreeze.registration.eddy_field import EddyFieldFit
+    from nifreeze.registration.utils import phase_encoding_vector, split_phase_encoding
+
+    sim = phantom_eddy
+    maskdata = np.asanyarray(sim.mask.dataobj) > 0
+    fit = EddyFieldFit(phase_encoding=sim.phase_encoding, seed=12345)
+    for index in range(len(sim.clean)):
+        fit.add(
+            index,
+            np.asarray(sim.clean.dataobj[index], dtype="float32"),
+            np.asarray(sim.moved.dataobj[index]),
+            sim.affine,
+            maskdata,
+            sim.truth[index],
+        )
+    field = fit.fit(sim.clean.gradients)
+
+    mappings = fit.mappings()
+    motion = np.stack([mappings[index][0] for index in range(len(sim.clean))])
+    eddy = np.stack([mappings[index][1] for index in range(len(sim.clean))])
+    u = phase_encoding_vector(sim.phase_encoding, sim.affine)
+    true_eddy = np.stack([split_phase_encoding(whole, u)[1] for whole in sim.whole])
+    scores = {
+        "eddy_currents": _summary(
+            _errors(sim.mask, eddy @ sim.truth, true_eddy @ sim.truth), sim.shells
+        ),
+        "whole": _summary(_errors(sim.mask, eddy @ motion, sim.whole), sim.shells),
+    }
+    _record(
+        outdir,
+        "eddy-field-oracle",
+        {
+            "kind": "eddy-field",
+            "model": "oracle",
+            "registration": "eddy-field",
+            "exponent": field.exponent,
+            "matrix": field.matrix.tolist(),
+            "b_ref": field.b_ref,
+            "evaluations": fit.evaluations,
+            **scores,
+            "gate": EDDY_FIELD_GATE,
+        },
+    )
+
+    gate = EDDY_FIELD_GATE["exponent"]
+    assert abs(field.exponent - gate["value"]) < gate["max_error"]
+    for name in ("eddy_currents", "whole"):
+        assert scores[name]["all"]["median"] < EDDY_FIELD_GATE[name]["max_median"], name
+        assert scores[name]["all"]["p95"] < EDDY_FIELD_GATE[name]["max_p95"], name

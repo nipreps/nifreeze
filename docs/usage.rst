@@ -103,7 +103,11 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
      :class:`~nifreeze.registration.itk_backend.ITK`), from the ``itk`` section of
      :data:`~nifreeze.registration.base.AFFINE`; the dataset must know its
      phase-encoding direction, and the eddy-current pass then refines the head
-     motion and stores the field.
+     motion and stores the field. Given an
+     :class:`~nifreeze.registration.eddy_field.EddyFieldFit` instead, the
+     eddy-current pass estimates one field model for all volumes: each volume's field
+     follows its b-vector and b-value, through a matrix and an exponent of the
+     b-value that every volume shares.
    - ``align_config``: the registration settings, a mapping or a YAML file with a
      section per backend. NiFreeze ships two:
      :data:`~nifreeze.registration.base.RIGID` (the default, for head motion) and

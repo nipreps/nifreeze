@@ -50,7 +50,8 @@ the grid (``sampling_percentage``), or at a number of points within the mask
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
 from os import PathLike
 from typing import Any
 from warnings import warn
@@ -174,6 +175,70 @@ def get_settings(align_config: Mapping[str, Any] | str | PathLike | None = None)
     return loaded
 
 
+def _prepare(
+    fixed: np.ndarray,
+    moving: np.ndarray,
+    window: tuple[float, float] | None,
+    clip: str,
+    settings: Mapping[str, Any],
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    The values of both images as the backend registers them.
+
+    Each image is coded to the sample's ``window`` as ``clip`` selects, and both are
+    winsorized when the settings ask.
+    """
+    fixed_values, moving_values = (
+        _coded(data, window)
+        if window is not None and clip in (which, "both")
+        else np.asarray(data, dtype="float32")
+        for data, which in ((fixed, "predicted"), (moving, "sample"))
+    )
+    if "winsorize_lower_quantile" in settings:
+        lower = settings["winsorize_lower_quantile"]
+        upper = settings["winsorize_upper_quantile"]
+        fixed_values = _winsorize(fixed_values, lower, upper)
+        moving_values = _winsorize(moving_values, lower, upper)
+    return fixed_values, moving_values
+
+
+def _matched(moving: Any, fixed: Any) -> Any:
+    """The moving ITK image, histogram-matched to the fixed one as ANTs does."""
+    import itk
+
+    return itk.histogram_matching_image_filter(
+        moving,
+        reference_image=fixed,
+        number_of_histogram_levels=MATCH_LEVELS,
+        number_of_match_points=MATCH_POINTS,
+        threshold_at_mean_intensity=True,
+    )
+
+
+@contextmanager
+def _threads(num_threads: int | None) -> Iterator[None]:
+    """
+    Set ITK's process-wide thread counts, and restore them on leaving.
+
+    Elastix sets the process's maximum thread count, so each backend sets it too.
+    """
+    import itk
+
+    threader = itk.MultiThreaderBase
+    previous = (
+        threader.GetGlobalMaximumNumberOfThreads(),
+        threader.GetGlobalDefaultNumberOfThreads(),
+    )
+    if num_threads is not None:
+        threader.SetGlobalMaximumNumberOfThreads(num_threads)
+        threader.SetGlobalDefaultNumberOfThreads(num_threads)
+    try:
+        yield
+    finally:
+        threader.SetGlobalMaximumNumberOfThreads(previous[0])
+        threader.SetGlobalDefaultNumberOfThreads(previous[1])
+
+
 def _voxel_image(data: np.ndarray, spacing: np.ndarray, pixel: str = "float32") -> Any:
     """An ITK image in the voxel frame: identity direction, origin zero, the spacing."""
     import itk
@@ -271,18 +336,8 @@ class ITK(Registration):
         if self.restricted and self.phase_encoding is None:
             raise ValueError(NO_PHASE_ENCODING_ERROR_MSG)
         mask = np.ones(fixed.shape, dtype=bool) if mask is None else np.asanyarray(mask, bool)
-        fixed_values, moving_values = (
-            _coded(data, window)
-            if window is not None and self.clip in (which, "both")
-            else np.asarray(data, dtype="float32")
-            for data, which in ((fixed, "predicted"), (moving, "sample"))
-        )
         settings = self.align_config
-        if "winsorize_lower_quantile" in settings:
-            lower = settings["winsorize_lower_quantile"]
-            upper = settings["winsorize_upper_quantile"]
-            fixed_values = _winsorize(fixed_values, lower, upper)
-            moving_values = _winsorize(moving_values, lower, upper)
+        fixed_values, moving_values = _prepare(fixed, moving, window, self.clip, settings)
         if self.debug_dir is not None:
             for name, values in (("predicted", fixed_values), ("sample", moving_values)):
                 nb.Nifti1Image(values, affine).to_filename(
@@ -293,26 +348,11 @@ class ITK(Registration):
         start = np.linalg.inv(frame) @ (np.eye(4) if init is None else np.asarray(init)) @ frame
         centre = spacing * (np.array(fixed.shape) - 1) / 2
 
-        # elastix sets the process's maximum thread count; set it here too and restore it
-        threader = itk.MultiThreaderBase
-        previous = (
-            threader.GetGlobalMaximumNumberOfThreads(),
-            threader.GetGlobalDefaultNumberOfThreads(),
-        )
-        if self.num_threads is not None:
-            threader.SetGlobalMaximumNumberOfThreads(self.num_threads)
-            threader.SetGlobalDefaultNumberOfThreads(self.num_threads)
-        try:
+        with _threads(self.num_threads):
             fixed_image = _voxel_image(fixed_values, spacing)
             moving_image = _voxel_image(moving_values, spacing)
             if settings.get("use_histogram_matching", False):
-                moving_image = itk.histogram_matching_image_filter(
-                    moving_image,
-                    reference_image=fixed_image,
-                    number_of_histogram_levels=MATCH_LEVELS,
-                    number_of_match_points=MATCH_POINTS,
-                    threshold_at_mean_intensity=True,
-                )
+                moving_image = _matched(moving_image, fixed_image)
             mask_object = itk.ImageMaskSpatialObject[3].New()
             mask_object.SetImage(_voxel_image(mask, spacing, "uint8"))
             mask_object.Update()
@@ -328,9 +368,6 @@ class ITK(Registration):
             total = np.eye(4)
             for member in members:  # applied last first
                 total = total @ _matrix(member)
-        finally:
-            threader.SetGlobalMaximumNumberOfThreads(previous[0])
-            threader.SetGlobalDefaultNumberOfThreads(previous[1])
         return frame @ total @ np.linalg.inv(frame)
 
     def _transform(
