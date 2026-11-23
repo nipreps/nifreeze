@@ -21,7 +21,7 @@
 #     https://www.nipreps.org/community/licensing/
 #
 r"""
-One eddy-current field for all the volumes of a DWI (nipreps/nifreeze#740).
+One model of the eddy-current fields of all the volumes of a DWI (nipreps/nifreeze#740).
 
 A field of eddy currents linear in position moves points only along the
 phase-encoding direction :math:`u`: :math:`E = I - u s^T`, with three slopes :math:`s`

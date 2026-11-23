@@ -163,7 +163,7 @@ def _field(result: dict) -> list:
     exponent = gates.get("exponent", {})
     lines = [
         "",
-        "## One eddy-current field for every volume (Sherbrooke, simulated motion and eddy"
+        "## One model of every volume's eddy-current field (Sherbrooke, simulated motion and eddy"
         " currents, the true head motion and noise-free targets)",
         "",
         f"Exponent of the b-value: {result['exponent']:.3f}"
