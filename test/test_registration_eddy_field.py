@@ -20,9 +20,11 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""One eddy-current field model for all volumes: C and the b-value's exponent (#740), with
-each volume's shift free or derived from the fields' zero point (#742)."""
+"""A global, physics-based model of the eddy-current fields (#745): one matrix C and the
+b-value's exponent for all volumes, or a matrix for each segment of b-values, with every
+field zero at one point."""
 
+import itertools
 import re
 from collections.abc import Callable
 from types import SimpleNamespace
@@ -31,13 +33,15 @@ import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation
 from test_registration_conventions import SKIP_ELASTIX, _error, _motion, _move, _volume
-from test_registration_itk import _across, _field, _off_centre
+from test_registration_itk import CENTRE, _across, _field, _off_centre
 
-from nifreeze.data.dmri import DWI
-from nifreeze.estimator import Estimator
 from nifreeze.registration.eddy_field import (
+    B_REF_ERROR_MSG,
     BVALUE_ERROR_MSG,
     DEFAULT_EXPONENT,
+    EDGES_B_REF_ERROR_MSG,
+    EDGES_ERROR_MSG,
+    MATRIX_ERROR_MSG,
     NO_PHASE_ENCODING_ERROR_MSG,
     NOT_FITTED_ERROR_MSG,
     NOTHING_ADDED_ERROR_MSG,
@@ -46,14 +50,20 @@ from nifreeze.registration.eddy_field import (
     TABLE_ERROR_MSG,
     EddyField,
     EddyFieldFit,
+    SegmentedEddyField,
     _Problem,
     field_of_view_centre,
     field_slopes,
 )
+from nifreeze.registration.itk_backend import _frame
 from nifreeze.registration.utils import phase_encoding_vector, split_phase_encoding
 
 SHELLS = (1000.0, 2000.0, 3000.0)
 """The b-values of the synthetic schemes."""
+EDGES = (1500.0, 2500.0)
+"""Edges that put each shell in a segment of its own."""
+ZERO = CENTRE + np.array([9.0, -7.0, 6.0])
+"""Where the synthetic fields are zero (RAS+, mm): 13 mm from the grid's centre."""
 
 
 def _unit_vectors(rng: np.random.Generator, count: int) -> np.ndarray:
@@ -87,6 +97,19 @@ def _truth(rng: np.random.Generator, exponent: float) -> EddyField:
     return EddyField(rng.normal(scale=0.012, size=(3, 3)), exponent=exponent, b_ref=1000.0)
 
 
+def _segmented(rng: np.random.Generator) -> SegmentedEddyField:
+    """A matrix for each shell, unrelated to the others' (no power of the b-value)."""
+    parts = [EddyField(rng.normal(scale=0.015, size=(3, 3)), b_ref=bval) for bval in SHELLS]
+    return SegmentedEddyField(EDGES, parts)
+
+
+def _about(fields: np.ndarray, zero: np.ndarray) -> np.ndarray:
+    """The fields ``I - u s^T``, made zero at ``zero``: :math:`E(y) = y - u s^T (y - z)`."""
+    about = np.array(fields, dtype=float)
+    about[:, :3, 3] = (np.eye(3) - about[:, :3, :3]) @ zero
+    return about
+
+
 # The model
 
 
@@ -102,7 +125,6 @@ def test_slopes_follow_the_gradient_and_its_strength(exponent):
     assert np.allclose(slopes[0], field.matrix @ g)
     assert np.allclose(slopes[1], -slopes[0])  # the field flips with the gradient
     assert np.allclose(slopes[2], 4.0**exponent * slopes[0])  # 2x at p=1/2, 4x at p=1
-    assert np.allclose(field.matrix_at(4000.0) @ g, slopes[2])
     rescaled = field.rescaled(2000.0)
     assert rescaled.b_ref == 2000.0 and np.allclose(rescaled.slopes(gradients), slopes)
 
@@ -194,11 +216,62 @@ def test_from_slopes_validates_its_inputs(change, message):
 
 
 def test_the_model_validates_its_parameters():
-    with pytest.raises(ValueError, match="3 x 3"):
+    with pytest.raises(ValueError, match=re.escape(MATRIX_ERROR_MSG)):
         EddyField(np.eye(2))
-    with pytest.raises(ValueError, match="must be positive"):
+    with pytest.raises(ValueError, match=re.escape(B_REF_ERROR_MSG)):
         EddyField(np.eye(3), b_ref=0.0)
     assert EddyField(np.eye(3)) == EddyField(np.eye(3))
+
+
+def test_a_segmented_field_gives_each_segment_its_own_matrix():
+    rng = np.random.default_rng(13)
+    field = _segmented(rng)
+    table = _balanced(rng)
+    direction = np.array([0.0, 1.0, 0.0])
+
+    slopes = field.slopes(table)
+
+    for k, bval in enumerate(SHELLS):
+        chosen = table[:, 3] == bval
+        assert np.allclose(slopes[chosen], field.parts[k].slopes(table[chosen]))
+    assert np.allclose(field_slopes(field.fields(table, direction), direction), slopes)
+    # A b-value on an edge opens the next segment
+    assert field.segments([1499.0, 1500.0, 2500.0, 9000.0]).tolist() == [0, 1, 2, 2]
+    # Segments without volumes leave the slopes of the others
+    first = table[table[:, 3] == SHELLS[0]]
+    assert np.allclose(field.slopes(first), field.parts[0].slopes(first))
+
+
+@pytest.mark.parametrize("edges", [[], [0.0, 1000.0], [2000.0, 1000.0], [1000.0, 1000.0]])
+def test_segment_edges_are_positive_and_increasing(edges):
+    with pytest.raises(ValueError, match=re.escape(EDGES_ERROR_MSG)):
+        SegmentedEddyField(edges, [EddyField(np.eye(3))] * (len(edges) + 1))
+    with pytest.raises(ValueError, match=re.escape(EDGES_ERROR_MSG)):
+        EddyFieldFit(edges=edges)
+
+
+def test_a_segmented_field_needs_a_field_for_each_segment():
+    with pytest.raises(ValueError, match="2 for 2 edges"):
+        SegmentedEddyField(EDGES, [EddyField(np.eye(3))] * 2)
+
+
+@pytest.mark.parametrize(
+    "linear",
+    [
+        np.diag([2.0, 2.0, 2.0]),
+        np.diag([-1.25, -1.25, 2.5]),
+        Rotation.from_rotvec([0.2, -0.3, 0.1]).as_matrix() @ np.diag([1.5, 2.0, 2.5]),
+    ],
+)
+@pytest.mark.parametrize("shape", [(5, 6, 7), (64, 64, 41), (2, 3, 4, 10)])
+def test_the_centre_of_the_field_of_view_is_the_middle_of_its_extent(linear, shape):
+    """The middle of the extent, from index -0.5 to n - 0.5 on each axis, odd or even."""
+    affine = np.eye(4)
+    affine[:3, :3], affine[:3, 3] = linear, [-30.0, 12.5, 4.0]
+    corners = np.array(list(itertools.product(*[(-0.5, n - 0.5) for n in shape[:3]])), dtype=float)
+    world = corners @ affine[:3, :3].T + affine[:3, 3]
+
+    assert np.allclose(field_of_view_centre(affine, shape), world.mean(axis=0))
 
 
 # The cost and its derivative
@@ -227,10 +300,10 @@ def _central(cost, theta: np.ndarray, step: float) -> np.ndarray:
     )
 
 
-@pytest.mark.parametrize("derived", [False, True])
 @pytest.mark.parametrize("sign", [1.0, -1.0])
-def test_the_chain_rule_gives_the_derivative_of_the_cost(sign, derived):
-    """From each volume's derivative to C, the exponent and any free shifts, exactly."""
+def test_the_chain_rule_gives_the_derivative_of_the_cost(sign):
+    """From each volume's derivative to C and the exponent, with the zero point off the
+    grid's centre."""
     rng = np.random.default_rng(6)
     table = _balanced(rng)
     motions = np.stack([_motion(degrees=3.0, shift=rng.normal(size=3)) for _ in table])
@@ -238,16 +311,14 @@ def test_the_chain_rule_gives_the_derivative_of_the_cost(sign, derived):
         table,
         b_ref=1500.0,
         motions=motions,
-        centre=np.array([30.0, 41.0, 35.0]),
+        zero=np.array([12.0, 50.0, 20.0]),
         radius=25.0,
         axis=1,
         sign=sign,
         rotation=Rotation.random(random_state=6).as_matrix(),
         evaluators=[_quadratic(rng) for _ in table],
-        zero=np.array([12.0, 50.0, 20.0]) if derived else None,
     )
-    shifts = () if derived else rng.normal(size=len(table))
-    theta = problem.pack(rng.normal(scale=0.01, size=(3, 3)), 0.7, shifts)
+    theta = problem.pack(rng.normal(scale=0.01, size=(3, 3)), 0.7)
 
     _, derivative = problem.cost(theta)
 
@@ -255,69 +326,46 @@ def test_the_chain_rule_gives_the_derivative_of_the_cost(sign, derived):
 
 
 def test_the_mappings_are_the_model_in_the_voxel_frame():
-    """Each voxel-frame mapping is the head motion, then the field and the shift."""
+    """Each voxel-frame mapping is the head motion, then the field, zero at the zero point."""
     rng = np.random.default_rng(7)
     table = _balanced(rng)
     motions = np.stack([_motion(degrees=3.0, shift=rng.normal(size=3)) for _ in table])
-    centre = np.array([30.0, 41.0, 35.0])
-    problem = _Problem(table, 1000.0, motions, centre, 25.0, 2, -1.0, np.eye(3), [])
+    zero = np.array([12.0, 50.0, 20.0])
+    problem = _Problem(table, 1000.0, motions, zero, 25.0, 2, -1.0, np.eye(3), [])
     field = _truth(rng, 0.5)
-    shifts = rng.normal(size=len(table))
 
-    mappings = problem.mappings(problem.pack(field.matrix, 0.5, shifts))
+    mappings = problem.mappings(problem.pack(field.matrix, 0.5))
 
     u = np.array([0.0, 0.0, -1.0])  # "k-" in an identity frame
-    for mapping, eddy, motion, shift in zip(
-        mappings, field.fields(table, u), motions, shifts, strict=True
-    ):
-        about = eddy.copy()
-        about[:3, 3] = (np.eye(3) - eddy[:3, :3]) @ centre - u * shift
-        assert np.allclose(mapping, about @ motion)
-
-
-def test_derived_shifts_put_the_zero_of_every_field_at_one_point():
-    rng = np.random.default_rng(12)
-    table = _balanced(rng)
-    motions = np.stack([_motion(degrees=3.0, shift=rng.normal(size=3)) for _ in table])
-    centre, zero = np.array([30.0, 41.0, 35.0]), np.array([12.0, 50.0, 20.0])
-    derived = _Problem(table, 1000.0, motions, centre, 25.0, 2, -1.0, np.eye(3), [], zero)
-    field = _truth(rng, 0.5)
-    theta = derived.pack(field.matrix, 0.5)
-
-    mappings = derived.mappings(theta)
-
-    u = np.array([0.0, 0.0, -1.0])  # "k-" in an identity frame
-    for mapping, eddy, motion in zip(mappings, field.fields(table, u), motions, strict=True):
-        about = eddy.copy()
-        about[:3, 3] = (np.eye(3) - eddy[:3, :3]) @ zero
-        assert np.allclose(mapping, about @ motion)
-    # The same mappings as free shifts of those sizes
-    free = _Problem(table, 1000.0, motions, centre, 25.0, 2, -1.0, np.eye(3), [])
-    assert np.allclose(
-        free.mappings(free.pack(field.matrix, 0.5, derived.shifts(theta))), mappings
-    )
+    fields = _about(field.fields(table, u), zero)
+    assert np.allclose(mappings, fields @ motions)
+    assert np.allclose(fields @ np.r_[zero, 1.0], np.r_[zero, 1.0])  # zero at the zero point
 
 
 # The fit on images (ITK)
 
 
-def _images(exponent: float, phase_encoding: str, shared: np.ndarray | None = None):
-    """Volumes moved by known head motion and fields of known C and exponent."""
+def _images(
+    exponent: float = 1.0,
+    phase_encoding: str = "j-",
+    shared: np.ndarray | None = None,
+    zero: np.ndarray = ZERO,
+    segmented: bool = False,
+):
+    """Volumes moved by known head motion and known fields, all zero at ``zero``."""
     rng = np.random.default_rng(8)
     data, mask = _volume()
     affine = _off_centre()
     u = phase_encoding_vector(phase_encoding, affine)
     table = _balanced(rng)
-    truth = _truth(rng, exponent)
-    # The fields are zero at the world's origin, away from the grid's centre: the
-    # shifts along phase encoding take that up
-    fields = truth.fields(table, u)
+    truth = _segmented(rng) if segmented else _truth(rng, exponent)
+    fields = _about(truth.fields(table, u), zero)
     motions = np.stack(
         [_motion(degrees=rng.uniform(0.0, 2.0), shift=rng.normal(size=3)) for _ in table]
     )
     mappings = fields @ motions
     if shared is not None:
-        mappings = _field(u, shared) @ mappings
+        mappings = _about(_field(u, shared)[np.newaxis], zero)[0] @ mappings
     samples = np.stack([_move(data, affine, mapping) for mapping in mappings])
     return SimpleNamespace(
         data=data,
@@ -333,94 +381,145 @@ def _images(exponent: float, phase_encoding: str, shared: np.ndarray | None = No
     )
 
 
-def _fitted(sim, phase_encoding: str, **kwargs) -> EddyFieldFit:
+def _fitted(sim, phase_encoding: str = "j-", **kwargs) -> EddyFieldFit:
     fit = EddyFieldFit(phase_encoding=phase_encoding, num_threads=1, clip="none", **kwargs)
     for index, (sample, motion) in enumerate(zip(sim.samples, sim.motions, strict=True)):
         fit.add(index, sim.data, sample, sim.affine, sim.mask, motion)
     return fit
 
 
+def _voxel_zero(affine: np.ndarray, zero: np.ndarray = ZERO) -> np.ndarray:
+    """A world point in the grid's voxel frame (see the backend's ``_frame``)."""
+    return (np.linalg.inv(_frame(affine)[0]) @ np.r_[zero, 1.0])[:3]
+
+
+def _mapping_errors(fit: EddyFieldFit, sim) -> np.ndarray:
+    """Each volume's mean displacement error (mm, in the mask) of the whole mapping."""
+    return np.array(
+        [
+            _error(sim.mask, sim.affine, eddy @ motion, sim.mappings[index])
+            for index, (motion, eddy) in sorted(fit.mappings().items())
+        ]
+    )
+
+
 @SKIP_ELASTIX
 @pytest.mark.parametrize(("exponent", "phase_encoding"), [(0.5, "k"), (1.0, "j-")])
-def test_the_fit_recovers_the_field_from_images(exponent, phase_encoding):
+def test_one_model_recovers_the_field_from_images(exponent, phase_encoding):
     sim = _images(exponent, phase_encoding)
-    fit = _fitted(sim, phase_encoding)
+    fit = _fitted(sim, phase_encoding, zero_point=ZERO)
 
     found = fit.fit(sim.table)
 
+    assert isinstance(found, EddyField)
     assert abs(found.exponent - exponent) < 0.05
     error = np.abs(found.rescaled(1000.0).matrix - sim.truth.matrix).max()
     assert error < 0.05 * np.abs(sim.truth.matrix).max()
-    mappings = fit.mappings()
-    for index, (motion, eddy) in mappings.items():
+    for index, (motion, eddy) in fit.mappings().items():
         assert np.allclose(eddy, found.fields(sim.table[[index]], sim.u)[0])
         assert np.allclose(motion[:3, :3], sim.motions[index][:3, :3])  # rotations held
-        assert _error(sim.mask, sim.affine, eddy @ motion, sim.mappings[index]) < 0.05
-    assert len(fit.evaluations) == 2 and min(fit.evaluations) > 0
-    assert len(fit.shifts) == len(sim.table)
+    assert _mapping_errors(fit, sim).max() < 0.05
+    assert fit.zero_point is not None and np.allclose(fit.zero_point, ZERO)
+    assert len(fit.evaluations) == 1 and len(fit.evaluations[0]) == 2
+    assert min(fit.evaluations[0]) > 0 and len(fit.messages[0]) == 2
 
 
 @SKIP_ELASTIX
-def test_the_fit_leaves_out_a_stretch_every_volume_shares():
-    """A stretch shared by every volume, on top of the field, stays out of C."""
-    shared = np.array([0.01, -0.015, 0.012])
-    sim = _images(1.0, "j-", shared=shared)
-
-    found = _fitted(sim, "j-").fit(sim.table)
-
-    assert abs(found.exponent - 1.0) < 0.05
-    error = np.abs(found.rescaled(1000.0).matrix - sim.truth.matrix).max()
-    assert error < 0.05 * np.abs(sim.truth.matrix).max()
-
-
-@SKIP_ELASTIX
-def test_the_fit_with_a_held_exponent_and_from_a_start():
-    sim = _images(1.0, "j-")
-    start = EddyField(0.5 * sim.truth.matrix, exponent=1.0, b_ref=1000.0)
-
-    found = _fitted(sim, "j-", exponent=0.8, b_ref=1000.0).fit(sim.table, start=start)
-
-    assert found.exponent == 0.8 and found.b_ref == 1000.0
-
-
-@SKIP_ELASTIX
-def test_derived_shifts_fit_the_field_about_its_zero_point():
-    """The fields of the images are zero at the world's origin, away from the grid."""
-    sim = _images(0.5, "k")
-    fit = _fitted(sim, "k", shifts="derived", zero_point=[0.0, 0.0, 0.0])
+def test_a_matrix_for_each_segment_recovers_each_shells_field():
+    sim = _images(segmented=True)
+    fit = _fitted(sim, edges=EDGES, zero_point=ZERO)
 
     found = fit.fit(sim.table)
 
-    assert abs(found.exponent - 0.5) < 0.05
-    error = np.abs(found.rescaled(1000.0).matrix - sim.truth.matrix).max()
-    assert error < 0.05 * np.abs(sim.truth.matrix).max()
-    for index, (motion, eddy) in fit.mappings().items():
-        assert np.allclose(motion[:3, :3], sim.motions[index][:3, :3])  # rotations held
-        assert _error(sim.mask, sim.affine, eddy @ motion, sim.mappings[index]) < 0.05
-    assert len(fit.shifts) == len(sim.table)
+    assert isinstance(found, SegmentedEddyField) and found.edges == EDGES
+    for part, truth in zip(found.parts, sim.truth.parts, strict=True):
+        assert part.exponent == DEFAULT_EXPONENT and part.b_ref == pytest.approx(truth.b_ref)
+        assert np.abs(part.matrix - truth.matrix).max() < 0.05 * np.abs(truth.matrix).max()
+    assert _mapping_errors(fit, sim).max() < 0.05
+    assert len(fit.evaluations) == len(SHELLS)
 
 
 @SKIP_ELASTIX
-def test_derived_shifts_default_to_the_centre_of_the_field_of_view():
-    sim = _images(0.5, "k")
-    fit = _fitted(sim, "k", shifts="derived")
+def test_the_zero_point_given_is_the_one_fitted():
+    """Data whose fields are zero 13 mm from the centre: the fit about the centre misses."""
+    sim = _images()
+
+    given = _fitted(sim, zero_point=ZERO)
+    given.fit(sim.table)
+    centred = _fitted(sim)
+    centred.fit(sim.table)
+
+    assert centred.zero_point is not None
+    assert np.allclose(centred.zero_point, field_of_view_centre(sim.affine, sim.data.shape))
+    assert np.median(_mapping_errors(centred, sim)) > 2 * np.median(_mapping_errors(given, sim))
+
+
+@SKIP_ELASTIX
+def test_the_zero_point_defaults_to_the_centre_of_the_field_of_view():
+    centre = field_of_view_centre(_off_centre(), _volume()[0].shape)
+    sim = _images(zero=centre)
+    fit = _fitted(sim)
 
     fit.fit(sim.table)
 
-    assert fit.zero_point is not None
-    assert np.allclose(fit.zero_point, field_of_view_centre(sim.affine, sim.data.shape))
+    assert fit.zero_point is not None and np.allclose(fit.zero_point, centre)
+    assert _mapping_errors(fit, sim).max() < 0.05
 
 
 @SKIP_ELASTIX
-@pytest.mark.parametrize("shifts", ["free", "derived"])
-def test_itks_derivative_points_downhill(shifts):
+def test_the_fit_leaves_out_most_of_a_stretch_every_volume_shares():
+    """
+    A stretch shared by every volume, on top of the field, mostly stays out of the fields.
+
+    A registration of each volume alone takes all of it. On slopes, the b-vectors of each
+    shell cancel it exactly (see the test of :meth:`EddyField.from_slopes`); on images,
+    the volumes of an antipodal pair weigh a little differently in the metric, so some of
+    it leaks, in proportion to its size (about a tenth here, at most a fifth).
+    """
+    shared = np.array([0.01, -0.015, 0.012])
+    sim = _images(shared=shared)
+
+    found = _fitted(sim, zero_point=ZERO).fit(sim.table)
+
+    assert isinstance(found, EddyField)
+    assert abs(found.exponent - 1.0) < 0.05
+    error = found.slopes(sim.table) - sim.truth.slopes(sim.table)
+    share = np.linalg.norm(error, axis=1) / np.linalg.norm(shared)
+    assert np.median(share) < 0.15 and share.max() < 0.25
+
+
+@SKIP_ELASTIX
+def test_the_fit_holds_the_exponent_given():
+    sim = _images()
+    fit = _fitted(sim, exponent=0.8, b_ref=1000.0, zero_point=ZERO)
+
+    found = fit.fit(sim.table)
+
+    assert isinstance(found, EddyField) and found.exponent == 0.8 and found.b_ref == 1000.0
+    segmented = _fitted(sim, exponent=1.0, edges=EDGES, zero_point=ZERO).fit(sim.table)
+    assert isinstance(segmented, SegmentedEddyField)
+    assert [part.exponent for part in segmented.parts] == [1.0] * len(SHELLS)
+
+
+@SKIP_ELASTIX
+def test_one_b_value_holds_the_exponent_of_the_fit():
+    sim = _images()
+    sim.table[:, 3] = 1000.0
+    fit = _fitted(sim, zero_point=ZERO)
+
+    with pytest.warns(UserWarning, match="the same b-value"):
+        found = fit.fit(sim.table)
+
+    assert isinstance(found, EddyField) and found.exponent == DEFAULT_EXPONENT
+
+
+@SKIP_ELASTIX
+def test_itks_derivative_points_downhill():
     """ITK's derivative of the summed metric has the sign and size of the cost's slope."""
-    sim = _images(1.0, "j-")
-    fit = _fitted(sim, "j-", shifts=shifts)
-    problem = fit._problem(sim.table, 2000.0, 1)  # the correlation stage
-    rng = np.random.default_rng(9)
-    free = () if shifts == "derived" else rng.normal(scale=0.5, size=len(sim.table))
-    theta = problem.pack(0.5 * sim.truth.matrix, 0.8, free)
+    sim = _images()
+    fit = _fitted(sim)
+    problem = fit._problem(fit.indices, sim.table, 2000.0, _voxel_zero(sim.affine), 1)
+    theta = problem.pack(0.5 * sim.truth.matrix, 0.8)
 
     _, derivative = problem.cost(theta)
     central = _central(problem.cost, theta, 1e-3)
@@ -432,17 +531,18 @@ def test_itks_derivative_points_downhill(shifts):
 
 @SKIP_ELASTIX
 def test_keeping_the_mask_box_leaves_the_correlation_unchanged():
-    sim = _images(1.0, "j-")
+    sim = _images()
+    zero = _voxel_zero(sim.affine)
     theta = None
     values = []
     for margin in (8.0, 1000.0):  # the mask's box and 4 voxels, and the whole grid
-        fit = _fitted(sim, "j-", margin=margin)
+        fit = _fitted(sim, margin=margin)
         kept = fit._fixed[0].shape
-        problem = fit._problem(sim.table, 2000.0, 1)
+        problem = fit._problem(fit.indices, sim.table, 2000.0, zero, 1)
         del fit  # the stage's metrics hold the arrays they view
         if theta is None:
             assert np.all(np.array(kept) < np.array(sim.data.shape))
-            theta = problem.pack(sim.truth.matrix, 1.0, np.zeros(len(sim.table)))
+            theta = problem.pack(sim.truth.matrix, 1.0)
         values.append(problem.cost(theta)[0])
     assert values[0] == pytest.approx(values[1], rel=1e-6)
 
@@ -455,7 +555,7 @@ def test_the_fit_prepares_the_images_as_the_backend_does():
     from nifreeze.data.filtering import robust_window
     from nifreeze.registration.itk_backend import _matched, _prepare, _voxel_image, get_settings
 
-    sim = _images(1.0, "j-")
+    sim = _images()
     settings = get_settings() | {"use_histogram_matching": True}
     fit = EddyFieldFit(settings, phase_encoding="j-", num_threads=1, margin=1000.0)
     sample = sim.samples[0]
@@ -496,6 +596,8 @@ def test_the_fit_validates_its_inputs():
         EddyFieldFit(phase_encoding="j").fit(table)
     with pytest.raises(ValueError, match=re.escape(NOT_FITTED_ERROR_MSG)):
         EddyFieldFit(phase_encoding="j").mappings()
+    with pytest.raises(ValueError, match=re.escape(EDGES_B_REF_ERROR_MSG)):
+        EddyFieldFit(edges=EDGES, b_ref=1000.0)
 
     fit = EddyFieldFit(clip="none")
     fit.add(0, data, data, affine, mask)
@@ -504,92 +606,19 @@ def test_the_fit_validates_its_inputs():
     fit.phase_encoding = "j"
     with pytest.raises(ValueError, match="has 0 rows"):
         fit.fit(table[:0])
-    with pytest.raises(ValueError, match="'free' or 'derived'"):
-        EddyFieldFit(shifts="each")
+    zero = table.copy()
+    zero[0, 3] = 0.0
+    with pytest.raises(ValueError, match=re.escape(BVALUE_ERROR_MSG)):
+        fit.fit(zero)
     with pytest.raises(ValueError, match="grid and mask"):
         fit.add(1, data, data, 2 * affine, mask)
     with pytest.raises(ValueError, match="grid and mask"):
         fit.add(1, data, data, affine, ~mask)
 
-
-# The eddy-current pass
-
-
-def _dwi(sim, phase_encoding: str) -> DWI:
-    dwi = DWI(
-        dataobj=sim.samples,
-        affine=sim.affine,
-        brainmask=sim.mask,
-        bzero=sim.data,
-        gradients=sim.table,
-        phase_encoding=phase_encoding,
-    )
-    dwi.motion = sim.motions.copy()
-    return dwi
-
-
-@SKIP_ELASTIX
-def test_the_eddy_pass_fits_one_field_for_every_volume():
-    """Through the estimator: the field of each volume, and its head motion's rotation kept."""
-    sim = _images(1.0, "j-")
-    dwi = _dwi(sim, "j-")
-    fit = EddyFieldFit(num_threads=1, clip="none")
-
-    Estimator("trivial", estimates="eddy", registration=fit).run(dwi, n_jobs=1, omp_nthreads=1)
-
-    assert fit.phase_encoding == "j-"  # the dataset's
-    assert fit.field is not None and abs(fit.field.exponent - 1.0) < 0.05
-    assert dwi.motion is not None and dwi.eddy is not None
-    assert np.allclose(dwi.motion[:, :3, :3], sim.motions[:, :3, :3])
-    assert np.abs(dwi.eddy - sim.fields).max() < 2e-3
-    for index, mapping in enumerate(sim.mappings):
-        assert _error(sim.mask, sim.affine, dwi.get_transform(index), mapping) < 0.05
-
-
-@SKIP_ELASTIX
-def test_the_eddy_pass_starts_from_the_fields_stored():
-    sim = _images(1.0, "j-")
-    dwi = _dwi(sim, "j-")
-    dwi.eddy = sim.fields.copy()  # as a previous pass would leave them
-    fit = EddyFieldFit(num_threads=1, clip="none", b_ref=1000.0)
-    starts = []
-    original = fit.fit
-
-    def fit_and_keep(gradients, start=None):
-        starts.append(start)
-        return original(gradients, start=start)
-
-    fit.fit = fit_and_keep  # type: ignore[method-assign]
-    Estimator("trivial", estimates="eddy", registration=fit).run(dwi, n_jobs=1, omp_nthreads=1)
-
-    assert np.allclose(starts[0].matrix, sim.truth.matrix)
-    assert abs(starts[0].exponent - 1.0) < 1e-8
-
-
-@SKIP_ELASTIX
-def test_the_eddy_pass_realigns_the_view_once_fitted():
-    """With the instant update, the view of the chain is realigned with the fitted mappings."""
-    sim = _images(1.0, "j-")
-    dwi = _dwi(sim, "j-")
-    views: dict = {}
-    fit = EddyFieldFit(phase_encoding="j-", clip="none")
-
-    Estimator("avg", estimates="eddy", registration=fit).run(
-        dwi, n_jobs=1, omp_nthreads=1, realigned=views
-    )
-
-    assert fit.num_threads == 1  # the run's
-    assert np.allclose(views[id(dwi)].dataobj, dwi.realigned().dataobj, atol=1e-4)
-
-
-def test_the_field_fit_estimates_only_the_eddy_currents():
-    sim = SimpleNamespace(
-        samples=np.zeros((18, 6, 6, 4), dtype="float32"),
-        affine=np.diag([2.0, 2.0, 2.0, 1.0]),
-        mask=np.ones((6, 6, 4), dtype=bool),
-        data=np.zeros((6, 6, 4), dtype="float32"),
-        table=_balanced(np.random.default_rng(11)),
-        motions=np.repeat(np.eye(4)[np.newaxis], 18, axis=0),
-    )
-    with pytest.raises(ValueError, match="estimates='eddy', not 'motion'"):
-        Estimator("trivial", registration=EddyFieldFit()).run(_dwi(sim, "j"))
+    segmented = EddyFieldFit(phase_encoding="j", clip="none", edges=EDGES)
+    for index in range(len(table)):
+        segmented.add(index, data, data, affine, mask)
+    middle = table.copy()
+    middle[middle[:, 3] == 2000.0, 3] = 1000.0
+    with pytest.raises(ValueError, match=r"segment 1 of the edges \(1500.0, 2500.0\)"):
+        segmented.fit(middle)
