@@ -440,7 +440,7 @@ def test_e2e_eddy_field_oracle(phantom_eddy, outdir):
     same way; the whole mapping is scored as it is.
     """
     pytest.importorskip("itk", reason="the field fit needs ITK (the elastix extra)")
-    from nifreeze.registration.eddy_field import EddyField, EddyFieldFit
+    from nifreeze.registration.eddy_field import EddyFieldFit
     from nifreeze.registration.utils import phase_encoding_vector, split_phase_encoding
 
     sim = phantom_eddy
@@ -456,7 +456,6 @@ def test_e2e_eddy_field_oracle(phantom_eddy, outdir):
             sim.truth[index],
         )
     field = fit.fit(sim.clean.gradients)
-    assert isinstance(field, EddyField)  # one C for every volume
 
     mappings = fit.mappings()
     motion = np.stack([mappings[index][0] for index in range(len(sim.clean))])
