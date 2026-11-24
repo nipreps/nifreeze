@@ -1125,6 +1125,7 @@ def _fit_predict_once(model_cls, dataset, index, n_jobs):
     return predicted, dt
 
 
+@pytest.mark.skip(reason="Disabled: on CI runners the speedup sits near 1 (#747).")
 def test_dki_parallel_speedup():
     """DKIModel with n_jobs > 1 should be meaningfully faster than n_jobs=1.
 
