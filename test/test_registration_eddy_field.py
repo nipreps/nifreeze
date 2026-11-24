@@ -389,6 +389,7 @@ def test_the_fit_recovers_the_field_from_images(exponent, phase_encoding):
 
     found = fit.fit(sim.table)
 
+    assert isinstance(found, EddyField)  # one C for every volume
     assert abs(found.exponent - exponent) < 0.05
     error = np.abs(found.rescaled(1000.0).matrix - sim.truth.matrix).max()
     assert error < 0.05 * np.abs(sim.truth.matrix).max()
@@ -409,6 +410,7 @@ def test_the_fit_leaves_out_a_stretch_every_volume_shares():
 
     found = _fitted(sim, "j-").fit(sim.table)
 
+    assert isinstance(found, EddyField)
     assert abs(found.exponent - 1.0) < 0.05
     error = np.abs(found.rescaled(1000.0).matrix - sim.truth.matrix).max()
     assert error < 0.05 * np.abs(sim.truth.matrix).max()
@@ -421,6 +423,7 @@ def test_the_fit_with_a_held_exponent_and_from_a_start():
 
     found = _fitted(sim, "j-", exponent=0.8, b_ref=1000.0).fit(sim.table, start=start)
 
+    assert isinstance(found, EddyField)
     assert found.exponent == 0.8 and found.b_ref == 1000.0
 
 
@@ -593,7 +596,7 @@ def test_the_eddy_pass_fits_one_field_for_every_volume():
     Estimator("trivial", estimates="eddy", registration=fit).run(dwi, n_jobs=1, omp_nthreads=1)
 
     assert fit.phase_encoding == "j-"  # the dataset's
-    assert fit.field is not None and abs(fit.field.exponent - 1.0) < 0.05
+    assert isinstance(fit.field, EddyField) and abs(fit.field.exponent - 1.0) < 0.05
     assert dwi.motion is not None and dwi.eddy is not None
     assert np.allclose(dwi.motion[:, :3, :3], sim.motions[:, :3, :3])
     assert np.abs(dwi.eddy - sim.fields).max() < 2e-3
