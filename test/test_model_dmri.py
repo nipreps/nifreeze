@@ -1133,7 +1133,8 @@ def test_dki_parallel_speedup():
 
     The test is skipped when fewer than ``_MIN_CPUS_REQUIRED`` logical CPUs are
     available, since the parallelism overhead dominates on underpowered hardware,
-    and inside a pytest-xdist worker, where other workers share the CPUs (#747).
+    and inside a pytest-xdist worker, where other workers share the CPUs; tox runs
+    it on its own after the suite (#747).
     """
 
     def _fit_predict_once_threadpool(_model_cls, _dataset, _index, _n_jobs):
@@ -1146,7 +1147,7 @@ def test_dki_parallel_speedup():
     if os.environ.get("PYTEST_XDIST_WORKER"):
         pytest.skip(
             "A wall-clock speedup cannot be measured while other xdist workers share the "
-            "CPUs; run it serially (pytest -p no:xdist)."
+            "CPUs; tox runs it on its own after the suite (or run pytest without -n)."
         )
     if cpu_count() < _MIN_CPUS_REQUIRED:
         pytest.skip(
