@@ -22,7 +22,7 @@
 #
 """A global, physics-based model of the eddy-current fields (#745): one matrix C and the
 b-value's exponent for all volumes, or a matrix for each segment of b-values, with every
-field zero at one point."""
+field zero at one point; and the eddy-current pass that runs it (#750)."""
 
 import itertools
 import re
@@ -35,6 +35,8 @@ from scipy.spatial.transform import Rotation
 from test_registration_conventions import SKIP_ELASTIX, _error, _motion, _move, _volume
 from test_registration_itk import CENTRE, _across, _field, _off_centre
 
+from nifreeze.data.dmri import DWI
+from nifreeze.estimator import FIELD_FIT_ESTIMATES_ERROR_MSG, Estimator
 from nifreeze.registration.eddy_field import (
     B_REF_ERROR_MSG,
     BVALUE_ERROR_MSG,
@@ -622,3 +624,74 @@ def test_the_fit_validates_its_inputs():
     middle[middle[:, 3] == 2000.0, 3] = 1000.0
     with pytest.raises(ValueError, match=r"segment 1 of the edges \(1500.0, 2500.0\)"):
         segmented.fit(middle)
+
+
+# The eddy-current pass (#750)
+
+
+def _dwi(sim, phase_encoding: str = "j-", motion: bool = True) -> DWI:
+    dwi = DWI(
+        dataobj=sim.samples,
+        affine=sim.affine,
+        brainmask=sim.mask,
+        bzero=sim.data,
+        gradients=sim.table,
+        phase_encoding=phase_encoding,
+    )
+    if motion:
+        dwi.motion = sim.motions.copy()
+    return dwi
+
+
+@SKIP_ELASTIX
+def test_the_eddy_pass_fits_one_field_for_every_volume():
+    """Through the estimator: each volume's field, and its head motion's rotation kept."""
+    sim = _images()
+    dwi = _dwi(sim)
+    fit = EddyFieldFit(clip="none", zero_point=ZERO)
+
+    Estimator("trivial", estimates="eddy", registration=fit).run(dwi, n_jobs=1, omp_nthreads=1)
+
+    assert fit.phase_encoding == "j-" and fit.num_threads == 1  # the dataset's and the run's
+    assert isinstance(fit.field, EddyField) and abs(fit.field.exponent - 1.0) < 0.05
+    assert dwi.motion is not None and dwi.eddy is not None
+    assert np.allclose(dwi.motion[:, :3, :3], sim.motions[:, :3, :3])
+    assert np.abs(dwi.eddy[:, :3, :3] - sim.fields[:, :3, :3]).max() < 2e-3
+    for index, mapping in enumerate(sim.mappings):
+        assert _error(sim.mask, sim.affine, dwi.get_transform(index), mapping) < 0.05
+
+
+@SKIP_ELASTIX
+def test_the_eddy_pass_realigns_the_view_once_fitted():
+    """
+    With the instant update, the pass predicts from the view as it found it, and the view
+    is realigned with the fitted mappings; the fit keeps the settings it was given.
+    """
+    sim = _images()
+    dwi = _dwi(sim, motion=False)
+    views: dict = {}
+    fit = EddyFieldFit(
+        phase_encoding="j-", num_threads=2, clip="none", edges=EDGES, zero_point=ZERO
+    )
+
+    Estimator("avg", estimates="eddy", registration=fit).run(
+        dwi, n_jobs=1, omp_nthreads=1, realigned=views
+    )
+
+    assert fit.num_threads == 2 and isinstance(fit.field, SegmentedEddyField)
+    assert dwi.motion is not None and dwi.eddy is not None
+    assert np.allclose(views[id(dwi)].dataobj, dwi.realigned().dataobj, atol=1e-4)
+
+
+def test_the_field_fit_estimates_only_the_eddy_currents():
+    sim = SimpleNamespace(
+        samples=np.zeros((18, 6, 6, 4), dtype="float32"),
+        affine=np.diag([2.0, 2.0, 2.0, 1.0]),
+        mask=np.ones((6, 6, 4), dtype=bool),
+        data=np.zeros((6, 6, 4), dtype="float32"),
+        table=_balanced(np.random.default_rng(11)),
+        motions=np.repeat(np.eye(4)[np.newaxis], 18, axis=0),
+    )
+    message = FIELD_FIT_ESTIMATES_ERROR_MSG.format(field="motion")
+    with pytest.raises(ValueError, match=re.escape(message)):
+        Estimator("trivial", registration=EddyFieldFit()).run(_dwi(sim, "j"))
