@@ -36,6 +36,7 @@ from typing_extensions import Self
 from nifreeze.data.base import ESTIMATES_FIELD_ERROR_MSG, BaseDataset
 from nifreeze.model.base import BaseModel, ModelFactory, TrivialModel
 from nifreeze.registration.base import AFFINE, Registration, RegistrationFactory
+from nifreeze.registration.eddy_field import EddyFieldFit
 from nifreeze.utils import iterators
 
 DatasetT = TypeVar("DatasetT", bound=BaseDataset)
@@ -45,6 +46,11 @@ ALIGN_CONFIGS = {"motion": None, "eddy": AFFINE}
 """Default registration settings by field of estimates. ``None`` takes the run's
 ``align_config``, or the backend's default (:data:`~nifreeze.registration.base.RIGID`):
 a default of the estimator's own would override the run's."""
+FIELD_FIT_ESTIMATES_ERROR_MSG = (
+    "An EddyFieldFit estimates the eddy currents of a DWI: give the estimator "
+    "estimates='eddy', not {field!r}."
+)
+"""A field fit asked for other estimates than the eddy currents error message."""
 FIT_MSG = "Fit&predict"
 REG_MSG = "Realign"
 
@@ -102,7 +108,8 @@ class Estimator:
         The registration backend, or the name of one
         (:data:`~nifreeze.registration.base.BACKENDS`), built for each run from the
         registration settings (default: elastix where ``itk-elastix`` is installed,
-        ANTs otherwise; see :func:`~nifreeze.registration.base.default_backend`).
+        ANTs otherwise; see :func:`~nifreeze.registration.base.default_backend`); or,
+        for the eddy currents, an :class:`~nifreeze.registration.eddy_field.EddyFieldFit`.
     estimates : :obj:`str`, optional
         The field of the dataset this estimator's estimates go to, one of its
         :attr:`~nifreeze.data.base.BaseDataset.ESTIMATES`: ``"motion"`` (default), or
@@ -116,7 +123,13 @@ class Estimator:
         estimates head motion and the field together
         (:meth:`~nifreeze.registration.base.Registration.split`, such as
         :class:`~nifreeze.registration.itk_backend.ITK` restricted to phase encoding)
-        stores both instead: the head motion it refined, and the field.
+        stores both instead: the head motion it refined, and the field. Given an
+        :class:`~nifreeze.registration.eddy_field.EddyFieldFit` (``estimates="eddy"``
+        only), the pass predicts every volume first, all from the same data whatever
+        the update setting, then estimates one field model for all of them. Each volume
+        keeps its head motion but for its shift along phase encoding, which the field
+        sets. With the instant update, the view is realigned once the field is
+        estimated.
     **kwargs
         Registration settings of this estimator, which take precedence over the run's
         ``align_kwargs``: ``align_config`` (a mapping, or a file with a section per
@@ -148,7 +161,7 @@ class Estimator:
         single_fit: bool = False,
         start_index: int = 0,
         stop_index: int | None = None,
-        registration: Registration | str | None = None,
+        registration: Registration | EddyFieldFit | str | None = None,
         estimates: str = "motion",
         **kwargs,
     ):
@@ -217,6 +230,9 @@ class Estimator:
                     fields=", ".join(dataset.ESTIMATES),
                 )
             )
+        field_fit = isinstance(self._registration, EddyFieldFit)
+        if field_fit and self._estimates != "eddy":
+            raise ValueError(FIELD_FIT_ESTIMATES_ERROR_MSG.format(field=self._estimates))
 
         # Shared with the previous estimators of the chain
         views = kwargs.setdefault("realigned", {})
@@ -300,9 +316,14 @@ class Estimator:
             model.fit_predict(None, **fit_pred_kwargs)
             print(f"Fitting 'single' model finished, elapsed {timer() - start}s.")
 
+        if field_fit:
+            threads = kwargs.get("num_threads") or n_threads
+            return self._fit_field(dataset, model, index_iter, fit_pred_kwargs, view, threads)
+
         # The backend given, or one built from the registration settings: the run's
         # (shared by the chain), this estimator's, and then the run's other arguments
         registration = self._registration
+        assert not isinstance(registration, EddyFieldFit)  # its pass returned above
         if not isinstance(registration, Registration):
             options = (kwargs.pop("align_kwargs", None) or {}) | self._align_kwargs | kwargs
             options.pop("realigned", None)
@@ -362,6 +383,56 @@ class Estimator:
                     model.update(i)
                 pbar.update()
 
+        return self
+
+    def _fit_field(
+        self,
+        dataset: BaseDataset,
+        model: BaseModel,
+        index_iter,
+        fit_pred_kwargs: dict,
+        view: BaseDataset | None,
+        num_threads: int | None,
+    ) -> Self:
+        """
+        The eddy-current pass with one field model for every volume (#750).
+
+        Every volume is predicted, all from the same data (the view does not change
+        during the pass), and added to the fit with its head motion; the fit then
+        estimates the field, and each volume's head motion and field are stored. The
+        fit takes the dataset's phase-encoding direction and the run's threads, unless
+        it has its own.
+        """
+        fit = self._registration
+        assert isinstance(fit, EddyFieldFit)
+        if fit.phase_encoding is None:
+            fit.phase_encoding = getattr(dataset, "phase_encoding", None)
+        if fit.num_threads is None:
+            fit.num_threads = num_threads
+        print(f"Registration: {type(fit).__name__}.")
+
+        motion = getattr(dataset, "motion", None)
+        indices = list(index_iter)
+        with tqdm(total=len(indices), unit="vols.") as pbar:
+            for i in indices:
+                pbar.set_description_str(f"{FIT_MSG: <16} vol. <{i}>")
+                predicted = model.fit_predict(i, **fit_pred_kwargs)  # type: ignore[union-attr]
+                assert predicted is not None  # a held-out volume is always predicted
+                fit.add(
+                    i,
+                    predicted,
+                    dataset[i][0],
+                    dataset.affine,
+                    dataset.brainmask,
+                    None if motion is None else motion[i],
+                )
+                pbar.update()
+
+        fit.fit(getattr(dataset, "gradients", None))
+        for index, (head_motion, field) in fit.mappings().items():
+            dataset.set_estimates(index, motion=head_motion, **{self._estimates: field})
+            if view is not None:
+                dataset.realign_into(view, index)
         return self
 
     def _store(
