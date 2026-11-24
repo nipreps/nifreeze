@@ -23,6 +23,7 @@
 """Unit tests exercising dMRI models."""
 
 import functools
+import os
 import re
 import time
 import warnings
@@ -1131,7 +1132,9 @@ def test_dki_parallel_speedup():
     speedup over the serial baseline.
 
     The test is skipped when fewer than ``_MIN_CPUS_REQUIRED`` logical CPUs are
-    available, since the parallelism overhead dominates on underpowered hardware.
+    available, since the parallelism overhead dominates on underpowered hardware,
+    and inside a pytest-xdist worker, where other workers share the CPUs; tox runs
+    it on its own after the suite (#747).
     """
 
     def _fit_predict_once_threadpool(_model_cls, _dataset, _index, _n_jobs):
@@ -1141,6 +1144,11 @@ def test_dki_parallel_speedup():
         ):
             return _fit_predict_once(_model_cls, _dataset, _index, _n_jobs)
 
+    if os.environ.get("PYTEST_XDIST_WORKER"):
+        pytest.skip(
+            "A wall-clock speedup cannot be measured while other xdist workers share the "
+            "CPUs; tox runs it on its own after the suite (or run pytest without -n)."
+        )
     if cpu_count() < _MIN_CPUS_REQUIRED:
         pytest.skip(
             f"Parallel scaling test requires >= {_MIN_CPUS_REQUIRED} CPUs "
