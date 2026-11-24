@@ -40,14 +40,19 @@ TRXScan 0.3.0 makes (PennLINC/TRXScan#27). A stretch that every volume shares ha
 parameter to go into, as long as the b-vectors average out: when they cover only half
 of the sphere, part of it still goes into :math:`C`.
 
-Estimating :math:`C` and :math:`p` is a global parameter estimation over all volumes,
-not a registration: ITK registers one pair of images at a time, and sums several pairs
-only when they share one transform. So :class:`EddyFieldFit` has ITK's metric
-evaluate each volume's similarity and its derivative, and scipy estimates the
-parameters. Each volume keeps the head motion it starts with, except for its shift
-along phase encoding, which is estimated too: the field's zero point is not known (in
-real data, the scanner's isocentre), and that shift is head motion by the convention
-of :func:`~nifreeze.registration.utils.split_phase_encoding`.
+Estimating :math:`C` and :math:`p` is one registration of all the volumes at once, with
+one set of parameters, in which each volume moves by its own field. ITK's transforms map
+a point without knowing which volume it belongs to, so :class:`EddyFieldFit` has ITK's
+metric evaluate each volume's similarity and its derivative, and scipy estimates the
+parameters. A :class:`SegmentedEddyField` gives each range of b-values its own matrix
+:math:`C`, in place of the exponent.
+
+Each volume keeps the head motion it starts with, except for its shift along phase
+encoding, which is head motion by the convention of
+:func:`~nifreeze.registration.utils.split_phase_encoding`. The field's zero point is not
+known (in real data, the scanner's isocentre), so either each volume's shift is
+estimated, or the shifts are derived from one zero point that is estimated: a volume's
+shift is then its field at that point.
 """
 
 from __future__ import annotations
@@ -103,6 +108,17 @@ NOT_FITTED_ERROR_MSG = "The field is not fitted yet: call fit() first."
 """Mappings before the fit error message."""
 TABLE_LENGTH_ERROR_MSG = "The gradient table has {rows} rows, but volume {index} was added."
 """A gradient table without a row for every volume error message."""
+SHIFTS = ("free", "derived")
+"""How each volume's shift along phase encoding is found: estimated for each volume, or
+derived from one zero point of the field that is estimated."""
+SHIFTS_ERROR_MSG = "shifts must be 'free' or 'derived', not {value!r}."
+"""Unknown kind of shifts error message."""
+EDGES_ERROR_MSG = "The b-values that split the segments must be positive and increasing."
+"""Malformed segment edges error message."""
+PARTS_ERROR_MSG = "A segmented field needs one field for each segment: {parts} for {edges} edges."
+"""A segmented field with the wrong number of fields error message."""
+EMPTY_SEGMENT_ERROR_MSG = "No volume has a b-value in segment {segment} of {edges}."
+"""A segment without volumes error message."""
 
 
 def _table(gradients: Any) -> np.ndarray:
@@ -174,6 +190,25 @@ def field_slopes(fields: Any, direction: Any) -> np.ndarray:
     """
     fields = np.asarray(fields, dtype=float)
     return np.einsum("i,nij->nj", _unit(direction), np.eye(3) - fields[:, :3, :3])
+
+
+def _from_slopes(slopes: np.ndarray, direction: Any) -> np.ndarray:
+    """The fields :math:`E = I - u s^T` of slopes ``(N, 3)``, ``(N, 4, 4)``."""
+    fields = np.repeat(np.eye(4)[np.newaxis], len(slopes), axis=0)
+    fields[:, :3, :3] -= _unit(direction)[np.newaxis, :, np.newaxis] * slopes[:, np.newaxis]
+    return fields
+
+
+def _as_edges(value: Any) -> tuple[float, ...]:
+    edges = tuple(float(edge) for edge in np.atleast_1d(np.asarray(value, dtype=float)))
+    if not edges or edges[0] <= 0 or np.any(np.diff(edges) <= 0):
+        raise ValueError(EDGES_ERROR_MSG)
+    return edges
+
+
+def _segment_of(edges: Sequence[float], bvals: Any) -> np.ndarray:
+    """The segment of each b-value: ``k`` when it lies in ``[edges[k - 1], edges[k])``."""
+    return np.searchsorted(np.asarray(edges, dtype=float), np.asarray(bvals, dtype=float), "right")
 
 
 def _as_matrix(value: Any) -> np.ndarray:
@@ -252,10 +287,7 @@ class EddyField:
         This is how :func:`~nifreeze.registration.utils.split_phase_encoding` gives a
         field: without a translation, which belongs to the head motion.
         """
-        slopes = self.slopes(gradients)
-        fields = np.repeat(np.eye(4)[np.newaxis], len(slopes), axis=0)
-        fields[:, :3, :3] -= _unit(direction)[np.newaxis, :, np.newaxis] * slopes[:, np.newaxis]
-        return fields
+        return _from_slopes(self.slopes(gradients), direction)
 
     @classmethod
     def from_slopes(
@@ -336,24 +368,84 @@ class EddyField:
         return cls(solve(held)[0], held, b_ref)
 
 
+def _as_parts(value: Any) -> tuple[EddyField, ...]:
+    return tuple(value)
+
+
+@attrs.frozen
+class SegmentedEddyField:
+    r"""
+    The eddy-current field of every volume, with a matrix :math:`C` for each range of
+    b-values.
+
+    ``edges`` split the b-values into segments: segment :math:`k` holds the b-values from
+    ``edges[k - 1]`` up to, not including, ``edges[k]``. Each segment has its own
+    :class:`EddyField`, so the slopes need not follow one power of the b-value: within a
+    single shell, its matrix takes up the shell's scale.
+
+    Examples
+    --------
+    >>> field = SegmentedEddyField(
+    ...     [1500.0],
+    ...     [EddyField(0.02 * np.eye(3), b_ref=1000.0), EddyField(0.05 * np.eye(3), b_ref=2000.0)],
+    ... )
+    >>> gradients = [[1.0, 0.0, 0.0, 1000.0], [1.0, 0.0, 0.0, 2000.0]]
+    >>> field.slopes(gradients).round(6).tolist()
+    [[0.02, 0.0, 0.0], [0.05, 0.0, 0.0]]
+
+    """
+
+    edges: tuple[float, ...] = attrs.field(converter=_as_edges)
+    """The b-values that split the segments, increasing."""
+    parts: tuple[EddyField, ...] = attrs.field(converter=_as_parts)
+    """The field of each segment, one more than ``edges``."""
+
+    @parts.validator
+    def _check_parts(self, attribute: Any, value: tuple[EddyField, ...]) -> None:
+        if len(value) != len(self.edges) + 1:
+            raise ValueError(PARTS_ERROR_MSG.format(parts=len(value), edges=len(self.edges)))
+
+    def segments(self, bvals: Any) -> np.ndarray:
+        """The segment of each b-value."""
+        return _segment_of(self.edges, bvals)
+
+    def slopes(self, gradients: Any) -> np.ndarray:
+        """The slopes of each volume's field, ``(N, 3)`` (see :meth:`EddyField.slopes`)."""
+        table = _table(gradients)
+        segments = self.segments(table[:, 3])
+        slopes = np.zeros((len(table), 3))
+        for k, part in enumerate(self.parts):
+            chosen = segments == k
+            if np.any(chosen):
+                slopes[chosen] = part.slopes(table[chosen])
+        return slopes
+
+    def fields(self, gradients: Any, direction: Any) -> np.ndarray:
+        """Each volume's field, ``(N, 4, 4)`` RAS+ matrices (see :meth:`EddyField.fields`)."""
+        return _from_slopes(self.slopes(gradients), direction)
+
+
 class _Problem:
     """
     The cost of a stage and its derivative, as a function of the estimated parameters.
 
-    The parameters are :math:`C` times the mask's radius (so that a unit moves its edge
-    about 1 mm), the exponent, and each volume's shift along phase encoding (mm). Each
-    volume's mapping is computed in the voxel frame of the images (see
-    :func:`~nifreeze.registration.itk_backend._frame`), where phase encoding runs
-    along the data axis ``axis``: :math:`W_v = E_v M_v`, with
+    The parameters are each segment's :math:`C` times the mask's radius (so that a unit
+    moves its edge about 1 mm), the exponent, and then either each volume's shift along
+    phase encoding (mm) or, with ``derived`` shifts, the field's zero point less the
+    mask's centre :math:`c`, in units of the radius. Each volume's mapping is computed in
+    the voxel frame of the images (see :func:`~nifreeze.registration.itk_backend._frame`),
+    where phase encoding runs along the data axis ``axis``: :math:`W_v = E_v M_v`, with
     :math:`E_v(y) = y - e\\, r_v^T (y - c) + e\\, \\tau_v` and the voxel-frame slopes
-    :math:`r_v`. ``evaluators`` give, for one volume's matrix and translation, the
-    metric's value and its derivative with respect to both.
+    :math:`r_v`; a derived shift is :math:`\\tau_v = r_v^T d`, with :math:`c + d` the zero
+    point. ``groups`` give each volume's segment, and ``b_ref`` each segment's reference
+    b-value. ``evaluators`` give, for one volume's matrix and translation, the metric's
+    value and its derivative with respect to both.
     """
 
     def __init__(
         self,
         table: np.ndarray,
-        b_ref: float,
+        b_ref: float | Sequence[float] | np.ndarray,
         motions: np.ndarray,
         centre: np.ndarray,
         radius: float,
@@ -361,9 +453,14 @@ class _Problem:
         sign: float,
         rotation: np.ndarray,
         evaluators: Sequence[Callable[[np.ndarray, np.ndarray], tuple]],
+        groups: np.ndarray | None = None,
+        derived: bool = False,
     ) -> None:
+        self.groups = np.zeros(len(table), dtype=int) if groups is None else np.asarray(groups)
+        self.count = int(self.groups.max()) + 1
+        b_refs = np.broadcast_to(np.asarray(b_ref, dtype=float), (self.count,))
         self.bvecs = table[:, :3]
-        self.log_b = np.log(table[:, 3] / b_ref)
+        self.log_b = np.log(table[:, 3] / b_refs[self.groups])
         self.motions = motions
         self.centre = centre
         self.radius = radius
@@ -371,30 +468,53 @@ class _Problem:
         self.sign = sign
         self.rotation = rotation
         self.evaluators = evaluators
+        self.derived = derived
 
     def unpack(self, theta: np.ndarray) -> tuple[np.ndarray, float, np.ndarray]:
-        """The matrix :math:`C`, the exponent and the shifts."""
-        return theta[:9].reshape(3, 3) / self.radius, float(theta[9]), theta[10:]
+        """Each segment's matrix :math:`C` ``(K, 3, 3)``, the exponent, and the shifts or
+        the zero point."""
+        size = 9 * self.count
+        matrices = theta[:size].reshape(self.count, 3, 3) / self.radius
+        return matrices, float(theta[size]), theta[size + 1 :]
 
-    def pack(self, matrix: np.ndarray, exponent: float, shifts: np.ndarray) -> np.ndarray:
-        """The parameters of a matrix :math:`C`, an exponent and shifts."""
-        return np.r_[np.ravel(matrix) * self.radius, exponent, shifts]
+    def pack(self, matrices: np.ndarray, exponent: float, rest: np.ndarray) -> np.ndarray:
+        """The parameters of the matrices :math:`C`, an exponent, and the shifts or the
+        zero point."""
+        return np.r_[np.ravel(matrices) * self.radius, exponent, rest]
 
     def _slopes(self, theta: np.ndarray) -> tuple:
-        matrix, exponent, shifts = self.unpack(theta)
+        matrices, exponent, rest = self.unpack(theta)
         scales = np.exp(exponent * self.log_b)
-        slopes = scales[:, np.newaxis] * (self.bvecs @ matrix.T)  # world
+        unscaled = np.einsum("nij,nj->ni", matrices[self.groups], self.bvecs)
+        slopes = scales[:, np.newaxis] * unscaled  # world
         rows = self.sign * slopes @ self.rotation  # voxel frame
-        return matrix, shifts, scales, rows
+        return unscaled, rest, scales, rows
+
+    def _zero(self, rest: np.ndarray) -> np.ndarray:
+        """Where the fields are zero (voxel frame, mm)."""
+        return self.centre + self.radius * rest if self.derived else self.centre
+
+    def shifts(self, theta: np.ndarray) -> np.ndarray:
+        """Each volume's shift along phase encoding (mm, along the data axis)."""
+        _, rest, _, rows = self._slopes(theta)
+        if self.derived:
+            return rows @ (self._zero(rest) - self.centre)
+        return np.asarray(rest, dtype=float)
+
+    def zero_point(self, theta: np.ndarray) -> np.ndarray | None:
+        """The fields' zero point (voxel frame, mm), when the shifts are derived from it."""
+        return self._zero(self.unpack(theta)[2]) if self.derived else None
 
     def matrices(self, theta: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Each volume's mapping in the voxel frame: its matrix and translation."""
-        _, shifts, _, rows = self._slopes(theta)
+        _, rest, _, rows = self._slopes(theta)
         rotations, translations = self.motions[:, :3, :3], self.motions[:, :3, 3]
         linear = rotations.copy()
         linear[:, self.axis] -= np.einsum("nk,nkj->nj", rows, rotations)
         offset = translations.copy()
-        offset[:, self.axis] += shifts - np.einsum("nk,nk->n", rows, translations - self.centre)
+        offset[:, self.axis] -= np.einsum("nk,nk->n", rows, translations - self._zero(rest))
+        if not self.derived:
+            offset[:, self.axis] += rest
         return linear, offset
 
     def mappings(self, theta: np.ndarray) -> np.ndarray:
@@ -406,22 +526,28 @@ class _Problem:
 
     def cost(self, theta: np.ndarray) -> tuple[float, np.ndarray]:
         """The summed metric and its derivative with respect to the parameters."""
-        matrix, _, scales, _ = self._slopes(theta)
+        unscaled, rest, scales, rows = self._slopes(theta)
         linear, offset = self.matrices(theta)
         each = [evaluate(linear[v], offset[v]) for v, evaluate in enumerate(self.evaluators)]
         values = [value for value, _, _ in each]
         by_linear = np.stack([gradient for _, gradient, _ in each])
-        by_offset = np.stack([gradient for _, _, gradient in each])
+        by_offset = np.stack([gradient for _, _, gradient in each])[:, self.axis]
         rotations, translations = self.motions[:, :3, :3], self.motions[:, :3, 3]
         by_rows = -np.einsum("nkj,nj->nk", rotations, by_linear[:, self.axis]) - by_offset[
-            :, self.axis, np.newaxis
-        ] * (translations - self.centre)
+            :, np.newaxis
+        ] * (translations - self._zero(rest))
         by_slopes = self.sign * by_rows @ self.rotation.T
-        by_matrix = (scales[:, np.newaxis] * by_slopes).T @ self.bvecs
-        by_exponent = np.sum(
-            self.log_b * scales * np.einsum("nj,nj->n", by_slopes, self.bvecs @ matrix.T)
+        weighted = scales[:, np.newaxis] * by_slopes
+        by_matrices = np.stack(
+            [
+                weighted[self.groups == k].T @ self.bvecs[self.groups == k]
+                for k in range(self.count)
+            ]
         )
-        derivative = np.r_[by_matrix.ravel() / self.radius, by_exponent, by_offset[:, self.axis]]
+        by_exponent = np.sum(self.log_b * scales * np.einsum("nj,nj->n", by_slopes, unscaled))
+        # A derived shift moves with the zero point by the volume's slopes
+        by_rest = self.radius * (by_offset @ rows) if self.derived else by_offset
+        derivative = np.r_[by_matrices.ravel() / self.radius, by_exponent, by_rest]
         return float(np.sum(values)), derivative
 
 
@@ -514,9 +640,9 @@ class EddyFieldFit:
     Estimate one :class:`EddyField` for all volumes, from their images.
 
     Each volume is added (:meth:`add`) with its prediction, its sample and the head
-    motion it starts with; :meth:`fit` then estimates :math:`C`, :math:`p` and each
-    volume's shift along phase encoding, and :meth:`mappings` gives each volume's head
-    motion and field. The eddy-current pass of an
+    motion it starts with; :meth:`fit` then estimates :math:`C` and :math:`p` (or a
+    :math:`C` for each segment of b-values) and the shifts along phase encoding, and
+    :meth:`mappings` gives each volume's head motion and field. The eddy-current pass of an
     :class:`~nifreeze.estimator.Estimator` given this fit as ``registration`` does
     all three.
 
@@ -542,9 +668,20 @@ class EddyFieldFit:
         The phase-encoding direction, as BIDS writes it (the eddy-current pass gives the
         dataset's).
     exponent : :obj:`float`, optional
-        Hold the exponent :math:`p` at this value; by default it is estimated.
+        Hold the exponent :math:`p` at this value; by default it is estimated, or held at
+        :data:`DEFAULT_EXPONENT` with ``segments``.
     b_ref : :obj:`float`, optional
-        The reference b-value (default: the :func:`geometric_mean` of the b-values).
+        The reference b-value (default: the :func:`geometric_mean` of the b-values). With
+        ``segments``, each segment's is the geometric mean of its b-values.
+    segments : :obj:`~collections.abc.Sequence` of :obj:`float`, optional
+        B-values that split the volumes into segments, each with its own matrix
+        :math:`C` (a :class:`SegmentedEddyField`); within a segment, the slopes scale with
+        the held exponent. Every segment must hold volumes whose b-vectors span three
+        dimensions. By default, one :math:`C` for every volume.
+    shifts : :obj:`str`, optional
+        ``"free"`` (default) estimates each volume's shift along phase encoding;
+        ``"derived"`` estimates one zero point of the fields, and each volume's shift is
+        its field there.
     seed : :obj:`int`, optional
         Seed of the points drawn in each stage.
     num_threads : :obj:`int`, optional
@@ -568,7 +705,11 @@ class EddyFieldFit:
         num_threads: int | None = None,
         clip: str | bool | None = "both",
         margin: float = 15.0,
+        segments: Sequence[float] | None = None,
+        shifts: str = "free",
     ) -> None:
+        if shifts not in SHIFTS:
+            raise ValueError(SHIFTS_ERROR_MSG.format(value=shifts))
         self.settings = get_settings(align_config)
         self.phase_encoding = format_phase_encoding(phase_encoding)
         self.exponent = None if exponent is None else float(exponent)
@@ -578,10 +719,14 @@ class EddyFieldFit:
         clip = str(clip).lower()
         self.clip = {"true": "both", "false": "none"}.get(clip, clip)
         self.margin = float(margin)
-        self.field: EddyField | None = None
+        self.segments = None if segments is None else _as_edges(segments)
+        self.derived = shifts == "derived"
+        self.field: EddyField | SegmentedEddyField | None = None
         """The estimated field, once fitted."""
         self.shifts: dict[int, float] = {}
         """Each volume's estimated shift along phase encoding (mm along :math:`u`)."""
+        self.zero_point: np.ndarray | None = None
+        """With derived shifts, the estimated zero point of the fields (RAS+, mm)."""
         self.evaluations: list[int] = []
         """How many times each stage evaluated the cost."""
         self.messages: list[str] = []
@@ -692,7 +837,9 @@ class EddyFieldFit:
         jitter = rng.uniform(-0.5, 0.5, size=(count, 3)) * shrink * spacing
         return points[chosen] + jitter
 
-    def _problem(self, table: np.ndarray, b_ref: float, number: int) -> _Problem:
+    def _problem(
+        self, table: np.ndarray, b_refs: np.ndarray, groups: np.ndarray, number: int
+    ) -> _Problem:
         """The cost of stage ``number`` over the volumes added."""
         import itk
 
@@ -717,7 +864,7 @@ class EddyFieldFit:
         radius = float(np.sqrt(np.mean(np.sum((inside - centre) ** 2, axis=1))))
         return _Problem(
             table,
-            b_ref,
+            b_refs,
             motions,
             centre,
             radius,
@@ -725,6 +872,8 @@ class EddyFieldFit:
             sign=-1.0 if self.phase_encoding.endswith("-") else 1.0,
             rotation=frame[:3, :3],
             evaluators=evaluators,
+            groups=groups,
+            derived=self.derived,
         )
 
     def _table(self, gradients: Any) -> np.ndarray:
@@ -736,7 +885,25 @@ class EddyFieldFit:
             )
         return _table(gradients[self.indices])
 
-    def fit(self, gradients: Any, start: EddyField | None = None) -> EddyField:
+    def _segments(self, table: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Each volume's segment, and each segment's reference b-value."""
+        if self.segments is None:
+            _check_span(table)
+            b_ref = geometric_mean(table[:, 3]) if self.b_ref is None else self.b_ref
+            return np.zeros(len(table), dtype=int), np.array([b_ref])
+        groups = _segment_of(self.segments, table[:, 3])
+        b_refs = []
+        for k in range(len(self.segments) + 1):
+            chosen = table[groups == k]
+            if not len(chosen):
+                raise ValueError(EMPTY_SEGMENT_ERROR_MSG.format(segment=k, edges=self.segments))
+            _check_span(chosen)
+            b_refs.append(geometric_mean(chosen[:, 3]))
+        return groups, np.array(b_refs)
+
+    def fit(
+        self, gradients: Any, start: EddyField | None = None
+    ) -> EddyField | SegmentedEddyField:
         """
         Estimate the field of every volume added.
 
@@ -747,11 +914,12 @@ class EddyFieldFit:
             (see :meth:`EddyField.slopes`).
         start : :class:`EddyField`, optional
             Where the estimation starts (default: no field, with the exponent
-            :data:`DEFAULT_EXPONENT`).
+            :data:`DEFAULT_EXPONENT`); each segment starts from its matrix at the
+            segment's reference b-value.
 
         Returns
         -------
-        :class:`EddyField`
+        :class:`EddyField` or :class:`SegmentedEddyField`
             The estimate, also kept as :attr:`field`. The images are released.
 
         """
@@ -762,14 +930,18 @@ class EddyFieldFit:
         if self.phase_encoding is None:
             raise ValueError(NO_PHASE_ENCODING_ERROR_MSG)
         table = self._table(gradients)
-        _check_span(table)
-        b_ref = geometric_mean(table[:, 3]) if self.b_ref is None else self.b_ref
-        start = EddyField(np.zeros((3, 3)), b_ref=b_ref) if start is None else start
-        start = start.rescaled(b_ref)
-        held = _held_exponent(table, self.exponent, start.exponent)
+        groups, b_refs = self._segments(table)
+        start = EddyField(np.zeros((3, 3)), b_ref=b_refs[0]) if start is None else start
+        if self.segments is None:
+            held = _held_exponent(table, self.exponent, start.exponent)
+        else:
+            held = DEFAULT_EXPONENT if self.exponent is None else self.exponent
         exponent = start.exponent if held is None else held
-        bounds = [(None, None)] * 9 + [EXPONENT_BOUNDS if held is None else (held, held)]
-        bounds += [(None, None)] * len(table)
+        matrices = np.stack([start.matrix_at(b_ref) for b_ref in b_refs])
+        rest = np.zeros(3 if self.derived else len(table))
+        bounds: list[tuple[float | None, float | None]] = [(None, None)] * matrices.size
+        bounds += [EXPONENT_BOUNDS if held is None else (held, held)]
+        bounds += [(None, None)] * len(rest)
 
         assert self._grid is not None
         affine = self._grid[0]
@@ -778,9 +950,9 @@ class EddyFieldFit:
         problem, theta = None, None
         with _threads(self.num_threads):
             for number, stage in enumerate(self.settings["stages"]):
-                problem = self._problem(table, b_ref, number)
+                problem = self._problem(table, b_refs, groups, number)
                 if theta is None:
-                    theta = problem.pack(start.matrix, exponent, np.zeros(len(table)))
+                    theta = problem.pack(matrices, exponent, rest)
                 result = minimize(
                     problem.cost,
                     theta,
@@ -795,11 +967,17 @@ class EddyFieldFit:
                 problem.evaluators = []  # release the stage's images and metrics
         assert problem is not None and theta is not None
 
-        matrix, exponent, shifts = problem.unpack(theta)
-        self.field = EddyField(matrix, exponent, b_ref)
+        matrices, exponent, _ = problem.unpack(theta)
+        parts = [EddyField(m, exponent, b) for m, b in zip(matrices, b_refs, strict=True)]
+        self.field = (
+            parts[0] if self.segments is None else SegmentedEddyField(self.segments, parts)
+        )
         u = phase_encoding_vector(self.phase_encoding, affine)
         sign = -1.0 if self.phase_encoding.endswith("-") else 1.0
         mappings = problem.mappings(theta)
+        shifts = problem.shifts(theta)
+        zero = problem.zero_point(theta)
+        self.zero_point = None if zero is None else (frame @ np.r_[zero, 1.0])[:3]
         self._mappings, self.shifts = {}, {}
         for position, index in enumerate(self.indices):
             world = frame @ mappings[position] @ np.linalg.inv(frame)
