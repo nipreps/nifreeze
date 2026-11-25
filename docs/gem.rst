@@ -72,6 +72,13 @@ L-BFGS-B estimates the model's parameters.
 The images are prepared as for ITK's registration of each volume on its own: clipped to
 the volume's intensity window, winsorized and histogram-matched as the settings ask.
 
+The model can be fitted on the volumes of a range of b-values only (``fit_range``), and
+then gives every volume its field.
+With a single b-value in the range, the exponent cannot be estimated, and is held.
+
+A field that an earlier pass estimated is factored out of each volume's mapping first, as a
+field zero at the zero point, and GEM fits from the head motion that remains.
+
 Running GEM
 -----------
 GEM runs in the estimator's eddy-current pass, given as its registration:
@@ -91,7 +98,22 @@ The fit takes the dataset's phase-encoding direction, unless it is given its own
 One model for each shell takes the edges between the shells, for instance
 ``EddyFieldFit(edges=(1500, 2750))`` for shells at b=1000, 2000 and 3500 s/mm².
 ``zero_point`` sets where the fields are zero, in world (RAS+) coordinates, in mm.
+``exponent`` holds :math:`p`, and ``fit_range`` fits the model on some b-values only: for
+instance, ``EddyFieldFit(fit_range=(0, 1500), exponent=0.5)`` fits :math:`C` on the
+b=1000 shell.
 The command line's ``--eddy`` registers each volume on its own.
+
+A second pass is a second estimator, in a chain:
+
+.. code-block:: python
+
+    first = Estimator("gqi-krr", estimates="eddy", registration=EddyFieldFit())
+    Estimator("gqi-krr", estimates="eddy", registration=EddyFieldFit(), prev=first).run(dwi)
+
+The second pass's model trains on the volumes that the first pass corrected (the default,
+``instant_update=True``); with the update off, the second pass repeats the first.
+FSL eddy, too, trains its predictions again on the corrected volumes at each of its
+iterations, five by default.
 
 The antecedent: FSL eddy's second-level model
 ---------------------------------------------
@@ -148,6 +170,9 @@ Noise-free originals
 gqi-krr predictions, gp-loo predictions
     each volume's prediction by that model (:doc:`models`), from the copy.
 
+Each fit runs in two passes, the second as above.
+Three more fits to gqi-krr's predictions hold the exponent (:ref:`gem-b1000`).
+
 What is measured
 ~~~~~~~~~~~~~~~~
 Each fit is scored with two numbers:
@@ -156,7 +181,10 @@ Each fit is scored with two numbers:
 - the share of the true field that GEM recovers: the gain of the estimated slopes
   :math:`s` on the true ones :math:`t`, :math:`\sum s \cdot t / \sum t \cdot t` over the
   volumes. The share is 1 when GEM recovers the whole field, and 0 when it recovers
-  none of it.
+  none of it;
+- the median, over the volumes, of each volume's field error: the mean, over the brain,
+  of the distance between where the estimated and the true mappings move each voxel's
+  center.
 
 What GEM recovers
 ~~~~~~~~~~~~~~~~~
@@ -164,7 +192,7 @@ What GEM recovers
    :width: 100%
 
    GEM's fitted exponent (left) and the share of the true field it recovers (right),
-   with each of the three targets.
+   with each of the three targets, after one pass (top) and two (bottom).
    Each line is one copy of the phantom, by the largest displacement of its eddy
    currents (4, 8 and 16 mm, light to dark blue).
    Solid lines and filled dots are the noise-free copies, and dashed lines and hollow
@@ -180,31 +208,94 @@ On the phantom, GEM's accuracy is set by its targets:
 
 - From the noise-free originals, GEM recovers the whole field, and :math:`p` is
   within 0.02 of the truth's, with or without noise.
-  The median field error, over the volumes, is 0.002 mm without noise and 0.010 mm
-  with it: the mean, over the brain, of the distance between where the estimated
-  and the true mappings move each voxel's center.
-- From predictions, it recovers less of the field, and less as the fields grow.
+  The median field error is at most 0.003 mm without noise, and 0.012 mm with it.
+  The originals never move, so a second pass changes nothing.
+- From predictions, one pass recovers less of the field, and less as the fields grow:
+  with gqi-krr's predictions of the noise-free copies, from 0.71 of it at 4 mm to 0.54
+  at 16 mm.
   Each prediction is made from the other volumes, whose fields resemble its volume's
   where their gradients do, so it carries part of its volume's distortion; registered
   to it, a volume is corrected for the rest.
 - The larger a volume's field, the smaller the share that GEM recovers, so the
   estimated fields grow more slowly with the b-value than the true ones, and the
   fitted exponent falls below the truth's.
-  With gqi-krr's predictions of the noise-free copy with 16 mm, for instance, GEM
+  With gqi-krr's predictions of the noise-free copy with 16 mm, for instance, one pass
   recovers 70% of the field at b=1000, 59% at b=2000 and 51% at b=3500, and :math:`p`
   is 0.76.
-- Without noise, GEM recovers only 13% to 20% of the field from gp-loo's predictions,
-  which therefore carry most of each volume's distortion.
+- A second pass predicts each volume from the volumes that the first pass corrected, so
+  its predictions carry part of what the first pass left, not of the whole field.
+  With gqi-krr, they carry 23% to 32% of it, at every size of the field, where the
+  first pass's predictions carry 26% to 46% of the field.
+  Two passes recover 0.85 to 0.93 of the field, :math:`p` is within 0.05 of the
+  truth's, and the median field error falls to about a third: at 16 mm, from 1.17 to
+  0.40 mm without noise, and from 1.14 to 0.34 mm with it.
+- Without noise, gp-loo's predictions carry most of each volume's distortion: GEM
+  recovers 13% to 20% of the field in one pass, and 22% to 31% in two.
   The exponent then stops at the upper limit of the fit, and says nothing about the
   field.
+  With noise, two passes recover 0.63 to 0.92 of it.
+
+.. _gem-b1000:
+
+Fitting C at b=1000
+~~~~~~~~~~~~~~~~~~~
+In one pass, from predictions, GEM recovers less of the larger fields, so a fit to every
+shell finds an exponent below the truth's.
+Three more fits to gqi-krr's predictions hold the exponent at the truth's, 1, and differ
+in what they fit:
+
+One C for all the shells
+    ``EddyFieldFit(exponent=1)``;
+One C for each shell
+    ``EddyFieldFit(edges=(1500, 2750), exponent=1)``;
+C from b=1000
+    one :math:`C`, fitted on the b=1000 shell only, which gives every volume its field:
+    ``EddyFieldFit(fit_range=(0, 1500), exponent=1)``.
+
+.. figure:: _static/gem/gem-fits.png
+   :width: 100%
+
+   The share of the true field that GEM recovers from gqi-krr's predictions (left), and
+   the median field error (right), for each way of fitting it, after one pass (top) and
+   two (bottom).
+   Lines and dots are as in the figure above.
+
+.. csv-table:: The values of the figure.
+   :file: _static/gem/gem-fits.csv
+   :header-rows: 1
+
+.. csv-table:: The share of the true field that each shell recovers, with one C for each
+   shell, gqi-krr's predictions.
+   :file: _static/gem/gem-shells.csv
+   :header-rows: 1
+
+- Holding the exponent does not help by itself.
+  With one :math:`C` for all the shells, or one for each, the share stays within 0.02 of
+  the default fit's, in both passes, and the median field error is the same or larger
+  (by up to 0.29 mm, at 16 mm).
+- Fitted at b=1000, :math:`C` gives every shell 0.70 to 0.80 of its field in one pass.
+  At 16 mm, the median field error is about half the default fit's: 0.66 against
+  1.17 mm without noise, and 0.56 against 1.14 mm with it.
+  At 4 mm, the four fits are alike.
+- After two passes, :math:`C` from b=1000 recovers 0.90 to 0.95 of the field, and its
+  error at 16 mm is still about half the default fit's: 0.21 against 0.40 mm without
+  noise, and 0.15 against 0.34 mm with it.
+- Fitted on its own, in one pass, each shell recovers about the same share at 4 mm.
+  At 8 and 16 mm, the b=1000 shell recovers the most, with or without noise: at 16 mm,
+  0.77 to 0.80 of its field, against 0.49 to 0.54 for the other shells.
+  These runs do not say why.
+- Here the exponent is held at the truth's.
+  On real data it must be given, and a wrong exponent goes straight to the high shells:
+  held at 1/2 when the truth is 1, the b=3500 fields would come out at 0.53 of their
+  size.
 
 Whether real eddy currents follow GEM is the question of
 `#752 <https://github.com/nipreps/nifreeze/issues/752>`__.
 
-Reproducing the figure
-~~~~~~~~~~~~~~~~~~~~~~
-The experiment runs GEM on the six copies (three sizes, without and with noise) with
-each target, in about 25 minutes on 6 CPUs::
+Reproducing the figures
+~~~~~~~~~~~~~~~~~~~~~~~
+The experiment runs GEM on the six copies (three sizes, without and with noise), with
+each of its six fits in two passes, in about 100 minutes on 6 CPUs::
 
     taskset -c 0-5 python tools/registration/eddy_model_accuracy.py \
         --dataset <phantoms> --out <results>
@@ -212,6 +303,7 @@ each target, in about 25 minutes on 6 CPUs::
         --results <results> --out docs/_static/gem
 
 The first command writes each run's estimates and scores, and
-``<results>/accuracy.{tsv,json}``; the second draws the figure and its table from them.
+``<results>/accuracy.{tsv,json}``; the second draws the figures and their tables from
+them.
 
 .. footbibliography::

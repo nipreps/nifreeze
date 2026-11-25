@@ -36,7 +36,23 @@ and GEM is fitted to each of three targets (:data:`TARGETS`):
 ``gqi-krr``, ``gp-loo``
     each volume's prediction by that model, from the copy.
 
-Each fit is scored against the truth, whose exponent is 1:
+Three more fits to gqi-krr's predictions hold the exponent at the truth's (:data:`HELD`),
+and differ in what they fit (:data:`FITS`):
+
+``held``
+    one ``C`` for all the volumes;
+``shells``
+    one ``C`` for each shell (:data:`EDGES`);
+``b1000``
+    one ``C``, fitted on the b=1000 volumes only (:data:`LOW`), which gives every volume
+    its field.
+
+Each fit runs in two passes (:data:`PASSES`). The second pass is a new fit with the same
+options, by a second estimator on the same dataset, whose model trains on the volumes
+realigned with the first pass's estimates. The originals never move, so their second pass
+repeats the first.
+
+Each fit and pass is scored against the truth, whose exponent is 1:
 
 - the fitted exponent ``p``;
 - the share of the true field recovered: the gain of the estimated slopes on the true
@@ -47,8 +63,8 @@ Each fit is scored against the truth, whose exponent is 1:
 
 Writes ``<out>/runs/<name>.{json,npz,tsv}`` and ``<out>/logs/<name>.log`` for each run
 (:data:`NAMES`) and, gathered, ``<out>/accuracy.{tsv,json}``, from which
-``eddy_model_accuracy_figures.py`` draws the figure of ``docs/gem.rst``. On CPUs 0-5,
-for instance::
+``eddy_model_accuracy_figures.py`` draws the figures of ``docs/gem.rst``. On CPUs 0-5,
+in about 90 minutes::
 
     taskset -c 0-5 python tools/registration/eddy_model_accuracy.py \\
         --dataset <phantoms> --out <results>
@@ -76,7 +92,12 @@ from experiments import provenance, write_results
 from nifreeze.analysis.phantoms import load_phantom
 from nifreeze.estimator import Estimator
 from nifreeze.model.base import BaseModel
-from nifreeze.registration.eddy_field import EddyField, EddyFieldFit, field_slopes
+from nifreeze.registration.eddy_field import (
+    EddyField,
+    EddyFieldFit,
+    SegmentedEddyField,
+    field_slopes,
+)
 from nifreeze.registration.utils import displacements_within_mask, phase_encoding_vector
 
 PROTOCOL = "sherbrooke"
@@ -87,6 +108,21 @@ NOISE_LEVELS = {"noise-free": None, "noisy": NOISE}
 """The seed of the noise on the moving volumes in each condition (none without it)."""
 TARGETS = ("original", "gqi-krr", "gp-loo")
 """What each volume is registered to: its noise-free original, or a model's prediction."""
+HELD = 1.0
+"""The exponent the extra fits hold: the truth's, since TRXScan drives the fields with b g."""
+EDGES = (1500.0, 2750.0)
+"""Between the protocol's shells (b=1000, 2000 and 3500 s/mm²)."""
+LOW = (0.0, 1500.0)
+"""The b-values of the b=1000 shell."""
+FITS: dict[str, tuple[str, dict[str, Any]]] = {
+    **{targets: (targets, {}) for targets in TARGETS},
+    "held": ("gqi-krr", {"exponent": HELD}),
+    "shells": ("gqi-krr", {"exponent": HELD, "edges": EDGES}),
+    "b1000": ("gqi-krr", {"exponent": HELD, "fit_range": LOW}),
+}
+"""Each fit: its targets, and the options of its :class:`EddyFieldFit`."""
+PASSES = 2
+"""The passes of each fit."""
 NAMES = tuple(f"{noise}-e{size:g}" for noise in NOISE_LEVELS for size in SIZES)
 """The runs, one for each condition and copy."""
 SEED = 12345
@@ -142,12 +178,12 @@ def _copy(root: Path, name: str) -> tuple[Any, Any, dict[str, np.ndarray], np.nd
 
 
 def run(args: argparse.Namespace, name: str) -> None:
-    """GEM fitted to each target, on one copy; the raw estimates are saved, then scored."""
+    """Each fit, in two passes, on one copy; the raw estimates are saved, then scored."""
     runs = args.out / "runs"
     runs.mkdir(parents=True, exist_ok=True)
     began = perf_counter()
     reference, dwi, truth, zero = _copy(args.dataset, name)
-    seconds = {"load": perf_counter() - began}
+    seconds: dict[str, Any] = {"load": perf_counter() - began}
     options = {"omp_nthreads": args.threads, "n_jobs": args.threads, "seed": SEED}
     arrays: dict[str, Any] = {
         "affine": dwi.affine,
@@ -162,25 +198,33 @@ def run(args: argparse.Namespace, name: str) -> None:
         "PhaseEncoding": dwi.phase_encoding,
     }
 
-    for targets in TARGETS:
+    for key, (targets, fit_options) in FITS.items():
         dwi.motion, dwi.eddy = truth["motion"].copy(), None
         model = Original(reference) if targets == "original" else targets
-        fit = EddyFieldFit(num_threads=args.threads, zero_point=zero)
-        began = perf_counter()
-        Estimator(model, estimates="eddy", registration=fit).run(dwi, **options)
-        seconds[targets] = perf_counter() - began
-        assert dwi.motion is not None and dwi.eddy is not None
-        assert isinstance(fit.field, EddyField)
-        arrays[f"{targets}/motion"] = dwi.motion.copy()
-        arrays[f"{targets}/eddy"] = dwi.eddy.copy()
-        record[targets] = {
-            "Matrix": fit.field.matrix.tolist(),
-            "Exponent": fit.field.exponent,
-            "BRef": fit.field.b_ref,
-            "Evaluations": fit.evaluations,
-            "Messages": fit.messages,
-        }
-        print(f"{name}: {targets}, {seconds[targets]:.0f} s", flush=True)
+        record[key], seconds[key] = [], []
+        for number in range(1, PASSES + 1):
+            # The second pass keeps the first pass's estimates, which its model trains on
+            fit = EddyFieldFit(num_threads=args.threads, zero_point=zero, **fit_options)
+            began = perf_counter()
+            Estimator(model, estimates="eddy", registration=fit).run(dwi, **options)
+            seconds[key].append(perf_counter() - began)
+            assert dwi.motion is not None and dwi.eddy is not None and fit.field is not None
+            arrays[f"{key}/{number}/motion"] = dwi.motion.copy()
+            arrays[f"{key}/{number}/eddy"] = dwi.eddy.copy()
+            field = fit.field
+            parts = field.parts if isinstance(field, SegmentedEddyField) else (field,)
+            record[key].append(
+                {
+                    # One field, or one for each shell
+                    "Fields": [
+                        {"Matrix": p.matrix.tolist(), "Exponent": p.exponent, "BRef": p.b_ref}
+                        for p in parts
+                    ],
+                    "Evaluations": fit.evaluations,
+                    "Messages": fit.messages,
+                }
+            )
+            print(f"{name}: {key}, pass {number}, {seconds[key][-1]:.0f} s", flush=True)
 
     record |= {"Seconds": seconds, "Threads": args.threads, "Provenance": provenance()}
     np.savez_compressed(runs / f"{name}.npz", **arrays)
@@ -212,27 +256,39 @@ def score(out: Path, name: str) -> None:
 
     columns: dict[str, np.ndarray] = {}
     summary: dict[str, Any] = {}
-    for targets in TARGETS:
-        slopes = field_slopes(saved[f"{targets}/eddy"], u)
-        mappings = saved[f"{targets}/eddy"] @ saved[f"{targets}/motion"]
-        errors = np.array(
-            [
-                np.mean(
-                    displacements_within_mask(mask_img, nt.linear.Affine(e), nt.linear.Affine(t))
-                )
-                for e, t in zip(mappings, truth, strict=True)
-            ]
-        )
-        columns[f"field_error_{targets}"] = errors
-        summary[targets] = {
-            "Exponent": record[targets]["Exponent"],
-            "Share": _share(slopes, truth_slopes),
-            "ShareByShell": {
-                f"{shell:g}": _share(slopes[shells == shell], truth_slopes[shells == shell])
-                for shell in np.unique(shells)
-            },
-            "FieldErrorMm": float(np.median(errors)),
-        }
+    for key in FITS:
+        summary[key] = []
+        for number, fitted in enumerate(record[key], start=1):
+            eddy = saved[f"{key}/{number}/eddy"]
+            slopes = field_slopes(eddy, u)
+            mappings = eddy @ saved[f"{key}/{number}/motion"]
+            errors = np.array(
+                [
+                    np.mean(
+                        displacements_within_mask(
+                            mask_img, nt.linear.Affine(e), nt.linear.Affine(t)
+                        )
+                    )
+                    for e, t in zip(mappings, truth, strict=True)
+                ]
+            )
+            columns[f"field_error_{key}_pass{number}"] = errors
+            by_shell = {f"{shell:g}": shells == shell for shell in np.unique(shells)}
+            summary[key].append(
+                {
+                    "Exponent": fitted["Fields"][0]["Exponent"],
+                    "Share": _share(slopes, truth_slopes),
+                    "ShareByShell": {
+                        shell: _share(slopes[chosen], truth_slopes[chosen])
+                        for shell, chosen in by_shell.items()
+                    },
+                    "FieldErrorMm": float(np.median(errors)),
+                    "FieldErrorMmByShell": {
+                        shell: float(np.median(errors[chosen]))
+                        for shell, chosen in by_shell.items()
+                    },
+                }
+            )
     record["Summary"] = summary
     (runs / f"{name}.json").write_text(json.dumps(record, indent=2) + "\n")
 

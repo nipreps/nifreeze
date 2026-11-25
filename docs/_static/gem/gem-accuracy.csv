@@ -1,7 +1,13 @@
-Targets,Moving volumes,"p, 4 mm","p, 8 mm","p, 16 mm","share, 4 mm","share, 8 mm","share, 16 mm"
-noise-free originals,noise-free,1.01,1.00,1.00,1.00,1.00,1.00
-noise-free originals,noisy,1.02,1.00,1.00,1.00,1.00,1.00
-gqi-krr predictions,noise-free,1.00,0.84,0.76,0.71,0.62,0.54
-gqi-krr predictions,noisy,0.98,0.84,0.75,0.74,0.65,0.55
-gp-loo predictions,noise-free,2.00,2.00,2.00,0.13,0.14,0.20
-gp-loo predictions,noisy,0.93,0.50,0.37,0.69,0.46,0.34
+Passes,Targets,Moving volumes,"p, 4 mm","p, 8 mm","p, 16 mm","share, 4 mm","share, 8 mm","share, 16 mm"
+1,noise-free originals,noise-free,1.01,1.00,1.00,1.00,1.00,1.00
+1,noise-free originals,noisy,1.02,1.00,1.00,1.00,1.00,1.00
+1,gqi-krr predictions,noise-free,1.00,0.84,0.76,0.71,0.62,0.54
+1,gqi-krr predictions,noisy,0.98,0.84,0.75,0.74,0.65,0.55
+1,gp-loo predictions,noise-free,2.00,2.00,2.00,0.13,0.14,0.20
+1,gp-loo predictions,noisy,0.93,0.50,0.37,0.69,0.46,0.34
+2,noise-free originals,noise-free,1.01,1.00,1.00,1.00,1.00,1.00
+2,noise-free originals,noisy,1.02,1.00,1.00,1.00,1.00,1.00
+2,gqi-krr predictions,noise-free,1.02,1.01,0.95,0.91,0.90,0.85
+2,gqi-krr predictions,noisy,1.03,1.01,0.95,0.93,0.92,0.87
+2,gp-loo predictions,noise-free,2.00,2.00,2.00,0.22,0.24,0.31
+2,gp-loo predictions,noisy,1.03,0.90,0.64,0.92,0.83,0.63
