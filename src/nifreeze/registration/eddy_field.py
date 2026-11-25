@@ -174,6 +174,13 @@ def _from_slopes(slopes: np.ndarray, direction: Any) -> np.ndarray:
     return fields
 
 
+def _zero_at(field: np.ndarray, point: np.ndarray) -> np.ndarray:
+    """A field's linear part, with the translation that makes it zero at ``point`` (RAS+)."""
+    zeroed = np.array(field, dtype=float)
+    zeroed[:3, 3] = (np.eye(3) - zeroed[:3, :3]) @ point
+    return zeroed
+
+
 def _as_edges(value: Any) -> tuple[float, ...]:
     edges = tuple(float(edge) for edge in np.atleast_1d(np.asarray(value, dtype=float)))
     if not edges or edges[0] <= 0 or np.any(np.diff(edges) <= 0):
@@ -634,8 +641,9 @@ class EddyFieldFit:
     Estimate the eddy-current field of all volumes, from their images, with one model.
 
     Each volume is added (:meth:`add`) with its target (the image it should match once its
-    field is undone), its sample and the head motion it is given; :meth:`fit` then
-    estimates the model, and :meth:`mappings` gives each volume's head motion and field.
+    field is undone), its sample, the head motion it is given and any field an earlier
+    pass estimated; :meth:`fit` then estimates the model, and :meth:`mappings` gives each
+    volume's head motion and field.
     Without ``edges``, the model is one :class:`EddyField` (:math:`C` and :math:`p`);
     with them, a :class:`SegmentedEddyField`, one :math:`C` for each segment of
     b-values, with the exponent held. The segments share no parameter, so each is fitted
@@ -725,6 +733,7 @@ class EddyFieldFit:
         self._fixed: dict[int, np.ndarray] = {}
         self._moving: dict[int, np.ndarray] = {}
         self._motion: dict[int, np.ndarray] = {}
+        self._field: dict[int, np.ndarray] = {}
         self._mappings: dict[int, tuple[np.ndarray, np.ndarray]] = {}
 
     @property
@@ -740,6 +749,7 @@ class EddyFieldFit:
         affine: np.ndarray,
         mask: np.ndarray | None = None,
         motion: np.ndarray | None = None,
+        field: np.ndarray | None = None,
     ) -> None:
         """
         Add one volume.
@@ -757,6 +767,12 @@ class EddyFieldFit:
         motion : :obj:`~numpy.ndarray`, optional
             The head motion the volume is given (a RAS+ matrix that maps the reference
             into it; default: none).
+        field : :obj:`~numpy.ndarray`, optional
+            The volume's eddy-current field already estimated, by an earlier pass (a RAS+
+            matrix that applies after ``motion``, as :meth:`mappings` gives it; default:
+            none). The fit takes it as a field zero at the zero point, and factors it out
+            of the volume's mapping: the fit starts from the head motion that remains, so
+            the earlier field's shift along phase encoding is not counted twice.
 
         """
         affine = np.asarray(affine, dtype=float)
@@ -800,6 +816,7 @@ class EddyFieldFit:
         self._fixed[index] = np.ascontiguousarray(fixed_values[box].transpose(2, 1, 0))
         self._moving[index] = np.ascontiguousarray(moving_values[box].transpose(2, 1, 0))
         self._motion[index] = np.eye(4) if motion is None else np.array(motion, dtype=float)
+        self._field[index] = np.eye(4) if field is None else np.array(field, dtype=float)
 
     def _points(self, stage: Mapping[str, Any], number: int) -> np.ndarray:
         """A stage's points in the voxel frame (mm), within the mask."""
@@ -961,6 +978,10 @@ class EddyFieldFit:
             world = self.zero_point
         zero = (np.linalg.inv(frame) @ np.r_[world, 1.0])[:3]
         u = phase_encoding_vector(self.phase_encoding, affine)
+        # An earlier pass's field, zero at the zero point too, out of each volume's mapping
+        for index, field in self._field.items():
+            undone = np.linalg.inv(_zero_at(field, np.asarray(world, dtype=float)))
+            self._motion[index] = undone @ field @ self._motion[index]
 
         self.evaluations, self.messages = [], []
         parts: list[EddyField] = []
@@ -976,7 +997,7 @@ class EddyFieldFit:
         self.zero_point = np.asarray(world, dtype=float)
         self.field = parts[0] if self.edges is None else SegmentedEddyField(self.edges, parts)
         self._mappings = mappings
-        self._fixed, self._moving = {}, {}
+        self._fixed, self._moving, self._field = {}, {}, {}
         return self.field
 
     def mappings(self) -> dict[int, tuple[np.ndarray, np.ndarray]]:
