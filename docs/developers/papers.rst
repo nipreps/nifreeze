@@ -46,4 +46,4 @@ It is generated for each release, from the root of the repository:
 
 .. code-block:: bash
 
-   uv run .maint/update_authors.py publication --release <version> --docs docs/citation.rst
+   uv run .maint/update_authors.py publication --release <version> --docs docs/developers/papers.rst

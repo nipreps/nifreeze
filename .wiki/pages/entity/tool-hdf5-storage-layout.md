@@ -21,7 +21,7 @@ raw data block can be memory-mapped directly ([[tool-numpy-memmap]],
 ## nfHDF5 container format (what nifreeze writes)
 
 - *nfHDF5* names this layout: HDF5 shaped for nifreeze. The user-facing
-  description is `docs/design.rst` (label `nfhdf5`).
+  description is `docs/usage/data.rst` (label `nfhdf5`).
 - File attrs `Format="nfHDF5"`, `Version` (uint16, `4`). A single group `/0`
   with a group attr `Type` (`"base dataset"`, DWI included, or `"pet"`); DWI
   files also carry a file attr `Type="dmri"`.

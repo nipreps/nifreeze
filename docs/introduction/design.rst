@@ -38,11 +38,11 @@ dMRI
 The dMRI data class holds a single ``b0`` volume. The rationale behind this is
 that this volume serves as a canonical reference for transforming non-zero
 gradient volumes. Users can compute such reference ``b0`` volume using their
-preferred method and provide it when instantiating a :class:`api/nifreeze.data.dmri.DWI`
+preferred method and provide it when instantiating a :class:`~nifreeze.data.dmri.DWI`
 class (e.g. through the :meth:`~nifreeze.data.dmri.io.from_nii`); otherwise,
 *NiFreeze* computes a reference ``b0`` as the median volume across
 non-diffusion-weighted volumes. Note that following this design choice,
-the gradient data hosted by the :class:`api/nifreeze.data.dmri.DWI` instance
+the gradient data hosted by the :class:`~nifreeze.data.dmri.DWI` instance
 only contains (nonzero) diffusion-weighted gradient values.
 
 The gradient table's convention and the files *NiFreeze* saves datasets in are
@@ -52,7 +52,7 @@ Preprocessing
 ^^^^^^^^^^^^^
 
 *NiFreeze* provides a set of minimal preprocessing utilities under the form
-of :class:`api/nifreeze.estimator.Filter`\s. :class:`api/nifreeze.estimator.Filter`\s
+of :class:`~nifreeze.estimator.Filter`\s. :class:`~nifreeze.estimator.Filter`\s
 can be specified as inputs to estimators so that the data used by the
 estimator is processed through the given filter instance.
 
@@ -149,4 +149,4 @@ can indicate which model should be used to address a specific problem, such as h
 The transformations estimated at each level initialize the registration of the next level, whose models train on
 the data realigned with them.
 
-Refer to the :ref:`usage` document for a self-contained usage example.
+Refer to :doc:`/usage/python` for a self-contained usage example.

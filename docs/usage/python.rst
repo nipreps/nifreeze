@@ -1,4 +1,4 @@
-.. include:: links.rst
+.. include:: ../links.rst
 
 Using *NiFreeze* from Python
 ============================
@@ -88,9 +88,9 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
 
    - ``model``: specifies the model used to generate the registration target
      for each gradient map (dMRI) or frame (dMRI, PET). For a list of
-     available models, see :doc:`api/nifreeze.model`.
+     available models, see :doc:`/api/nifreeze.model`.
    - ``strategy``: strategy used to traverse the 4D sequence. The list of
-     supported strategies can be found at :doc:`api/nifreeze.utils.iterators`.
+     supported strategies can be found at :doc:`/api/nifreeze.utils.iterators`.
    - ``prev``: estimators can be stacked and be run sequentially.
    - ``single_fit``: when ``True``, fit the model once on all volumes instead of
      refitting per held-out volume. Use carefully.
@@ -101,7 +101,7 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
      :data:`~nifreeze.registration.base.AFFINE`; the dataset must know its
      phase-encoding direction, and the eddy-current pass then refines the head
      motion and stores the field. ``"gem"`` estimates the eddy currents of all the
-     volumes at once (:doc:`gem`), and needs the direction too.
+     volumes at once (:doc:`/methods/gem`), and needs the direction too.
    - ``align_config``: the registration settings, a mapping or a YAML file with a
      section per backend. NiFreeze ships two:
      :data:`~nifreeze.registration.base.RIGID` (the default, for head motion) and
@@ -161,7 +161,7 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
    Eddy currents are estimated by more passes, which start from the head-motion
    estimates stored in the dataset and store what they add in ``eddy``.
    By default, the command line estimates the eddy currents of a DWI with three passes
-   of GEM, the global eddy model (:doc:`gem`), after the cascade of ``--models``
+   of GEM, the global eddy model (:doc:`/methods/gem`), after the cascade of ``--models``
    (gqi-krr by default).
    ``--gem-passes N`` sets their number, and ``--gem-passes 0`` turns GEM off.
    Their model is the cascade's last, unless ``--eddy-model`` names another
@@ -202,7 +202,7 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
 
 6. **Plotting**: Visualize data and results:
 
-   Estimated motion results can be visualized using :doc:`api/nifreeze.viz.motion_viz`
+   Estimated motion results can be visualized using :doc:`/api/nifreeze.viz.motion_viz`
    functions. This includes visualizing framewise displacement, motion
    overlay, and volume-wise motion.
 

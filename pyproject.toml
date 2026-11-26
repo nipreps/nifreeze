@@ -292,4 +292,4 @@ exclude_lines = [
 # mapp, reson -- Mapp. and Reson. abbreviations in citation
 ignore-words-list = "nd,mapp,reson"
 skip = """
-./.git,./docs/gallery,*.pdf,*.svg,*.min.js,*.ipynb"""
+./.git,./docs/edd/gallery,*.pdf,*.svg,*.min.js,*.ipynb"""

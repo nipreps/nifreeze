@@ -73,7 +73,7 @@ uses, and the adaptive stochastic gradient descent, elastix's default.
 
 Data
 ----
-Phantoms (:doc:`../phantoms`)
+Phantoms (:doc:`phantoms`)
     The development volumes of Sherbrooke (64, every third of 192) and HCP-YA (30,
     every ninth of 270), in the rigid-motion copies at 0.5, 1, 2 and 4 mm and degrees
     (motion seed 0, no eddy currents, noise 20261029).

@@ -20,7 +20,7 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""Draw the figures of ``docs/phantoms.rst`` from a synthetic dataset.
+"""Draw the figures of ``docs/edd/phantoms.rst`` from a synthetic dataset.
 
 Usage::
 

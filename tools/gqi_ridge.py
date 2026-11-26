@@ -28,7 +28,7 @@ is predicted in closed form from all the others, at each ridge of the grid of
 ridge (normalized by each voxel's signal energy, as
 :func:`~nifreeze.model.lovo.lovo_error`, and averaged over voxels), the ridge
 that minimizes it, and, at that ridge, the median over volumes of the ratio
-between the predicted and observed mean signals. ``docs/models.rst`` reports
+between the predicted and observed mean signals. ``docs/methods/models.rst`` reports
 its output::
 
     python tools/gqi_ridge.py

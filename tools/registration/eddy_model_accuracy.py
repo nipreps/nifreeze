@@ -63,7 +63,7 @@ Each fit and pass is scored against the truth, whose exponent is 1:
 
 Writes ``<out>/runs/<name>.{json,npz,tsv}`` and ``<out>/logs/<name>.log`` for each run
 (:data:`NAMES`) and, gathered, ``<out>/accuracy.{tsv,json}``, from which
-``eddy_model_accuracy_figures.py`` draws the figures of ``docs/gem.rst``. On CPUs 0-5,
+``eddy_model_accuracy_figures.py`` draws the figures of ``docs/edd/gem-accuracy.rst``. On CPUs 0-5,
 in about 3 hours::
 
     taskset -c 0-5 python tools/registration/eddy_model_accuracy.py \\

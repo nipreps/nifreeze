@@ -1,4 +1,4 @@
-.. include:: links.rst
+.. include:: ../links.rst
 
 What limits registration to a perfect target
 ============================================
@@ -78,7 +78,7 @@ the diffusion contrast of a moved volume also changes as its fibers turn.
 This experiment uses the copies with *m* = 1 and *m* = 4, and every third volume:
 64 of the 192, of which 22 are at b=1000, 21 at b=2000 and 21 at b=3500.
 
-.. figure:: _static/registration/floor-orientations.svg
+.. figure:: ../_static/registration/floor-orientations.svg
    :width: 100%
 
    The 64 volumes this experiment registers, noise-free, played in order, a quarter
@@ -103,7 +103,7 @@ Diffusion weighting lowers the signal, so the ratio is lower at higher b-values.
 The brain mask (171,170 voxels) limits where ANTs computes the similarity, on the
 fixed image, and where the error is measured.
 
-.. figure:: _static/registration/floor-inputs.png
+.. figure:: ../_static/registration/floor-inputs.png
    :width: 100%
 
    One volume of each shell at *m* = 1, on an axial slice through the center of the
@@ -136,7 +136,7 @@ This is the command of the benchmark, with the file names replaced by placeholde
 ``fixed.nii`` is the oracle, ``moving.nii`` the moved volume and ``mask.nii`` the
 brain mask.
 
-.. literalinclude:: _static/registration/floor-command.txt
+.. literalinclude:: ../_static/registration/floor-command.txt
    :language: bash
 
 The command runs two stages, one after the other, each estimating a rigid
@@ -195,7 +195,7 @@ The variants change only the second stage, or the images given to ANTs:
 .. csv-table:: The nine variants, and the second-stage options in which each differs
    from A, as ANTs receives them. Noise and the coding of the inputs are not ANTs
    options.
-   :file: _static/registration/floor-variants.csv
+   :file: ../_static/registration/floor-variants.csv
    :header-rows: 1
    :widths: auto
 
@@ -225,11 +225,11 @@ Results
 
 .. csv-table:: Mean displacement error within the brain (mm), median and p95 over
    64 volumes at each motion size, and the median seconds per registration.
-   :file: _static/registration/floor-results.csv
+   :file: ../_static/registration/floor-results.csv
    :header-rows: 1
    :widths: auto
 
-.. figure:: _static/registration/floor-errors.png
+.. figure:: ../_static/registration/floor-errors.png
    :width: 100%
 
    The error of every registration. Each point is one volume, colored by its shell
@@ -239,11 +239,11 @@ Results
    differ from A.
 
 .. csv-table:: Median error per shell (mm), with both motion sizes together.
-   :file: _static/registration/floor-shells.csv
+   :file: ../_static/registration/floor-shells.csv
    :header-rows: 1
    :widths: auto
 
-.. figure:: _static/registration/floor-residuals.png
+.. figure:: ../_static/registration/floor-residuals.png
    :width: 100%
 
    Where each estimate misplaces the center of the brain: the residual displacement
@@ -326,7 +326,7 @@ and the remaining error is scatter.
 .. csv-table:: Mean residual of each variant over its 128 registrations: the shift of
    the brain's centroid (estimate minus truth) and the rotation of the estimate
    relative to the truth, about each axis.
-   :file: _static/registration/floor-bias.csv
+   :file: ../_static/registration/floor-bias.csv
    :header-rows: 1
    :widths: auto
 

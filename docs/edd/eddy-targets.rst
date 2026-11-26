@@ -49,7 +49,7 @@ The working hypothesis asked two questions:
    Hypothesis 1 said: the eddy currents that the training data still carry.
 2. Hypothesis 2: does the pass's benefit from the *instant update* grow with a volume's
    position in the order of registration?
-   With the instant update (:doc:`../design`), each volume, once registered, enters the
+   With the instant update (:doc:`/introduction/design`), each volume, once registered, enters the
    models' training data resampled with its estimate, so later volumes get targets
    drawn from more corrected volumes.
    The order is random, drawn from the run's seed, and the same in every level of the
@@ -58,7 +58,7 @@ The working hypothesis asked two questions:
 Data
 ~~~~
 The copy
-    Sherbrooke ``m2s0e2`` (:doc:`../phantoms`): 192 diffusion-weighted volumes at 2 mm,
+    Sherbrooke ``m2s0e2`` (:doc:`phantoms`): 192 diffusion-weighted volumes at 2 mm,
     in three shells (b=1000, 2000 and 3500) that share the same 64 directions.
     Every volume moved by 2 mm and 2° (motion seed 0), then was distorted by eddy
     currents of up to 4 mm within the brain.

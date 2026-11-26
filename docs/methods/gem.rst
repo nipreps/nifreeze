@@ -1,4 +1,4 @@
-.. include:: links.rst
+.. include:: ../links.rst
 
 The global eddy model (GEM)
 ===========================
@@ -31,7 +31,7 @@ the reference b-value :math:`b_\text{ref}` is the geometric mean of the b-values
 frame rotated by :math:`R`, it becomes :math:`R C R^T`, as a tensor does.
 The exponent is 1/2 when the field follows the gradient's strength at a fixed timing,
 and 1 when it follows the b-value, as in the phantoms that TRXScan makes
-(:doc:`phantoms`).
+(:doc:`/edd/phantoms`).
 GEM estimates :math:`p` between 0 and 2.
 
 The fields are zero at one point, by default the center of the field of view, the
@@ -83,8 +83,8 @@ Each target predicts its volume as the head shows it at the reference position.
 When the head turns by :math:`Q_v`, the gradient :math:`g_v` points along
 :math:`Q_v^{-1} g_v` in the head, and the model predicts the volume there
 (:func:`~nifreeze.data.dmri.utils.realign_bvecs`).
-With the instant update (:doc:`design`), the realigned view that the model trains on
-holds each volume realigned and its b-vector rotated, together.
+With the instant update (:doc:`/introduction/design`), the realigned view that the model
+trains on holds each volume realigned and its b-vector rotated, together.
 Without it (``--no-instant-update``), the model trains on the original volumes, at the
 b-vectors as acquired.
 GEM derives only each volume's translation along :math:`u`, and keeps the rotation of
@@ -150,7 +150,7 @@ The command line fits GEM in its default form; its other options are set in Pyth
 On DIPY's Sherbrooke data, the default run took 17 min on six CPUs, against 5.4 min
 for head motion alone.
 
-.. figure:: _static/gem/gem-sherbrooke.svg
+.. figure:: ../_static/gem/gem-sherbrooke.svg
    :width: 100%
 
    The default run on DIPY's Sherbrooke 3-shell data (64 volumes at each of b=1000,

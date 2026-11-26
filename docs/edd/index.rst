@@ -9,7 +9,7 @@ code or default that each outcome would change.
 The tracking issue `#614 <https://github.com/nipreps/nifreeze/issues/614>`__ lists
 every experiment, its status and its decision.
 
-The experiments run on the synthetic phantoms (:doc:`../phantoms`), where the truth
+The experiments run on the synthetic phantoms (:doc:`phantoms`), where the truth
 of every volume is known exactly.
 Each runs as a ``datalad run`` record in the phantom dataset, from a script under
 ``tools/registration/``, so every result traces back to the command and the

@@ -224,7 +224,7 @@ jobs:
           python tools/gallery_collect.py \
             --staging gallery-staging \
             --out "${NIFREEZE_GALLERY_OUT}" \
-            --pages docs/gallery \
+            --pages docs/edd/gallery \
             ${EXPECT_ARG}
       - name: Combine coverage
         run: |
@@ -250,7 +250,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: gallery-pages
-          path: docs/gallery
+          path: docs/edd/gallery
           retention-days: 30
       - name: Upload coverage to Codecov
         if: hashFiles('coverage-gallery.xml') != ''

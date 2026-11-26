@@ -1,4 +1,4 @@
-.. include:: links.rst
+.. include:: ../links.rst
 
 Synthetic reference data
 ========================
@@ -269,7 +269,7 @@ same gradient table::
     python tools/phantoms/figures.py --dataset <dataset> --protocol hbn \
         --real <real_dwi.nii.gz> --out docs/_static/phantoms
 
-.. figure:: _static/phantoms/hbn_real_vs_synthetic.png
+.. figure:: ../_static/phantoms/hbn_real_vs_synthetic.png
    :width: 100%
 
    A real HBN subject (top) and the synthetic dataset, noise-free and at the
@@ -277,13 +277,13 @@ same gradient table::
    The synthetic tissues are piecewise constant, without the texture of real
    brains, and the head around the brain is not simulated.
 
-.. figure:: _static/phantoms/hbn_truth.png
+.. figure:: ../_static/phantoms/hbn_truth.png
    :width: 100%
 
    The ground truth written with the reference: the scalar maps the simulated
    compartments imply, and the orientation of the first fiber.
 
-.. figure:: _static/phantoms/hbn_eddy_currents.png
+.. figure:: ../_static/phantoms/hbn_eddy_currents.png
    :width: 100%
 
    Eddy currents of 2, 4 and 8 voxels on the volume most stretched along phase
@@ -291,7 +291,7 @@ same gradient table::
    readout, bottom), with the outline of the undistorted brain. On the right, the
    displacement of each at 8 voxels, from the coefficients stored in its sidecar.
 
-.. figure:: _static/phantoms/hbn_motion.png
+.. figure:: ../_static/phantoms/hbn_motion.png
    :width: 100%
 
    Two moved volumes against the reference, with the outline of the reference

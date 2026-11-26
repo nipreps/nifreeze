@@ -24,7 +24,7 @@ It involves no registration.
 
 The question
 ------------
-Each eddy-current copy of a phantom (:doc:`../phantoms`) comes with the
+Each eddy-current copy of a phantom (:doc:`phantoms`) comes with the
 displacement of every volume along phase encoding, in closed form
 (:class:`~nifreeze.analysis.sensitivity.Distortion`).
 The displacement is a polynomial of degree 1,
@@ -408,7 +408,7 @@ Deviations from the registration
 
 Reproducing
 -----------
-The results are in the phantom dataset (:doc:`../phantoms`), under
+The results are in the phantom dataset (:doc:`phantoms`), under
 ``derivatives/registration/eddy-truth``.
 ``<protocol>.tsv`` has one row per volume of each copy, and ``<protocol>.json``
 records the copies, the fitted volumes and the provenance of the run.

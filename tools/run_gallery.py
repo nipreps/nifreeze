@@ -92,7 +92,7 @@ def main() -> None:
             "--out",
             str(OUT),
             "--pages",
-            "docs/gallery",
+            "docs/edd/gallery",
         ]
     )
 

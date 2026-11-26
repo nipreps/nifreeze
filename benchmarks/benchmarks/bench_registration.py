@@ -23,7 +23,7 @@
 """How accurately and how fast a volume is registered (nipreps/nifreeze#584).
 
 Each diffusion-weighted volume of the CI phantom's copy that moves all 24 volumes
-by 1° and 1 mm (``tools/phantoms/phantom.py fixture``, see ``docs/phantoms.rst``),
+by 1° and 1 mm (``tools/phantoms/phantom.py fixture``, see ``docs/edd/phantoms.rst``),
 with the noise of seed 0, is registered to the noise-free reference volume of the
 same direction: the error of registration alone, with no model involved
 (:func:`~nifreeze.analysis.registration.registration_accuracy`).

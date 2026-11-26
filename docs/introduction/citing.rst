@@ -4,7 +4,7 @@ Citing NiFreeze
 If you use NiFreeze in your research, please cite it using the below
 references as appropriate:
 
-.. literalinclude:: _static/citation.txt
+.. literalinclude:: ../_static/citation.txt
    :language: text
 
 The citation metadata are maintained in the repository's

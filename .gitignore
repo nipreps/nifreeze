@@ -69,7 +69,7 @@ instance/
 docs/_build/
 docs/api/
 # Prediction gallery pages, fetched by tools/fetch_gallery.py
-docs/gallery/
+docs/edd/gallery/
 
 # PyBuilder
 target/

@@ -45,7 +45,7 @@ Creating New Models
 
 To implement a new model:
 
-1. Subclass the :class:`api/nifreeze.model.base.BaseModel` class.
+1. Subclass the :class:`~nifreeze.model.base.BaseModel` class.
 1. Implement the ``fit(data)`` method, which returns a 3D volume.
 1. Register the model in your pipeline or CLI wrapper.
 

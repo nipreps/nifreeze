@@ -25,7 +25,7 @@ The synthetic phantoms of ``tools/phantoms/phantom.py``, for the sensitivity ana
 
 A phantom dataset holds, for each acquisition protocol, a noise-free reference
 and only the changed volumes of each perturbed copy of it, with their ground
-truth in the sidecars (see ``docs/phantoms.rst``). :func:`load_phantom` reads
+truth in the sidecars (see ``docs/edd/phantoms.rst``). :func:`load_phantom` reads
 one protocol as :func:`~nifreeze.analysis.sensitivity.sensitivity` takes it: the
 reference, and each copy with its :class:`~nifreeze.analysis.sensitivity.Perturbation`.
 

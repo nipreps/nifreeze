@@ -21,14 +21,14 @@ The copies have no head motion, and the pass is given none, so GEM estimates the
 fields alone.
 Each copy is registered twice: noise-free, as simulated, and with the protocol's noise.
 The noise is complex Gaussian, with a standard deviation of 3.0 in each channel, and
-the magnitude is kept, as in :doc:`registration`.
+the magnitude is kept, as in :doc:`registration-floor`.
 GEM is fitted to three targets:
 
 Noise-free originals
     each volume as simulated without eddy currents, noise-free: what a perfect model
     would predict;
 gqi-krr predictions, gp-loo predictions
-    each volume's prediction by that model (:doc:`models`), from the copy.
+    each volume's prediction by that model (:doc:`/methods/models`), from the copy.
 
 Each fit runs in three cascaded passes (:ref:`gem-cascade`).
 Three more fits to gqi-krr's predictions hold the exponent (:ref:`gem-b1000`).
@@ -50,7 +50,7 @@ Each fit is scored with two numbers:
 
 What GEM recovers
 -----------------
-.. figure:: _static/gem/gem-accuracy.png
+.. figure:: ../_static/gem/gem-accuracy.png
    :width: 100%
 
    GEM's fitted exponent (left) and the share of the true field it recovers (right),
@@ -63,7 +63,7 @@ What GEM recovers
    Triangles are fits whose exponent stopped at the upper limit of the fit, 2.
 
 .. csv-table:: The values of the figure.
-   :file: _static/gem/gem-accuracy.csv
+   :file: ../_static/gem/gem-accuracy.csv
    :header-rows: 1
 
 On the phantom, GEM's accuracy is set by its targets:
@@ -121,7 +121,7 @@ C from b=1000
     one :math:`C`, fitted on the b=1000 shell only, which gives every volume its field
     (:ref:`gem-fit-range`): ``GEM(fit_range=(0, 1500), exponent=1)``.
 
-.. figure:: _static/gem/gem-fits.png
+.. figure:: ../_static/gem/gem-fits.png
    :width: 100%
 
    The share of the true field that GEM recovers from gqi-krr's predictions (left), and
@@ -130,12 +130,12 @@ C from b=1000
    Lines and dots are as in the figure above.
 
 .. csv-table:: The values of the figure.
-   :file: _static/gem/gem-fits.csv
+   :file: ../_static/gem/gem-fits.csv
    :header-rows: 1
 
 .. csv-table:: The share of the true field that each shell recovers, with one C for each
    shell, gqi-krr's predictions.
-   :file: _static/gem/gem-shells.csv
+   :file: ../_static/gem/gem-shells.csv
    :header-rows: 1
 
 - Holding the exponent does not help by itself.
