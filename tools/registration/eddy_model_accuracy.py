@@ -1,0 +1,376 @@
+# emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
+# vi: set ft=python sts=4 ts=4 sw=4 et:
+#
+# Copyright The NiPreps Developers <nipreps@gmail.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# We support and encourage derived works from this project, please read
+# about our expectations at
+#
+#     https://www.nipreps.org/community/licensing/
+#
+"""
+How accurately does the global eddy model (GEM) recover the phantom's eddy currents?
+
+GEM (:class:`~nifreeze.registration.gem.GEM`, one tensor ``C`` and one
+exponent ``p``) runs in the estimator's eddy-current pass on the copies of the Sherbrooke
+phantom without head motion (:data:`SIZES`: eddy currents whose largest displacement in
+the brain is 4, 8 and 16 mm). Head motion is held at the identity: there is no head-motion
+step. The fields' zero point is the phantom's (#744). Each copy runs in two conditions
+(:data:`NOISE_LEVELS`), with its moving volumes noise-free or with the protocol's noise,
+and GEM is fitted to each of three targets (:data:`TARGETS`):
+
+``original``
+    each volume's noise-free original, without eddy currents, which never moves;
+``gqi-krr``, ``gp-loo``
+    each volume's prediction by that model, from the copy.
+
+Three more fits to gqi-krr's predictions hold the exponent at the truth's (:data:`HELD`),
+and differ in what they fit (:data:`FITS`):
+
+``held``
+    one ``C`` for all the volumes;
+``shells``
+    one ``C`` for each shell (:data:`EDGES`);
+``b1000``
+    one ``C``, fitted on the b=1000 volumes only (:data:`LOW`), which gives every volume
+    its field.
+
+Each fit runs in three passes (:data:`PASSES`). Each pass after the first is a new fit
+with the same options, by another estimator on the same dataset, whose model trains on
+the volumes realigned with the previous pass's estimates. The originals never move, so
+their later passes repeat the first.
+
+Each fit and pass is scored against the truth, whose exponent is 1:
+
+- the fitted exponent ``p``;
+- the share of the true field recovered: the gain of the estimated slopes on the true
+  ones, ``sum(s * t) / sum(t * t)`` over the volumes and the slopes' components, for all
+  the volumes and for each shell;
+- each volume's field error: the mean, over the brain, of the distance between the points
+  to which the estimated and the true mappings move each voxel's centre.
+
+Writes ``<out>/runs/<name>.{json,npz,tsv}`` and ``<out>/logs/<name>.log`` for each run
+(:data:`NAMES`) and, gathered, ``<out>/accuracy.{tsv,json}``, from which
+``eddy_model_accuracy_figures.py`` draws the figures of ``docs/gem.rst``. On CPUs 0-5,
+in about 3 hours::
+
+    taskset -c 0-5 python tools/registration/eddy_model_accuracy.py \\
+        --dataset <phantoms> --out <results>
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from time import perf_counter
+from typing import Any
+
+import nibabel as nb
+import nitransforms as nt
+import numpy as np
+from eddy_targets import _dataset_commit
+from eddy_targets_expansion import NOISE
+from experiments import provenance, write_results
+
+from nifreeze.analysis.phantoms import load_phantom
+from nifreeze.estimator import Estimator
+from nifreeze.model.base import BaseModel
+from nifreeze.registration.gem import (
+    GEM,
+    EddyTensor,
+    SegmentedEddyTensor,
+    field_slopes,
+)
+from nifreeze.registration.utils import displacements_within_mask, phase_encoding_vector
+
+PROTOCOL = "sherbrooke"
+"""The phantom's protocol."""
+SIZES = (4.0, 8.0, 16.0)
+"""The copies' eddy currents: their largest displacement in the brain (mm)."""
+NOISE_LEVELS = {"noise-free": None, "noisy": NOISE}
+"""The seed of the noise on the moving volumes in each condition (none without it)."""
+TARGETS = ("original", "gqi-krr", "gp-loo")
+"""What each volume is registered to: its noise-free original, or a model's prediction."""
+HELD = 1.0
+"""The exponent the extra fits hold: the truth's, since TRXScan drives the fields with b g."""
+EDGES = (1500.0, 2750.0)
+"""Between the protocol's shells (b=1000, 2000 and 3500 s/mm²)."""
+LOW = (0.0, 1500.0)
+"""The b-values of the b=1000 shell."""
+FITS: dict[str, tuple[str, dict[str, Any]]] = {
+    **{targets: (targets, {}) for targets in TARGETS},
+    "held": ("gqi-krr", {"exponent": HELD}),
+    "shells": ("gqi-krr", {"exponent": HELD, "edges": EDGES}),
+    "b1000": ("gqi-krr", {"exponent": HELD, "fit_range": LOW}),
+}
+"""Each fit: its targets, and the options of its :class:`GEM`."""
+PASSES = 3
+"""The passes of each fit."""
+NAMES = tuple(f"{noise}-e{size:g}" for noise in NOISE_LEVELS for size in SIZES)
+"""The runs, one for each condition and copy."""
+SEED = 12345
+"""Seed of the estimators."""
+THREAD_VARIABLES = ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS")
+"""The libraries' thread counts, set to each process's."""
+
+
+class Original(BaseModel):
+    """Each volume's noise-free original: the phantom's reference, as it is."""
+
+    def fit_predict(self, index: int | None = None, **kwargs: Any) -> np.ndarray | None:
+        """Return the original of volume ``index``."""
+        if index is None:
+            return None
+        return np.asarray(self._dataset.dataobj[index], dtype="float32")
+
+
+def _parse(name: str) -> tuple[str, float]:
+    """A run's condition and its copy's eddy currents (mm)."""
+    noise, size = name.rsplit("-", 1)
+    return noise, float(size[1:])
+
+
+def _copy(root: Path, name: str) -> tuple[Any, Any, dict[str, np.ndarray], np.ndarray]:
+    """The noise-free original, the copy, its truth and its fields' zero point."""
+    noise, size = _parse(name)
+    reference, cells = load_phantom(root, PROTOCOL, noise=None)
+    if NOISE_LEVELS[noise] is not None:  # the copies with noise; the original stays noise-free
+        _, cells = load_phantom(root, PROTOCOL, noise=NOISE_LEVELS[noise])
+    chosen = [
+        (perturbation, load)
+        for perturbation, load in cells
+        if perturbation.magnitude == 0
+        and perturbation.distortion is not None
+        and perturbation.distortion.magnitude == size
+        and perturbation.count == 0
+        and perturbation.seed in (None, 0)
+    ]
+    if len(chosen) != 1:
+        raise RuntimeError(f"{len(chosen)} copies match {name}, not 1")
+    perturbation, load = chosen[0]
+    distortion = perturbation.distortion
+    assert distortion is not None
+    dwi = load()
+    if len(dwi) != len(reference):
+        raise RuntimeError(f"{name} has {len(dwi)} volumes, its original {len(reference)}")
+    sidecar = next((root / "sub-60501" / "dwi").glob(f"*_acq-{PROTOCOL}_dwi.json"))
+    dwi.phase_encoding = json.loads(sidecar.read_text())["PhaseEncodingDirection"]
+    identity = np.repeat(np.eye(4)[np.newaxis], len(dwi), axis=0)
+    truth = {"motion": identity, "eddy": distortion.matrices()}
+    return reference, dwi, truth, np.asarray(distortion.center, dtype=float)
+
+
+def run(args: argparse.Namespace, name: str) -> None:
+    """Each fit, in its passes, on one copy; the raw estimates are saved, then scored."""
+    runs = args.out / "runs"
+    runs.mkdir(parents=True, exist_ok=True)
+    began = perf_counter()
+    reference, dwi, truth, zero = _copy(args.dataset, name)
+    seconds: dict[str, Any] = {"load": perf_counter() - began}
+    options = {"omp_nthreads": args.threads, "n_jobs": args.threads, "seed": SEED}
+    arrays: dict[str, Any] = {
+        "affine": dwi.affine,
+        "mask": np.asanyarray(dwi.brainmask, dtype=bool),
+        "gradients": dwi.gradients,
+        **{f"truth/{key}": value for key, value in truth.items()},
+    }
+    record: dict[str, Any] = {
+        "Name": name,
+        "Noise": NOISE_LEVELS[_parse(name)[0]],
+        "ZeroPoint": zero.tolist(),
+        "PhaseEncoding": dwi.phase_encoding,
+    }
+
+    for key, (targets, fit_options) in FITS.items():
+        dwi.motion, dwi.eddy = truth["motion"].copy(), None
+        model = Original(reference) if targets == "original" else targets
+        record[key], seconds[key] = [], []
+        for number in range(1, PASSES + 1):
+            # Each later pass keeps the previous pass's estimates, which its model trains on
+            fit = GEM(num_threads=args.threads, zero_point=zero, **fit_options)
+            began = perf_counter()
+            Estimator(model, estimates="eddy", backend=fit).run(dwi, **options)
+            seconds[key].append(perf_counter() - began)
+            assert dwi.motion is not None and dwi.eddy is not None and fit.tensor is not None
+            arrays[f"{key}/{number}/motion"] = dwi.motion.copy()
+            arrays[f"{key}/{number}/eddy"] = dwi.eddy.copy()
+            tensor = fit.tensor
+            parts = tensor.parts if isinstance(tensor, SegmentedEddyTensor) else (tensor,)
+            record[key].append(
+                {
+                    # One tensor, or one for each shell
+                    "Tensors": [
+                        {"Matrix": p.matrix.tolist(), "Exponent": p.exponent, "BRef": p.b_ref}
+                        for p in parts
+                    ],
+                    "Evaluations": fit.evaluations,
+                    "Messages": fit.messages,
+                }
+            )
+            print(f"{name}: {key}, pass {number}, {seconds[key][-1]:.0f} s", flush=True)
+
+    record |= {"Seconds": seconds, "Threads": args.threads, "Provenance": provenance()}
+    np.savez_compressed(runs / f"{name}.npz", **arrays)
+    (runs / f"{name}.json").write_text(json.dumps(record, indent=2) + "\n")
+    score(args.out, name)
+
+
+def _share(slopes: np.ndarray, truth: np.ndarray) -> float:
+    """The gain of the estimated slopes on the true ones."""
+    return float(np.sum(slopes * truth) / np.sum(truth * truth))
+
+
+def score(out: Path, name: str) -> None:
+    """Score a run's saved estimates: ``<out>/runs/<name>.tsv``, and its record's summary."""
+    runs = out / "runs"
+    saved = np.load(runs / f"{name}.npz")
+    record = json.loads((runs / f"{name}.json").read_text())
+    affine, mask, gradients = saved["affine"], saved["mask"], saved["gradients"]
+    u = phase_encoding_vector(record["PhaseEncoding"], affine)
+    mask_img = nb.Nifti1Image(mask.astype("uint8"), affine)
+    shells = np.round(gradients[:, 3], -2)
+    truth = saved["truth/eddy"] @ saved["truth/motion"]
+    truth_slopes = field_slopes(saved["truth/eddy"], u)
+    found = EddyTensor.from_slopes(truth_slopes, gradients)
+    record["Truth"] = {
+        "Exponent": found.exponent,
+        "ModelSlopeResidual": float(np.abs(found.slopes(gradients) - truth_slopes).max()),
+    }
+
+    columns: dict[str, np.ndarray] = {}
+    summary: dict[str, Any] = {}
+    for key in FITS:
+        summary[key] = []
+        for number, fitted in enumerate(record[key], start=1):
+            eddy = saved[f"{key}/{number}/eddy"]
+            slopes = field_slopes(eddy, u)
+            mappings = eddy @ saved[f"{key}/{number}/motion"]
+            errors = np.array(
+                [
+                    np.mean(
+                        displacements_within_mask(
+                            mask_img, nt.linear.Affine(e), nt.linear.Affine(t)
+                        )
+                    )
+                    for e, t in zip(mappings, truth, strict=True)
+                ]
+            )
+            columns[f"field_error_{key}_pass{number}"] = errors
+            by_shell = {f"{shell:g}": shells == shell for shell in np.unique(shells)}
+            summary[key].append(
+                {
+                    "Exponent": fitted["Tensors"][0]["Exponent"],
+                    "Share": _share(slopes, truth_slopes),
+                    "ShareByShell": {
+                        shell: _share(slopes[chosen], truth_slopes[chosen])
+                        for shell, chosen in by_shell.items()
+                    },
+                    "FieldErrorMm": float(np.median(errors)),
+                    "FieldErrorMmByShell": {
+                        shell: float(np.median(errors[chosen]))
+                        for shell, chosen in by_shell.items()
+                    },
+                }
+            )
+    record["Summary"] = summary
+    (runs / f"{name}.json").write_text(json.dumps(record, indent=2) + "\n")
+
+    noise, size = _parse(name)
+    with (runs / f"{name}.tsv").open("w") as stream:
+        header = ["name", "noise", "eddy", "index", "shell", *columns]
+        stream.write("\t".join(header) + "\n")
+        for index in range(len(shells)):
+            values = [name, noise, f"{size:g}", str(index), f"{shells[index]:g}"]
+            values += [f"{column[index]:.6g}" for column in columns.values()]
+            stream.write("\t".join(values) + "\n")
+    print(f"{name}: scored", flush=True)
+
+
+def _launch(args: argparse.Namespace, name: str) -> int:
+    """Run one copy in a process of its own, its output to ``<out>/logs``."""
+    logs = args.out / "logs"
+    logs.mkdir(parents=True, exist_ok=True)
+    env = os.environ | {variable: str(args.threads) for variable in THREAD_VARIABLES}
+    command = [sys.executable, str(Path(__file__).resolve()), "--dataset", str(args.dataset)]
+    command += ["--out", str(args.out), "--threads", str(args.threads), "--run", name]
+    with (logs / f"{name}.log").open("w") as log:
+        status = subprocess.run(
+            command, env=env, cwd=Path(__file__).parent, stdout=log, stderr=subprocess.STDOUT
+        ).returncode
+    print(f"{name}: {'done' if status == 0 else f'failed ({status})'}", flush=True)
+    return status
+
+
+def gather(args: argparse.Namespace) -> None:
+    """Every run's rows in ``<out>/accuracy.tsv``, and the records in its JSON."""
+    rows: list[dict[str, Any]] = []
+    records = {}
+    for name in NAMES:
+        table = args.out / "runs" / f"{name}.tsv"
+        if not table.exists():
+            continue
+        lines = table.read_text().splitlines()
+        header = lines[0].split("\t")
+        rows += [dict(zip(header, line.split("\t"), strict=True)) for line in lines[1:]]
+        records[name] = json.loads((args.out / "runs" / f"{name}.json").read_text())
+    write_results(
+        args.out,
+        "accuracy",
+        rows,
+        {
+            "Runs": records,
+            "Protocol": PROTOCOL,
+            "NoiseSeed": NOISE,
+            "Seed": SEED,
+            "DatasetCommit": _dataset_commit(args.dataset),
+            "Provenance": provenance(),
+        },
+    )
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument("--dataset", type=Path, required=True, help="phantom dataset root")
+    parser.add_argument("--out", type=Path, required=True, help="results folder")
+    parser.add_argument("--jobs", type=int, default=3, help="runs at a time")
+    parser.add_argument("--threads", type=int, default=3, help="threads per run")
+    parser.add_argument("--only", nargs="+", choices=NAMES, help="these runs only")
+    parser.add_argument("--gather", action="store_true", help="only gather the scored runs")
+    parser.add_argument("--run", help=argparse.SUPPRESS)
+    args = parser.parse_args(argv)
+    args.dataset, args.out = args.dataset.resolve(), args.out.resolve()
+    if args.run is not None:
+        run(args, args.run)
+        return 0
+    if not args.gather:
+        chosen = args.only or NAMES
+        todo = [name for name in chosen if not (args.out / "runs" / f"{name}.tsv").exists()]
+        with ThreadPoolExecutor(args.jobs) as pool:
+            statuses = list(pool.map(lambda name: _launch(args, name), todo))
+        failed = [name for name, status in zip(todo, statuses, strict=True) if status]
+        if failed:
+            print(f"failed: {failed}", flush=True)
+    gather(args)
+    print(f"wrote {args.out / 'accuracy.tsv'}", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

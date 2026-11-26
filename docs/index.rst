@@ -30,6 +30,7 @@ Contents
     developers
     phantoms
     registration
+    gem
     edd/index
     changes
     bibliography
