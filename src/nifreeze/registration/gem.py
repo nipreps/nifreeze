@@ -33,37 +33,38 @@ b-vector :math:`g_v` and the b-value :math:`b_v`,
 
     s_v = \left(\frac{b_v}{b_\text{ref}}\right)^p C g_v,
 
-where the matrix :math:`C` and the exponent :math:`p` are the same for every volume
-(:class:`EddyField`). The exponent is 1/2 when the field follows the gradient's
+where the tensor :math:`C`, which maps the gradient's direction to the field's
+slopes, and the exponent :math:`p` are the same for every volume
+(:class:`EddyTensor`). The exponent is 1/2 when the field follows the gradient's
 strength at a fixed timing, and 1 when it follows the b-value, as in the phantoms that
 TRXScan makes (PennLINC/TRXScan#27). Alternatively, each segment of b-values has its own
-matrix, with the exponent held (:class:`SegmentedEddyField`). The model can also be
+tensor, with the exponent held (:class:`SegmentedEddyTensor`). The model can also be
 fitted on the volumes of a range of b-values only, and give every volume its field
-(``fit_range`` of :class:`EddyFieldFit`). A stretch that every
+(``fit_range`` of :class:`GEM`). A stretch that every
 volume shares has no parameter to go into, as long as the b-vectors average out; fitted
 on images, where volumes weigh a little differently in the metric, a small part of it
 still reaches the fields.
 
 The fields are zero at one point, by default the centre of the field of view
-(:func:`field_of_view_centre`). Only the model is estimated: each volume's slopes follow
-from it, and so does its shift along phase encoding, the field's displacement away from
-that point. The shift is head motion by the convention of
+(:func:`field_of_view_centre`). Only the tensor and the exponent are estimated: each
+volume's slopes follow from them, and so does its shift along phase encoding, the
+field's displacement away from that point. The shift is head motion by the convention of
 :func:`~nifreeze.registration.utils.split_phase_encoding`; each volume keeps the rest of
 the head motion it is given.
 
 Estimating the model is one registration of all the volumes at once, with one set of
 parameters, in which each volume moves by its own field. ITK's transforms map a point
-without knowing which volume it belongs to, so :class:`EddyFieldFit` has ITK's metric
+without knowing which volume it belongs to, so :class:`GEM` has ITK's metric
 evaluate each volume's similarity and its derivative, and scipy estimates the
 parameters.
 
 FSL eddy's second-level model (``--slm linear``) is the antecedent: it replaces each
 volume's estimated field coefficients by their least-squares fit on
 :math:`(b_v / 1000)\, g_v`, which is this model with :math:`p = 1`, fitted to the
-estimates of the volumes registered one by one (:meth:`EddyField.from_slopes` does the
+estimates of the volumes registered one by one (:meth:`EddyTensor.from_slopes` does the
 same, with the exponent free). Here, the model is fitted on the images; the zero point is
 given, whereas eddy regresses the field's offset on the gradients; and each segment of
-b-values may have its own matrix.
+b-values may have its own tensor.
 """
 
 from __future__ import annotations
@@ -112,8 +113,10 @@ ONE_BVALUE_WARN_MSG = (
 """A single b-value warning message."""
 EDGES_ERROR_MSG = "The b-values that split the segments must be positive and increasing."
 """Malformed segment edges error message."""
-PARTS_ERROR_MSG = "A segmented field needs one field for each segment: {parts} for {edges} edges."
-"""A segmented field with the wrong number of fields error message."""
+PARTS_ERROR_MSG = (
+    "A segmented tensor needs one tensor for each segment: {parts} for {edges} edges."
+)
+"""A segmented tensor with the wrong number of tensors error message."""
 EMPTY_SEGMENT_ERROR_MSG = "No volume has a b-value in segment {segment} of the edges {edges}."
 """A segment without volumes error message."""
 EDGES_B_REF_ERROR_MSG = (
@@ -139,7 +142,7 @@ GRID_ERROR_MSG = "Volume {index} is not on the grid and mask of the volumes adde
 """A volume on another grid error message."""
 NOTHING_ADDED_ERROR_MSG = "No volume was added to the fit."
 """A fit without volumes error message."""
-NOT_FITTED_ERROR_MSG = "The field is not fitted yet: call fit() first."
+NOT_FITTED_ERROR_MSG = "The tensor is not fitted yet: call fit() first."
 """Mappings before the fit error message."""
 TABLE_LENGTH_ERROR_MSG = "The gradient table has {rows} rows, but volume {index} was added."
 """A gradient table without a row for every volume error message."""
@@ -277,21 +280,24 @@ def _as_matrix(value: Any) -> np.ndarray:
 
 
 @attrs.frozen
-class EddyField:
+class EddyTensor:
     r"""
-    The eddy-current field of every volume, from its b-vector and b-value.
+    The eddy-current tensor, which gives every volume its field from its b-vector and
+    b-value.
 
-    In volume :math:`v`, the field's slopes are
+    The tensor :math:`C` maps the unit b-vector to the field's slopes at the reference
+    b-value; with the scanner's frame rotated by :math:`R`, it becomes
+    :math:`R C R^T`. In volume :math:`v`, the field's slopes are
     :math:`s_v = (b_v / b_\text{ref})^p C g_v`, and the field is
     :math:`E_v = I - u s_v^T`.
 
     Examples
     --------
-    >>> field = EddyField(0.02 * np.eye(3), exponent=0.5, b_ref=1000.0)
+    >>> tensor = EddyTensor(0.02 * np.eye(3), exponent=0.5, b_ref=1000.0)
     >>> gradients = [[1.0, 0.0, 0.0, 1000.0], [0.0, -1.0, 0.0, 4000.0]]
-    >>> field.slopes(gradients).round(6).tolist()
+    >>> tensor.slopes(gradients).round(6).tolist()
     [[0.02, 0.0, 0.0], [0.0, -0.04, 0.0]]
-    >>> field.fields(gradients, [0.0, 1.0, 0.0])[1, :3, :3].round(6).tolist()
+    >>> tensor.fields(gradients, [0.0, 1.0, 0.0])[1, :3, :3].round(6).tolist()
     [[1.0, 0.0, 0.0], [0.0, 1.04, 0.0], [0.0, 0.0, 1.0]]
 
     """
@@ -314,9 +320,9 @@ class EddyField:
         """How much each b-value scales the slopes: :math:`(b / b_\\text{ref})^p`."""
         return (np.asarray(bvals, dtype=float) / self.b_ref) ** self.exponent
 
-    def rescaled(self, b_ref: float) -> EddyField:
-        """The same field, with :math:`C` given at another reference b-value."""
-        return EddyField(self.matrix * float(self.scales(b_ref)), self.exponent, b_ref)
+    def rescaled(self, b_ref: float) -> EddyTensor:
+        """The same fields, with :math:`C` given at another reference b-value."""
+        return EddyTensor(self.matrix * float(self.scales(b_ref)), self.exponent, b_ref)
 
     def slopes(self, gradients: Any) -> np.ndarray:
         """
@@ -350,7 +356,7 @@ class EddyField:
         weights: Any = None,
         exponent: float | None = None,
         b_ref: float | None = None,
-    ) -> EddyField:
+    ) -> EddyTensor:
         """
         Fit :math:`C` and :math:`p` to each volume's slopes, by least squares.
 
@@ -384,8 +390,8 @@ class EddyField:
         >>> b_vectors = rng.normal(size=(30, 3))
         >>> b_vectors /= np.linalg.norm(b_vectors, axis=1, keepdims=True)
         >>> gradients = np.column_stack([b_vectors, np.repeat([1000.0, 2000.0, 3000.0], 10)])
-        >>> truth = EddyField(rng.normal(scale=0.02, size=(3, 3)), exponent=1.0, b_ref=1000.0)
-        >>> found = EddyField.from_slopes(truth.slopes(gradients), gradients, b_ref=1000.0)
+        >>> truth = EddyTensor(rng.normal(scale=0.02, size=(3, 3)), exponent=1.0, b_ref=1000.0)
+        >>> found = EddyTensor.from_slopes(truth.slopes(gradients), gradients, b_ref=1000.0)
         >>> round(found.exponent, 6), np.allclose(found.matrix, truth.matrix)
         (1.0, True)
 
@@ -422,43 +428,46 @@ class EddyField:
         return cls(solve(held)[0], held, b_ref)
 
 
-def _as_parts(value: Any) -> tuple[EddyField, ...]:
+def _as_parts(value: Any) -> tuple[EddyTensor, ...]:
     return tuple(value)
 
 
 @attrs.frozen
-class SegmentedEddyField:
+class SegmentedEddyTensor:
     r"""
-    The eddy-current field of every volume, with a matrix :math:`C` for each segment of
-    b-values.
+    Eddy-current tensors, one :math:`C` for each segment of b-values, which give every
+    volume its field.
 
     ``edges`` split the b-values into segments: segment :math:`k` holds the b-values from
     ``edges[k - 1]`` up to, not including, ``edges[k]`` (the first, those below
     ``edges[0]``; the last, those from ``edges[-1]`` on). Each segment has its own
-    :class:`EddyField`, so the slopes need not follow one power of the b-value: within a
-    single shell, its matrix takes up the shell's scale.
+    :class:`EddyTensor`, so the slopes need not follow one power of the b-value: within a
+    single shell, its tensor takes up the shell's scale.
 
     Examples
     --------
-    >>> field = SegmentedEddyField(
+    >>> tensor = SegmentedEddyTensor(
     ...     [1500.0],
-    ...     [EddyField(0.02 * np.eye(3), b_ref=1000.0), EddyField(0.05 * np.eye(3), b_ref=2000.0)],
+    ...     [
+    ...         EddyTensor(0.02 * np.eye(3), b_ref=1000.0),
+    ...         EddyTensor(0.05 * np.eye(3), b_ref=2000.0),
+    ...     ],
     ... )
     >>> gradients = [[1.0, 0.0, 0.0, 1000.0], [1.0, 0.0, 0.0, 2000.0]]
-    >>> field.slopes(gradients).round(6).tolist()
+    >>> tensor.slopes(gradients).round(6).tolist()
     [[0.02, 0.0, 0.0], [0.05, 0.0, 0.0]]
-    >>> field.segments([1000.0, 1500.0, 3000.0]).tolist()
+    >>> tensor.segments([1000.0, 1500.0, 3000.0]).tolist()
     [0, 1, 1]
 
     """
 
     edges: tuple[float, ...] = attrs.field(converter=_as_edges)
     """The b-values that split the segments, increasing."""
-    parts: tuple[EddyField, ...] = attrs.field(converter=_as_parts)
-    """The field of each segment, one more than ``edges``."""
+    parts: tuple[EddyTensor, ...] = attrs.field(converter=_as_parts)
+    """The tensor of each segment, one more than ``edges``."""
 
     @parts.validator
-    def _check_parts(self, attribute: Any, value: tuple[EddyField, ...]) -> None:
+    def _check_parts(self, attribute: Any, value: tuple[EddyTensor, ...]) -> None:
         if len(value) != len(self.edges) + 1:
             raise ValueError(PARTS_ERROR_MSG.format(parts=len(value), edges=len(self.edges)))
 
@@ -467,7 +476,7 @@ class SegmentedEddyField:
         return _segment_of(self.edges, bvals)
 
     def slopes(self, gradients: Any) -> np.ndarray:
-        """The slopes of each volume's field, ``(N, 3)`` (see :meth:`EddyField.slopes`)."""
+        """The slopes of each volume's field, ``(N, 3)`` (see :meth:`EddyTensor.slopes`)."""
         table = _table(gradients)
         segments = self.segments(table[:, 3])
         slopes = np.zeros((len(table), 3))
@@ -478,7 +487,7 @@ class SegmentedEddyField:
         return slopes
 
     def fields(self, gradients: Any, direction: Any) -> np.ndarray:
-        """Each volume's field, ``(N, 4, 4)`` RAS+ matrices (see :meth:`EddyField.fields`)."""
+        """Each volume's field, ``(N, 4, 4)`` RAS+ matrices (see :meth:`EddyTensor.fields`)."""
         return _from_slopes(self.slopes(gradients), direction)
 
 
@@ -654,16 +663,17 @@ class _Metric:
         return self.metric.GetCurrentValue(), gradient[:9].reshape(3, 3), gradient[9:]
 
 
-class EddyFieldFit:
+class GEM:
     """
-    Estimate the eddy-current field of all volumes, from their images, with one model.
+    The global eddy model (GEM): the eddy-current field of every volume, from their
+    images, with one tensor.
 
     Each volume is added (:meth:`add`) with its target (the image it should match once its
     field is undone), its sample, the head motion it is given and any field an earlier
     pass estimated; :meth:`fit` then estimates the model, and :meth:`mappings` gives each
     volume's head motion and field.
-    Without ``edges``, the model is one :class:`EddyField` (:math:`C` and :math:`p`);
-    with them, a :class:`SegmentedEddyField`, one :math:`C` for each segment of
+    Without ``edges``, the model is one :class:`EddyTensor` (:math:`C` and :math:`p`);
+    with them, a :class:`SegmentedEddyTensor`, one :math:`C` for each segment of
     b-values, with the exponent held. The segments share no parameter, so each is fitted
     on its own. With ``fit_range``, the model is fitted on the volumes of a range of
     b-values only, and every volume added gets its field from it. Each volume's shift
@@ -697,7 +707,7 @@ class EddyFieldFit:
         the b-values). With them, each segment's is the geometric mean of its b-values.
     edges : :obj:`~collections.abc.Sequence` of :obj:`float`, optional
         The b-values that split the segments, each with its own matrix :math:`C` (see
-        :class:`SegmentedEddyField`); one model for all volumes if :obj:`None`.
+        :class:`SegmentedEddyTensor`); one model for all volumes if :obj:`None`.
     fit_range : :obj:`~collections.abc.Sequence` of :obj:`float`, optional
         Fit the model on the volumes whose b-value is in ``[low, high)`` only, and give
         every volume added its field from it (default: fit on all of them). With a
@@ -750,8 +760,8 @@ class EddyFieldFit:
         clip = str(clip).lower()
         self.clip = {"true": "both", "false": "none"}.get(clip, clip)
         self.margin = float(margin)
-        self.field: EddyField | SegmentedEddyField | None = None
-        """The estimated field, once fitted."""
+        self.tensor: EddyTensor | SegmentedEddyTensor | None = None
+        """The estimated tensor, once fitted."""
         self.evaluations: list[list[int]] = []
         """How many times each stage evaluated the cost, for each segment (one list
         without ``edges``)."""
@@ -938,8 +948,8 @@ class EddyFieldFit:
 
     def _fit_group(
         self, indices: Sequence[int], table: np.ndarray, zero: np.ndarray
-    ) -> tuple[EddyField, np.ndarray]:
-        """Fit one model to the volumes ``indices``; its field and their voxel mappings."""
+    ) -> tuple[EddyTensor, np.ndarray]:
+        """Fit one model to the volumes ``indices``; its tensor and their voxel mappings."""
         from scipy.optimize import minimize
 
         _check_span(table)
@@ -974,7 +984,7 @@ class EddyFieldFit:
         self.evaluations.append(evaluations)
         self.messages.append(messages)
         matrix, exponent = problem.unpack(theta)
-        return EddyField(matrix, exponent, b_ref), problem.mappings(theta)
+        return EddyTensor(matrix, exponent, b_ref), problem.mappings(theta)
 
     def _groups(self, table: np.ndarray) -> list[np.ndarray]:
         """The rows of ``table`` fitted together: all, those in the range, or each segment's."""
@@ -993,9 +1003,9 @@ class EddyFieldFit:
                 raise ValueError(EMPTY_SEGMENT_ERROR_MSG.format(segment=k, edges=self.edges))
         return groups
 
-    def fit(self, gradients: Any) -> EddyField | SegmentedEddyField:
+    def fit(self, gradients: Any) -> EddyTensor | SegmentedEddyTensor:
         """
-        Estimate the field of every volume added.
+        Estimate the tensor, and with it the field of every volume added.
 
         The estimation starts from no field, with the exponent at
         :data:`DEFAULT_EXPONENT` unless it is held.
@@ -1004,12 +1014,12 @@ class EddyFieldFit:
         ----------
         gradients : :obj:`~numpy.ndarray`
             The dataset's gradient table, ``(N, 4)``, with a row for each volume index
-            (see :meth:`EddyField.slopes`).
+            (see :meth:`EddyTensor.slopes`).
 
         Returns
         -------
-        :class:`EddyField` or :class:`SegmentedEddyField`
-            The estimate (segmented with ``edges``), also kept as :attr:`field`. The
+        :class:`EddyTensor` or :class:`SegmentedEddyTensor`
+            The estimate (segmented with ``edges``), also kept as :attr:`tensor`. The
             images are released.
 
         """
@@ -1036,7 +1046,7 @@ class EddyFieldFit:
             self._motion[index] = undone @ field @ self._motion[index]
 
         self.evaluations, self.messages = [], []
-        parts: list[EddyField] = []
+        parts: list[EddyTensor] = []
         mappings: dict[int, tuple[np.ndarray, np.ndarray]] = {}
 
         def keep(chosen: list[int], voxel: np.ndarray) -> None:
@@ -1057,10 +1067,10 @@ class EddyFieldFit:
             model = self._model(chosen, table[rest], parts[0].b_ref, zero)
             keep(chosen, model.mappings(model.pack(parts[0].matrix, parts[0].exponent)))
         self.zero_point = np.asarray(world, dtype=float)
-        self.field = parts[0] if self.edges is None else SegmentedEddyField(self.edges, parts)
+        self.tensor = parts[0] if self.edges is None else SegmentedEddyTensor(self.edges, parts)
         self._mappings = mappings
         self._fixed, self._moving, self._field = {}, {}, {}
-        return self.field
+        return self.tensor
 
     def mappings(self) -> dict[int, tuple[np.ndarray, np.ndarray]]:
         """
@@ -1074,6 +1084,6 @@ class EddyFieldFit:
             the field applies after the motion.
 
         """
-        if self.field is None:
+        if self.tensor is None:
             raise ValueError(NOT_FITTED_ERROR_MSG)
         return dict(self._mappings)

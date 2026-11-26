@@ -315,7 +315,7 @@ def test_the_eddy_pass_with_fixed_motion_keeps_the_head_motion():
     before = dwi.motion.copy()
     register = ITK(_settings(motion="fixed"), num_threads=1, phase_encoding="j-", clip="none")
 
-    Estimator("avg", estimates="eddy", registration=register).run(
+    Estimator("avg", estimates="eddy", backend=register).run(
         dwi, n_jobs=1, omp_nthreads=1, instant_update=False
     )
 
@@ -406,7 +406,7 @@ def test_the_eddy_pass_stores_the_split():
     """A backend that splits refines the head motion and stores the field."""
     dwi = _dwi()
     dwi.motion = np.repeat(np.eye(4)[np.newaxis], 8, axis=0)
-    Estimator("avg", estimates="eddy", registration=_Splitting()).run(
+    Estimator("avg", estimates="eddy", backend=_Splitting()).run(
         dwi, n_jobs=1, omp_nthreads=1, instant_update=False
     )
     assert dwi.eddy is not None

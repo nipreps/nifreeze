@@ -120,7 +120,7 @@ def test_ants_config_is_gone():
     """A leftover ``ants_config`` raises, instead of being ignored."""
     dataset, model, _ = _series()
     estimator = Estimator(
-        model, strategy="linear", registration="ants", ants_config="dwi-to-dwi_level1"
+        model, strategy="linear", backend="ants", ants_config="dwi-to-dwi_level1"
     )
     with pytest.raises(TypeError, match="ants_config"):
         estimator.run(dataset)
@@ -139,7 +139,7 @@ def test_a_custom_backend_plugs_into_the_estimator():
     dataset, model, _ = _series()
     backend = Recorder()
 
-    Estimator(model, strategy="linear", registration=backend).run(dataset)
+    Estimator(model, strategy="linear", backend=backend).run(dataset)
 
     assert [call["index"] for call in backend.calls] == [0, 1, 2]
     assert all(call["window"] is not None for call in backend.calls)
@@ -149,9 +149,9 @@ def test_a_custom_backend_plugs_into_the_estimator():
 def test_a_chain_starts_each_backend_from_the_previous_estimate():
     dataset, model, _ = _series()
     first, second = Recorder(), Recorder(shift=(2.0, 0.0, 0.0))
-    chain = Estimator(model, strategy="linear", registration=first)
+    chain = Estimator(model, strategy="linear", backend=first)
 
-    Estimator(model, strategy="linear", prev=chain, registration=second).run(dataset)
+    Estimator(model, strategy="linear", prev=chain, backend=second).run(dataset)
 
     assert all(call["init"] is None for call in first.calls)
     assert all(np.array_equal(call["init"], first.matrix) for call in second.calls)
@@ -187,7 +187,7 @@ def test_the_estimator_registers_with_a_backend_by_name(tmp_path, name):
     """Through the estimator, each backend recovers the motions and leaves its traces."""
     dataset, model, motions = _series()
 
-    Estimator(model, strategy="linear", registration=name).run(
+    Estimator(model, strategy="linear", backend=name).run(
         dataset, omp_nthreads=1, seed=12345, debug_dir=tmp_path
     )
 

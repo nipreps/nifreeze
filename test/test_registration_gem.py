@@ -20,8 +20,8 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""A global, physics-based model of the eddy-current fields (#745): one matrix C and the
-b-value's exponent for all volumes, or a matrix for each segment of b-values, with every
+"""A global, physics-based model of the eddy-current fields (#745): one tensor C and the
+b-value's exponent for all volumes, or a tensor for each segment of b-values, with every
 field zero at one point; and the eddy-current pass that runs it (#750)."""
 
 import itertools
@@ -36,8 +36,8 @@ from test_registration_conventions import SKIP_ELASTIX, _error, _motion, _move, 
 from test_registration_itk import CENTRE, _across, _field, _off_centre
 
 from nifreeze.data.dmri import DWI
-from nifreeze.estimator import FIELD_FIT_ESTIMATES_ERROR_MSG, Estimator
-from nifreeze.registration.eddy_field import (
+from nifreeze.estimator import GEM_ESTIMATES_ERROR_MSG, Estimator
+from nifreeze.registration.gem import (
     B_REF_ERROR_MSG,
     BVALUE_ERROR_MSG,
     DEFAULT_EXPONENT,
@@ -45,6 +45,7 @@ from nifreeze.registration.eddy_field import (
     EDGES_ERROR_MSG,
     FIT_RANGE_EDGES_ERROR_MSG,
     FIT_RANGE_ERROR_MSG,
+    GEM,
     MATRIX_ERROR_MSG,
     NO_PHASE_ENCODING_ERROR_MSG,
     NOT_FITTED_ERROR_MSG,
@@ -52,9 +53,8 @@ from nifreeze.registration.eddy_field import (
     SLOPES_ERROR_MSG,
     SPAN_ERROR_MSG,
     TABLE_ERROR_MSG,
-    EddyField,
-    EddyFieldFit,
-    SegmentedEddyField,
+    EddyTensor,
+    SegmentedEddyTensor,
     _Problem,
     field_of_view_centre,
     field_slopes,
@@ -97,14 +97,14 @@ def _dsi(rng: np.random.Generator) -> np.ndarray:
     return np.column_stack([_unit_vectors(rng, len(bvals)), bvals])
 
 
-def _truth(rng: np.random.Generator, exponent: float) -> EddyField:
-    return EddyField(rng.normal(scale=0.012, size=(3, 3)), exponent=exponent, b_ref=1000.0)
+def _truth(rng: np.random.Generator, exponent: float) -> EddyTensor:
+    return EddyTensor(rng.normal(scale=0.012, size=(3, 3)), exponent=exponent, b_ref=1000.0)
 
 
-def _segmented(rng: np.random.Generator) -> SegmentedEddyField:
+def _segmented(rng: np.random.Generator) -> SegmentedEddyTensor:
     """A matrix for each shell, unrelated to the others' (no power of the b-value)."""
-    parts = [EddyField(rng.normal(scale=0.015, size=(3, 3)), b_ref=bval) for bval in SHELLS]
-    return SegmentedEddyField(EDGES, parts)
+    parts = [EddyTensor(rng.normal(scale=0.015, size=(3, 3)), b_ref=bval) for bval in SHELLS]
+    return SegmentedEddyTensor(EDGES, parts)
 
 
 def _about(fields: np.ndarray, zero: np.ndarray) -> np.ndarray:
@@ -120,16 +120,16 @@ def _about(fields: np.ndarray, zero: np.ndarray) -> np.ndarray:
 @pytest.mark.parametrize("exponent", [0.5, 1.0])
 def test_slopes_follow_the_gradient_and_its_strength(exponent):
     rng = np.random.default_rng(0)
-    field = _truth(rng, exponent)
+    tensor = _truth(rng, exponent)
     g = _unit_vectors(rng, 1)[0]
     gradients = [[*g, 1000.0], [*(-g), 1000.0], [*g, 4000.0]]
 
-    slopes = field.slopes(gradients)
+    slopes = tensor.slopes(gradients)
 
-    assert np.allclose(slopes[0], field.matrix @ g)
+    assert np.allclose(slopes[0], tensor.matrix @ g)
     assert np.allclose(slopes[1], -slopes[0])  # the field flips with the gradient
     assert np.allclose(slopes[2], 4.0**exponent * slopes[0])  # 2x at p=1/2, 4x at p=1
-    rescaled = field.rescaled(2000.0)
+    rescaled = tensor.rescaled(2000.0)
     assert rescaled.b_ref == 2000.0 and np.allclose(rescaled.slopes(gradients), slopes)
 
 
@@ -137,12 +137,12 @@ def test_fields_split_back_into_motion_and_field():
     """Each field moves points only along u, and splits from head motion exactly."""
     rng = np.random.default_rng(1)
     table = _balanced(rng)
-    field = _truth(rng, 0.5)
+    tensor = _truth(rng, 0.5)
     for seed in range(6):
         voxels = Rotation.random(random_state=seed).as_matrix()
         direction = voxels[:, seed % 3] * (-1.0 if seed % 2 else 1.0)
-        fields = field.fields(table, direction)
-        assert np.allclose(field_slopes(fields, direction), field.slopes(table))
+        fields = tensor.fields(table, direction)
+        assert np.allclose(field_slopes(fields, direction), tensor.slopes(table))
         for eddy in fields:
             assert _across(eddy, direction) < 1e-12
             motion = _motion(degrees=2.0, shift=rng.normal(size=3))
@@ -158,11 +158,11 @@ def test_from_slopes_recovers_the_matrix_and_exponent(scheme, exponent):
     table = scheme(rng)
     truth = _truth(rng, exponent)
 
-    found = EddyField.from_slopes(truth.slopes(table), table)
+    found = EddyTensor.from_slopes(truth.slopes(table), table)
 
     assert abs(found.exponent - exponent) < 1e-8
     assert np.allclose(found.rescaled(1000.0).matrix, truth.matrix, atol=1e-10)
-    weighted = EddyField.from_slopes(truth.slopes(table), table, weights=rng.random(len(table)))
+    weighted = EddyTensor.from_slopes(truth.slopes(table), table, weights=rng.random(len(table)))
     assert abs(weighted.exponent - exponent) < 1e-8
 
 
@@ -173,11 +173,11 @@ def test_from_slopes_leaves_out_a_slope_every_volume_shares():
     truth = _truth(rng, 0.5)
 
     balanced = _balanced(rng)
-    found = EddyField.from_slopes(truth.slopes(balanced) + shared, balanced, exponent=0.5)
+    found = EddyTensor.from_slopes(truth.slopes(balanced) + shared, balanced, exponent=0.5)
     assert np.allclose(found.rescaled(1000.0).matrix, truth.matrix, atol=1e-10)
 
     half = _half_sphere(rng)
-    leaked = EddyField.from_slopes(truth.slopes(half) + shared, half, exponent=0.5)
+    leaked = EddyTensor.from_slopes(truth.slopes(half) + shared, half, exponent=0.5)
     assert not np.allclose(leaked.rescaled(1000.0).matrix, truth.matrix, atol=1e-4)
 
 
@@ -188,7 +188,7 @@ def test_one_b_value_holds_the_exponent():
     truth = _truth(rng, DEFAULT_EXPONENT)
 
     with pytest.warns(UserWarning, match="the same b-value"):
-        found = EddyField.from_slopes(truth.slopes(table), table)
+        found = EddyTensor.from_slopes(truth.slopes(table), table)
 
     assert found.exponent == DEFAULT_EXPONENT
     assert np.allclose(found.rescaled(1000.0).matrix, truth.matrix)
@@ -216,47 +216,47 @@ def test_from_slopes_validates_its_inputs(change, message):
     else:
         slopes = slopes[:-1]
     with pytest.raises(ValueError, match=re.escape(message)):
-        EddyField.from_slopes(slopes, table)
+        EddyTensor.from_slopes(slopes, table)
 
 
 def test_the_model_validates_its_parameters():
     with pytest.raises(ValueError, match=re.escape(MATRIX_ERROR_MSG)):
-        EddyField(np.eye(2))
+        EddyTensor(np.eye(2))
     with pytest.raises(ValueError, match=re.escape(B_REF_ERROR_MSG)):
-        EddyField(np.eye(3), b_ref=0.0)
-    assert EddyField(np.eye(3)) == EddyField(np.eye(3))
+        EddyTensor(np.eye(3), b_ref=0.0)
+    assert EddyTensor(np.eye(3)) == EddyTensor(np.eye(3))
 
 
-def test_a_segmented_field_gives_each_segment_its_own_matrix():
+def test_a_segmented_tensor_gives_each_segment_its_own_matrix():
     rng = np.random.default_rng(13)
-    field = _segmented(rng)
+    tensor = _segmented(rng)
     table = _balanced(rng)
     direction = np.array([0.0, 1.0, 0.0])
 
-    slopes = field.slopes(table)
+    slopes = tensor.slopes(table)
 
     for k, bval in enumerate(SHELLS):
         chosen = table[:, 3] == bval
-        assert np.allclose(slopes[chosen], field.parts[k].slopes(table[chosen]))
-    assert np.allclose(field_slopes(field.fields(table, direction), direction), slopes)
+        assert np.allclose(slopes[chosen], tensor.parts[k].slopes(table[chosen]))
+    assert np.allclose(field_slopes(tensor.fields(table, direction), direction), slopes)
     # A b-value on an edge opens the next segment
-    assert field.segments([1499.0, 1500.0, 2500.0, 9000.0]).tolist() == [0, 1, 2, 2]
+    assert tensor.segments([1499.0, 1500.0, 2500.0, 9000.0]).tolist() == [0, 1, 2, 2]
     # Segments without volumes leave the slopes of the others
     first = table[table[:, 3] == SHELLS[0]]
-    assert np.allclose(field.slopes(first), field.parts[0].slopes(first))
+    assert np.allclose(tensor.slopes(first), tensor.parts[0].slopes(first))
 
 
 @pytest.mark.parametrize("edges", [[], [0.0, 1000.0], [2000.0, 1000.0], [1000.0, 1000.0]])
 def test_segment_edges_are_positive_and_increasing(edges):
     with pytest.raises(ValueError, match=re.escape(EDGES_ERROR_MSG)):
-        SegmentedEddyField(edges, [EddyField(np.eye(3))] * (len(edges) + 1))
+        SegmentedEddyTensor(edges, [EddyTensor(np.eye(3))] * (len(edges) + 1))
     with pytest.raises(ValueError, match=re.escape(EDGES_ERROR_MSG)):
-        EddyFieldFit(edges=edges)
+        GEM(edges=edges)
 
 
-def test_a_segmented_field_needs_a_field_for_each_segment():
+def test_a_segmented_tensor_needs_a_tensor_for_each_segment():
     with pytest.raises(ValueError, match="2 for 2 edges"):
-        SegmentedEddyField(EDGES, [EddyField(np.eye(3))] * 2)
+        SegmentedEddyTensor(EDGES, [EddyTensor(np.eye(3))] * 2)
 
 
 @pytest.mark.parametrize(
@@ -336,12 +336,12 @@ def test_the_mappings_are_the_model_in_the_voxel_frame():
     motions = np.stack([_motion(degrees=3.0, shift=rng.normal(size=3)) for _ in table])
     zero = np.array([12.0, 50.0, 20.0])
     problem = _Problem(table, 1000.0, motions, zero, 25.0, 2, -1.0, np.eye(3), [])
-    field = _truth(rng, 0.5)
+    tensor = _truth(rng, 0.5)
 
-    mappings = problem.mappings(problem.pack(field.matrix, 0.5))
+    mappings = problem.mappings(problem.pack(tensor.matrix, 0.5))
 
     u = np.array([0.0, 0.0, -1.0])  # "k-" in an identity frame
-    fields = _about(field.fields(table, u), zero)
+    fields = _about(tensor.fields(table, u), zero)
     assert np.allclose(mappings, fields @ motions)
     assert np.allclose(fields @ np.r_[zero, 1.0], np.r_[zero, 1.0])  # zero at the zero point
 
@@ -385,8 +385,8 @@ def _images(
     )
 
 
-def _fitted(sim, phase_encoding: str = "j-", **kwargs) -> EddyFieldFit:
-    fit = EddyFieldFit(phase_encoding=phase_encoding, num_threads=1, clip="none", **kwargs)
+def _fitted(sim, phase_encoding: str = "j-", **kwargs) -> GEM:
+    fit = GEM(phase_encoding=phase_encoding, num_threads=1, clip="none", **kwargs)
     for index, (sample, motion) in enumerate(zip(sim.samples, sim.motions, strict=True)):
         fit.add(index, sim.data, sample, sim.affine, sim.mask, motion)
     return fit
@@ -397,7 +397,7 @@ def _voxel_zero(affine: np.ndarray, zero: np.ndarray = ZERO) -> np.ndarray:
     return (np.linalg.inv(_frame(affine)[0]) @ np.r_[zero, 1.0])[:3]
 
 
-def _mapping_errors(fit: EddyFieldFit, sim) -> np.ndarray:
+def _mapping_errors(fit: GEM, sim) -> np.ndarray:
     """Each volume's mean displacement error (mm, in the mask) of the whole mapping."""
     return np.array(
         [
@@ -415,7 +415,7 @@ def test_one_model_recovers_the_field_from_images(exponent, phase_encoding):
 
     found = fit.fit(sim.table)
 
-    assert isinstance(found, EddyField)
+    assert isinstance(found, EddyTensor)
     assert abs(found.exponent - exponent) < 0.05
     error = np.abs(found.rescaled(1000.0).matrix - sim.truth.matrix).max()
     assert error < 0.05 * np.abs(sim.truth.matrix).max()
@@ -435,7 +435,7 @@ def test_a_matrix_for_each_segment_recovers_each_shells_field():
 
     found = fit.fit(sim.table)
 
-    assert isinstance(found, SegmentedEddyField) and found.edges == EDGES
+    assert isinstance(found, SegmentedEddyTensor) and found.edges == EDGES
     for part, truth in zip(found.parts, sim.truth.parts, strict=True):
         assert part.exponent == DEFAULT_EXPONENT and part.b_ref == pytest.approx(truth.b_ref)
         assert np.abs(part.matrix - truth.matrix).max() < 0.05 * np.abs(truth.matrix).max()
@@ -451,7 +451,7 @@ def test_a_model_fitted_on_one_shell_gives_every_volume_its_field():
 
     found = fit.fit(sim.table)
 
-    assert isinstance(found, EddyField) and found.exponent == 1.0
+    assert isinstance(found, EddyTensor) and found.exponent == 1.0
     assert found.b_ref == pytest.approx(1000.0)  # the geometric mean of the range's b-values
     assert np.abs(found.matrix - sim.truth.matrix).max() < 0.05 * np.abs(sim.truth.matrix).max()
     assert len(fit.evaluations) == 1  # one registration, of the lowest shell's volumes
@@ -499,7 +499,7 @@ def test_the_fit_leaves_out_most_of_a_stretch_every_volume_shares():
     A stretch shared by every volume, on top of the field, mostly stays out of the fields.
 
     A registration of each volume alone takes all of it. On slopes, the b-vectors of each
-    shell cancel it exactly (see the test of :meth:`EddyField.from_slopes`); on images,
+    shell cancel it exactly (see the test of :meth:`EddyTensor.from_slopes`); on images,
     the volumes of an antipodal pair weigh a little differently in the metric, so some of
     it leaks, in proportion to its size (about a tenth here, at most a fifth).
     """
@@ -508,7 +508,7 @@ def test_the_fit_leaves_out_most_of_a_stretch_every_volume_shares():
 
     found = _fitted(sim, zero_point=ZERO).fit(sim.table)
 
-    assert isinstance(found, EddyField)
+    assert isinstance(found, EddyTensor)
     assert abs(found.exponent - 1.0) < 0.05
     error = found.slopes(sim.table) - sim.truth.slopes(sim.table)
     share = np.linalg.norm(error, axis=1) / np.linalg.norm(shared)
@@ -522,9 +522,9 @@ def test_the_fit_holds_the_exponent_given():
 
     found = fit.fit(sim.table)
 
-    assert isinstance(found, EddyField) and found.exponent == 0.8 and found.b_ref == 1000.0
+    assert isinstance(found, EddyTensor) and found.exponent == 0.8 and found.b_ref == 1000.0
     segmented = _fitted(sim, exponent=1.0, edges=EDGES, zero_point=ZERO).fit(sim.table)
-    assert isinstance(segmented, SegmentedEddyField)
+    assert isinstance(segmented, SegmentedEddyTensor)
     assert [part.exponent for part in segmented.parts] == [1.0] * len(SHELLS)
 
 
@@ -537,7 +537,7 @@ def test_one_b_value_holds_the_exponent_of_the_fit():
     with pytest.warns(UserWarning, match="the same b-value"):
         found = fit.fit(sim.table)
 
-    assert isinstance(found, EddyField) and found.exponent == DEFAULT_EXPONENT
+    assert isinstance(found, EddyTensor) and found.exponent == DEFAULT_EXPONENT
 
 
 @SKIP_ELASTIX
@@ -584,7 +584,7 @@ def test_the_fit_prepares_the_images_as_the_backend_does():
 
     sim = _images()
     settings = get_settings() | {"use_histogram_matching": True}
-    fit = EddyFieldFit(settings, phase_encoding="j-", num_threads=1, margin=1000.0)
+    fit = GEM(settings, phase_encoding="j-", num_threads=1, margin=1000.0)
     sample = sim.samples[0]
 
     fit.add(0, sim.data, sample, sim.affine, sim.mask, sim.motions[0])
@@ -601,7 +601,7 @@ def test_the_fit_prepares_the_images_as_the_backend_does():
 
 def test_a_stage_draws_its_points_in_the_mask():
     data, mask = _volume()
-    fit = EddyFieldFit(phase_encoding="j", clip="none")
+    fit = GEM(phase_encoding="j", clip="none")
     fit.add(0, data, data, _off_centre(), mask)
     stage = {"metric": "correlation"}
 
@@ -620,18 +620,18 @@ def test_the_fit_validates_its_inputs():
     affine = _off_centre()
     table = _balanced(np.random.default_rng(10))
     with pytest.raises(ValueError, match=NOTHING_ADDED_ERROR_MSG):
-        EddyFieldFit(phase_encoding="j").fit(table)
+        GEM(phase_encoding="j").fit(table)
     with pytest.raises(ValueError, match=re.escape(NOT_FITTED_ERROR_MSG)):
-        EddyFieldFit(phase_encoding="j").mappings()
+        GEM(phase_encoding="j").mappings()
     with pytest.raises(ValueError, match=re.escape(EDGES_B_REF_ERROR_MSG)):
-        EddyFieldFit(edges=EDGES, b_ref=1000.0)
+        GEM(edges=EDGES, b_ref=1000.0)
     with pytest.raises(ValueError, match=re.escape(FIT_RANGE_EDGES_ERROR_MSG)):
-        EddyFieldFit(edges=EDGES, fit_range=(0.0, 1500.0))
+        GEM(edges=EDGES, fit_range=(0.0, 1500.0))
     for bad in ((1500.0, 1000.0), (-1.0, 1500.0), (1000.0, 1000.0), (0.0, 1000.0, 2000.0)):
         with pytest.raises(ValueError, match=re.escape(FIT_RANGE_ERROR_MSG)):
-            EddyFieldFit(fit_range=bad)
+            GEM(fit_range=bad)
 
-    fit = EddyFieldFit(clip="none")
+    fit = GEM(clip="none")
     fit.add(0, data, data, affine, mask)
     with pytest.raises(ValueError, match=re.escape(NO_PHASE_ENCODING_ERROR_MSG)):
         fit.fit(table)
@@ -647,7 +647,7 @@ def test_the_fit_validates_its_inputs():
     with pytest.raises(ValueError, match="grid and mask"):
         fit.add(1, data, data, affine, ~mask)
 
-    segmented = EddyFieldFit(phase_encoding="j", clip="none", edges=EDGES)
+    segmented = GEM(phase_encoding="j", clip="none", edges=EDGES)
     for index in range(len(table)):
         segmented.add(index, data, data, affine, mask)
     middle = table.copy()
@@ -655,7 +655,7 @@ def test_the_fit_validates_its_inputs():
     with pytest.raises(ValueError, match=r"segment 1 of the edges \(1500.0, 2500.0\)"):
         segmented.fit(middle)
 
-    ranged = EddyFieldFit(phase_encoding="j", clip="none", fit_range=(4000.0, 5000.0))
+    ranged = GEM(phase_encoding="j", clip="none", fit_range=(4000.0, 5000.0))
     ranged.add(0, data, data, affine, mask)
     with pytest.raises(ValueError, match=re.escape("in the fit range [4000, 5000)")):
         ranged.fit(table)
@@ -683,17 +683,36 @@ def test_the_eddy_pass_fits_one_field_for_every_volume():
     """Through the estimator: each volume's field, and its head motion's rotation kept."""
     sim = _images()
     dwi = _dwi(sim)
-    fit = EddyFieldFit(clip="none", zero_point=ZERO)
+    fit = GEM(clip="none", zero_point=ZERO)
 
-    Estimator("trivial", estimates="eddy", registration=fit).run(dwi, n_jobs=1, omp_nthreads=1)
+    Estimator("trivial", estimates="eddy", backend=fit).run(dwi, n_jobs=1, omp_nthreads=1)
 
     assert fit.phase_encoding == "j-" and fit.num_threads == 1  # the dataset's and the run's
-    assert isinstance(fit.field, EddyField) and abs(fit.field.exponent - 1.0) < 0.05
+    assert isinstance(fit.tensor, EddyTensor) and abs(fit.tensor.exponent - 1.0) < 0.05
     assert dwi.motion is not None and dwi.eddy is not None
     assert np.allclose(dwi.motion[:, :3, :3], sim.motions[:, :3, :3])
     assert np.abs(dwi.eddy[:, :3, :3] - sim.fields[:, :3, :3]).max() < 2e-3
     for index, mapping in enumerate(sim.mappings):
         assert _error(sim.mask, sim.affine, dwi.get_transform(index), mapping) < 0.05
+
+
+@SKIP_ELASTIX
+def test_the_estimator_builds_gem_by_name():
+    """``backend="gem"`` builds GEM for the run, from its settings, as an instance of them."""
+    sim = _images()
+    named, given = _dwi(sim), _dwi(sim)
+
+    Estimator("trivial", estimates="eddy", backend="gem", clip="none").run(
+        named, n_jobs=1, omp_nthreads=1
+    )
+    Estimator("trivial", estimates="eddy", backend=GEM(clip="none")).run(
+        given, n_jobs=1, omp_nthreads=1
+    )
+
+    assert named.eddy is not None and given.eddy is not None
+    assert named.motion is not None and given.motion is not None
+    assert np.array_equal(named.eddy, given.eddy)
+    assert np.array_equal(named.motion, given.motion)
 
 
 @SKIP_ELASTIX
@@ -711,7 +730,7 @@ def test_cascaded_passes_count_the_shift_along_phase_encoding_once(passes):
         chain = Estimator(
             "trivial",
             estimates="eddy",
-            registration=EddyFieldFit(clip="none", zero_point=ZERO),
+            backend=GEM(clip="none", zero_point=ZERO),
             prev=chain,
         )
 
@@ -733,20 +752,19 @@ def test_the_eddy_pass_realigns_the_view_once_fitted():
     sim = _images()
     dwi = _dwi(sim, motion=False)
     views: dict = {}
-    fit = EddyFieldFit(
-        phase_encoding="j-", num_threads=2, clip="none", edges=EDGES, zero_point=ZERO
-    )
+    fit = GEM(phase_encoding="j-", num_threads=2, clip="none", edges=EDGES, zero_point=ZERO)
 
-    Estimator("avg", estimates="eddy", registration=fit).run(
+    Estimator("avg", estimates="eddy", backend=fit).run(
         dwi, n_jobs=1, omp_nthreads=1, realigned=views
     )
 
-    assert fit.num_threads == 2 and isinstance(fit.field, SegmentedEddyField)
+    assert fit.num_threads == 2 and isinstance(fit.tensor, SegmentedEddyTensor)
     assert dwi.motion is not None and dwi.eddy is not None
     assert np.allclose(views[id(dwi)].dataobj, dwi.realigned().dataobj, atol=1e-4)
 
 
-def test_the_field_fit_estimates_only_the_eddy_currents():
+@pytest.mark.parametrize("backend", [GEM(), "gem", "GEM"], ids=["instance", "name", "upper"])
+def test_gem_estimates_only_the_eddy_currents(backend):
     sim = SimpleNamespace(
         samples=np.zeros((18, 6, 6, 4), dtype="float32"),
         affine=np.diag([2.0, 2.0, 2.0, 1.0]),
@@ -755,6 +773,6 @@ def test_the_field_fit_estimates_only_the_eddy_currents():
         table=_balanced(np.random.default_rng(11)),
         motions=np.repeat(np.eye(4)[np.newaxis], 18, axis=0),
     )
-    message = FIELD_FIT_ESTIMATES_ERROR_MSG.format(field="motion")
+    message = GEM_ESTIMATES_ERROR_MSG.format(field="motion")
     with pytest.raises(ValueError, match=re.escape(message)):
-        Estimator("trivial", registration=EddyFieldFit()).run(_dwi(sim, "j"))
+        Estimator("trivial", backend=backend).run(_dwi(sim, "j"))

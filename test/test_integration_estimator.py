@@ -487,12 +487,12 @@ def test_estimator_stores_eddy_currents_apart(request):
     eddy[1, 0], eddy[1, 3] = 0.02, 0.5
     rigid, affine = _Composing(motion), _Composing(eddy)
 
-    first = Estimator(DummyInsiderModel(dataset=dwi), strategy="linear", registration=rigid)
+    first = Estimator(DummyInsiderModel(dataset=dwi), strategy="linear", backend=rigid)
     Estimator(
         DummyInsiderModel(dataset=dwi),
         strategy="linear",
         prev=first,
-        registration=affine,
+        backend=affine,
         estimates="eddy",
     ).run(dwi, clip="none")
 
@@ -539,8 +539,8 @@ def test_estimator_rejects_estimates_the_dataset_lacks():
     """It fails before any estimator of the chain registers."""
     dataset = _smooth_dataset()
     backend = _Composing(np.eye(4))
-    first = Estimator("avg", strategy="linear", registration=backend)
-    eddy = Estimator("avg", prev=first, registration=backend, estimates="eddy")
+    first = Estimator("avg", strategy="linear", backend=backend)
+    eddy = Estimator("avg", prev=first, backend=backend, estimates="eddy")
 
     message = "BaseDataset has no estimates 'eddy' (it has: motion)."
     with pytest.raises(ValueError, match=re.escape(message)):

@@ -269,7 +269,7 @@ def run_arm(args: argparse.Namespace, arm: str, cascade: np.ndarray | None) -> N
         model = MODEL if flag else ModelFactory.init(model=MODEL, dataset=data.realigned())
         Estimator(
             model,
-            registration=BACKENDS[registration],
+            backend=BACKENDS[registration],
             estimates="eddy",
             align_config=_settings(registration),
         ).run(data, omp_nthreads=args.threads, n_jobs=args.threads, seed=SEED, num_threads=1)
