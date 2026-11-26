@@ -288,8 +288,8 @@ class EddyTensor:
     The tensor :math:`C` maps the unit b-vector to the field's slopes at the reference
     b-value; with the scanner's frame rotated by :math:`R`, it becomes
     :math:`R C R^T`. In volume :math:`v`, the field's slopes are
-    :math:`s_v = (b_v / b_\text{ref})^p C g_v`, and the field is
-    :math:`E_v = I - u s_v^T`.
+    :math:`s_v = (b_v / b_\text{ref})^p C g_v`, with :math:`g_v` the b-vector as
+    acquired (see :ref:`gem-bvectors`), and the field is :math:`E_v = I - u s_v^T`.
 
     Examples
     --------
@@ -1014,7 +1014,9 @@ class GEM:
         ----------
         gradients : :obj:`~numpy.ndarray`
             The dataset's gradient table, ``(N, 4)``, with a row for each volume index
-            (see :meth:`EddyTensor.slopes`).
+            (see :meth:`EddyTensor.slopes`): the b-vectors as acquired, never rotated by
+            the head motion, since the field follows the gradient the scanner plays
+            (see :ref:`gem-bvectors`).
 
         Returns
         -------

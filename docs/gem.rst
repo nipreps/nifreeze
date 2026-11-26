@@ -62,6 +62,38 @@ the b-vectors average out.
 Fitted on the images, where the volumes weigh a little differently, a small part of it
 still reaches the fields.
 
+.. _gem-bvectors:
+
+The b-vectors
+-------------
+A GEM pass reads each volume's b-vector in two frames: the scanner's, for the field,
+and the head's, for the target.
+
+The field follows the b-vector as acquired.
+The eddy currents come from the gradient the scanner plays, which stays put when the
+head moves.
+So :math:`g_v` in the slopes above is the b-vector of the acquisition, in world (RAS+)
+coordinates, never rotated by the head motion.
+The pass gives :meth:`~nifreeze.registration.gem.GEM.fit` the dataset's own gradient
+table, which keeps the b-vectors as they were read.
+
+The target follows the b-vector in the head.
+Each target predicts its volume as the head shows it at the reference position.
+When the head turns by :math:`Q_v`, the gradient :math:`g_v` points along
+:math:`Q_v^{-1} g_v` in the head, and the model predicts the volume there
+(:func:`~nifreeze.data.dmri.utils.realign_bvecs`).
+With the instant update (:doc:`design`), the realigned view that the model trains on
+holds each volume realigned and its b-vector rotated, together.
+Without it (``--no-instant-update``), the model trains on the original volumes, at the
+b-vectors as acquired.
+GEM derives only each volume's translation along :math:`u`, and keeps the rotation of
+the head motion it is given, so the rotated b-vectors stay right through cascaded
+passes (:ref:`gem-cascade`).
+
+The outputs' b-vectors turn with the head motion alone, as the view's do: the eddy
+currents displace the image without turning the head
+(:meth:`~nifreeze.data.dmri.DWI.to_nifti`).
+
 How GEM is estimated
 --------------------
 Estimating GEM is one registration of all the volumes at once, with one set of

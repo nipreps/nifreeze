@@ -269,6 +269,8 @@ class DWI(BaseDataset[np.ndarray]):
         (:attr:`~nifreeze.data.base.BaseDataset.motion`), as at export
         (see :func:`~nifreeze.data.dmri.utils.realign_bvecs`). The view's whole
         gradient table is reassigned, so an integer table is never truncated.
+        This dataset's table keeps the b-vectors as acquired, which GEM's fields follow
+        (see :ref:`gem-bvectors`).
 
         """
         super().realign_into(view, index, order=order)
