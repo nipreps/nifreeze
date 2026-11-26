@@ -60,6 +60,9 @@ def test_run_call(tmp_path, monkeypatch, write_hdf5):
         str(input_file),
         "--models",
         "dti",
+        # GIN's file does not record it, and the default run needs it for GEM
+        "--phase-encoding",
+        "j",
         "--debug-dir",
         str(tmp_path / "debug"),
     ]

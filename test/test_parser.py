@@ -28,6 +28,8 @@ from pathlib import Path
 import pytest
 
 from nifreeze.cli.parser import (
+    EDDY_GEM_ERROR_MSG,
+    EDDY_MODEL_ERROR_MSG,
     _build_parser,
     _determine_single_fit_mode,
     _normalize_model_name,
@@ -39,7 +41,7 @@ MIN_ARGS = ["data/dwi.h5"]
 
 
 def test_parser_registration(tmp_path):
-    """The backend, the settings file and the eddy-current pass, all off by default."""
+    """The backend, the settings file and the per-volume eddy-current pass, unset by default."""
     input_file = tmp_path / "dwi.h5"
     input_file.touch()
 
@@ -47,7 +49,16 @@ def test_parser_registration(tmp_path):
     assert (args.backend, args.align_config, args.eddy) == (None, None, None)
 
     args, *_ = parse_args(
-        [str(input_file), "--backend", "ants", "--align-config", "rigid.yaml", "--eddy"]
+        [
+            str(input_file),
+            "--backend",
+            "ants",
+            "--align-config",
+            "rigid.yaml",
+            "--gem-passes",
+            "0",
+            "--eddy",
+        ]
     )
     assert (args.backend, args.align_config, args.eddy) == (
         "ants",
@@ -55,7 +66,7 @@ def test_parser_registration(tmp_path):
         AFFINE,
     )
 
-    args, *_ = parse_args([str(input_file), "--eddy", "eddy.yaml"])
+    args, *_ = parse_args([str(input_file), "--gem-passes", "0", "--eddy", "eddy.yaml"])
     assert args.eddy == Path("eddy.yaml")
 
     with pytest.raises(SystemExit):
@@ -77,22 +88,77 @@ def test_parser_registration_is_the_backend_s_former_name(tmp_path, capsys):
 @pytest.mark.parametrize(
     ("argv", "eddy", "model", "single_fit"),
     [
-        ([], None, None, False),
-        (["--models", "dti", "singlegp-loo", "--eddy"], AFFINE, "gp-loo", True),
-        (["--eddy-model", "gqi-krr"], AFFINE, "gqi-krr", False),
-        (["--models", "gp-loo", "--eddy-model", "singleDTI"], AFFINE, "dti", True),
-        (["--models", "singlegqi-krr", "--eddy-model", "gqi-krr"], AFFINE, "gqi-krr", False),
-        (["--eddy", "eddy.yaml", "--eddy-model", "gqi-krr"], Path("eddy.yaml"), "gqi-krr", False),
+        ([], None, "gqi-krr", False),
+        (["--models", "dti", "singlegp-loo"], None, "gp-loo", True),
+        (
+            ["--models", "dti", "singlegp-loo", "--gem-passes", "0", "--eddy"],
+            AFFINE,
+            "gp-loo",
+            True,
+        ),
+        (["--eddy-model", "gp-loo"], None, "gp-loo", False),
+        (["--models", "gp-loo", "--eddy-model", "singleDTI"], None, "dti", True),
+        (["--models", "singlegqi-krr", "--eddy-model", "gqi-krr"], None, "gqi-krr", False),
+        (
+            ["--gem-passes", "0", "--eddy", "eddy.yaml", "--eddy-model", "gp-loo"],
+            Path("eddy.yaml"),
+            "gp-loo",
+            False,
+        ),
     ],
-    ids=["off", "last-model", "own-model", "own-single", "own-fit-mode", "own-settings"],
+    ids=[
+        "default",
+        "last-model",
+        "per-volume",
+        "own-model",
+        "own-single",
+        "own-fit-mode",
+        "per-volume-own",
+    ],
 )
 def test_parser_eddy_model(tmp_path, argv, eddy, model, single_fit):
-    """The eddy-current pass's model: its own, which turns the pass on, or the cascade's last."""
+    """The eddy-current passes' model: their own, or the cascade's last."""
     input_file = tmp_path / "dwi.h5"
     input_file.touch()
 
     args, *_ = parse_args([str(input_file), *argv])
     assert (args.eddy, args.eddy_model, args.eddy_single_fit) == (eddy, model, single_fit)
+
+
+@pytest.mark.parametrize(
+    ("argv", "passes"),
+    [([], None), (["--gem-passes", "0"], 0), (["--gem-passes", "2"], 2)],
+    ids=["default", "off", "two"],
+)
+def test_parser_gem_passes(tmp_path, argv, passes):
+    """``--gem-passes`` is left unset unless given, for the run to resolve on its data."""
+    input_file = tmp_path / "dwi.h5"
+    input_file.touch()
+
+    args, *_ = parse_args([str(input_file), *argv])
+    assert args.gem_passes == passes
+    assert args.models == ["gqi-krr"]
+
+
+@pytest.mark.parametrize(
+    ("argv", "message"),
+    [
+        (["--gem-passes", "-1"], "expected zero or more passes, got '-1'"),
+        (["--gem-passes", "two"], "expected zero or more passes, got 'two'"),
+        (["--eddy"], EDDY_GEM_ERROR_MSG),
+        (["--gem-passes", "3", "--eddy"], EDDY_GEM_ERROR_MSG),
+        (["--gem-passes", "0", "--eddy-model", "gp-loo"], EDDY_MODEL_ERROR_MSG),
+    ],
+    ids=["negative", "not-a-number", "eddy-with-default", "eddy-with-gem", "model-without-pass"],
+)
+def test_parser_rejects_the_eddy_options(tmp_path, capsys, argv, message):
+    """GEM's passes and ``--eddy`` exclude each other, and a model needs a pass to run."""
+    input_file = tmp_path / "dwi.h5"
+    input_file.touch()
+
+    with pytest.raises(SystemExit):
+        parse_args([str(input_file), *argv])
+    assert message in capsys.readouterr().err
 
 
 @pytest.mark.parametrize(
@@ -140,7 +206,7 @@ def test_parser_valid(tmp_path, argv):
     args = _build_parser().parse_args(argv)
 
     assert args.input_file == datapath
-    assert args.models == ["trivial"]
+    assert args.models == ["gqi-krr"]
 
 
 @pytest.mark.parametrize(
