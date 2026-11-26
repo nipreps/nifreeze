@@ -42,7 +42,8 @@ the mask). Each volume thus shows at :math:`M x - d(M x) u` what the reference s
 at :math:`x`, as the audit of nipreps/nifreeze#626 checked. Since :math:`d` is
 linear, that is the affine :math:`E M`, with :math:`M` the head motion and :math:`E`
 the eddy currents. A cascade of models and then an eddy-current pass, through the
-command line, must recover the two apart (nipreps/nifreeze#712).
+command line, must recover the two apart (nipreps/nifreeze#712), and so must the
+default run: head motion, then three passes of GEM, the global eddy model.
 
 The tests register with the backend that ``NIFREEZE_E2E_REGISTRATION`` names (the CI
 job's), or with the default one, and skip if it is not installed. CI registers with
@@ -52,8 +53,8 @@ The model gates record the current single-pass accuracy, as set on ANTs: the mod
 are fit on the moving volumes, so their targets mix anatomy at different positions
 (see nipreps/nifreeze#497). Tighten them when the instant update is in place.
 The cascade's head motion must pass the gate of its last model on head motion without
-eddy currents, and the eddy-current pass must improve on the head motion it starts from. The gates
-of the eddy currents and of the whole mapping record their accuracy on both backends.
+eddy currents, and the eddy-current correction must improve on the head motion it starts from.
+The gates of the eddy currents and of the whole mapping record their accuracy on both backends.
 """
 
 import json
@@ -70,7 +71,8 @@ from nitransforms.linear import LinearTransformsMapping
 from nitransforms.manip import TransformChain
 from scipy.spatial.transform import Rotation
 
-from nifreeze.analysis.phantoms import load_phantom
+from nifreeze.analysis.phantoms import SUBJECT, load_phantom
+from nifreeze.cli.parser import DEFAULT_GEM_PASSES
 from nifreeze.cli.run import main
 from nifreeze.data import dmri
 from nifreeze.registration.base import RegistrationFactory, default_backend
@@ -111,6 +113,16 @@ CASCADE_GATE = {
     "whole": {"max_median": 1.7, "max_p95": 2.7},
 }
 """Largest median and 95th percentile (mm) of each score of the cascade, over all shells."""
+DEFAULT_MODEL = "gqi-krr"
+"""The model of a run that names none, for head motion and GEM's passes."""
+DEFAULT_GATE = {
+    # The gate of the default model on head motion alone
+    "head_motion": {"max_median": 1.35, "max_p95": 2.75},
+    # Set on both backends (worst: ANTs, 0.55 / 1.32 and 1.19 / 2.69)
+    "eddy_currents": {"max_median": 0.7, "max_p95": 1.65},
+    "whole": {"max_median": 1.5, "max_p95": 3.4},
+}
+"""Largest median and 95th percentile (mm) of each score of the default run, over all shells."""
 
 
 @pytest.fixture(scope="module")
@@ -176,14 +188,18 @@ def phantom_motion(phantom_copies, tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
-def phantom_eddy(phantom_copies, tmp_path_factory):
+def phantom_eddy(phantoms, phantom_copies, tmp_path_factory):
     """The moved phantom with eddy currents too, written for the CLI, and their truth."""
     clean, cells = phantom_copies
     perturbation, load = _choose(clean, cells, EDDY_MM)
     distortion = perturbation.distortion
     assert distortion is not None
+    moved = load()
+    # As a BIDS sidecar gives it, for GEM: the reference's
+    sidecar = phantoms / f"sub-{SUBJECT}" / "dwi" / f"sub-{SUBJECT}_acq-{PROTOCOL}_dwi.json"
+    moved.phase_encoding = json.loads(sidecar.read_text())["PhaseEncodingDirection"]
     sim = _write(
-        clean, load(), perturbation, tmp_path_factory.mktemp("phantom_eddy"), "phantom_eddy"
+        clean, moved, perturbation, tmp_path_factory.mktemp("phantom_eddy"), "phantom_eddy"
     )
     # Exact for the phantom's field, of degree 1 (raises for higher degrees)
     sim.eddy = distortion.matrices()
@@ -294,6 +310,9 @@ def test_e2e_motion(
             str(sim.mask_path),
             "--models",
             model,
+            # Head motion alone (the copy has no eddy currents, nor its direction)
+            "--gem-passes",
+            "0",
             "--backend",
             REGISTRATION,
             "--seed",
@@ -340,9 +359,8 @@ def test_e2e_motion(
         assert stats["p95"] < max_p95
 
 
-def test_e2e_cascade_eddy(phantom_eddy, outdir, tmp_path):
-    """A cascade, then an eddy-current pass, recover head motion and eddy currents apart."""
-    sim = phantom_eddy
+def _run_eddy(sim: SimpleNamespace, tmp_path: Path, *argv: str) -> tuple[np.ndarray, np.ndarray]:
+    """Run the CLI on the eddy copy, and read back its head motion and eddy currents."""
     output_dir = tmp_path / "output"
     output_dir.mkdir()
     main(
@@ -350,9 +368,7 @@ def test_e2e_cascade_eddy(phantom_eddy, outdir, tmp_path):
             str(sim.dwi_path),
             "--brainmask",
             str(sim.mask_path),
-            "--models",
-            *CASCADE,
-            "--eddy",
+            *argv,
             "--backend",
             REGISTRATION,
             "--seed",
@@ -366,14 +382,26 @@ def test_e2e_cascade_eddy(phantom_eddy, outdir, tmp_path):
     motion, eddy = dataset.motion, dataset.eddy
     assert motion is not None
     assert eddy is not None
-    whole = eddy @ motion
 
     # The X5 file carries them apart too: head motion first, then the eddy currents
     x5 = next(output_dir.glob("*.x5"))
     assert np.allclose(LinearTransformsMapping.from_filename(x5, fmt="X5").matrix, motion)
     chain = TransformChain.from_filename(x5)
-    assert np.allclose(chain.transforms[1].matrix @ chain.transforms[0].matrix, whole)
+    assert np.allclose(chain.transforms[1].matrix @ chain.transforms[0].matrix, eddy @ motion)
+    return motion, eddy
 
+
+def _check_eddy(
+    sim: SimpleNamespace,
+    motion: np.ndarray,
+    eddy: np.ndarray,
+    outdir,
+    name: str,
+    record: dict,
+    gates: dict,
+) -> None:
+    """Score head motion and eddy currents against their truth, record them, and gate them."""
+    whole = eddy @ motion
     # Each estimate against its truth, without the transform its volumes share (the
     # frame of the model's targets). That frame cancels from the eddy currents
     # (whole @ inv(motion)), which are evaluated where the head is.
@@ -384,7 +412,7 @@ def test_e2e_cascade_eddy(phantom_eddy, outdir, tmp_path):
         "head_motion": _summary(_errors(sim.mask, head_motion, sim.truth), sim.shells),
         "eddy_currents": _summary(_errors(sim.mask, eddy @ sim.truth, sim.whole), sim.shells),
         "whole": _summary(_errors(sim.mask, corrected, sim.whole), sim.shells),
-        # The mapping that a run without --eddy gives, where the eddy-current pass starts
+        # The head motion's mapping alone, as a run without eddy-current correction gives it
         "without_eddy": _summary(_errors(sim.mask, started, sim.whole), sim.shells),
     }
     identity = np.stack([np.eye(4)] * len(sim.truth))
@@ -394,10 +422,10 @@ def test_e2e_cascade_eddy(phantom_eddy, outdir, tmp_path):
     }
     _record(
         outdir,
-        "cascade-eddy",
+        name,
         {
             "kind": "cascade",
-            "models": [*CASCADE, f"{CASCADE[-1]} (eddy currents)"],
+            **record,
             "registration": REGISTRATION,
             "offset_mm": {
                 name: float(displacements_within_mask(sim.mask, nt.linear.Affine(common)).max())
@@ -405,13 +433,49 @@ def test_e2e_cascade_eddy(phantom_eddy, outdir, tmp_path):
             },
             "applied": applied,
             **scores,
-            "gate": CASCADE_GATE,
+            "gate": gates,
         },
     )
 
-    for name, gate in CASCADE_GATE.items():
-        assert scores[name]["all"]["median"] < gate["max_median"], name
-        assert scores[name]["all"]["p95"] < gate["max_p95"], name
-    # The eddy-current pass improves on the head motion it starts from
+    for score, gate in gates.items():
+        assert scores[score]["all"]["median"] < gate["max_median"], score
+        assert scores[score]["all"]["p95"] < gate["max_p95"], score
+    # The eddy-current correction improves on the head motion it starts from
     for stat in ("median", "p95"):
         assert scores["whole"]["all"][stat] < scores["without_eddy"]["all"][stat], stat
+
+
+def test_e2e_cascade_eddy(phantom_eddy, outdir, tmp_path):
+    """A cascade, then a per-volume eddy-current pass, recover head motion and eddy currents."""
+    motion, eddy = _run_eddy(
+        phantom_eddy, tmp_path, "--models", *CASCADE, "--gem-passes", "0", "--eddy"
+    )
+    _check_eddy(
+        phantom_eddy,
+        motion,
+        eddy,
+        outdir,
+        "cascade-eddy",
+        {
+            "title": "Cascade, then an eddy-current pass",
+            "models": [*CASCADE, f"{CASCADE[-1]} (eddy currents, each volume on its own)"],
+        },
+        CASCADE_GATE,
+    )
+
+
+def test_e2e_default_eddy(phantom_eddy, outdir, tmp_path):
+    """The default run, head motion then GEM's passes, recovers both apart."""
+    motion, eddy = _run_eddy(phantom_eddy, tmp_path)
+    _check_eddy(
+        phantom_eddy,
+        motion,
+        eddy,
+        outdir,
+        "default-eddy",
+        {
+            "title": "The default run: head motion, then GEM",
+            "models": [DEFAULT_MODEL, f"GEM × {DEFAULT_GEM_PASSES} ({DEFAULT_MODEL})"],
+        },
+        DEFAULT_GATE,
+    )
