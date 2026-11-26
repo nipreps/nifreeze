@@ -69,9 +69,9 @@ from experiments import provenance, write_results
 
 from nifreeze.analysis.phantoms import load_phantom
 from nifreeze.registration.eddy_field import (
-    EddyField,
     EddyFieldFit,
-    SegmentedEddyField,
+    EddyTensor,
+    SegmentedEddyTensor,
     field_of_view_centre,
     field_slopes,
 )
@@ -117,10 +117,10 @@ def _segments(bvals: np.ndarray) -> np.ndarray:
     return np.searchsorted(np.asarray(EDGES), bvals, "right")
 
 
-def _truth_fields(field: EddyField | SegmentedEddyField, slopes: np.ndarray, table: np.ndarray):
+def _truth_fields(tensor: EddyTensor | SegmentedEddyTensor, slopes: np.ndarray, table: np.ndarray):
     """The phantom's fields as the fitted model writes them, at the same reference b-values."""
-    if isinstance(field, EddyField):
-        truth = EddyField.from_slopes(slopes, table, b_ref=field.b_ref)
+    if isinstance(tensor, EddyTensor):
+        truth = EddyTensor.from_slopes(slopes, table, b_ref=tensor.b_ref)
         residual = np.abs(truth.slopes(table) - slopes).max()
         return {
             "Matrix": truth.matrix.tolist(),
@@ -129,9 +129,9 @@ def _truth_fields(field: EddyField | SegmentedEddyField, slopes: np.ndarray, tab
             "ResidualSlope": float(residual),
         }
     parts = []
-    for k, part in enumerate(field.parts):
+    for k, part in enumerate(tensor.parts):
         chosen = _segments(table[:, 3]) == k
-        truth = EddyField.from_slopes(slopes[chosen], table[chosen], exponent=part.exponent)
+        truth = EddyTensor.from_slopes(slopes[chosen], table[chosen], exponent=part.exponent)
         residual = np.abs(truth.slopes(table[chosen]) - slopes[chosen]).max()
         parts.append(
             {
@@ -141,17 +141,21 @@ def _truth_fields(field: EddyField | SegmentedEddyField, slopes: np.ndarray, tab
                 "ResidualSlope": float(residual),
             }
         )
-    return {"Edges": list(field.edges), "Parts": parts}
+    return {"Edges": list(tensor.edges), "Parts": parts}
 
 
-def _fitted(field: EddyField | SegmentedEddyField) -> dict[str, Any]:
-    if isinstance(field, EddyField):
-        return {"Matrix": field.matrix.tolist(), "Exponent": field.exponent, "BRef": field.b_ref}
+def _fitted(tensor: EddyTensor | SegmentedEddyTensor) -> dict[str, Any]:
+    if isinstance(tensor, EddyTensor):
+        return {
+            "Matrix": tensor.matrix.tolist(),
+            "Exponent": tensor.exponent,
+            "BRef": tensor.b_ref,
+        }
     return {
-        "Edges": list(field.edges),
+        "Edges": list(tensor.edges),
         "Parts": [
             {"Matrix": part.matrix.tolist(), "Exponent": part.exponent, "BRef": part.b_ref}
-            for part in field.parts
+            for part in tensor.parts
         ],
     }
 
@@ -188,7 +192,7 @@ def run(args: argparse.Namespace, variant: str, threads: int) -> None:
     added = perf_counter() - began
     del clean, moving
     began = perf_counter()
-    field = fit.fit(table)
+    tensor = fit.fit(table)
     fitted = perf_counter() - began
     peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
 
@@ -214,8 +218,8 @@ def run(args: argparse.Namespace, variant: str, threads: int) -> None:
         "RssLoadedMb": rss_loaded,
         "PeakRssMb": peak,
         "ZeroPoint": np.asarray(fit.zero_point).tolist(),
-        "Fitted": _fitted(field),
-        "Truth": _truth_fields(field, true_slopes, table),
+        "Fitted": _fitted(tensor),
+        "Truth": _truth_fields(tensor, true_slopes, table),
         "Provenance": provenance(),
     }
     runs = args.out / "runs"
@@ -226,7 +230,7 @@ def run(args: argparse.Namespace, variant: str, threads: int) -> None:
         stem.with_suffix(".npz"),
         estimated=estimated,
         truth=truth,
-        slopes=field.slopes(table),
+        slopes=tensor.slopes(table),
         true_slopes=true_slopes,
         error_median=np.array([np.median(e) for e in errors]),
         error_max=np.array([e.max() for e in errors]),
