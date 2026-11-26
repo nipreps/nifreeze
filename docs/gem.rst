@@ -23,9 +23,11 @@ In volume :math:`v`, with the unit b-vector :math:`g_v` and the b-value :math:`b
 
     s_v = \left(\frac{b_v}{b_\text{ref}}\right)^p C g_v,
 
-where the 3 × 3 matrix :math:`C` and the exponent :math:`p` are the same for every
-volume (:class:`~nifreeze.registration.eddy_field.EddyField`), and the reference
-b-value :math:`b_\text{ref}` is the geometric mean of the b-values.
+where the eddy-current tensor :math:`C` (3 × 3) and the exponent :math:`p` are the
+same for every volume (:class:`~nifreeze.registration.eddy_field.EddyTensor`), and
+the reference b-value :math:`b_\text{ref}` is the geometric mean of the b-values.
+:math:`C` maps the gradient's direction to the field's slopes: with the scanner's
+frame rotated by :math:`R`, it becomes :math:`R C R^T`, as a tensor does.
 The exponent is 1/2 when the field follows the gradient's strength at a fixed timing,
 and 1 when it follows the b-value, as in the phantoms that TRXScan makes
 (:doc:`phantoms`).
@@ -44,12 +46,12 @@ point, and each volume keeps the rest of the head motion it is given.
 
 GEM comes in two forms:
 
-One model for all the volumes
+One tensor for all the volumes
     One :math:`C` and one :math:`p` (the default): 10 parameters, or 9 with the
     exponent held.
-One model for each shell
+One tensor for each shell
     One :math:`C` for each segment of b-values, between the edges that the caller gives
-    (:class:`~nifreeze.registration.eddy_field.SegmentedEddyField`).
+    (:class:`~nifreeze.registration.eddy_field.SegmentedEddyTensor`).
     The exponent is held, at 1/2 by default, and each segment's reference b-value is
     the geometric mean of its b-values.
     On shelled data, every volume of a segment has the same b-value, so the exponent
@@ -88,7 +90,7 @@ with its head motion; it then estimates the model and stores each volume's head 
 and field in the dataset.
 The fit takes the dataset's phase-encoding direction, unless it is given its own
 (``phase_encoding``).
-One model for each shell takes the edges between the shells, for instance
+One tensor for each shell takes the edges between the shells, for instance
 ``EddyFieldFit(edges=(1500, 2750))`` for shells at b=1000, 2000 and 3500 s/mm².
 ``zero_point`` sets where the fields are zero, in world (RAS+) coordinates, in mm, and
 ``exponent`` holds :math:`p`.
@@ -176,7 +178,7 @@ volume.
 With ``--slm linear`` (off by default), each of the field's coefficients except its
 offset is pooled over the diffusion-weighted volumes of every shell, and replaced by
 its least-squares fit on :math:`(b_v / 1000)\, g_v`, without an intercept.
-For the slopes, that is GEM with one model for all the volumes and :math:`p = 1`.
+For the slopes, that is GEM with one tensor for all the volumes and :math:`p = 1`.
 ``eddy`` applies it in each iteration, after the step that updates each volume's
 estimates.
 FSL recommends it for data with few directions, or whose directions do not cover the
@@ -192,7 +194,7 @@ GEM differs from it in four ways:
    along phase encoding on the gradients, across the volumes: the fit becomes the
    offset, and the rest the translation.
    In effect, its fields' zero point is estimated.
-4. GEM can fit one model for each shell.
+4. GEM can fit one tensor for each shell.
 
 Accuracy on the phantom
 -----------------------

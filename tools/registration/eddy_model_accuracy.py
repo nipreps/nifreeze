@@ -23,7 +23,7 @@
 """
 How accurately does the global eddy model (GEM) recover the phantom's eddy currents?
 
-GEM (:class:`~nifreeze.registration.eddy_field.EddyFieldFit`, one matrix ``C`` and one
+GEM (:class:`~nifreeze.registration.eddy_field.EddyFieldFit`, one tensor ``C`` and one
 exponent ``p``) runs in the estimator's eddy-current pass on the copies of the Sherbrooke
 phantom without head motion (:data:`SIZES`: eddy currents whose largest displacement in
 the brain is 4, 8 and 16 mm). Head motion is held at the identity: there is no head-motion
@@ -93,9 +93,9 @@ from nifreeze.analysis.phantoms import load_phantom
 from nifreeze.estimator import Estimator
 from nifreeze.model.base import BaseModel
 from nifreeze.registration.eddy_field import (
-    EddyField,
     EddyFieldFit,
-    SegmentedEddyField,
+    EddyTensor,
+    SegmentedEddyTensor,
     field_slopes,
 )
 from nifreeze.registration.utils import displacements_within_mask, phase_encoding_vector
@@ -208,15 +208,15 @@ def run(args: argparse.Namespace, name: str) -> None:
             began = perf_counter()
             Estimator(model, estimates="eddy", registration=fit).run(dwi, **options)
             seconds[key].append(perf_counter() - began)
-            assert dwi.motion is not None and dwi.eddy is not None and fit.field is not None
+            assert dwi.motion is not None and dwi.eddy is not None and fit.tensor is not None
             arrays[f"{key}/{number}/motion"] = dwi.motion.copy()
             arrays[f"{key}/{number}/eddy"] = dwi.eddy.copy()
-            field = fit.field
-            parts = field.parts if isinstance(field, SegmentedEddyField) else (field,)
+            tensor = fit.tensor
+            parts = tensor.parts if isinstance(tensor, SegmentedEddyTensor) else (tensor,)
             record[key].append(
                 {
-                    # One field, or one for each shell
-                    "Fields": [
+                    # One tensor, or one for each shell
+                    "Tensors": [
                         {"Matrix": p.matrix.tolist(), "Exponent": p.exponent, "BRef": p.b_ref}
                         for p in parts
                     ],
@@ -248,7 +248,7 @@ def score(out: Path, name: str) -> None:
     shells = np.round(gradients[:, 3], -2)
     truth = saved["truth/eddy"] @ saved["truth/motion"]
     truth_slopes = field_slopes(saved["truth/eddy"], u)
-    found = EddyField.from_slopes(truth_slopes, gradients)
+    found = EddyTensor.from_slopes(truth_slopes, gradients)
     record["Truth"] = {
         "Exponent": found.exponent,
         "ModelSlopeResidual": float(np.abs(found.slopes(gradients) - truth_slopes).max()),
@@ -276,7 +276,7 @@ def score(out: Path, name: str) -> None:
             by_shell = {f"{shell:g}": shells == shell for shell in np.unique(shells)}
             summary[key].append(
                 {
-                    "Exponent": fitted["Fields"][0]["Exponent"],
+                    "Exponent": fitted["Tensors"][0]["Exponent"],
                     "Share": _share(slopes, truth_slopes),
                     "ShareByShell": {
                         shell: _share(slopes[chosen], truth_slopes[chosen])
