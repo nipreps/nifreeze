@@ -114,6 +114,32 @@ it, or ``--phase-encoding``.
 Without it, the default run estimates head motion only, with a warning.
 The command line fits GEM in its default form; its other options are set in Python.
 
+On DIPY's Sherbrooke data, the default run took 17 min on six CPUs, against 5.4 min
+for head motion alone.
+
+.. figure:: _static/gem/gem-sherbrooke.svg
+   :width: 100%
+
+   The default run on DIPY's Sherbrooke 3-shell data (64 volumes at each of b=1000,
+   2000 and 3500 s/mm², 2 mm voxels), given phase encoding along :math:`j`, played in
+   acquisition order, a fifth of a second per volume.
+   Left: the original volumes.
+   Middle: corrected for head motion only (``--gem-passes 0``).
+   Right: the default run, corrected for head motion and three passes of GEM.
+   The orange line outlines the brain at the reference position and is the same in
+   every frame.
+   The header gives how far each volume's corrections move the brain.
+   On these data, the eddy currents are well below the voxel size: 0.13 mm in the
+   median volume (the median over the brain), and at most 0.86 mm in any voxel, against
+   0.35 mm and 1.80 mm for head motion.
+   So the right column differs little from the middle one.
+
+``tools/gem_sherbrooke.py`` makes both runs and the figure, on CPUs 0-5:
+
+.. code-block:: bash
+
+    taskset -c 0-5 python tools/gem_sherbrooke.py --work <work> --out docs/_static/gem
+
 Each variant is one ``GEM``, given as the pass's backend:
 
 .. code-block:: python
