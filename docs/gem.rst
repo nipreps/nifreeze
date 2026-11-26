@@ -94,6 +94,20 @@ One model for each shell takes the edges between the shells, for instance
 ``exponent`` holds :math:`p`.
 The command line's ``--eddy`` registers each volume on its own.
 
+Each variant is one ``EddyFieldFit``, given as the pass's registration:
+
+.. code-block:: python
+
+    EddyFieldFit()                                   # one C and one p, both estimated
+    EddyFieldFit(exponent=0.5)                       # one C, with p held at 1/2
+    EddyFieldFit(edges=(1500, 2750))                 # one C for each shell, p held at 1/2
+    EddyFieldFit(fit_range=(0, 1500), exponent=0.5)  # C fitted at b=1000, given to all
+    EddyFieldFit(zero_point=(0.0, -18.0, 12.0))      # the fields zero there (RAS+, mm)
+    EddyFieldFit(phase_encoding="j-")                # its own phase-encoding direction
+
+The API reference of :class:`~nifreeze.registration.eddy_field.EddyFieldFit` lists the
+rest of its options.
+
 .. _gem-cascade:
 
 Cascading passes
@@ -108,8 +122,8 @@ Three passes, for instance:
     second = Estimator("gqi-krr", estimates="eddy", registration=EddyFieldFit(), prev=first)
     Estimator("gqi-krr", estimates="eddy", registration=EddyFieldFit(), prev=second).run(dwi)
 
-Each pass's model trains on the volumes that the previous pass corrected (the default,
-``instant_update=True``); with the update off, every pass repeats the first.
+Each pass's model trains on the volumes that the previous pass corrected (the default);
+with ``run(dwi, instant_update=False)``, every pass repeats the first.
 FSL eddy, too, trains its predictions again on the corrected volumes at each of its
 iterations, five by default.
 
@@ -139,6 +153,21 @@ a fit on the b=1000 shell would give the b=3500 fields at 0.53 of their size.
 ``fit_range`` and ``edges`` exclude each other.
 On the phantom, at 16 mm, :math:`C` fitted at b=1000 gives the smallest median field
 error in every pass (:ref:`gem-b1000`).
+
+The options combine: :math:`C` fitted at b=1000, in three cascaded passes, for instance:
+
+.. code-block:: python
+
+    chain = None
+    for _ in range(3):
+        chain = Estimator(
+            "gqi-krr",
+            estimates="eddy",
+            # p held at 1/2: give your scanner's, if known (the phantom's is 1)
+            registration=EddyFieldFit(fit_range=(0, 1500), exponent=0.5),
+            prev=chain,
+        )
+    chain.run(dwi)
 
 The antecedent: FSL eddy's second-level model
 ---------------------------------------------
