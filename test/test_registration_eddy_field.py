@@ -697,6 +697,34 @@ def test_the_eddy_pass_fits_one_field_for_every_volume():
 
 
 @SKIP_ELASTIX
+@pytest.mark.parametrize("passes", [2, 3])
+def test_cascaded_passes_count_the_shift_along_phase_encoding_once(passes):
+    """
+    Each pass after the first factors the field of the pass before, zero at the zero
+    point, out of each volume's mapping, and fits from the head motion that remains: its
+    shift along phase encoding is the field's, however many passes come before it.
+    """
+    sim = _images()
+    dwi = _dwi(sim)
+    chain = None
+    for _ in range(passes):
+        chain = Estimator(
+            "trivial",
+            estimates="eddy",
+            registration=EddyFieldFit(clip="none", zero_point=ZERO),
+            prev=chain,
+        )
+
+    assert chain is not None
+    chain.run(dwi, n_jobs=1, omp_nthreads=1)
+
+    assert dwi.motion is not None and dwi.eddy is not None
+    assert np.abs(dwi.eddy[:, :3, :3] - sim.fields[:, :3, :3]).max() < 2e-3
+    for index, mapping in enumerate(sim.mappings):
+        assert _error(sim.mask, sim.affine, dwi.get_transform(index), mapping) < 0.05
+
+
+@SKIP_ELASTIX
 def test_the_eddy_pass_realigns_the_view_once_fitted():
     """
     With the instant update, the pass predicts from the view as it found it, and the view

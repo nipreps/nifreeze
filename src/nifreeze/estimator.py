@@ -128,8 +128,9 @@ class Estimator:
         only), the pass predicts every volume first, all from the same data whatever
         the update setting, then estimates one field model for all of them. Each volume
         keeps its head motion but for its shift along phase encoding, which the field
-        sets. With the instant update, the view is realigned once the field is
-        estimated.
+        sets; a field an earlier pass estimated is factored out first, as a field zero
+        at the fit's zero point, so that its shift is not counted twice. With the instant
+        update, the view is realigned once the field is estimated.
     **kwargs
         Registration settings of this estimator, which take precedence over the run's
         ``align_kwargs``: ``align_config`` (a mapping, or a file with a section per
@@ -398,8 +399,9 @@ class Estimator:
         The eddy-current pass with one field model for every volume (#750).
 
         Every volume is predicted, all from the same data (the view does not change
-        during the pass), and added to the fit with its head motion; the fit then
-        estimates the field, and each volume's head motion and field are stored. The
+        during the pass), and added to the fit with its head motion and any field an
+        earlier pass estimated; the fit then estimates the field, and each volume's head
+        motion and field are stored. The
         fit takes the dataset's phase-encoding direction and the run's threads, unless
         it has its own.
         """
@@ -412,6 +414,7 @@ class Estimator:
         print(f"Registration: {type(fit).__name__}.")
 
         motion = getattr(dataset, "motion", None)
+        earlier = getattr(dataset, self._estimates, None)  # the fields of an earlier pass
         indices = list(index_iter)
         with tqdm(total=len(indices), unit="vols.") as pbar:
             for i in indices:
@@ -425,6 +428,7 @@ class Estimator:
                     dataset.affine,
                     dataset.brainmask,
                     None if motion is None else motion[i],
+                    None if earlier is None else earlier[i],
                 )
                 pbar.update()
 
