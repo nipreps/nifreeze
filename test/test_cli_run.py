@@ -30,7 +30,9 @@ import numpy as np
 import pytest
 
 from nifreeze.cli import run
+from nifreeze.cli.parser import DEFAULT_GEM_PASSES
 from nifreeze.data.dmri import DWI
+from nifreeze.estimator import GEM_NAME
 from nifreeze.registration.base import AFFINE
 
 
@@ -93,7 +95,18 @@ def test_main_appends_the_eddy_pass(monkeypatch, tmp_path):
     input_file = tmp_path / "dwi.h5"
     input_file.touch()
     argv = [str(input_file), "--models", "avgdwi", "gqi-krr", "--output-dir", str(tmp_path)]
-    run.main([*argv, "--backend", "ants", "--align-config", "motion.yaml", "--eddy"])
+    run.main(
+        [
+            *argv,
+            "--backend",
+            "ants",
+            "--align-config",
+            "motion.yaml",
+            "--gem-passes",
+            "0",
+            "--eddy",
+        ]
+    )
 
     first, second, eddy = _Estimator.built
     assert [estimator.args[0] for estimator in _Estimator.built] == [
@@ -112,7 +125,7 @@ def test_main_appends_the_eddy_pass(monkeypatch, tmp_path):
 
 
 def test_main_chooses_the_eddy_model(monkeypatch, tmp_path):
-    """``--eddy-model`` runs the eddy-current pass with its own model and fit mode."""
+    """``--eddy-model`` runs ``--eddy``'s pass with its own model and fit mode."""
     monkeypatch.setattr(run, "load", lambda *args, **kwargs: _Dataset())
     monkeypatch.setattr(run, "Estimator", _Estimator)
     monkeypatch.setattr(_Estimator, "built", [])
@@ -127,6 +140,9 @@ def test_main_chooses_the_eddy_model(monkeypatch, tmp_path):
             "singlegp-loo",
             "--eddy-model",
             "gqi-krr",
+            "--gem-passes",
+            "0",
+            "--eddy",
             "--backend",
             "ants",
             "--output-dir",
@@ -171,9 +187,97 @@ def test_main_takes_the_phase_encoding(monkeypatch, tmp_path, metadata, argument
     input_file = tmp_path / "dwi.h5"
     input_file.touch()
     extra = [] if argument is None else ["--phase-encoding", argument]
-    run.main([str(input_file), "--backend", "ants", "--output-dir", str(tmp_path), *extra])
+    run.main(
+        [str(input_file), "--backend", "ants", "--gem-passes", "0", "--output-dir", str(tmp_path)]
+        + extra
+    )
 
     assert dataset.phase_encoding == expected
+
+
+def _run_dwi(monkeypatch, tmp_path, dataset, *argv):
+    """Run the CLI on ``dataset``, with the estimators and the export mocked."""
+    monkeypatch.setattr(run, "load", lambda *args, **kwargs: dataset)
+    monkeypatch.setattr(run, "Estimator", _Estimator)
+    monkeypatch.setattr(_Estimator, "built", [])
+    monkeypatch.setattr(run, "ants_version", lambda: None)
+    monkeypatch.setattr(DWI, "to_nifti", lambda self, *args, **kwargs: None)
+
+    input_file = tmp_path / "dwi.h5"
+    input_file.touch()
+    run.main([str(input_file), "--output-dir", str(tmp_path), *argv])
+    return _Estimator.built
+
+
+@pytest.mark.parametrize(
+    ("argv", "passes", "model", "single_fit"),
+    [
+        ([], DEFAULT_GEM_PASSES, "gqi-krr", False),
+        (["--gem-passes", "1"], 1, "gqi-krr", False),
+        (["--models", "dti", "gp-loo", "--gem-passes", "2"], 2, "gp-loo", False),
+        (["--eddy-model", "singlegp-loo", "--gem-passes", "4"], 4, "gp-loo", True),
+        (["--gem-passes", "0"], 0, None, None),
+    ],
+    ids=["default", "one", "cascade", "own-model", "off"],
+)
+def test_main_chains_the_gem_passes(monkeypatch, tmp_path, argv, passes, model, single_fit):
+    """After the cascade, each GEM pass starts from the estimates of the one before."""
+    built = _run_dwi(monkeypatch, tmp_path, _dwi("j"), "--backend", "ants", *argv)
+
+    gem = built[len(built) - passes :]
+    assert len(built) - passes == (2 if "--models" in argv else 1)
+    assert all(estimator.kwargs["backend"] == "ants" for estimator in built[: -passes or None])
+    for before, estimator in zip(built[-passes - 1 :], gem, strict=False):
+        assert estimator.kwargs["prev"] is before
+        assert estimator.args[0] == model
+        assert estimator.kwargs["single_fit"] is single_fit
+        assert estimator.kwargs["backend"] == GEM_NAME
+        assert estimator.kwargs["estimates"] == "eddy"
+        assert "align_config" not in estimator.kwargs
+
+
+def test_main_skips_gem_without_the_phase_encoding(monkeypatch, tmp_path):
+    """Without a phase-encoding direction, the default run estimates head motion only."""
+    with pytest.warns(UserWarning, match="GEM does not run"):
+        built = _run_dwi(monkeypatch, tmp_path, _dwi(None))
+    assert [estimator.kwargs.get("estimates") for estimator in built] == [None]
+
+    # Given along with the data, the direction lets GEM run
+    built = _run_dwi(monkeypatch, tmp_path, _dwi(None), "--phase-encoding", "j-")
+    assert len(built) == 1 + DEFAULT_GEM_PASSES
+
+    with pytest.raises(ValueError, match="GEM needs the phase-encoding direction"):
+        _run_dwi(monkeypatch, tmp_path, _dwi(None), "--gem-passes", "2")
+
+
+def test_main_runs_gem_on_dmri_only(monkeypatch, tmp_path):
+    """Other data get no GEM pass, unless one is asked for, which is an error."""
+    monkeypatch.setattr(run, "load", lambda *args, **kwargs: _Dataset())
+    monkeypatch.setattr(run, "Estimator", _Estimator)
+    monkeypatch.setattr(_Estimator, "built", [])
+    monkeypatch.setattr(run, "ants_version", lambda: None)
+    input_file = tmp_path / "pet.h5"
+    input_file.touch()
+
+    run.main([str(input_file), "--output-dir", str(tmp_path)])
+    assert len(_Estimator.built) == 1
+
+    with pytest.raises(ValueError, match="dMRI inputs only"):
+        run.main([str(input_file), "--gem-passes", "1", "--output-dir", str(tmp_path)])
+
+
+@pytest.mark.parametrize(
+    ("argv", "itk"),
+    [([], True), (["--gem-passes", "0"], False)],
+    ids=["gem", "no-gem"],
+)
+def test_main_records_the_itk_version(monkeypatch, tmp_path, argv, itk):
+    """A run whose GEM passes ran records the version of ITK, whatever the backend."""
+    monkeypatch.setattr(run, "version", lambda distribution: f"{distribution} 1.0")
+    _run_dwi(monkeypatch, tmp_path, _dwi("j"), "--backend", "ants", *argv)
+
+    sidecar = json.loads((tmp_path / "dwi.json").read_text())
+    assert sidecar == {"ANTsVersion": None} | ({"ITKVersion": "itk-core 1.0"} if itk else {})
 
 
 def test_main_refuses_the_phase_encoding_of_other_data(monkeypatch, tmp_path):

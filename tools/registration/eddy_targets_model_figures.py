@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.13"
-# dependencies = ["nifreeze[elastix]", "matplotlib"]
+# dependencies = ["nifreeze", "matplotlib"]
 #
 # [tool.uv.sources]
 # nifreeze = { path = "../..", editable = true }

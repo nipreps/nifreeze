@@ -36,7 +36,7 @@ SCORES = {
     "head_motion": "Head motion",
     "eddy_currents": "Eddy currents",
     "whole": "Whole mapping",
-    "without_eddy": "Without the eddy-current pass",
+    "without_eddy": "Without eddy-current correction",
 }
 """The scores of a cascade, as its table names them."""
 
@@ -108,18 +108,18 @@ def _motion(results: dict, backends: list) -> list:
 
 
 def _cascade(result: dict) -> list:
-    """The table of a cascade of models, then an eddy-current pass."""
+    """The table of a cascade of models, then eddy-current correction."""
     shells = sorted(result["whole"]["shells"], key=int)
     offsets = result.get("offset_mm", {})
     gates = result.get("gate", {})
     lines = [
         "",
-        "## Cascade, then an eddy-current pass (Sherbrooke, simulated motion and eddy"
-        f" currents, {result['registration']})",
+        f"## {result.get('title', 'Cascade, then an eddy-current pass')} (Sherbrooke,"
+        f" simulated motion and eddy currents, {result['registration']})",
         "",
         f"Models: {', '.join(result['models'])}. Median / 95th percentile of the"
         " per-volume error (mm). Head motion and the whole mapping are compared after"
-        " removing their common offset. *Without the eddy-current pass* is the cascade's"
+        " removing their common offset. *Without eddy-current correction* is the cascade's"
         " head motion against the truth of the whole mapping.",
         "",
         "| Score | Offset | All | " + " | ".join(f"b={shell}" for shell in shells) + " | Gate |",

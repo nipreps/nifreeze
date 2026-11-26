@@ -22,11 +22,39 @@
 #
 """Parser module."""
 
-from argparse import SUPPRESS, ArgumentDefaultsHelpFormatter, ArgumentParser, Namespace
+from argparse import (
+    SUPPRESS,
+    ArgumentDefaultsHelpFormatter,
+    ArgumentParser,
+    ArgumentTypeError,
+    Namespace,
+)
 from pathlib import Path
 
 from nifreeze.data.dmri.utils import PHASE_ENCODING_DIRECTIONS
 from nifreeze.registration.base import AFFINE, BACKENDS
+
+DEFAULT_GEM_PASSES = 3
+"""The passes of GEM that a run on dMRI inputs makes unless ``--gem-passes`` sets them."""
+EDDY_GEM_ERROR_MSG = (
+    "--eddy registers each volume on its own, in place of GEM: give it with --gem-passes 0."
+)
+"""Both eddy-current corrections asked for error message."""
+EDDY_MODEL_ERROR_MSG = (
+    "--eddy-model has no pass to run: --gem-passes is 0, and --eddy is not given."
+)
+"""A model for eddy-current passes that do not run error message."""
+
+
+def _passes(value: str) -> int:
+    """A number of passes: an integer, zero or more."""
+    try:
+        number = int(value)
+    except ValueError:
+        number = -1
+    if number < 0:
+        raise ArgumentTypeError(f"expected zero or more passes, got {value!r}")
+    return number
 
 
 def _build_parser() -> ArgumentParser:
@@ -60,8 +88,7 @@ def _build_parser() -> ArgumentParser:
         choices=sorted(BACKENDS),
         default=None,
         help=(
-            "The registration backend (default: elastix where itk-elastix is installed, "
-            "ANTs otherwise)."
+            "The registration backend, which registers each volume on its own (default: elastix)."
         ),
     )
     # The flag's former name, until a later release removes it
@@ -87,6 +114,21 @@ def _build_parser() -> ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--gem-passes",
+        action="store",
+        type=_passes,
+        metavar="N",
+        default=None,
+        help=(
+            "Estimate the eddy currents of a DWI with N passes of the global eddy model "
+            "(GEM), after the --models cascade: each pass predicts every volume, from the "
+            "volumes the pass before corrected, and fits one model of the fields to all "
+            "of them. 0 turns GEM off. GEM needs the phase-encoding direction: without "
+            "it, the default run estimates head motion only, with a warning (default: "
+            f"{DEFAULT_GEM_PASSES} on dMRI inputs, none on others)."
+        ),
+    )
+    parser.add_argument(
         "--eddy",
         action="store",
         nargs="?",
@@ -95,12 +137,10 @@ def _build_parser() -> ArgumentParser:
         metavar="FILE",
         default=None,
         help=(
-            "Estimate eddy currents (dMRI): after the --models cascade, one more pass, "
-            "started from the motion estimates, with the settings of FILE (default: the "
-            "packaged nifreeze/registration/config/affine.yaml). Its model is the one "
-            "--eddy-model names, or else the cascade's last, and should predict the "
-            "diffusion signal: the trivial model registers every volume to the b=0 "
-            "reference."
+            "Estimate the eddy currents of a DWI by registering each volume on its own, "
+            "in place of GEM (with --gem-passes 0): after the --models cascade, one more "
+            "pass, started from the motion estimates, with the settings of FILE (default: "
+            "the packaged nifreeze/registration/config/affine.yaml)."
         ),
     )
     parser.add_argument(
@@ -109,17 +149,17 @@ def _build_parser() -> ArgumentParser:
         metavar="MODEL",
         default=None,
         help=(
-            "The model of the eddy-current pass, apart from the --models cascade (as "
-            "named there, the 'single' prefix included). It turns --eddy on, with its "
-            "default settings unless --eddy FILE is given (default: the cascade's last "
-            "model)."
+            "The model of the eddy-current passes, GEM's or --eddy's, apart from the "
+            "--models cascade (as named there, the 'single' prefix included). It should "
+            "predict the diffusion signal: the trivial model registers every volume to "
+            "the b=0 reference (default: the cascade's last model)."
         ),
     )
     parser.add_argument(
         "--models",
         action="store",
         nargs="+",
-        default=["trivial"],
+        default=["gqi-krr"],
         help=(
             "Select the data model(s) used to generate registration targets; "
             "multiple models run as a cascade. By default each model runs in "
@@ -380,17 +420,32 @@ def parse_args(argv: list[str] | None = None) -> tuple[Namespace, dict, dict, di
         args.models[idx] = model_name
         estimator_kwargs[model_name] = {"single_fit": single_fit}
 
+    _check_eddy(parser, args)
     _eddy_pass(args, estimator_kwargs)
 
     return args, extra_kwargs, estimator_kwargs, model_kwargs
 
 
+def _check_eddy(parser: ArgumentParser, args: Namespace) -> None:
+    """
+    Refuse eddy-current options that exclude each other, with the parser's error.
+
+    ``--eddy`` registers each volume on its own in place of GEM, so it needs
+    ``--gem-passes 0``, and ``--eddy-model`` needs a pass to run.
+
+    """
+    if args.eddy is not None and args.gem_passes != 0:
+        parser.error(EDDY_GEM_ERROR_MSG)
+    if args.eddy_model is not None and args.eddy is None and args.gem_passes == 0:
+        parser.error(EDDY_MODEL_ERROR_MSG)
+
+
 def _eddy_pass(args: Namespace, estimator_kwargs: dict) -> None:
     """
-    Resolve the model of the eddy-current pass, and its fit mode, in ``args``.
+    Resolve the model of the eddy-current passes, and its fit mode, in ``args``.
 
-    The model is the one ``--eddy-model`` names, which turns the pass on, or else the
-    cascade's last (already normalized), each in its own fit mode.
+    The model of GEM's passes, or of ``--eddy``'s, is the one ``--eddy-model`` names, or
+    else the cascade's last (already normalized), each in its own fit mode.
 
     Parameters
     ----------
@@ -401,11 +456,8 @@ def _eddy_pass(args: Namespace, estimator_kwargs: dict) -> None:
 
     """
     if args.eddy_model is not None:
-        args.eddy = AFFINE if args.eddy is None else args.eddy
         args.eddy_single_fit = _determine_single_fit_mode(args.eddy_model)
         args.eddy_model = _normalize_model_name(args.eddy_model)
-    elif args.eddy is not None:
+    else:
         args.eddy_model = args.models[-1]
         args.eddy_single_fit = estimator_kwargs[args.eddy_model]["single_fit"]
-    else:
-        args.eddy_single_fit = False

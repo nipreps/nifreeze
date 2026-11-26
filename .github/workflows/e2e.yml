@@ -90,7 +90,7 @@ jobs:
         uses: ./.github/actions/ants
       - name: Install nifreeze
         run: |
-          uv pip install --python "${{ steps.setup-python.outputs.python-path }}" ".[test,elastix]"
+          uv pip install --python "${{ steps.setup-python.outputs.python-path }}" ".[test]"
       - name: Key the phantom's cache
         id: phantoms-key
         run: |
