@@ -47,10 +47,10 @@ and differ in what they fit (:data:`FITS`):
     one ``C``, fitted on the b=1000 volumes only (:data:`LOW`), which gives every volume
     its field.
 
-Each fit runs in two passes (:data:`PASSES`). The second pass is a new fit with the same
-options, by a second estimator on the same dataset, whose model trains on the volumes
-realigned with the first pass's estimates. The originals never move, so their second pass
-repeats the first.
+Each fit runs in three passes (:data:`PASSES`). Each pass after the first is a new fit
+with the same options, by another estimator on the same dataset, whose model trains on
+the volumes realigned with the previous pass's estimates. The originals never move, so
+their later passes repeat the first.
 
 Each fit and pass is scored against the truth, whose exponent is 1:
 
@@ -64,7 +64,7 @@ Each fit and pass is scored against the truth, whose exponent is 1:
 Writes ``<out>/runs/<name>.{json,npz,tsv}`` and ``<out>/logs/<name>.log`` for each run
 (:data:`NAMES`) and, gathered, ``<out>/accuracy.{tsv,json}``, from which
 ``eddy_model_accuracy_figures.py`` draws the figures of ``docs/gem.rst``. On CPUs 0-5,
-in about 90 minutes::
+in about 3 hours::
 
     taskset -c 0-5 python tools/registration/eddy_model_accuracy.py \\
         --dataset <phantoms> --out <results>
@@ -121,7 +121,7 @@ FITS: dict[str, tuple[str, dict[str, Any]]] = {
     "b1000": ("gqi-krr", {"exponent": HELD, "fit_range": LOW}),
 }
 """Each fit: its targets, and the options of its :class:`EddyFieldFit`."""
-PASSES = 2
+PASSES = 3
 """The passes of each fit."""
 NAMES = tuple(f"{noise}-e{size:g}" for noise in NOISE_LEVELS for size in SIZES)
 """The runs, one for each condition and copy."""
@@ -178,7 +178,7 @@ def _copy(root: Path, name: str) -> tuple[Any, Any, dict[str, np.ndarray], np.nd
 
 
 def run(args: argparse.Namespace, name: str) -> None:
-    """Each fit, in two passes, on one copy; the raw estimates are saved, then scored."""
+    """Each fit, in its passes, on one copy; the raw estimates are saved, then scored."""
     runs = args.out / "runs"
     runs.mkdir(parents=True, exist_ok=True)
     began = perf_counter()
@@ -203,7 +203,7 @@ def run(args: argparse.Namespace, name: str) -> None:
         model = Original(reference) if targets == "original" else targets
         record[key], seconds[key] = [], []
         for number in range(1, PASSES + 1):
-            # The second pass keeps the first pass's estimates, which its model trains on
+            # Each later pass keeps the previous pass's estimates, which its model trains on
             fit = EddyFieldFit(num_threads=args.threads, zero_point=zero, **fit_options)
             began = perf_counter()
             Estimator(model, estimates="eddy", registration=fit).run(dwi, **options)

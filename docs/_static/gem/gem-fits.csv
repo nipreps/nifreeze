@@ -15,3 +15,11 @@ Passes,Fit,Moving volumes,"share, 4 mm","share, 8 mm","share, 16 mm","error (mm)
 2,"p held at 1, one C per shell",noisy,0.93,0.92,0.85,0.062,0.129,0.406
 2,"p held at 1, C from b=1000",noise-free,0.90,0.92,0.93,0.073,0.120,0.205
 2,"p held at 1, C from b=1000",noisy,0.93,0.95,0.95,0.056,0.084,0.153
+3,"p fitted, all shells",noise-free,0.96,0.97,0.96,0.030,0.050,0.120
+3,"p fitted, all shells",noisy,0.97,0.98,0.97,0.028,0.042,0.102
+3,"p held at 1, all shells",noise-free,0.97,0.96,0.95,0.028,0.053,0.141
+3,"p held at 1, all shells",noisy,0.97,0.98,0.96,0.024,0.042,0.121
+3,"p held at 1, one C per shell",noise-free,0.96,0.97,0.96,0.025,0.049,0.131
+3,"p held at 1, one C per shell",noisy,0.97,0.98,0.96,0.032,0.047,0.113
+3,"p held at 1, C from b=1000",noise-free,0.96,0.97,0.98,0.025,0.039,0.070
+3,"p held at 1, C from b=1000",noisy,0.96,0.98,0.99,0.037,0.043,0.063

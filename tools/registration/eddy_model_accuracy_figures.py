@@ -74,7 +74,7 @@ FIT_LABELS = {
     "shells": "p held at 1,\none C per shell",
     "b1000": "p held at 1,\nC from b=1000",
 }
-ROWS = {1: "One pass", 2: "Two passes"}
+ROWS = {1: "One pass", 2: "Two passes", 3: "Three passes"}
 
 
 def values(
@@ -201,7 +201,7 @@ def _legend(fig) -> None:
         handlelength=3.5,
         title="Largest eddy-current displacement, and the volumes' noise",
         title_fontsize=9,
-        bbox_to_anchor=(0.5, -0.01),
+        bbox_to_anchor=(0.5, 0.005),
     )
 
 
@@ -215,12 +215,13 @@ def figure(
     import matplotlib.pyplot as plt
 
     plt.rcParams.update({"font.size": 10, "axes.edgecolor": AXIS, "axes.labelcolor": INK2})
-    fig, axes = plt.subplots(PASSES, len(panels), figsize=(10.5, 8.4), facecolor=SURFACE)
+    height = 4.2 * PASSES
+    fig, axes = plt.subplots(PASSES, len(panels), figsize=(10.5, height), facecolor=SURFACE)
     for row, number in zip(axes, range(1, PASSES + 1), strict=True):
         for ax, (key, spec) in zip(row, panels.items(), strict=True):
             _panel(ax, summary, fits, labels, key, spec, number, named=key == named)
     _legend(fig)
-    fig.tight_layout(rect=(0, 0.06, 1, 1), h_pad=2.5)
+    fig.tight_layout(rect=(0, 0.8 / height, 1, 1), h_pad=2.5)  # 0.8 in for the legend
     fig.savefig(out / name, dpi=200, facecolor=SURFACE)
     plt.close(fig)
 

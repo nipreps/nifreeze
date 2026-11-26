@@ -11,3 +11,9 @@ Passes,Moving volumes,Eddy currents,b=1000,b=2000,b=3500
 2,noisy,4 mm,0.92,0.92,0.93
 2,noisy,8 mm,0.92,0.91,0.92
 2,noisy,16 mm,0.92,0.86,0.84
+3,noise-free,4 mm,0.96,0.96,0.97
+3,noise-free,8 mm,0.97,0.96,0.97
+3,noise-free,16 mm,0.96,0.95,0.96
+3,noisy,4 mm,0.96,0.97,0.97
+3,noisy,8 mm,0.97,0.97,0.98
+3,noisy,16 mm,0.97,0.96,0.96
