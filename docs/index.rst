@@ -1,36 +1,50 @@
 .. include:: links.rst
 .. include:: ../README.rst
    :end-before: BEGIN NOTICE AND BADGES
-.. include:: ../README.rst
-   :start-after: END NOTICE AND BADGES
-   :end-before: BEGIN FLOWCHART
 
 .. image:: _static/nifreeze-flowchart.svg
    :alt: The nifreeze flowchart
 
-*NiFreeze* succeeds *eddymotion*, whose `repository <https://github.com/nipreps/eddymotion>`__
-is archived; its contributors are listed in
-`.maint/EDDYMOTION.md <https://github.com/nipreps/nifreeze/blob/main/.maint/EDDYMOTION.md>`__.
-
-.. include:: ../README.rst
-   :start-after: END FLOWCHART
-
-Contents
---------
 .. toctree::
-    :maxdepth: 3
+   :maxdepth: 1
+   :caption: Introduction
 
-    installation
-    design
-    models
-    gallery
-    usage
-    running
-    citation
-    developers
-    phantoms
-    registration
-    gem
-    edd/index
-    changes
-    bibliography
+   introduction/index
+   introduction/design
+   introduction/citing
+
+.. toctree::
+   :maxdepth: 1
+   :caption: User guide
+
+   installation
+   usage/index
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Methods
+
+   methods/models
+   methods/gem
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Experiment-driven development
+
+   edd/index
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Developers
+
+   developers/index
+   developers/extending
+   developers/papers
+   developers/api
+
+.. toctree::
+   :maxdepth: 1
+   :caption: About
+
+   changes
+   bibliography

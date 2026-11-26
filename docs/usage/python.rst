@@ -1,9 +1,7 @@
 .. include:: links.rst
 
-How to Use
-==========
-Incorporating NiFreeze into a Python module or script
------------------------------------------------------
+Using *NiFreeze* from Python
+============================
 To utilize *NiFreeze* functionalities within your Python module or script, follow these steps:
 
 1. **Import NiFreeze Components**: Start by importing necessary components from the *NiFreeze* package:

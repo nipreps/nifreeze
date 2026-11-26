@@ -22,14 +22,23 @@ When a result calls for a change to the registered plan, the change is posted on
 issue before the run it affects, and the report keeps the registered result next to
 the one added after the fact (*post hoc*).
 
-The reports on registration accuracy (:doc:`../registration`) follow the same
-approach.
+The prediction gallery (:doc:`gallery`) shows what the models predict on real data.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
+   :caption: Material
 
+   phantoms
+   gallery
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Reports
+
+   registration-floor
    eddy-truth
    error-audit
    elastix-settings
    elastix-accuracy
    eddy-targets
+   gem-accuracy
