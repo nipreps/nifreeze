@@ -72,13 +72,6 @@ L-BFGS-B estimates the model's parameters.
 The images are prepared as for ITK's registration of each volume on its own: clipped to
 the volume's intensity window, winsorized and histogram-matched as the settings ask.
 
-The model can be fitted on the volumes of a range of b-values only (``fit_range``), and
-then gives every volume its field.
-With a single b-value in the range, the exponent cannot be estimated, and is held.
-
-A field that an earlier pass estimated is factored out of each volume's mapping first, as a
-field zero at the zero point, and GEM fits from the head motion that remains.
-
 Running GEM
 -----------
 GEM runs in the estimator's eddy-current pass, given as its registration:
@@ -97,13 +90,17 @@ The fit takes the dataset's phase-encoding direction, unless it is given its own
 (``phase_encoding``).
 One model for each shell takes the edges between the shells, for instance
 ``EddyFieldFit(edges=(1500, 2750))`` for shells at b=1000, 2000 and 3500 s/mm².
-``zero_point`` sets where the fields are zero, in world (RAS+) coordinates, in mm.
-``exponent`` holds :math:`p`, and ``fit_range`` fits the model on some b-values only: for
-instance, ``EddyFieldFit(fit_range=(0, 1500), exponent=0.5)`` fits :math:`C` on the
-b=1000 shell.
+``zero_point`` sets where the fields are zero, in world (RAS+) coordinates, in mm, and
+``exponent`` holds :math:`p`.
 The command line's ``--eddy`` registers each volume on its own.
 
-Each pass is an estimator, in a chain; three passes, for instance:
+.. _gem-cascade:
+
+Cascading passes
+~~~~~~~~~~~~~~~~
+GEM's passes can be cascaded, as many as needed: each pass is an estimator, and a chain
+of them (``prev=``) runs them in turn.
+Three passes, for instance:
 
 .. code-block:: python
 
@@ -115,6 +112,33 @@ Each pass's model trains on the volumes that the previous pass corrected (the de
 ``instant_update=True``); with the update off, every pass repeats the first.
 FSL eddy, too, trains its predictions again on the corrected volumes at each of its
 iterations, five by default.
+
+Each pass after the first is given the head motion and the field that the pass before
+stored (`#758 <https://github.com/nipreps/nifreeze/pull/758>`__).
+It factors that field out of each volume's mapping, as a field zero at the zero point,
+and fits from the head motion that remains.
+Each volume's translation along :math:`u` then comes from the new field alone, however
+many passes came before.
+On the phantom, with gqi-krr's predictions, each of the second and third passes
+recovers 59% to 77% of what the pass before left (:ref:`gem-recovers`).
+
+.. _gem-fit-range:
+
+Fitting on low b-values
+~~~~~~~~~~~~~~~~~~~~~~~
+``fit_range=(low, high)`` fits the model on the volumes whose b-value is at least
+``low`` and below ``high`` only, and gives every volume its field from it
+(`#757 <https://github.com/nipreps/nifreeze/pull/757>`__).
+For instance, ``EddyFieldFit(fit_range=(0, 1500), exponent=0.5)`` fits :math:`C` on the
+b=1000 shell.
+The reference b-value is then, by default, the geometric mean of the range's b-values.
+With a single b-value in the range, the exponent cannot be estimated, and is held: at
+``exponent``, or at 1/2 with a warning.
+A wrong exponent goes straight to the other shells: held at 1/2 when the truth is 1,
+a fit on the b=1000 shell would give the b=3500 fields at 0.53 of their size.
+``fit_range`` and ``edges`` exclude each other.
+On the phantom, at 16 mm, :math:`C` fitted at b=1000 gives the smallest median field
+error in every pass (:ref:`gem-b1000`).
 
 The antecedent: FSL eddy's second-level model
 ---------------------------------------------
@@ -171,7 +195,7 @@ Noise-free originals
 gqi-krr predictions, gp-loo predictions
     each volume's prediction by that model (:doc:`models`), from the copy.
 
-Each fit runs in three passes, as above.
+Each fit runs in three cascaded passes (:ref:`gem-cascade`).
 Three more fits to gqi-krr's predictions hold the exponent (:ref:`gem-b1000`).
 
 What is measured
@@ -186,6 +210,8 @@ Each fit is scored with two numbers:
 - the median, over the volumes, of each volume's field error: the mean, over the brain,
   of the distance between where the estimated and the true mappings move each voxel's
   center.
+
+.. _gem-recovers:
 
 What GEM recovers
 ~~~~~~~~~~~~~~~~~
@@ -257,8 +283,8 @@ One C for all the shells
 One C for each shell
     ``EddyFieldFit(edges=(1500, 2750), exponent=1)``;
 C from b=1000
-    one :math:`C`, fitted on the b=1000 shell only, which gives every volume its field:
-    ``EddyFieldFit(fit_range=(0, 1500), exponent=1)``.
+    one :math:`C`, fitted on the b=1000 shell only, which gives every volume its field
+    (:ref:`gem-fit-range`): ``EddyFieldFit(fit_range=(0, 1500), exponent=1)``.
 
 .. figure:: _static/gem/gem-fits.png
    :width: 100%
