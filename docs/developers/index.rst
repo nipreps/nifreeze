@@ -7,6 +7,24 @@ Contributing
 *NiFreeze* is a project of the *NiPreps Community*, `which specifies the contributing guidelines <https://www.nipreps.org/community/>`__.
 Before delving into the code, please make sure you have read all the guidelines offered online.
 
+Set up for Development
+----------------------
+
+Install the appropriate modules:
+
+.. code-block:: bash
+
+   pip install .[test, doc, style, contributing]
+
+Download data from OSF, OpenNeuro, etc.:
+
+.. code-block:: bash
+
+   download
+
+Typechecking, spellchecking, style, doc
+
+
 Documentation
 -------------
 Documentation sources are found under the ``docs/`` folder, and builds are archived in the `gh-pages <https://github.com/nipreps/nifreeze/tree/gh-pages>`__ branch of the repository.
@@ -79,21 +97,3 @@ The *End-to-end tests* workflow runs them weekly, on demand, and on pull request
 that change them, and lists the errors of every model and of the cascade in its job
 summary.
 Every run registers with elastix, and the weekly run with ANTs as well.
-
-Library API (application program interface)
--------------------------------------------
-Information on specific functions, classes, and methods.
-
-.. toctree::
-   :glob:
-
-   api/nifreeze.analysis
-   api/nifreeze.cli
-   api/nifreeze.data
-   api/nifreeze.estimator
-   api/nifreeze.exceptions
-   api/nifreeze.model
-   api/nifreeze.registration
-   api/nifreeze.testing
-   api/nifreeze.utils
-   api/nifreeze.viz

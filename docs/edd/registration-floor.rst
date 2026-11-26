@@ -1,19 +1,17 @@
 .. include:: links.rst
 
-Registration accuracy
-=====================
+What limits registration to a perfect target
+============================================
 *NiFreeze* estimates head motion by registering each volume to a prediction of it.
 How accurate that registration can be is measured on the synthetic phantom
 (:doc:`phantoms`), where the true motion of every volume is known exactly.
 
-What limits registration to a perfect target
---------------------------------------------
-This section reports an experiment, with ANTs, on the error that remains when
+This page reports an experiment, with ANTs, on the error that remains when
 registration gets the best possible fixed image
 (`#609 <https://github.com/nipreps/nifreeze/issues/609>`__).
 
 The question
-~~~~~~~~~~~~
+------------
 The registration benchmark (``tools/registration/bench.py``,
 `#584 <https://github.com/nipreps/nifreeze/issues/584>`__) uses TRXScan's default
 adult phantom simulated with the Sherbrooke acquisition protocol, at that protocol's
@@ -65,7 +63,7 @@ They estimate what these settings achieve, not a limit of registration: other
 settings, or another registration library, may reach lower errors.
 
 Data
-~~~~
+----
 The phantom is TRXScan's adult brain under the Sherbrooke protocol
 (:doc:`phantoms`): 128 × 128 × 60 voxels of 2 mm, one b=0 volume, and 64 gradient
 directions at each of b=1000, 2000 and 3500 s/mm².
@@ -117,7 +115,7 @@ fixed image, and where the error is measured.
    head moved. The last column is the moving image that the benchmark registers.
 
 How the error is measured
-~~~~~~~~~~~~~~~~~~~~~~~~~
+-------------------------
 Registration returns a rigid transform, the *estimate*; the phantom's sidecars give
 the *true* transform.
 For each voxel inside the brain mask, the displacement error is the distance
@@ -131,7 +129,7 @@ Not registering at all (returning the identity) has the true motion as its error
 a median of 1.21 mm at *m* = 1, and 4.85 mm at *m* = 4.
 
 The ANTs settings
-~~~~~~~~~~~~~~~~~
+-----------------
 *NiFreeze* builds its ANTs command from the ``ants`` section of
 ``src/nifreeze/registration/config/rigid.yaml``.
 This is the command of the benchmark, with the file names replaced by placeholders:
@@ -223,7 +221,7 @@ cores (four hardware threads), with ANTs 2.4.4.
 The seconds compare the variants with each other, not with other machines.
 
 Results
-~~~~~~~
+-------
 
 .. csv-table:: Mean displacement error within the brain (mm), median and p95 over
    64 volumes at each motion size, and the median seconds per registration.
@@ -254,7 +252,7 @@ Results
    motion sizes. A bias would shift a cloud away from the origin; noise spreads it.
 
 What the results show
-~~~~~~~~~~~~~~~~~~~~~
+---------------------
 **Noise accounts for most of the error.**
 Without noise (B), the default settings miss by 0.04 mm; with noise (A), by 0.22
 mm.
@@ -340,7 +338,7 @@ With noise, its weaker signal widens the gap (A: 0.30 against 0.20 and 0.21 mm).
 Full resolution lowers it to 0.14 mm (C).
 
 Consequences
-~~~~~~~~~~~~
+------------
 - The benchmark's oracle error of about 0.2 mm is a property of the default settings
   on noisy data, not a limit of registration: at full resolution, the same command
   reaches 0.10 mm, and other settings may do better.
@@ -359,7 +357,7 @@ Consequences
   so that its prediction approaches the oracle.
 
 Open question
-~~~~~~~~~~~~~
+-------------
 Full resolution may help because of the resolution itself or because the similarity
 averages eight times as many points.
 Sweeping the sampling fraction at both shrink factors (for example, a random 18%,
@@ -367,7 +365,7 @@ Sweeping the sampling fraction at both shrink factors (for example, a random 18%
 as a larger sample at shrink factor 2 or smoothing before shrinking, reaches 0.1 mm.
 
 Reproducing
-~~~~~~~~~~~
+-----------
 The results live in the phantom dataset (:doc:`phantoms`), under
 ``derivatives/registration/floor``: ``sherbrooke.tsv`` has one row per
 registration, and ``sherbrooke.json`` records the variants with their full ANTs

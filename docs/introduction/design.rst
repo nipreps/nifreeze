@@ -35,20 +35,6 @@ uniform API, enabling transparent access to individual volumes by index.
 dMRI
 """"
 
-dMRI gradients are held as a table of one row per volume, ``[R A S b]``: a unit
-b-vector in world RAS+ coordinates (the frame the image's affine maps voxels
-into), then the b-value in units of :math:`s/mm^2`.
-Conversions happen only where a table enters or leaves:
-:func:`~nifreeze.data.dmri.io.from_nii` converts FSL's ``.bvec`` and ``.bval``
-files with the image's affine, and reads RAS+B tables (MRtrix's ``.b``,
-NiPreps' ``.tsv``) as they are;
-:meth:`~nifreeze.data.dmri.DWI.to_nifti` writes both conventions.
-When a volume moves by :math:`M`, its b-vector in the realigned view is
-:math:`R^{-1} \mathbf{g}`, with :math:`R` the rotation of :math:`M`
-(:func:`~nifreeze.data.dmri.utils.realign_bvecs`).
-The dataset's own table keeps the b-vectors as acquired: the eddy currents follow the
-gradient the scanner plays, so GEM fits its fields from them (:ref:`gem-bvectors`).
-
 The dMRI data class holds a single ``b0`` volume. The rationale behind this is
 that this volume serves as a canonical reference for transforming non-zero
 gradient volumes. Users can compute such reference ``b0`` volume using their
@@ -59,51 +45,11 @@ non-diffusion-weighted volumes. Note that following this design choice,
 the gradient data hosted by the :class:`api/nifreeze.data.dmri.DWI` instance
 only contains (nonzero) diffusion-weighted gradient values.
 
-.. _nfhdf5:
-
-nfHDF5 files
-""""""""""""
-
-*nfHDF5* is the HDF5 layout *NiFreeze* saves datasets in.
-:meth:`~nifreeze.data.base.BaseDataset.to_filename` writes it, and
-:func:`~nifreeze.data.load` and
-:meth:`~nifreeze.data.base.BaseDataset.from_filename` read it back.
-
-- The file attributes ``Format`` (``"nfHDF5"``) and ``Version`` (``4``)
-  identify the layout.
-- The group ``/0`` holds one HDF5 dataset per field of the dataset object:
-  ``dataobj``, ``affine``, ``brainmask`` and ``motion``, plus the
-  modality's own fields, such as ``gradients``, ``bzero`` and ``eddy`` (dMRI) or
-  ``midframe`` and ``total_duration`` (PET).
-- ``motion`` (and ``eddy``, dMRI) store the estimates, ``(N, 4, 4)``: for each
-  volume, a RAS+ matrix that maps the reference into it.
-- ``dataobj`` stores the volumes on the first axis, ``(N, X, Y, Z)``, and has
-  the attribute ``volume_axis`` set to ``0``.
-  Each volume is one contiguous block, so the file is memory-mapped when
-  loaded and volumes are read from disk as they are accessed.
-  Compressed files (``to_filename(..., compression="gzip")``) are
-  decompressed into a temporary file first.
-- ``gradients`` (dMRI) holds the table in RAS+B, as
-  :class:`~nifreeze.data.dmri.DWI` does.
-- ``phase_encoding`` (dMRI, when known) holds the phase-encoding direction as BIDS
-  writes ``PhaseEncodingDirection`` (``i``, ``j`` or ``k``, with an optional ``-``).
-  Files without it load with the direction unknown.
-
-Files written by earlier versions of *NiFreeze* (version 1) store the volumes
-last, and their ``Format`` is ``"NFDH5"`` (``"EMC/PET"`` for PET).
-They still load, after a conversion into a temporary file;
-save them again with ``to_filename`` to skip that step.
-
-Files of versions 1 to 3 name the head-motion estimates ``motion_affines``,
-which loads as ``motion``.
-
-Files of versions 1 and 2 do not record the frame of their gradient table.
-:meth:`~nifreeze.data.dmri.DWI.from_filename` reads it as RAS+B, and warns.
-A table loaded from FSL's ``.bvec`` files into one of these files is on the
-voxel axes instead: load it again from its source.
+The gradient table's convention and the files *NiFreeze* saves datasets in are
+described in :doc:`/usage/data`.
 
 Preprocessing
--------------
+^^^^^^^^^^^^^
 
 *NiFreeze* provides a set of minimal preprocessing utilities under the form
 of :class:`api/nifreeze.estimator.Filter`\s. :class:`api/nifreeze.estimator.Filter`\s
@@ -111,7 +57,7 @@ can be specified as inputs to estimators so that the data used by the
 estimator is processed through the given filter instance.
 
 Modeling
---------
+^^^^^^^^
 
 These modules encapsulate the algorithms used for artifact estimation and
 correction. By abstracting the modeling logic, *NiFreeze* enables the
@@ -124,7 +70,7 @@ for DWI data, smoothing and thresholding the PET data, clipping or detrending
 the data).
 
 Iterators
----------
+^^^^^^^^^
 
 Iterators in *NiFreeze* manage the traversal of data volumes, allowing access
 operations to particular data volumes. They are designed to be extensible,
@@ -132,7 +78,7 @@ allowing developers to implement custom traversal logic as needed.
 
 
 Estimation
-----------
+^^^^^^^^^^
 
 *NiFreeze* estimators rely on predictive models to reconstruct artifact-free
 volumes from artifact-affected 4D datasets. Each model maintains access to the
@@ -167,100 +113,8 @@ dataset's motion parameter attribute.
 Corrected datasets and associated metadata are produced in standardized
 formats for downstream analysis.
 
-Extending *NiFreeze*
-====================
-
-To extend *NiFreeze*'s functionality,
-
-Creating New Iterators
-----------------------
-
-To extend *NiFreeze*'s functionality, such as implementing a custom iterator,
-follow these general steps:
-
-1. **Create a new function**: Define a new iterator function implementing the
-   desired logic.
-
-   .. code-block:: python
-
-    from typing import Iterator
-
-    def my_iterator(**kwargs) -> Iterator[int]:
-        # Size is the number of volumes in the dataset
-        size = get_size(**kwargs)
-
-        # Implement custom iteration logic
-        index_order = establish_order(size)
-
-        return (x for x in index_order)
-
-
-1. **Integrate the function**: Incorporate the newly created iterator into the
-   *NiFreeze* workflow by updating the configuration or pipeline definitions to
-   utilize your new implementation.
-
-   .. code-block:: python
-
-    list(my_iterator(10))
-
-
-1. **Test the Implementation**: Ensure that your custom class functions as intended by
-   running unit tests and validating the outputs against expected results.
-
-Creating New Models
--------------------
-
-To implement a new model:
-
-1. Subclass the :class:`api/nifreeze.model.base.BaseModel` class.
-1. Implement the ``fit(data)`` method, which returns a 3D volume.
-1. Register the model in your pipeline or CLI wrapper.
-
-Example: Extrapolation model
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: python
-
-    from nifreeze.data.base import BaseDataset
-    from nifreeze.model.base import BaseModel
-
-    class ExtrapolationModel(BaseModel):
-        """Model a volume extrapolating across training volumes."""
-
-        __slots__ = {
-            "_param1": "Parameter 1",
-            "_param2": "Parameter 2",
-        }
-
-        def __init__(self, dataset: BaseDataset, param1: float, param2: float, **kwargs):
-
-            super().__init__(dataset, **kwargs)
-
-            self._param1 = param1
-            self._param2 = param2
-
-        def _fit(self, index, n_jobs=None, **kwargs):
-            # Fit the data
-            pass
-
-        def fit_predict(self, index: int, **kwargs):
-            # Compute prediction
-            return pred
-
-so ``fit_predict`` is suitable for case where the model is fit only once per iteration, and ``predict`` is for cases where
-the model is fit across multiple volumes in each iteration.
-
-Usage
-^^^^^
-
-.. code-block:: python
-
-    model = ExtrapolationModel()
-    result = model.fit(data, index=3)
-
-
 Fitting and Prediction
-----------------------
+^^^^^^^^^^^^^^^^^^^^^^
 
 In the default Leave-One-Volume-Out (LOVO) mode described above, each call to a
 model's ``fit_predict(index)`` fits on every volume *except* ``index`` and
@@ -287,9 +141,8 @@ the bias is anticipated to be negligible, such as a coarse, low-DOF early
 rigid-body realignment that a subsequent LOVO stage refines, or trading accuracy
 for speed during development or debugging.
 
-Usage
------
-
+Cascades
+^^^^^^^^
 The *NiFreeze* command-line interface supports specifying multiple models, which are applied in a cascade fashion. Users
 can indicate which model should be used to address a specific problem, such as head motion or eddy current correction.
 
@@ -297,36 +150,3 @@ The transformations estimated at each level initialize the registration of the n
 the data realigned with them.
 
 Refer to the :ref:`usage` document for a self-contained usage example.
-
-Contributing to NiFreeze
-========================
-
-Set up for Development
-----------------------
-
-Install the appropriate modules:
-
-.. code-block:: bash
-
-   pip install .[test, doc, style, contributing]
-
-Download data from OSF, OpenNeuro, etc.:
-
-.. code-block:: bash
-
-   download
-
-Typechecking, spellchecking, style, doc
-
-Developer Resources
--------------------
-
-Refer to the :ref:`developers` document for detailed development guidelines.
-
-For guidance on contributing to *NiFreeze*, refer to the *NiPreps*
-Contributing Guidelines:
-
-https://www.nipreps.org/community/CONTRIBUTING/
-
-This resource provides detailed instructions on community principles and
-contributor acknowledgements.
