@@ -37,7 +37,9 @@ where the matrix :math:`C` and the exponent :math:`p` are the same for every vol
 (:class:`EddyField`). The exponent is 1/2 when the field follows the gradient's
 strength at a fixed timing, and 1 when it follows the b-value, as in the phantoms that
 TRXScan makes (PennLINC/TRXScan#27). Alternatively, each segment of b-values has its own
-matrix, with the exponent held (:class:`SegmentedEddyField`). A stretch that every
+matrix, with the exponent held (:class:`SegmentedEddyField`). The model can also be
+fitted on the volumes of a range of b-values only, and give every volume its field
+(``fit_range`` of :class:`EddyFieldFit`). A stretch that every
 volume shares has no parameter to go into, as long as the b-vectors average out; fitted
 on images, where volumes weigh a little differently in the metric, a small part of it
 still reaches the fields.
@@ -119,6 +121,15 @@ EDGES_B_REF_ERROR_MSG = (
     "is the geometric mean of its b-values."
 )
 """A reference b-value given with segments error message."""
+FIT_RANGE_ERROR_MSG = "fit_range must be two b-values, low then high, with 0 <= low < high."
+"""Malformed range of b-values error message."""
+FIT_RANGE_EDGES_ERROR_MSG = (
+    "fit_range fits one model on some of the volumes, and edges one model for each "
+    "segment: give one of them."
+)
+"""A range of b-values given with segments error message."""
+EMPTY_RANGE_ERROR_MSG = "No volume added has a b-value in the fit range [{low:g}, {high:g})."
+"""A range of b-values without volumes error message."""
 NO_PHASE_ENCODING_ERROR_MSG = (
     "The eddy-current field moves points along phase encoding, whose direction is unknown: "
     "give the fit phase_encoding (the dataset's, as BIDS writes it)."
@@ -186,6 +197,13 @@ def _as_edges(value: Any) -> tuple[float, ...]:
     if not edges or edges[0] <= 0 or np.any(np.diff(edges) <= 0):
         raise ValueError(EDGES_ERROR_MSG)
     return edges
+
+
+def _as_range(value: Any) -> tuple[float, float]:
+    bounds = np.asarray(value, dtype=float)
+    if bounds.shape != (2,) or not 0 <= bounds[0] < bounds[1]:
+        raise ValueError(FIT_RANGE_ERROR_MSG)
+    return float(bounds[0]), float(bounds[1])
 
 
 def _segment_of(edges: Sequence[float], bvals: Any) -> np.ndarray:
@@ -647,8 +665,9 @@ class EddyFieldFit:
     Without ``edges``, the model is one :class:`EddyField` (:math:`C` and :math:`p`);
     with them, a :class:`SegmentedEddyField`, one :math:`C` for each segment of
     b-values, with the exponent held. The segments share no parameter, so each is fitted
-    on its own. Each volume's shift along phase encoding is derived from its slopes and
-    the fields' zero point.
+    on its own. With ``fit_range``, the model is fitted on the volumes of a range of
+    b-values only, and every volume added gets its field from it. Each volume's shift
+    along phase encoding is derived from its slopes and the fields' zero point.
 
     The cost is the sum over volumes of ITK's metric between the target and the
     sample, run in the stages of the settings (the ``itk`` section of
@@ -679,6 +698,11 @@ class EddyFieldFit:
     edges : :obj:`~collections.abc.Sequence` of :obj:`float`, optional
         The b-values that split the segments, each with its own matrix :math:`C` (see
         :class:`SegmentedEddyField`); one model for all volumes if :obj:`None`.
+    fit_range : :obj:`~collections.abc.Sequence` of :obj:`float`, optional
+        Fit the model on the volumes whose b-value is in ``[low, high)`` only, and give
+        every volume added its field from it (default: fit on all of them). With a
+        single b-value in the range, the exponent is held: at ``exponent``, or at
+        :data:`DEFAULT_EXPONENT` with a warning. Not with ``edges``.
     zero_point : :obj:`~numpy.ndarray`, optional
         Where the fields are zero (RAS+, mm; default: the :func:`field_of_view_centre`
         of the volumes' grid).
@@ -702,6 +726,7 @@ class EddyFieldFit:
         exponent: float | None = None,
         b_ref: float | None = None,
         edges: Sequence[float] | None = None,
+        fit_range: Sequence[float] | None = None,
         zero_point: Sequence[float] | np.ndarray | None = None,
         seed: int | None = 12345,
         num_threads: int | None = None,
@@ -710,11 +735,14 @@ class EddyFieldFit:
     ) -> None:
         if edges is not None and b_ref is not None:
             raise ValueError(EDGES_B_REF_ERROR_MSG)
+        if edges is not None and fit_range is not None:
+            raise ValueError(FIT_RANGE_EDGES_ERROR_MSG)
         self.settings = get_settings(align_config)
         self.phase_encoding = format_phase_encoding(phase_encoding)
         self.exponent = None if exponent is None else float(exponent)
         self.b_ref = None if b_ref is None else float(b_ref)
         self.edges = None if edges is None else _as_edges(edges)
+        self.fit_range = None if fit_range is None else _as_range(fit_range)
         self.zero_point = None if zero_point is None else np.asarray(zero_point, dtype=float)
         """Where the fields are zero (RAS+, mm); once fitted, the one used."""
         self.seed = seed
@@ -855,9 +883,9 @@ class EddyFieldFit:
         """The cost of stage ``number`` over the volumes ``indices``."""
         import itk
 
-        assert self._grid is not None and self.phase_encoding is not None
-        affine, mask, box = self._grid
-        frame, spacing = _frame(affine)
+        assert self._grid is not None
+        affine, _, box = self._grid
+        spacing = _frame(affine)[1]
         stage = self.settings["stages"][number]
         origin = np.array([part.start for part in box]) * spacing
 
@@ -868,9 +896,23 @@ class EddyFieldFit:
             _Metric(stage, (self._fixed[index], self._moving[index]), spacing, origin, points)
             for index in indices
         ]
+        return self._model(indices, table, b_ref, zero, evaluators)
 
+    def _model(
+        self,
+        indices: Sequence[int],
+        table: np.ndarray,
+        b_ref: float,
+        zero: np.ndarray,
+        evaluators: Sequence[Callable[[np.ndarray, np.ndarray], tuple]] = (),
+    ) -> _Problem:
+        """The model over the volumes ``indices``: their mappings, and a cost if evaluated."""
+        assert self._grid is not None and self.phase_encoding is not None
+        affine, mask, _ = self._grid
+        frame, spacing = _frame(affine)
         inverse = np.linalg.inv(frame)
-        motions = np.stack([inverse @ self._motion[index] @ frame for index in indices])
+        each = [inverse @ self._motion[index] @ frame for index in indices]
+        motions = np.reshape(each, (-1, 4, 4))  # (0, 4, 4) without volumes
         inside = np.argwhere(mask) * spacing
         radius = float(np.sqrt(np.mean(np.sum((inside - inside.mean(axis=0)) ** 2, axis=1))))
         return _Problem(
@@ -934,6 +976,23 @@ class EddyFieldFit:
         matrix, exponent = problem.unpack(theta)
         return EddyField(matrix, exponent, b_ref), problem.mappings(theta)
 
+    def _groups(self, table: np.ndarray) -> list[np.ndarray]:
+        """The rows of ``table`` fitted together: all, those in the range, or each segment's."""
+        if self.fit_range is not None:
+            low, high = self.fit_range
+            inside = np.flatnonzero((table[:, 3] >= low) & (table[:, 3] < high))
+            if not len(inside):
+                raise ValueError(EMPTY_RANGE_ERROR_MSG.format(low=low, high=high))
+            return [inside]
+        if self.edges is None:
+            return [np.arange(len(table))]
+        segments = _segment_of(self.edges, table[:, 3])
+        groups = [np.flatnonzero(segments == k) for k in range(len(self.edges) + 1)]
+        for k, group in enumerate(groups):
+            if not len(group):
+                raise ValueError(EMPTY_SEGMENT_ERROR_MSG.format(segment=k, edges=self.edges))
+        return groups
+
     def fit(self, gradients: Any) -> EddyField | SegmentedEddyField:
         """
         Estimate the field of every volume added.
@@ -960,14 +1019,7 @@ class EddyFieldFit:
             raise ValueError(NO_PHASE_ENCODING_ERROR_MSG)
         table = self._table(gradients)
         indices = self.indices
-        if self.edges is None:
-            groups = [np.arange(len(indices))]
-        else:
-            segments = _segment_of(self.edges, table[:, 3])
-            groups = [np.flatnonzero(segments == k) for k in range(len(self.edges) + 1)]
-            for k, group in enumerate(groups):
-                if not len(group):
-                    raise ValueError(EMPTY_SEGMENT_ERROR_MSG.format(segment=k, edges=self.edges))
+        groups = self._groups(table)
 
         assert self._grid is not None
         affine, mask, _ = self._grid
@@ -986,14 +1038,24 @@ class EddyFieldFit:
         self.evaluations, self.messages = [], []
         parts: list[EddyField] = []
         mappings: dict[int, tuple[np.ndarray, np.ndarray]] = {}
+
+        def keep(chosen: list[int], voxel: np.ndarray) -> None:
+            for index, mapping in zip(chosen, voxel, strict=True):
+                world_mapping = frame @ mapping @ np.linalg.inv(frame)
+                mappings[index] = split_phase_encoding(world_mapping, u)
+
         with _threads(self.num_threads):
             for group in groups:
                 chosen = [indices[position] for position in group]
                 part, voxel = self._fit_group(chosen, table[group], zero)
                 parts.append(part)
-                for index, mapping in zip(chosen, voxel, strict=True):
-                    world_mapping = frame @ mapping @ np.linalg.inv(frame)
-                    mappings[index] = split_phase_encoding(world_mapping, u)
+                keep(chosen, voxel)
+        if self.fit_range is not None:
+            # The volumes outside the range (if any) get their field from the model
+            rest = np.setdiff1d(np.arange(len(indices)), groups[0])
+            chosen = [indices[position] for position in rest]
+            model = self._model(chosen, table[rest], parts[0].b_ref, zero)
+            keep(chosen, model.mappings(model.pack(parts[0].matrix, parts[0].exponent)))
         self.zero_point = np.asarray(world, dtype=float)
         self.field = parts[0] if self.edges is None else SegmentedEddyField(self.edges, parts)
         self._mappings = mappings

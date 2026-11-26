@@ -43,6 +43,8 @@ from nifreeze.registration.eddy_field import (
     DEFAULT_EXPONENT,
     EDGES_B_REF_ERROR_MSG,
     EDGES_ERROR_MSG,
+    FIT_RANGE_EDGES_ERROR_MSG,
+    FIT_RANGE_ERROR_MSG,
     MATRIX_ERROR_MSG,
     NO_PHASE_ENCODING_ERROR_MSG,
     NOT_FITTED_ERROR_MSG,
@@ -442,6 +444,29 @@ def test_a_matrix_for_each_segment_recovers_each_shells_field():
 
 
 @SKIP_ELASTIX
+def test_a_model_fitted_on_one_shell_gives_every_volume_its_field():
+    """Fitted on the lowest shell with the exponent held, the model gives the others theirs."""
+    sim = _images(exponent=1.0)
+    fit = _fitted(sim, exponent=1.0, fit_range=(0.0, 1500.0), zero_point=ZERO)
+
+    found = fit.fit(sim.table)
+
+    assert isinstance(found, EddyField) and found.exponent == 1.0
+    assert found.b_ref == pytest.approx(1000.0)  # the geometric mean of the range's b-values
+    assert np.abs(found.matrix - sim.truth.matrix).max() < 0.05 * np.abs(sim.truth.matrix).max()
+    assert len(fit.evaluations) == 1  # one registration, of the lowest shell's volumes
+    mappings = fit.mappings()
+    assert sorted(mappings) == list(range(len(sim.table)))
+    outside = np.flatnonzero(sim.table[:, 3] >= 1500.0)
+    fields = _about(found.fields(sim.table[outside], sim.u), ZERO)
+    for index, field in zip(outside, fields, strict=True):
+        motion, eddy = mappings[int(index)]
+        assert np.allclose(eddy, found.fields(sim.table[[index]], sim.u)[0])
+        assert np.allclose(eddy @ motion, field @ sim.motions[index])  # the model's mapping
+    assert _mapping_errors(fit, sim).max() < 0.1
+
+
+@SKIP_ELASTIX
 def test_the_zero_point_given_is_the_one_fitted():
     """Data whose fields are zero 13 mm from the centre: the fit about the centre misses."""
     sim = _images()
@@ -600,6 +625,11 @@ def test_the_fit_validates_its_inputs():
         EddyFieldFit(phase_encoding="j").mappings()
     with pytest.raises(ValueError, match=re.escape(EDGES_B_REF_ERROR_MSG)):
         EddyFieldFit(edges=EDGES, b_ref=1000.0)
+    with pytest.raises(ValueError, match=re.escape(FIT_RANGE_EDGES_ERROR_MSG)):
+        EddyFieldFit(edges=EDGES, fit_range=(0.0, 1500.0))
+    for bad in ((1500.0, 1000.0), (-1.0, 1500.0), (1000.0, 1000.0), (0.0, 1000.0, 2000.0)):
+        with pytest.raises(ValueError, match=re.escape(FIT_RANGE_ERROR_MSG)):
+            EddyFieldFit(fit_range=bad)
 
     fit = EddyFieldFit(clip="none")
     fit.add(0, data, data, affine, mask)
@@ -624,6 +654,11 @@ def test_the_fit_validates_its_inputs():
     middle[middle[:, 3] == 2000.0, 3] = 1000.0
     with pytest.raises(ValueError, match=r"segment 1 of the edges \(1500.0, 2500.0\)"):
         segmented.fit(middle)
+
+    ranged = EddyFieldFit(phase_encoding="j", clip="none", fit_range=(4000.0, 5000.0))
+    ranged.add(0, data, data, affine, mask)
+    with pytest.raises(ValueError, match=re.escape("in the fit range [4000, 5000)")):
+        ranged.fit(table)
 
 
 # The eddy-current pass (#750)
