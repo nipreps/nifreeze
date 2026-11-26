@@ -6,7 +6,7 @@ The global eddy model (GEM)
 own, to a prediction of it (``--eddy``).
 The global eddy model (GEM) estimates them for all the volumes at once instead, with a
 model of how the field of the eddy currents follows the diffusion gradient
-(:class:`~nifreeze.registration.eddy_field.EddyFieldFit`,
+(:class:`~nifreeze.registration.gem.GEM`,
 `#746 <https://github.com/nipreps/nifreeze/pull/746>`__).
 
 The model
@@ -24,7 +24,7 @@ In volume :math:`v`, with the unit b-vector :math:`g_v` and the b-value :math:`b
     s_v = \left(\frac{b_v}{b_\text{ref}}\right)^p C g_v,
 
 where the eddy-current tensor :math:`C` (3 × 3) and the exponent :math:`p` are the
-same for every volume (:class:`~nifreeze.registration.eddy_field.EddyTensor`), and
+same for every volume (:class:`~nifreeze.registration.gem.EddyTensor`), and
 the reference b-value :math:`b_\text{ref}` is the geometric mean of the b-values.
 :math:`C` maps the gradient's direction to the field's slopes: with the scanner's
 frame rotated by :math:`R`, it becomes :math:`R C R^T`, as a tensor does.
@@ -35,7 +35,7 @@ GEM estimates :math:`p` between 0 and 2.
 
 The fields are zero at one point, by default the center of the field of view, the
 middle of its physical extent
-(:func:`~nifreeze.registration.eddy_field.field_of_view_centre`).
+(:func:`~nifreeze.registration.gem.field_of_view_centre`).
 A field that is zero at the point :math:`z` also translates the volume along
 :math:`u`, by :math:`s^T z`.
 That translation is part of the head motion, by the convention of
@@ -51,7 +51,7 @@ One tensor for all the volumes
     exponent held.
 One tensor for each shell
     One :math:`C` for each segment of b-values, between the edges that the caller gives
-    (:class:`~nifreeze.registration.eddy_field.SegmentedEddyTensor`).
+    (:class:`~nifreeze.registration.gem.SegmentedEddyTensor`).
     The exponent is held, at 1/2 by default, and each segment's reference b-value is
     the geometric mean of its b-values.
     On shelled data, every volume of a segment has the same b-value, so the exponent
@@ -76,39 +76,41 @@ the volume's intensity window, winsorized and histogram-matched as the settings 
 
 Running GEM
 -----------
-GEM runs in the estimator's eddy-current pass, given as its registration:
+GEM runs in the estimator's eddy-current pass, given as its backend:
 
 .. code-block:: python
 
     from nifreeze.estimator import Estimator
-    from nifreeze.registration.eddy_field import EddyFieldFit
+    from nifreeze.registration.gem import GEM
 
-    Estimator("gqi-krr", estimates="eddy", registration=EddyFieldFit()).run(dwi)
+    Estimator("gqi-krr", estimates="eddy", backend=GEM()).run(dwi)
 
+``backend="gem"`` does the same: the estimator builds GEM for each run, with its
+defaults and the run's ``align_config``, ``clip`` and ``seed``.
 The pass predicts every volume first, all from the same data, and adds each to the fit
 with its head motion; it then estimates the model and stores each volume's head motion
 and field in the dataset.
 The fit takes the dataset's phase-encoding direction, unless it is given its own
 (``phase_encoding``).
 One tensor for each shell takes the edges between the shells, for instance
-``EddyFieldFit(edges=(1500, 2750))`` for shells at b=1000, 2000 and 3500 s/mm².
+``GEM(edges=(1500, 2750))`` for shells at b=1000, 2000 and 3500 s/mm².
 ``zero_point`` sets where the fields are zero, in world (RAS+) coordinates, in mm, and
 ``exponent`` holds :math:`p`.
 The command line's ``--eddy`` registers each volume on its own.
 
-Each variant is one ``EddyFieldFit``, given as the pass's registration:
+Each variant is one ``GEM``, given as the pass's backend:
 
 .. code-block:: python
 
-    EddyFieldFit()                                   # one C and one p, both estimated
-    EddyFieldFit(exponent=0.5)                       # one C, with p held at 1/2
-    EddyFieldFit(edges=(1500, 2750))                 # one C for each shell, p held at 1/2
-    EddyFieldFit(fit_range=(0, 1500), exponent=0.5)  # C fitted at b=1000, given to all
-    EddyFieldFit(zero_point=(0.0, -18.0, 12.0))      # the fields zero there (RAS+, mm)
-    EddyFieldFit(phase_encoding="j-")                # its own phase-encoding direction
+    GEM()                                   # one C and one p, both estimated
+    GEM(exponent=0.5)                       # one C, with p held at 1/2
+    GEM(edges=(1500, 2750))                 # one C for each shell, p held at 1/2
+    GEM(fit_range=(0, 1500), exponent=0.5)  # C fitted at b=1000, given to all
+    GEM(zero_point=(0.0, -18.0, 12.0))      # the fields zero there (RAS+, mm)
+    GEM(phase_encoding="j-")                # its own phase-encoding direction
 
-The API reference of :class:`~nifreeze.registration.eddy_field.EddyFieldFit` lists the
-rest of its options.
+The API reference of :class:`~nifreeze.registration.gem.GEM` lists the rest of its
+options.
 
 .. _gem-cascade:
 
@@ -120,9 +122,9 @@ Three passes, for instance:
 
 .. code-block:: python
 
-    first = Estimator("gqi-krr", estimates="eddy", registration=EddyFieldFit())
-    second = Estimator("gqi-krr", estimates="eddy", registration=EddyFieldFit(), prev=first)
-    Estimator("gqi-krr", estimates="eddy", registration=EddyFieldFit(), prev=second).run(dwi)
+    first = Estimator("gqi-krr", estimates="eddy", backend=GEM())
+    second = Estimator("gqi-krr", estimates="eddy", backend=GEM(), prev=first)
+    Estimator("gqi-krr", estimates="eddy", backend=GEM(), prev=second).run(dwi)
 
 Each pass's model trains on the volumes that the previous pass corrected (the default);
 with ``run(dwi, instant_update=False)``, every pass repeats the first.
@@ -145,7 +147,7 @@ Fitting on low b-values
 ``fit_range=(low, high)`` fits the model on the volumes whose b-value is at least
 ``low`` and below ``high`` only, and gives every volume its field from it
 (`#757 <https://github.com/nipreps/nifreeze/pull/757>`__).
-For instance, ``EddyFieldFit(fit_range=(0, 1500), exponent=0.5)`` fits :math:`C` on the
+For instance, ``GEM(fit_range=(0, 1500), exponent=0.5)`` fits :math:`C` on the
 b=1000 shell.
 The reference b-value is then, by default, the geometric mean of the range's b-values.
 With a single b-value in the range, the exponent cannot be estimated, and is held: at
@@ -166,7 +168,7 @@ The options combine: :math:`C` fitted at b=1000, in three cascaded passes, for i
             "gqi-krr",
             estimates="eddy",
             # p held at 1/2: give your scanner's, if known (the phantom's is 1)
-            registration=EddyFieldFit(fit_range=(0, 1500), exponent=0.5),
+            backend=GEM(fit_range=(0, 1500), exponent=0.5),
             prev=chain,
         )
     chain.run(dwi)
@@ -310,12 +312,12 @@ Three more fits to gqi-krr's predictions hold the exponent at the truth's, 1, an
 in what they fit:
 
 One C for all the shells
-    ``EddyFieldFit(exponent=1)``;
+    ``GEM(exponent=1)``;
 One C for each shell
-    ``EddyFieldFit(edges=(1500, 2750), exponent=1)``;
+    ``GEM(edges=(1500, 2750), exponent=1)``;
 C from b=1000
     one :math:`C`, fitted on the b=1000 shell only, which gives every volume its field
-    (:ref:`gem-fit-range`): ``EddyFieldFit(fit_range=(0, 1500), exponent=1)``.
+    (:ref:`gem-fit-range`): ``GEM(fit_range=(0, 1500), exponent=1)``.
 
 .. figure:: _static/gem/gem-fits.png
    :width: 100%

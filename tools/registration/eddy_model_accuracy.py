@@ -23,7 +23,7 @@
 """
 How accurately does the global eddy model (GEM) recover the phantom's eddy currents?
 
-GEM (:class:`~nifreeze.registration.eddy_field.EddyFieldFit`, one tensor ``C`` and one
+GEM (:class:`~nifreeze.registration.gem.GEM`, one tensor ``C`` and one
 exponent ``p``) runs in the estimator's eddy-current pass on the copies of the Sherbrooke
 phantom without head motion (:data:`SIZES`: eddy currents whose largest displacement in
 the brain is 4, 8 and 16 mm). Head motion is held at the identity: there is no head-motion
@@ -92,8 +92,8 @@ from experiments import provenance, write_results
 from nifreeze.analysis.phantoms import load_phantom
 from nifreeze.estimator import Estimator
 from nifreeze.model.base import BaseModel
-from nifreeze.registration.eddy_field import (
-    EddyFieldFit,
+from nifreeze.registration.gem import (
+    GEM,
     EddyTensor,
     SegmentedEddyTensor,
     field_slopes,
@@ -120,7 +120,7 @@ FITS: dict[str, tuple[str, dict[str, Any]]] = {
     "shells": ("gqi-krr", {"exponent": HELD, "edges": EDGES}),
     "b1000": ("gqi-krr", {"exponent": HELD, "fit_range": LOW}),
 }
-"""Each fit: its targets, and the options of its :class:`EddyFieldFit`."""
+"""Each fit: its targets, and the options of its :class:`GEM`."""
 PASSES = 3
 """The passes of each fit."""
 NAMES = tuple(f"{noise}-e{size:g}" for noise in NOISE_LEVELS for size in SIZES)
@@ -204,9 +204,9 @@ def run(args: argparse.Namespace, name: str) -> None:
         record[key], seconds[key] = [], []
         for number in range(1, PASSES + 1):
             # Each later pass keeps the previous pass's estimates, which its model trains on
-            fit = EddyFieldFit(num_threads=args.threads, zero_point=zero, **fit_options)
+            fit = GEM(num_threads=args.threads, zero_point=zero, **fit_options)
             began = perf_counter()
-            Estimator(model, estimates="eddy", registration=fit).run(dwi, **options)
+            Estimator(model, estimates="eddy", backend=fit).run(dwi, **options)
             seconds[key].append(perf_counter() - began)
             assert dwi.motion is not None and dwi.eddy is not None and fit.tensor is not None
             arrays[f"{key}/{number}/motion"] = dwi.motion.copy()

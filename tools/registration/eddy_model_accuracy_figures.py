@@ -60,7 +60,7 @@ LINES: dict[str, tuple[Any, float]] = {"noise-free": ("-", -0.11), "noisy": ((0,
 DODGE = (-0.045, 0.0, 0.045)
 """Each size's offset along the x-axis, within its condition."""
 LIMIT = 2.0
-"""The upper limit of the fitted exponent (``EXPONENT_BOUNDS`` of ``eddy_field.py``)."""
+"""The upper limit of the fitted exponent (``EXPONENT_BOUNDS`` of ``gem.py``)."""
 LABELS = {
     "original": "noise-free\noriginals",
     "gqi-krr": "gqi-krr\npredictions",
