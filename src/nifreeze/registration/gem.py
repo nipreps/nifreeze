@@ -40,7 +40,7 @@ strength at a fixed timing, and 1 when it follows the b-value, as in the phantom
 TRXScan makes (PennLINC/TRXScan#27). Alternatively, each segment of b-values has its own
 tensor, with the exponent held (:class:`SegmentedEddyTensor`). The model can also be
 fitted on the volumes of a range of b-values only, and give every volume its field
-(``fit_range`` of :class:`EddyFieldFit`). A stretch that every
+(``fit_range`` of :class:`GEM`). A stretch that every
 volume shares has no parameter to go into, as long as the b-vectors average out; fitted
 on images, where volumes weigh a little differently in the metric, a small part of it
 still reaches the fields.
@@ -54,7 +54,7 @@ the head motion it is given.
 
 Estimating the model is one registration of all the volumes at once, with one set of
 parameters, in which each volume moves by its own field. ITK's transforms map a point
-without knowing which volume it belongs to, so :class:`EddyFieldFit` has ITK's metric
+without knowing which volume it belongs to, so :class:`GEM` has ITK's metric
 evaluate each volume's similarity and its derivative, and scipy estimates the
 parameters.
 
@@ -663,9 +663,10 @@ class _Metric:
         return self.metric.GetCurrentValue(), gradient[:9].reshape(3, 3), gradient[9:]
 
 
-class EddyFieldFit:
+class GEM:
     """
-    Estimate the eddy-current field of all volumes, from their images, with one model.
+    The global eddy model (GEM): the eddy-current field of every volume, from their
+    images, with one tensor.
 
     Each volume is added (:meth:`add`) with its target (the image it should match once its
     field is undone), its sample, the head motion it is given and any field an earlier

@@ -36,8 +36,8 @@ from test_registration_conventions import SKIP_ELASTIX, _error, _motion, _move, 
 from test_registration_itk import CENTRE, _across, _field, _off_centre
 
 from nifreeze.data.dmri import DWI
-from nifreeze.estimator import FIELD_FIT_ESTIMATES_ERROR_MSG, Estimator
-from nifreeze.registration.eddy_field import (
+from nifreeze.estimator import GEM_ESTIMATES_ERROR_MSG, Estimator
+from nifreeze.registration.gem import (
     B_REF_ERROR_MSG,
     BVALUE_ERROR_MSG,
     DEFAULT_EXPONENT,
@@ -45,6 +45,7 @@ from nifreeze.registration.eddy_field import (
     EDGES_ERROR_MSG,
     FIT_RANGE_EDGES_ERROR_MSG,
     FIT_RANGE_ERROR_MSG,
+    GEM,
     MATRIX_ERROR_MSG,
     NO_PHASE_ENCODING_ERROR_MSG,
     NOT_FITTED_ERROR_MSG,
@@ -52,7 +53,6 @@ from nifreeze.registration.eddy_field import (
     SLOPES_ERROR_MSG,
     SPAN_ERROR_MSG,
     TABLE_ERROR_MSG,
-    EddyFieldFit,
     EddyTensor,
     SegmentedEddyTensor,
     _Problem,
@@ -251,7 +251,7 @@ def test_segment_edges_are_positive_and_increasing(edges):
     with pytest.raises(ValueError, match=re.escape(EDGES_ERROR_MSG)):
         SegmentedEddyTensor(edges, [EddyTensor(np.eye(3))] * (len(edges) + 1))
     with pytest.raises(ValueError, match=re.escape(EDGES_ERROR_MSG)):
-        EddyFieldFit(edges=edges)
+        GEM(edges=edges)
 
 
 def test_a_segmented_tensor_needs_a_tensor_for_each_segment():
@@ -385,8 +385,8 @@ def _images(
     )
 
 
-def _fitted(sim, phase_encoding: str = "j-", **kwargs) -> EddyFieldFit:
-    fit = EddyFieldFit(phase_encoding=phase_encoding, num_threads=1, clip="none", **kwargs)
+def _fitted(sim, phase_encoding: str = "j-", **kwargs) -> GEM:
+    fit = GEM(phase_encoding=phase_encoding, num_threads=1, clip="none", **kwargs)
     for index, (sample, motion) in enumerate(zip(sim.samples, sim.motions, strict=True)):
         fit.add(index, sim.data, sample, sim.affine, sim.mask, motion)
     return fit
@@ -397,7 +397,7 @@ def _voxel_zero(affine: np.ndarray, zero: np.ndarray = ZERO) -> np.ndarray:
     return (np.linalg.inv(_frame(affine)[0]) @ np.r_[zero, 1.0])[:3]
 
 
-def _mapping_errors(fit: EddyFieldFit, sim) -> np.ndarray:
+def _mapping_errors(fit: GEM, sim) -> np.ndarray:
     """Each volume's mean displacement error (mm, in the mask) of the whole mapping."""
     return np.array(
         [
@@ -584,7 +584,7 @@ def test_the_fit_prepares_the_images_as_the_backend_does():
 
     sim = _images()
     settings = get_settings() | {"use_histogram_matching": True}
-    fit = EddyFieldFit(settings, phase_encoding="j-", num_threads=1, margin=1000.0)
+    fit = GEM(settings, phase_encoding="j-", num_threads=1, margin=1000.0)
     sample = sim.samples[0]
 
     fit.add(0, sim.data, sample, sim.affine, sim.mask, sim.motions[0])
@@ -601,7 +601,7 @@ def test_the_fit_prepares_the_images_as_the_backend_does():
 
 def test_a_stage_draws_its_points_in_the_mask():
     data, mask = _volume()
-    fit = EddyFieldFit(phase_encoding="j", clip="none")
+    fit = GEM(phase_encoding="j", clip="none")
     fit.add(0, data, data, _off_centre(), mask)
     stage = {"metric": "correlation"}
 
@@ -620,18 +620,18 @@ def test_the_fit_validates_its_inputs():
     affine = _off_centre()
     table = _balanced(np.random.default_rng(10))
     with pytest.raises(ValueError, match=NOTHING_ADDED_ERROR_MSG):
-        EddyFieldFit(phase_encoding="j").fit(table)
+        GEM(phase_encoding="j").fit(table)
     with pytest.raises(ValueError, match=re.escape(NOT_FITTED_ERROR_MSG)):
-        EddyFieldFit(phase_encoding="j").mappings()
+        GEM(phase_encoding="j").mappings()
     with pytest.raises(ValueError, match=re.escape(EDGES_B_REF_ERROR_MSG)):
-        EddyFieldFit(edges=EDGES, b_ref=1000.0)
+        GEM(edges=EDGES, b_ref=1000.0)
     with pytest.raises(ValueError, match=re.escape(FIT_RANGE_EDGES_ERROR_MSG)):
-        EddyFieldFit(edges=EDGES, fit_range=(0.0, 1500.0))
+        GEM(edges=EDGES, fit_range=(0.0, 1500.0))
     for bad in ((1500.0, 1000.0), (-1.0, 1500.0), (1000.0, 1000.0), (0.0, 1000.0, 2000.0)):
         with pytest.raises(ValueError, match=re.escape(FIT_RANGE_ERROR_MSG)):
-            EddyFieldFit(fit_range=bad)
+            GEM(fit_range=bad)
 
-    fit = EddyFieldFit(clip="none")
+    fit = GEM(clip="none")
     fit.add(0, data, data, affine, mask)
     with pytest.raises(ValueError, match=re.escape(NO_PHASE_ENCODING_ERROR_MSG)):
         fit.fit(table)
@@ -647,7 +647,7 @@ def test_the_fit_validates_its_inputs():
     with pytest.raises(ValueError, match="grid and mask"):
         fit.add(1, data, data, affine, ~mask)
 
-    segmented = EddyFieldFit(phase_encoding="j", clip="none", edges=EDGES)
+    segmented = GEM(phase_encoding="j", clip="none", edges=EDGES)
     for index in range(len(table)):
         segmented.add(index, data, data, affine, mask)
     middle = table.copy()
@@ -655,7 +655,7 @@ def test_the_fit_validates_its_inputs():
     with pytest.raises(ValueError, match=r"segment 1 of the edges \(1500.0, 2500.0\)"):
         segmented.fit(middle)
 
-    ranged = EddyFieldFit(phase_encoding="j", clip="none", fit_range=(4000.0, 5000.0))
+    ranged = GEM(phase_encoding="j", clip="none", fit_range=(4000.0, 5000.0))
     ranged.add(0, data, data, affine, mask)
     with pytest.raises(ValueError, match=re.escape("in the fit range [4000, 5000)")):
         ranged.fit(table)
@@ -683,9 +683,9 @@ def test_the_eddy_pass_fits_one_field_for_every_volume():
     """Through the estimator: each volume's field, and its head motion's rotation kept."""
     sim = _images()
     dwi = _dwi(sim)
-    fit = EddyFieldFit(clip="none", zero_point=ZERO)
+    fit = GEM(clip="none", zero_point=ZERO)
 
-    Estimator("trivial", estimates="eddy", registration=fit).run(dwi, n_jobs=1, omp_nthreads=1)
+    Estimator("trivial", estimates="eddy", backend=fit).run(dwi, n_jobs=1, omp_nthreads=1)
 
     assert fit.phase_encoding == "j-" and fit.num_threads == 1  # the dataset's and the run's
     assert isinstance(fit.tensor, EddyTensor) and abs(fit.tensor.exponent - 1.0) < 0.05
@@ -694,6 +694,25 @@ def test_the_eddy_pass_fits_one_field_for_every_volume():
     assert np.abs(dwi.eddy[:, :3, :3] - sim.fields[:, :3, :3]).max() < 2e-3
     for index, mapping in enumerate(sim.mappings):
         assert _error(sim.mask, sim.affine, dwi.get_transform(index), mapping) < 0.05
+
+
+@SKIP_ELASTIX
+def test_the_estimator_builds_gem_by_name():
+    """``backend="gem"`` builds GEM for the run, from its settings, as an instance of them."""
+    sim = _images()
+    named, given = _dwi(sim), _dwi(sim)
+
+    Estimator("trivial", estimates="eddy", backend="gem", clip="none").run(
+        named, n_jobs=1, omp_nthreads=1
+    )
+    Estimator("trivial", estimates="eddy", backend=GEM(clip="none")).run(
+        given, n_jobs=1, omp_nthreads=1
+    )
+
+    assert named.eddy is not None and given.eddy is not None
+    assert named.motion is not None and given.motion is not None
+    assert np.array_equal(named.eddy, given.eddy)
+    assert np.array_equal(named.motion, given.motion)
 
 
 @SKIP_ELASTIX
@@ -711,7 +730,7 @@ def test_cascaded_passes_count_the_shift_along_phase_encoding_once(passes):
         chain = Estimator(
             "trivial",
             estimates="eddy",
-            registration=EddyFieldFit(clip="none", zero_point=ZERO),
+            backend=GEM(clip="none", zero_point=ZERO),
             prev=chain,
         )
 
@@ -733,11 +752,9 @@ def test_the_eddy_pass_realigns_the_view_once_fitted():
     sim = _images()
     dwi = _dwi(sim, motion=False)
     views: dict = {}
-    fit = EddyFieldFit(
-        phase_encoding="j-", num_threads=2, clip="none", edges=EDGES, zero_point=ZERO
-    )
+    fit = GEM(phase_encoding="j-", num_threads=2, clip="none", edges=EDGES, zero_point=ZERO)
 
-    Estimator("avg", estimates="eddy", registration=fit).run(
+    Estimator("avg", estimates="eddy", backend=fit).run(
         dwi, n_jobs=1, omp_nthreads=1, realigned=views
     )
 
@@ -746,7 +763,8 @@ def test_the_eddy_pass_realigns_the_view_once_fitted():
     assert np.allclose(views[id(dwi)].dataobj, dwi.realigned().dataobj, atol=1e-4)
 
 
-def test_the_field_fit_estimates_only_the_eddy_currents():
+@pytest.mark.parametrize("backend", [GEM(), "gem", "GEM"], ids=["instance", "name", "upper"])
+def test_gem_estimates_only_the_eddy_currents(backend):
     sim = SimpleNamespace(
         samples=np.zeros((18, 6, 6, 4), dtype="float32"),
         affine=np.diag([2.0, 2.0, 2.0, 1.0]),
@@ -755,6 +773,6 @@ def test_the_field_fit_estimates_only_the_eddy_currents():
         table=_balanced(np.random.default_rng(11)),
         motions=np.repeat(np.eye(4)[np.newaxis], 18, axis=0),
     )
-    message = FIELD_FIT_ESTIMATES_ERROR_MSG.format(field="motion")
+    message = GEM_ESTIMATES_ERROR_MSG.format(field="motion")
     with pytest.raises(ValueError, match=re.escape(message)):
-        Estimator("trivial", registration=EddyFieldFit()).run(_dwi(sim, "j"))
+        Estimator("trivial", backend=backend).run(_dwi(sim, "j"))

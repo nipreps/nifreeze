@@ -93,7 +93,7 @@ def test_main_appends_the_eddy_pass(monkeypatch, tmp_path):
     input_file = tmp_path / "dwi.h5"
     input_file.touch()
     argv = [str(input_file), "--models", "avgdwi", "gqi-krr", "--output-dir", str(tmp_path)]
-    run.main([*argv, "--registration", "ants", "--align-config", "motion.yaml", "--eddy"])
+    run.main([*argv, "--backend", "ants", "--align-config", "motion.yaml", "--eddy"])
 
     first, second, eddy = _Estimator.built
     assert [estimator.args[0] for estimator in _Estimator.built] == [
@@ -105,7 +105,7 @@ def test_main_appends_the_eddy_pass(monkeypatch, tmp_path):
     assert eddy.kwargs["align_config"] == AFFINE
     assert eddy.kwargs["estimates"] == "eddy"
     assert "estimates" not in first.kwargs and "estimates" not in second.kwargs
-    assert all(estimator.kwargs["registration"] == "ants" for estimator in _Estimator.built)
+    assert all(estimator.kwargs["backend"] == "ants" for estimator in _Estimator.built)
     # The run's settings reach the motion passes; the eddy pass keeps its own
     assert eddy.ran["align_kwargs"] == {"align_config": Path("motion.yaml")}
     assert "align_config" not in first.kwargs
@@ -127,7 +127,7 @@ def test_main_chooses_the_eddy_model(monkeypatch, tmp_path):
             "singlegp-loo",
             "--eddy-model",
             "gqi-krr",
-            "--registration",
+            "--backend",
             "ants",
             "--output-dir",
             str(tmp_path),
@@ -171,7 +171,7 @@ def test_main_takes_the_phase_encoding(monkeypatch, tmp_path, metadata, argument
     input_file = tmp_path / "dwi.h5"
     input_file.touch()
     extra = [] if argument is None else ["--phase-encoding", argument]
-    run.main([str(input_file), "--registration", "ants", "--output-dir", str(tmp_path), *extra])
+    run.main([str(input_file), "--backend", "ants", "--output-dir", str(tmp_path), *extra])
 
     assert dataset.phase_encoding == expected
 

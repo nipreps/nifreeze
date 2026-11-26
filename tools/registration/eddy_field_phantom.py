@@ -31,7 +31,7 @@
 Fit the global eddy-current model to the eddy-only phantom, and time it (#745).
 
 The phantom's eddy-only copy (no head motion, a largest displacement of 4 mm, with
-noise) is fitted by :class:`~nifreeze.registration.eddy_field.EddyFieldFit`, each volume
+noise) is fitted by :class:`~nifreeze.registration.gem.GEM`, each volume
 compared with its noise-free original and its head motion held at the identity:
 
 ``all-q``
@@ -68,8 +68,8 @@ from eddy_targets_expansion import COPIES, NOISE
 from experiments import provenance, write_results
 
 from nifreeze.analysis.phantoms import load_phantom
-from nifreeze.registration.eddy_field import (
-    EddyFieldFit,
+from nifreeze.registration.gem import (
+    GEM,
     EddyTensor,
     SegmentedEddyTensor,
     field_of_view_centre,
@@ -174,7 +174,7 @@ def run(args: argparse.Namespace, variant: str, threads: int) -> None:
     affine = np.asarray(clean.affine, dtype=float)
     loaded, rss_loaded = perf_counter() - began, _rss_mb()
 
-    fit = EddyFieldFit(
+    fit = GEM(
         phase_encoding=PHASE_ENCODING,
         num_threads=threads,
         edges=EDGES if variant == "q-wise" else None,

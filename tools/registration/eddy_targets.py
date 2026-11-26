@@ -326,7 +326,7 @@ def _cascade(copy: Any, run: dict[str, Any], seconds: dict[str, float]) -> dict[
     levels = {}
     for model in CASCADE:
         began = perf_counter()
-        Estimator(model, registration="elastix").run(copy, **run)
+        Estimator(model, backend="elastix").run(copy, **run)
         seconds[f"cascade/{model}"] = perf_counter() - began
         assert copy.motion is not None
         levels[model] = copy.motion.copy()
@@ -384,7 +384,7 @@ def _pass(
     """The eddy-current pass, as the command line runs it after the cascade."""
     data = load()
     data.motion = cascade.copy()
-    Estimator(model, registration="elastix", estimates="eddy").run(data, **run, num_threads=1)
+    Estimator(model, backend="elastix", estimates="eddy").run(data, **run, num_threads=1)
     return {
         index: (np.asarray(data.get_transform(index)), float("nan"), False)
         for index in range(len(data))

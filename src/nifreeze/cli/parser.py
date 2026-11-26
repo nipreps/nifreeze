@@ -22,7 +22,7 @@
 #
 """Parser module."""
 
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, Namespace
+from argparse import SUPPRESS, ArgumentDefaultsHelpFormatter, ArgumentParser, Namespace
 from pathlib import Path
 
 from nifreeze.data.dmri.utils import PHASE_ENCODING_DIRECTIONS
@@ -55,7 +55,7 @@ def _build_parser() -> ArgumentParser:
     )
 
     parser.add_argument(
-        "--registration",
+        "--backend",
         action="store",
         choices=sorted(BACKENDS),
         default=None,
@@ -63,6 +63,15 @@ def _build_parser() -> ArgumentParser:
             "The registration backend (default: elastix where itk-elastix is installed, "
             "ANTs otherwise)."
         ),
+    )
+    # The flag's former name, until a later release removes it
+    parser.add_argument(
+        "--registration",
+        action="store",
+        dest="backend",
+        choices=sorted(BACKENDS),
+        deprecated=True,
+        help=SUPPRESS,
     )
     parser.add_argument(
         "--align-config",

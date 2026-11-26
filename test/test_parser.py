@@ -44,12 +44,12 @@ def test_parser_registration(tmp_path):
     input_file.touch()
 
     args, *_ = parse_args([str(input_file)])
-    assert (args.registration, args.align_config, args.eddy) == (None, None, None)
+    assert (args.backend, args.align_config, args.eddy) == (None, None, None)
 
     args, *_ = parse_args(
-        [str(input_file), "--registration", "ants", "--align-config", "rigid.yaml", "--eddy"]
+        [str(input_file), "--backend", "ants", "--align-config", "rigid.yaml", "--eddy"]
     )
-    assert (args.registration, args.align_config, args.eddy) == (
+    assert (args.backend, args.align_config, args.eddy) == (
         "ants",
         Path("rigid.yaml"),
         AFFINE,
@@ -59,7 +59,19 @@ def test_parser_registration(tmp_path):
     assert args.eddy == Path("eddy.yaml")
 
     with pytest.raises(SystemExit):
-        parse_args([str(input_file), "--registration", "flirt"])
+        parse_args([str(input_file), "--backend", "flirt"])
+
+
+def test_parser_registration_is_the_backend_s_former_name(tmp_path, capsys):
+    """``--registration`` still sets the backend, with a deprecation warning."""
+    input_file = tmp_path / "dwi.h5"
+    input_file.touch()
+
+    args, *_ = parse_args([str(input_file), "--registration", "ants"])
+
+    assert args.backend == "ants"
+    assert "'--registration' is deprecated" in capsys.readouterr().err
+    assert "--registration" not in _build_parser().format_help()
 
 
 @pytest.mark.parametrize(

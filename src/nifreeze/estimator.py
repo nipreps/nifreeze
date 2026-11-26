@@ -36,7 +36,7 @@ from typing_extensions import Self
 from nifreeze.data.base import ESTIMATES_FIELD_ERROR_MSG, BaseDataset
 from nifreeze.model.base import BaseModel, ModelFactory, TrivialModel
 from nifreeze.registration.base import AFFINE, Registration, RegistrationFactory
-from nifreeze.registration.eddy_field import EddyFieldFit
+from nifreeze.registration.gem import GEM
 from nifreeze.utils import iterators
 
 DatasetT = TypeVar("DatasetT", bound=BaseDataset)
@@ -46,11 +46,15 @@ ALIGN_CONFIGS = {"motion": None, "eddy": AFFINE}
 """Default registration settings by field of estimates. ``None`` takes the run's
 ``align_config``, or the backend's default (:data:`~nifreeze.registration.base.RIGID`):
 a default of the estimator's own would override the run's."""
-FIELD_FIT_ESTIMATES_ERROR_MSG = (
-    "An EddyFieldFit estimates the eddy currents of a DWI: give the estimator "
-    "estimates='eddy', not {field!r}."
+GEM_NAME = "gem"
+"""The backend name that builds :class:`~nifreeze.registration.gem.GEM` for each run."""
+GEM_OPTIONS = ("align_config", "clip", "seed", "num_threads", "phase_encoding")
+"""The registration settings that :class:`~nifreeze.registration.gem.GEM`, built by name,
+takes from the run and the estimator."""
+GEM_ESTIMATES_ERROR_MSG = (
+    "GEM estimates the eddy currents of a DWI: give the estimator estimates='eddy', not {field!r}."
 )
-"""A field fit asked for other estimates than the eddy currents error message."""
+"""GEM asked for other estimates than the eddy currents error message."""
 FIT_MSG = "Fit&predict"
 REG_MSG = "Realign"
 
@@ -104,12 +108,14 @@ class Estimator:
         First volume index to process.
     stop_index : :obj:`int`, optional
         One-past-last volume index to process (``None`` = to the end).
-    registration : :obj:`~nifreeze.registration.base.Registration` or :obj:`str`, optional
-        The registration backend, or the name of one
-        (:data:`~nifreeze.registration.base.BACKENDS`), built for each run from the
-        registration settings (default: elastix where ``itk-elastix`` is installed,
-        ANTs otherwise; see :func:`~nifreeze.registration.base.default_backend`); or,
-        for the eddy currents, an :class:`~nifreeze.registration.eddy_field.EddyFieldFit`.
+    backend : :obj:`~nifreeze.registration.base.Registration`, GEM or :obj:`str`, optional
+        The registration backend, or the name of one, built for each run from the
+        registration settings. :data:`~nifreeze.registration.base.BACKENDS` names those
+        that register each volume on its own (default: elastix where ``itk-elastix`` is
+        installed, ANTs otherwise; see :func:`~nifreeze.registration.base.default_backend`);
+        ``"gem"`` (:data:`GEM_NAME`) builds :class:`~nifreeze.registration.gem.GEM`, which
+        estimates the eddy currents of every volume at once, from the settings of
+        :data:`GEM_OPTIONS`.
     estimates : :obj:`str`, optional
         The field of the dataset this estimator's estimates go to, one of its
         :attr:`~nifreeze.data.base.BaseDataset.ESTIMATES`: ``"motion"`` (default), or
@@ -123,10 +129,10 @@ class Estimator:
         estimates head motion and the field together
         (:meth:`~nifreeze.registration.base.Registration.split`, such as
         :class:`~nifreeze.registration.itk_backend.ITK` restricted to phase encoding)
-        stores both instead: the head motion it refined, and the field. Given an
-        :class:`~nifreeze.registration.eddy_field.EddyFieldFit` (``estimates="eddy"``
+        stores both instead: the head motion it refined, and the field. With
+        :class:`~nifreeze.registration.gem.GEM` (``estimates="eddy"``
         only), the pass predicts every volume first, all from the same data whatever
-        the update setting, then estimates one field model for all of them. Each volume
+        the update setting, then estimates one tensor for all of them. Each volume
         keeps its head motion but for its shift along phase encoding, which the field
         sets; a field an earlier pass estimated is factored out first, as a field zero
         at the fit's zero point, so that its shift is not counted twice. With the instant
@@ -149,7 +155,7 @@ class Estimator:
         "_align_kwargs",
         "_start_index",
         "_stop_index",
-        "_registration",
+        "_backend",
         "_estimates",
     )
 
@@ -162,7 +168,7 @@ class Estimator:
         single_fit: bool = False,
         start_index: int = 0,
         stop_index: int | None = None,
-        registration: Registration | EddyFieldFit | str | None = None,
+        backend: Registration | GEM | str | None = None,
         estimates: str = "motion",
         **kwargs,
     ):
@@ -178,7 +184,7 @@ class Estimator:
 
         self._start_index = start_index
         self._stop_index = stop_index
-        self._registration = registration
+        self._backend = backend
         self._estimates = estimates
 
     def run(self, dataset: DatasetT, **kwargs) -> Self:
@@ -231,9 +237,11 @@ class Estimator:
                     fields=", ".join(dataset.ESTIMATES),
                 )
             )
-        field_fit = isinstance(self._registration, EddyFieldFit)
-        if field_fit and self._estimates != "eddy":
-            raise ValueError(FIELD_FIT_ESTIMATES_ERROR_MSG.format(field=self._estimates))
+        gem = isinstance(self._backend, GEM) or (
+            isinstance(self._backend, str) and self._backend.lower() == GEM_NAME
+        )
+        if gem and self._estimates != "eddy":
+            raise ValueError(GEM_ESTIMATES_ERROR_MSG.format(field=self._estimates))
 
         # Shared with the previous estimators of the chain
         views = kwargs.setdefault("realigned", {})
@@ -317,14 +325,15 @@ class Estimator:
             model.fit_predict(None, **fit_pred_kwargs)
             print(f"Fitting 'single' model finished, elapsed {timer() - start}s.")
 
-        if field_fit:
+        if gem:
             threads = kwargs.get("num_threads") or n_threads
-            return self._fit_field(dataset, model, index_iter, fit_pred_kwargs, view, threads)
+            fit = self._gem(kwargs)
+            return self._fit_field(dataset, model, index_iter, fit_pred_kwargs, view, threads, fit)
 
         # The backend given, or one built from the registration settings: the run's
         # (shared by the chain), this estimator's, and then the run's other arguments
-        registration = self._registration
-        assert not isinstance(registration, EddyFieldFit)  # its pass returned above
+        registration = self._backend
+        assert not isinstance(registration, GEM)  # its pass returned above
         if not isinstance(registration, Registration):
             options = (kwargs.pop("align_kwargs", None) or {}) | self._align_kwargs | kwargs
             options.pop("realigned", None)
@@ -386,6 +395,18 @@ class Estimator:
 
         return self
 
+    def _gem(self, kwargs: dict) -> GEM:
+        """
+        The GEM given, or one built for this run (``backend="gem"``).
+
+        A GEM built by name takes the settings of :data:`GEM_OPTIONS` from the run's
+        ``align_kwargs``, then this estimator's, and then the run's other arguments.
+        """
+        if isinstance(self._backend, GEM):
+            return self._backend
+        options = (kwargs.pop("align_kwargs", None) or {}) | self._align_kwargs | kwargs
+        return GEM(**{key: options[key] for key in GEM_OPTIONS if options.get(key) is not None})
+
     def _fit_field(
         self,
         dataset: BaseDataset,
@@ -394,19 +415,17 @@ class Estimator:
         fit_pred_kwargs: dict,
         view: BaseDataset | None,
         num_threads: int | None,
+        fit: GEM,
     ) -> Self:
         """
-        The eddy-current pass with one field model for every volume (#750).
+        The eddy-current pass with GEM: one tensor for every volume (#750).
 
         Every volume is predicted, all from the same data (the view does not change
         during the pass), and added to the fit with its head motion and any field an
-        earlier pass estimated; the fit then estimates the field, and each volume's head
-        motion and field are stored. The
-        fit takes the dataset's phase-encoding direction and the run's threads, unless
-        it has its own.
+        earlier pass estimated; GEM then estimates the tensor, and each volume's head
+        motion and field are stored. GEM takes the dataset's phase-encoding direction and
+        the run's threads, unless it has its own.
         """
-        fit = self._registration
-        assert isinstance(fit, EddyFieldFit)
         if fit.phase_encoding is None:
             fit.phase_encoding = getattr(dataset, "phase_encoding", None)
         if fit.num_threads is None:

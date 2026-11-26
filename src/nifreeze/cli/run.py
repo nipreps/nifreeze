@@ -91,7 +91,7 @@ def main(argv: list[str] | None = None) -> None:
             prev=prev_model,
             single_fit=single_fit,
             model_kwargs=model_kwargs,
-            registration=args.registration,
+            backend=args.backend,
         )
         prev_model = estimator
 
@@ -102,7 +102,7 @@ def main(argv: list[str] | None = None) -> None:
             prev=estimator,
             single_fit=args.eddy_single_fit,
             model_kwargs=model_kwargs,
-            registration=args.registration,
+            backend=args.backend,
             estimates="eddy",
             align_config=args.eddy,
         )
@@ -130,7 +130,7 @@ def main(argv: list[str] | None = None) -> None:
     dataset.to_nifti(output_path, write_estimates=True)
 
     # Record the version of the backend that registered
-    if (args.registration or default_backend()) == "ants":
+    if (args.backend or default_backend()) == "ants":
         provenance = {"ANTsVersion": ants_version()}
     else:
         provenance = {"ElastixVersion": version("itk-elastix")}
