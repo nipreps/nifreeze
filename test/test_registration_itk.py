@@ -359,7 +359,7 @@ def test_the_other_backends_take_the_phase_encoding_and_do_not_split():
     for name in ("ants", "elastix"):
         try:
             register = RegistrationFactory.init(name, phase_encoding="j-")
-        except ImportError:  # elastix's extra is not installed
+        except ImportError:  # itk-elastix is not installed
             continue
         assert register.phase_encoding == "j-"
         assert register.split(np.eye(4), np.eye(4)) is None

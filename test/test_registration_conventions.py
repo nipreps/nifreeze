@@ -75,7 +75,7 @@ def _installed(distribution: str) -> bool:
 
 
 NO_ELASTIX = not _installed("itk-elastix")
-"""Whether itk-elastix (the ``elastix`` extra) is missing."""
+"""Whether itk-elastix is missing."""
 SKIP_ANTS = pytest.mark.skipif(NO_ANTS, reason="ANTs is not installed")
 SKIP_ELASTIX = pytest.mark.skipif(NO_ELASTIX, reason="itk-elastix is not installed")
 BACKENDS = (

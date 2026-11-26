@@ -84,7 +84,7 @@ MISSING = {
     "ants": shutil.which("antsRegistration") is None,
     "elastix": default_backend() != "elastix",
 }
-"""Whether each backend is missing: ANTs from ``PATH``, or the ``elastix`` extra."""
+"""Whether each backend is missing: ANTs from ``PATH``, or itk-elastix."""
 
 pytestmark = [
     pytest.mark.e2e,

@@ -1297,7 +1297,7 @@ requires-dist = [
     { name = "virtualenv", marker = "extra == 'all'", specifier = "==20.38.0" },
     { name = "virtualenv", marker = "extra == 'benchmark'", specifier = "==20.38.0" },
 ]
-provides-extras = ["all", "antsopt", "benchmark", "dev", "doc", "docs", "elastix", "gallery", "notebooks", "plotting", "resmon", "test", "tests", "types"]
+provides-extras = ["all", "antsopt", "benchmark", "dev", "doc", "docs", "gallery", "notebooks", "plotting", "resmon", "test", "tests", "types"]
 
 [[package]]
 name = "nilearn"
