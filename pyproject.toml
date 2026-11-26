@@ -22,6 +22,7 @@ dependencies = [
   "attrs>=24.3.0",
   "dipy>=1.12.1",
   "h5py>=3.13.0",
+  "itk-elastix>=0.25.4",
   "joblib>=1.5.0",
   "matplotlib>=3.11",
   "nibabel>=5.3.3",
@@ -59,7 +60,8 @@ dev = [
   "pre-commit>=4.1.0",
   "pre-commit-hooks>=6.0.0",
 ]
-elastix = ["itk-elastix>=0.25.4"]
+# A core dependency since GEM, the default eddy-current correction, needs ITK
+elastix = []
 plotting = ["nilearn>=0.11.0"]
 resmon = ["psutil>=6.1.1"]
 test = [

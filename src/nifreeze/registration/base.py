@@ -62,7 +62,7 @@ AFFINE = CONFIG / "affine.yaml"
 
 
 def default_backend() -> str:
-    """Elastix where ``itk-elastix`` is installed (as #672 found it), ANTs otherwise."""
+    """Elastix, a dependency, unless ``itk-elastix`` is missing (as #672 found it): ANTs."""
     try:
         version("itk-elastix")
     except PackageNotFoundError:

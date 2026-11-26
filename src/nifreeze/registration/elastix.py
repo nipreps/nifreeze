@@ -21,7 +21,7 @@
 #     https://www.nipreps.org/community/licensing/
 #
 """
-Registration with elastix, through ``itk-elastix`` (the ``elastix`` extra).
+Registration with elastix, through ``itk-elastix``.
 
 The images pass to elastix in memory: no files, unlike ANTs' command line.
 :class:`Elastix` is a :class:`~nifreeze.registration.base.Registration`:

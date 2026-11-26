@@ -111,8 +111,8 @@ class Estimator:
     backend : :obj:`~nifreeze.registration.base.Registration`, GEM or :obj:`str`, optional
         The registration backend, or the name of one, built for each run from the
         registration settings. :data:`~nifreeze.registration.base.BACKENDS` names those
-        that register each volume on its own (default: elastix where ``itk-elastix`` is
-        installed, ANTs otherwise; see :func:`~nifreeze.registration.base.default_backend`);
+        that register each volume on its own (default: elastix; see
+        :func:`~nifreeze.registration.base.default_backend`);
         ``"gem"`` (:data:`GEM_NAME`) builds :class:`~nifreeze.registration.gem.GEM`, which
         estimates the eddy currents of every volume at once, from the settings of
         :data:`GEM_OPTIONS`.
