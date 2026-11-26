@@ -96,7 +96,23 @@ One tensor for each shell takes the edges between the shells, for instance
 ``GEM(edges=(1500, 2750))`` for shells at b=1000, 2000 and 3500 s/mm².
 ``zero_point`` sets where the fields are zero, in world (RAS+) coordinates, in mm, and
 ``exponent`` holds :math:`p`.
-The command line's ``--eddy`` registers each volume on its own.
+
+On the command line, GEM is the default eddy-current correction of a DWI: three
+cascaded passes (:ref:`gem-cascade`), after the head-motion step, with the model of
+its cascade's last level (gqi-krr by default) unless ``--eddy-model`` names another.
+``--gem-passes`` sets the number of passes:
+
+.. code-block:: bash
+
+    nifreeze dwi.h5                        # head motion, then three passes of GEM
+    nifreeze dwi.h5 --gem-passes 1         # one pass
+    nifreeze dwi.h5 --gem-passes 0         # head motion only
+    nifreeze dwi.h5 --gem-passes 0 --eddy  # each volume registered on its own instead
+
+GEM needs the phase-encoding direction: the input's BIDS sidecar or *nfHDF5* file give
+it, or ``--phase-encoding``.
+Without it, the default run estimates head motion only, with a warning.
+The command line fits GEM in its default form; its other options are set in Python.
 
 Each variant is one ``GEM``, given as the pass's backend:
 

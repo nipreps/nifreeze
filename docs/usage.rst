@@ -96,14 +96,14 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
    - ``prev``: estimators can be stacked and be run sequentially.
    - ``single_fit``: when ``True``, fit the model once on all volumes instead of
      refitting per held-out volume. Use carefully.
-   - ``registration``: the registration backend, ``"elastix"`` or ``"ants"``
-     (default: elastix where ``itk-elastix``, the ``elastix`` extra, is installed,
-     ANTs otherwise). With the same extra, ``"itk"`` estimates eddy currents as head
+   - ``backend``: the registration backend, ``"elastix"`` (the default) or ``"ants"``,
+     which register each volume on its own. ``"itk"`` estimates eddy currents as head
      motion followed by a field along the phase-encoding direction (9 parameters,
      :class:`~nifreeze.registration.itk_backend.ITK`), from the ``itk`` section of
      :data:`~nifreeze.registration.base.AFFINE`; the dataset must know its
      phase-encoding direction, and the eddy-current pass then refines the head
-     motion and stores the field.
+     motion and stores the field. ``"gem"`` estimates the eddy currents of all the
+     volumes at once (:doc:`gem`), and needs the direction too.
    - ``align_config``: the registration settings, a mapping or a YAML file with a
      section per backend. NiFreeze ships two:
      :data:`~nifreeze.registration.base.RIGID` (the default, for head motion) and
@@ -160,14 +160,26 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
           seed=42,
       )
 
-   Eddy currents are estimated by a second pass, which starts from the head-motion
-   estimates stored in the dataset and stores what it adds in ``eddy``. On the command
-   line, ``--eddy`` runs it with the cascade's last model, and ``--eddy-model`` with
-   another (``--models gp-loo --eddy-model gqi-krr``). It registers with the affine settings,
-   :data:`~nifreeze.registration.base.AFFINE`, unless given its own ``align_config``:
+   Eddy currents are estimated by more passes, which start from the head-motion
+   estimates stored in the dataset and store what they add in ``eddy``.
+   By default, the command line estimates the eddy currents of a DWI with three passes
+   of GEM, the global eddy model (:doc:`gem`), after the cascade of ``--models``
+   (gqi-krr by default).
+   ``--gem-passes N`` sets their number, and ``--gem-passes 0`` turns GEM off.
+   Their model is the cascade's last, unless ``--eddy-model`` names another
+   (``--models gp-loo --eddy-model gqi-krr``).
+   GEM needs the phase-encoding direction, from the input's metadata or
+   ``--phase-encoding``: without it, the default run estimates head motion only, with
+   a warning.
+   ``--gem-passes 0 --eddy`` registers each volume on its own instead, with the affine
+   settings, :data:`~nifreeze.registration.base.AFFINE`, unless given its own file.
+   In Python, each pass is an estimator:
 
    .. code-block:: python
 
+      # One pass of GEM
+      Estimator("gqi-krr", estimates="eddy", backend="gem").run(dataset, seed=42)
+      # Each volume registered on its own
       Estimator("gqi-krr", estimates="eddy").run(dataset, seed=42)
 
 5. **Save Results**: Once transformations are estimated, save the realigned data in your preferred output format, either :ref:`nfHDF5 <nfhdf5>` or NIfTI:
