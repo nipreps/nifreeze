@@ -425,6 +425,11 @@ class Estimator:
         earlier pass estimated; GEM then estimates the tensor, and each volume's head
         motion and field are stored. GEM takes the dataset's phase-encoding direction and
         the run's threads, unless it has its own.
+
+        The b-vectors come in two frames (see :ref:`gem-bvectors`). The model predicts
+        each target from the realigned view, at the b-vectors rotated by each volume's
+        head motion. GEM fits the field from the dataset's own gradient table: the
+        b-vectors as acquired, which the eddy currents follow.
         """
         if fit.phase_encoding is None:
             fit.phase_encoding = getattr(dataset, "phase_encoding", None)

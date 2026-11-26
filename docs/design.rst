@@ -46,6 +46,8 @@ NiPreps' ``.tsv``) as they are;
 When a volume moves by :math:`M`, its b-vector in the realigned view is
 :math:`R^{-1} \mathbf{g}`, with :math:`R` the rotation of :math:`M`
 (:func:`~nifreeze.data.dmri.utils.realign_bvecs`).
+The dataset's own table keeps the b-vectors as acquired: the eddy currents follow the
+gradient the scanner plays, so GEM fits its fields from them (:ref:`gem-bvectors`).
 
 The dMRI data class holds a single ``b0`` volume. The rationale behind this is
 that this volume serves as a canonical reference for transforming non-zero
