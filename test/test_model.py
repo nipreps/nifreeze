@@ -51,12 +51,6 @@ class DummyDMRIModel:
         self._kwargs = kwargs
 
 
-class DummyPETModel:
-    def __init__(self, dataset, **kwargs):
-        self._dataset = dataset
-        self._kwargs = kwargs
-
-
 class DummyDataset:
     pass
 
@@ -311,8 +305,6 @@ def test_factory_avgdwi_variants(monkeypatch, name, setup_random_dwi_data):
         ("dti", DummyDMRIModel),
         ("DTI", DummyDMRIModel),
         ("dki", DummyDMRIModel),
-        ("pet", DummyPETModel),
-        ("PET", DummyPETModel),
     ],
 )
 def test_model_factory_valid_models(monkeypatch, model_name, expected_cls):
@@ -325,17 +317,10 @@ def test_model_factory_valid_models(monkeypatch, model_name, expected_cls):
         DKIModel = DummyDMRIModel
         GQIModel = DummyDMRIModel
 
-    class DummyPET:
-        # Use a distinct DummyPETModel so we can explicitly verify the factory
-        # resolves to nifreeze.model.pet:PETModel (not to a dMRI model).
-        PETModel = DummyPETModel
-
     def dummy_import_module(name):
         imported_modules.append(name)
         if name == "nifreeze.model.dmri":
             return DummyDMRI
-        if name == "nifreeze.model.pet":
-            return DummyPET
         raise ImportError(f"Unexpected import: {name}")
 
     monkeypatch.setattr("importlib.import_module", dummy_import_module)
@@ -344,21 +329,31 @@ def test_model_factory_valid_models(monkeypatch, model_name, expected_cls):
     assert isinstance(model_instance._dataset, DummyDataset)
     assert model_instance._kwargs.get("extra") == "value"
 
-    # Check the imported modules
-    if model_name.lower() == "pet":
-        assert "nifreeze.model.pet" in imported_modules, (
-            "Factory should import 'nifreeze.model.pet' when model_name is 'pet'"
-        )
-        assert "nifreeze.model.dmri" not in imported_modules, (
-            "Factory should not import 'nifreeze.model.dmri' when resolving PET models"
-        )
-    else:
-        assert "nifreeze.model.dmri" in imported_modules, (
-            "Factory should import 'nifreeze.model.dmri' for dMRI model names"
-        )
-        assert "nifreeze.model.pet" not in imported_modules, (
-            "Factory should not import 'nifreeze.model.pet' when resolving dMRI models"
-        )
+    assert "nifreeze.model.dmri" in imported_modules, (
+        "Factory should import 'nifreeze.model.dmri' for dMRI model names"
+    )
+    assert "nifreeze.model.pet" not in imported_modules, (
+        "Factory should not import 'nifreeze.model.pet' when resolving dMRI models"
+    )
+
+
+@pytest.mark.parametrize("name", ["pet", "PET"])
+def test_factory_pet_model(name, setup_random_pet_data):
+    """The factory resolves ``pet`` to :class:`~nifreeze.model.pet.BSplinePETModel`."""
+    from nifreeze.data.pet import PET
+
+    pet_dataobj, affine, brainmask_dataobj, _, midframe, total_duration = setup_random_pet_data
+    dataset = PET(
+        dataobj=pet_dataobj,
+        affine=affine,
+        brainmask=brainmask_dataobj,
+        midframe=midframe,
+        total_duration=total_duration,
+    )
+    model_instance = model.ModelFactory.init(name, dataset=dataset, n_ctrl=2, order=2)
+    assert isinstance(model_instance, model.BSplinePETModel)
+    assert model_instance._n_ctrl == 2
+    assert model_instance._order == 2
 
 
 @pytest.mark.parametrize("name", ["gp", "gpr", "gaussianprocess", "GP", "GaussianProcess"])

@@ -294,3 +294,53 @@ def test_parser_rejects_an_unknown_phase_encoding(tmp_path, capsys):
     with pytest.raises(SystemExit):
         run.parse_args([str(tmp_path / "dwi.h5"), "--phase-encoding", "AP"])
     assert "invalid choice: 'AP'" in capsys.readouterr().err
+
+
+def test_main_runs_pet_model_with_timing_file(monkeypatch, tmp_path):
+    """``--models pet`` with ``--timing-file`` loads a PET dataset and builds BSplinePETModel."""
+    import nibabel as nb
+
+    from nifreeze.data.pet import PET
+    from nifreeze.model.base import ModelFactory
+    from nifreeze.model.pet import BSplinePETModel
+
+    rng = np.random.default_rng(1234)
+    n_frames = 6
+    pet_nii = tmp_path / "sub-01_pet.nii.gz"
+    nb.Nifti1Image(rng.random((4, 4, 4, n_frames), dtype=np.float32), np.eye(4)).to_filename(
+        pet_nii
+    )
+    timing_json = tmp_path / "sub-01_pet.json"
+    timing_json.write_text(json.dumps({"FrameTimesStart": [0, 10, 20, 30, 40, 50]}))
+
+    seen = {}
+
+    class _PetEstimator(_Estimator):
+        def run(self, dataset, **kwargs):
+            seen["dataset"] = dataset
+            seen["model"] = ModelFactory.init(
+                self.args[0], dataset=dataset, **self.kwargs.get("model_kwargs", {})
+            )
+            return dataset
+
+    monkeypatch.setattr(run, "Estimator", _PetEstimator)
+    monkeypatch.setattr(_Estimator, "built", [])
+    monkeypatch.setattr(run, "ants_version", lambda: None)
+    monkeypatch.setattr(PET, "to_nifti", lambda self, *args, **kwargs: None)
+
+    run.main(
+        [
+            str(pet_nii),
+            "--timing-file",
+            str(timing_json),
+            "--models",
+            "pet",
+            "--backend",
+            "ants",
+            "--output-dir",
+            str(tmp_path),
+        ]
+    )
+
+    assert isinstance(seen["dataset"], PET)
+    assert isinstance(seen["model"], BSplinePETModel)

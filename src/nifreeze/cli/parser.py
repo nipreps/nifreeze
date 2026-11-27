@@ -303,7 +303,7 @@ def _build_parser() -> ArgumentParser:
         type=Path,
         metavar="FILE",
         help=(
-            "A NIfTI file containing the timing information (onsets and durations) "
+            "A JSON file containing the timing information (FrameTimesStart) "
             "corresponding to the input file"
         ),
     )
@@ -399,7 +399,7 @@ def parse_args(argv: list[str] | None = None) -> tuple[Namespace, dict, dict, di
         extra_kwargs["b0_file"] = args.b0_file
 
     if args.timing_file:
-        raise NotImplementedError("Cannot load PET timing information")
+        extra_kwargs["temporal_file"] = args.timing_file
 
     model_kwargs = {}
 
