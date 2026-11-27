@@ -20,7 +20,7 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""The figures and tables of GEM's accuracy on the phantom, in ``docs/gem.rst``.
+"""The figures and tables of GEM's accuracy on the phantom, in ``docs/edd/gem-accuracy.rst``.
 
 Reads ``<results>/accuracy.json``, which ``tools/registration/eddy_model_accuracy.py``
 wrote. Each figure has a row for each pass of GEM, and each copy's eddy currents a line,

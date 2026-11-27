@@ -23,7 +23,7 @@
 """End-to-end motion estimation on a synthetic phantom with known motion.
 
 The phantom is TRXScan's simulation of the Sherbrooke protocol (``tools/phantoms``,
-see ``docs/phantoms.rst``). In its perturbed set at 2° and 2 mm, every
+see ``docs/edd/phantoms.rst``). In its perturbed set at 2° and 2 mm, every
 diffusion-weighted volume was simulated again from the head moved by its own
 rigid motion (2° about a random axis through the brain's centroid, and 2 mm along
 a random direction); the b=0 stays in place and defines the frame of the ground

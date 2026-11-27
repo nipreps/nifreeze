@@ -103,7 +103,7 @@ def test_gqi_kernel_b0_row_is_constant(method, constant):
     ``sinc(0) = 1`` (``standard``) and ``squared_radial_component(0) = 1/3``
     (``gqi2``). Two b=0 volumes therefore produce identical rows carrying no
     angular information -- the rank-deficiency that motivates excluding b=0 from
-    the fit (see ``docs/models.rst``, "Reconstruction fidelity and the intercept
+    the fit (see ``docs/methods/models.rst``, "Reconstruction fidelity and the intercept
     behaviour"). ``dsi_voxels`` only carries a single low-b b0 (b=15), so this
     uses a synthetic pair of true b=0 volumes.
     """

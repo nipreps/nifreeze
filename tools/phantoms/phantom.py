@@ -32,7 +32,7 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""Simulate the synthetic reference datasets with TRXScan (see ``docs/phantoms.rst``).
+"""Simulate the synthetic reference datasets with TRXScan (see ``docs/edd/phantoms.rst``).
 
 The only code that imports TRXScan, pinned to one commit above (its motion fixes
 are not released yet). Run it with ``uv run``, which builds that environment

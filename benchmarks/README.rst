@@ -39,7 +39,7 @@ Name prefix              Measure                                           A pul
 - ``bench_cpu.py``: CPU time of model fits and predictions, and the wall time of
   a DKI fit over two workers.
 - ``bench_quality.py``: how far each model's predictions drift on the CI phantom
-  (``docs/phantoms.rst``) when volumes move or are distorted by eddy currents,
+  (``docs/edd/phantoms.rst``) when volumes move or are distorted by eddy currents,
   and whether motion and eddy currents compound.
   It needs the phantom at ``NIFREEZE_PHANTOMS``, which the workflow restores
   with ``.github/actions/phantom-fixtures``; without it, it is skipped.

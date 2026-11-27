@@ -21,7 +21,7 @@
 #     https://www.nipreps.org/community/licensing/
 #
 """
-Noise of the synthetic reference datasets (see :doc:`/phantoms`).
+Noise of the synthetic reference datasets (see :doc:`/edd/phantoms`).
 
 The simulator writes noise-free images. Noise is added afterwards, so that one
 noise-free volume can be stored once and given the same noise in every dataset

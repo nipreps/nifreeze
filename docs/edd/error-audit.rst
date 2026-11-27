@@ -62,7 +62,7 @@ These use it:
   (`#584 <https://github.com/nipreps/nifreeze/issues/584>`__);
 - ``tools/registration/floor.py``, behind the registration floor
   (`#609 <https://github.com/nipreps/nifreeze/issues/609>`__,
-  :doc:`../registration`);
+  :doc:`registration-floor`);
 - the gates of ``test/test_e2e_motion.py``, which also remove the transform shared
   by all the estimates, composed before the truth (the estimate is the truth
   applied after that shared transform);
@@ -256,13 +256,13 @@ The motion truth is the sidecar's matrix, in the direction of the estimate (A).
 Earlier results agree, by other means: ``test_ANTs_config_b0`` and the convention
 tests of `#619 <https://github.com/nipreps/nifreeze/issues/619>`__, on synthetic
 volumes; and the noise-free registrations of the registration floor on Sherbrooke
-(:doc:`../registration`), whose median distance from the sidecar's matrices is 0.03
+(:doc:`registration-floor`), whose median distance from the sidecar's matrices is 0.03
 to 0.04 mm, at 1° and at 4° alike.
 A reversed truth would leave errors of millimeters that grow with the motion.
 
 **The residual that the right motion leaves is not interpolation alone.**
 TRXScan simulates each moved volume again, from the moved phantom
-(:doc:`../phantoms`), so a moved copy differs from any resampling of the reference.
+(:doc:`phantoms`), so a moved copy differs from any resampling of the reference.
 Its partial volumes are drawn anew on the grid, at every motion, and its diffusion
 contrast changes as the fibers turn relative to the gradient, more so the larger the
 rotation.
@@ -353,7 +353,7 @@ Deviations from the registration
 
 Reproducing
 -----------
-The results are in the phantom dataset (:doc:`../phantoms`), under
+The results are in the phantom dataset (:doc:`phantoms`), under
 ``derivatives/registration/error-audit``.
 ``<protocol>.tsv`` has one row per volume of each copy, and ``<protocol>.json``
 records the copies and the provenance of the run.

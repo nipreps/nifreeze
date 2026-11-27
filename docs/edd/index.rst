@@ -9,7 +9,7 @@ code or default that each outcome would change.
 The tracking issue `#614 <https://github.com/nipreps/nifreeze/issues/614>`__ lists
 every experiment, its status and its decision.
 
-The experiments run on the synthetic phantoms (:doc:`../phantoms`), where the truth
+The experiments run on the synthetic phantoms (:doc:`phantoms`), where the truth
 of every volume is known exactly.
 Each runs as a ``datalad run`` record in the phantom dataset, from a script under
 ``tools/registration/``, so every result traces back to the command and the
@@ -22,14 +22,23 @@ When a result calls for a change to the registered plan, the change is posted on
 issue before the run it affects, and the report keeps the registered result next to
 the one added after the fact (*post hoc*).
 
-The reports on registration accuracy (:doc:`../registration`) follow the same
-approach.
+The prediction gallery (:doc:`gallery`) shows what the models predict on real data.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
+   :caption: Material
 
+   phantoms
+   gallery
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Reports
+
+   registration-floor
    eddy-truth
    error-audit
    elastix-settings
    elastix-accuracy
    eddy-targets
+   gem-accuracy

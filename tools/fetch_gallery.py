@@ -28,7 +28,7 @@ The gallery pages are not tracked: the ``gallery`` workflow uploads them (one
 Runs triggered by a push or a manual dispatch publish; scheduled runs are only a
 fallback, used once the newer artifacts have expired (after 30 days).
 
-Run as ``python tools/fetch_gallery.py [--dest docs/gallery] [--strict]``. It needs
+Run as ``python tools/fetch_gallery.py [--dest docs/edd/gallery] [--strict]``. It needs
 the GitHub CLI with a token (``GH_TOKEN`` on CI, ``gh auth login`` locally).
 """
 
@@ -200,8 +200,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--dest",
         type=Path,
-        default=SPHINXEXT.parent / "gallery",
-        help="Where to write the pages (default: docs/gallery).",
+        default=SPHINXEXT.parent / "edd" / "gallery",
+        help="Where to write the pages (default: docs/edd/gallery).",
     )
     parser.add_argument(
         "--repo",

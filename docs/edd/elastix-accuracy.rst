@@ -22,7 +22,7 @@ held-out volumes as accurately as today's ANTs path, and how fast?
 
 Data
 ----
-The phantoms (:doc:`../phantoms`)
+The phantoms (:doc:`phantoms`)
     Sherbrooke (192 volumes at 2 mm) and HCP-YA (270 volumes at 1.25 mm), in the
     rigid-motion copies at 0.5, 1, 2 and 4 mm and degrees (motion seed 0, no eddy
     currents, noise 20261029): the copies of :doc:`elastix-settings`.

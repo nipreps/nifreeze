@@ -59,7 +59,7 @@ extensions = [
 ]
 
 # No notebooks are rendered at present: the prediction gallery is generated as
-# plain rST pages under gallery/, and the top-level notebooks are excluded below.
+# plain rST pages under edd/gallery/, and the notebooks are excluded below.
 # nbsphinx stays configured (and set to never execute, which would need the full
 # scientific stack + data downloads) so notebooks can return without re-wiring.
 nbsphinx_execute = "never"
@@ -136,9 +136,10 @@ exclude_patterns = [
 from gallery.datasets import DATASETS as GALLERY_DATASETS  # noqa: E402
 from gallery.pages import ensure_pages, provenance_rst  # noqa: E402
 
-GALLERY_DIR = Path(__file__).parent / "gallery"
+GALLERY_DIR = Path(__file__).parent / "edd" / "gallery"
 exclude_patterns += [
-    f"gallery/{name}.rst" for name in ensure_pages(GALLERY_DIR, [d.name for d in GALLERY_DATASETS])
+    f"edd/gallery/{name}.rst"
+    for name in ensure_pages(GALLERY_DIR, [d.name for d in GALLERY_DATASETS])
 ]
 rst_epilog = f".. |gallery_provenance| replace:: {provenance_rst(GALLERY_DIR)}\n"
 

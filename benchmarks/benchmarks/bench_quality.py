@@ -25,7 +25,7 @@
 ``track_quality_*`` benchmarks run each commit's
 :func:`~nifreeze.analysis.sensitivity.sensitivity` on the synthetic phantom that
 ``.github/actions/phantom-fixtures`` restores and points ``NIFREEZE_PHANTOMS`` to
-(``tools/phantoms/phantom.py fixture``, see ``docs/phantoms.rst``): the Sherbrooke
+(``tools/phantoms/phantom.py fixture``, see ``docs/edd/phantoms.rst``): the Sherbrooke
 protocol at 4 mm, 24 diffusion-weighted volumes, with the noise of seed 0. Every
 commit reads the same files, and the values are deterministic, so
 ``benchmarks/report.py`` judges them by their absolute change.

@@ -1,23 +1,5 @@
-Citing NiFreeze, and writing papers about it
-============================================
-
-How to cite
------------
-
-If you use NiFreeze in your research, please cite it using the below
-references as appropriate:
-
-.. literalinclude:: _static/citation.txt
-   :language: text
-
-The citation metadata are maintained in the repository's
-`CITATION.cff <https://github.com/nipreps/nifreeze/blob/main/CITATION.cff>`_
-file. The preferred citation is available through GitHub's
-*Cite this repository* `button <https://github.com/nipreps/nifreeze>`_,
-which provides APA and BibTeX formats.
-
 Writing a paper about NiFreeze
-------------------------------
+==============================
 NiFreeze follows the NiPreps community's guidelines on
 `recognizing contributions and publications
 <https://www.nipreps.org/community/CONTRIBUTING/#recognizing-contributions>`__:
@@ -64,4 +46,4 @@ It is generated for each release, from the root of the repository:
 
 .. code-block:: bash
 
-   uv run .maint/update_authors.py publication --release <version> --docs docs/citation.rst
+   uv run .maint/update_authors.py publication --release <version> --docs docs/developers/papers.rst

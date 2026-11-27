@@ -35,7 +35,8 @@ Authors are ranked by the lines they wrote that the repository still holds (``gi
 --line``, from git-extras), with the PIs last in papers. Run from the repository's root::
 
     uv run .maint/update_authors.py zenodo
-    uv run .maint/update_authors.py publication --release 26.0.0rc1 --docs docs/citation.rst
+    uv run .maint/update_authors.py publication \\
+        --release 26.0.0rc1 --docs docs/developers/papers.rst
 
 """
 

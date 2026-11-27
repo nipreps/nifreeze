@@ -20,14 +20,14 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""Draw the figures and tables of ``docs/registration.rst`` from the phantom dataset.
+"""Draw the figures and tables of ``docs/edd/registration-floor.rst`` from the phantom dataset.
 
 Usage::
 
     python tools/registration/floor_figures.py --dataset <dataset> \
         --out docs/_static/registration
 
-``<dataset>`` is the phantom dataset of ``docs/phantoms.rst``, with the results that
+``<dataset>`` is the phantom dataset of ``docs/edd/phantoms.rst``, with the results that
 ``tools/registration/floor.py`` wrote into ``derivatives/registration/floor``. The
 variants are named A to I in the order the script ran them. Images are shown in RAS
 orientation, with anterior up.

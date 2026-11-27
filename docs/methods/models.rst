@@ -1,4 +1,4 @@
-.. include:: links.rst
+.. include:: ../links.rst
 
 .. _models:
 
@@ -6,7 +6,7 @@
 Model implementation
 =====================
 This page collects implementation notes that complement the auto-generated API
-documentation (see :doc:`api/nifreeze.model`). It documents design decisions and
+documentation (see :doc:`/api/nifreeze.model`). It documents design decisions and
 empirical characterizations that are specific to *NiFreeze*'s **code** — not the
 underlying domain theory, which lives in the project's grounding knowledge base.
 

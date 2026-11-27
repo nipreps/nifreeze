@@ -1,19 +1,17 @@
-.. include:: links.rst
+.. include:: ../links.rst
 
-Registration accuracy
-=====================
+What limits registration to a perfect target
+============================================
 *NiFreeze* estimates head motion by registering each volume to a prediction of it.
 How accurate that registration can be is measured on the synthetic phantom
 (:doc:`phantoms`), where the true motion of every volume is known exactly.
 
-What limits registration to a perfect target
---------------------------------------------
-This section reports an experiment, with ANTs, on the error that remains when
+This page reports an experiment, with ANTs, on the error that remains when
 registration gets the best possible fixed image
 (`#609 <https://github.com/nipreps/nifreeze/issues/609>`__).
 
 The question
-~~~~~~~~~~~~
+------------
 The registration benchmark (``tools/registration/bench.py``,
 `#584 <https://github.com/nipreps/nifreeze/issues/584>`__) uses TRXScan's default
 adult phantom simulated with the Sherbrooke acquisition protocol, at that protocol's
@@ -65,7 +63,7 @@ They estimate what these settings achieve, not a limit of registration: other
 settings, or another registration library, may reach lower errors.
 
 Data
-~~~~
+----
 The phantom is TRXScan's adult brain under the Sherbrooke protocol
 (:doc:`phantoms`): 128 × 128 × 60 voxels of 2 mm, one b=0 volume, and 64 gradient
 directions at each of b=1000, 2000 and 3500 s/mm².
@@ -80,7 +78,7 @@ the diffusion contrast of a moved volume also changes as its fibers turn.
 This experiment uses the copies with *m* = 1 and *m* = 4, and every third volume:
 64 of the 192, of which 22 are at b=1000, 21 at b=2000 and 21 at b=3500.
 
-.. figure:: _static/registration/floor-orientations.svg
+.. figure:: ../_static/registration/floor-orientations.svg
    :width: 100%
 
    The 64 volumes this experiment registers, noise-free, played in order, a quarter
@@ -105,7 +103,7 @@ Diffusion weighting lowers the signal, so the ratio is lower at higher b-values.
 The brain mask (171,170 voxels) limits where ANTs computes the similarity, on the
 fixed image, and where the error is measured.
 
-.. figure:: _static/registration/floor-inputs.png
+.. figure:: ../_static/registration/floor-inputs.png
    :width: 100%
 
    One volume of each shell at *m* = 1, on an axial slice through the center of the
@@ -117,7 +115,7 @@ fixed image, and where the error is measured.
    head moved. The last column is the moving image that the benchmark registers.
 
 How the error is measured
-~~~~~~~~~~~~~~~~~~~~~~~~~
+-------------------------
 Registration returns a rigid transform, the *estimate*; the phantom's sidecars give
 the *true* transform.
 For each voxel inside the brain mask, the displacement error is the distance
@@ -131,14 +129,14 @@ Not registering at all (returning the identity) has the true motion as its error
 a median of 1.21 mm at *m* = 1, and 4.85 mm at *m* = 4.
 
 The ANTs settings
-~~~~~~~~~~~~~~~~~
+-----------------
 *NiFreeze* builds its ANTs command from the ``ants`` section of
 ``src/nifreeze/registration/config/rigid.yaml``.
 This is the command of the benchmark, with the file names replaced by placeholders:
 ``fixed.nii`` is the oracle, ``moving.nii`` the moved volume and ``mask.nii`` the
 brain mask.
 
-.. literalinclude:: _static/registration/floor-command.txt
+.. literalinclude:: ../_static/registration/floor-command.txt
    :language: bash
 
 The command runs two stages, one after the other, each estimating a rigid
@@ -197,7 +195,7 @@ The variants change only the second stage, or the images given to ANTs:
 .. csv-table:: The nine variants, and the second-stage options in which each differs
    from A, as ANTs receives them. Noise and the coding of the inputs are not ANTs
    options.
-   :file: _static/registration/floor-variants.csv
+   :file: ../_static/registration/floor-variants.csv
    :header-rows: 1
    :widths: auto
 
@@ -223,15 +221,15 @@ cores (four hardware threads), with ANTs 2.4.4.
 The seconds compare the variants with each other, not with other machines.
 
 Results
-~~~~~~~
+-------
 
 .. csv-table:: Mean displacement error within the brain (mm), median and p95 over
    64 volumes at each motion size, and the median seconds per registration.
-   :file: _static/registration/floor-results.csv
+   :file: ../_static/registration/floor-results.csv
    :header-rows: 1
    :widths: auto
 
-.. figure:: _static/registration/floor-errors.png
+.. figure:: ../_static/registration/floor-errors.png
    :width: 100%
 
    The error of every registration. Each point is one volume, colored by its shell
@@ -241,11 +239,11 @@ Results
    differ from A.
 
 .. csv-table:: Median error per shell (mm), with both motion sizes together.
-   :file: _static/registration/floor-shells.csv
+   :file: ../_static/registration/floor-shells.csv
    :header-rows: 1
    :widths: auto
 
-.. figure:: _static/registration/floor-residuals.png
+.. figure:: ../_static/registration/floor-residuals.png
    :width: 100%
 
    Where each estimate misplaces the center of the brain: the residual displacement
@@ -254,7 +252,7 @@ Results
    motion sizes. A bias would shift a cloud away from the origin; noise spreads it.
 
 What the results show
-~~~~~~~~~~~~~~~~~~~~~
+---------------------
 **Noise accounts for most of the error.**
 Without noise (B), the default settings miss by 0.04 mm; with noise (A), by 0.22
 mm.
@@ -328,7 +326,7 @@ and the remaining error is scatter.
 .. csv-table:: Mean residual of each variant over its 128 registrations: the shift of
    the brain's centroid (estimate minus truth) and the rotation of the estimate
    relative to the truth, about each axis.
-   :file: _static/registration/floor-bias.csv
+   :file: ../_static/registration/floor-bias.csv
    :header-rows: 1
    :widths: auto
 
@@ -340,7 +338,7 @@ With noise, its weaker signal widens the gap (A: 0.30 against 0.20 and 0.21 mm).
 Full resolution lowers it to 0.14 mm (C).
 
 Consequences
-~~~~~~~~~~~~
+------------
 - The benchmark's oracle error of about 0.2 mm is a property of the default settings
   on noisy data, not a limit of registration: at full resolution, the same command
   reaches 0.10 mm, and other settings may do better.
@@ -359,7 +357,7 @@ Consequences
   so that its prediction approaches the oracle.
 
 Open question
-~~~~~~~~~~~~~
+-------------
 Full resolution may help because of the resolution itself or because the similarity
 averages eight times as many points.
 Sweeping the sampling fraction at both shrink factors (for example, a random 18%,
@@ -367,7 +365,7 @@ Sweeping the sampling fraction at both shrink factors (for example, a random 18%
 as a larger sample at shrink factor 2 or smoothing before shrinking, reaches 0.1 mm.
 
 Reproducing
-~~~~~~~~~~~
+-----------
 The results live in the phantom dataset (:doc:`phantoms`), under
 ``derivatives/registration/floor``: ``sherbrooke.tsv`` has one row per
 registration, and ``sherbrooke.json`` records the variants with their full ANTs
