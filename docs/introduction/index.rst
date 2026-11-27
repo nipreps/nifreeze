@@ -2,7 +2,7 @@
 
 Overview
 ========
-Several neuroimaging modalities acquire a series of three-dimensional volumes:
+Often, neuroimaging modalities acquire a series of three-dimensional volumes:
 the diffusion-weighted volumes of a diffusion MRI (dMRI) scan, the volumes of a
 functional MRI (fMRI) run, the frames of a dynamic positron emission tomography (PET)
 scan.
@@ -17,9 +17,11 @@ When contrast changes from one volume to the next, as it does across the diffusi
 encodings of dMRI or as the tracer distributes during a PET scan, a volume and its
 reference differ in more than their position, and the registration confounds the two.
 
-*NiFreeze* gives each volume a registration target with its own contrast.
-A model of the signal, fit on all the *other* volumes, predicts the volume left out,
-and the volume is registered to its prediction (leave-one-volume-out).
+*NiFreeze* estimates head motion by generating *unmoved* predictions of
+the moved volume and finding a mapping through image registration.
+The *unmoved* reference volume is predicted from a model of the signal.
+The model is fit on all the *other* volumes so as not to bias the prediction,
+in effect applying a *leave-one-volume-out* approach.
 The data structures, the order in which volumes are visited and the estimator that
 registers them are the same for every modality; only the model of the signal changes
 (:doc:`/introduction/design`).
