@@ -74,52 +74,16 @@ and eddy-current-derived distortion estimation in dMRI.
 
 .. END NOTICE AND BADGES
 
-Diffusion and functional MRI (d/fMRI) generally employ echo-planar imaging (EPI) for fast
-whole-brain acquisition.
-Despite the rapid collection of volumes, typical repetition times are long enough for head motion
-to occur, which has been proven detrimental to both diffusion [1]_ and functional [2]_ MRI.
-In the case of dMRI, additional volume-wise, low-order spatial distortions are caused by
-eddy currents (EC), which appear as a result of quickly switching diffusion gradients.
-Unaccounted for EC distortion can result in incorrect local model fitting and poor downstream
-tractography results [3]_, [4]_.
-*FSL*'s ``eddy`` [5]_ is the most popular tool for EC distortion correction, and
-implements a leave-one-volume-out approach to estimate EC distortions.
-However, *FSL* has commercial restrictions that hinder application within open-source initiatives
-such as *NiPreps* [6]_.
-In addition, *FSL*'s development model discourages the implementation of alternative data-modeling
-approaches to broaden the scope of application (e.g., modalities beyond dMRI).
-*NiFreeze* is an open-source implementation of ``eddy``'s approach to estimate artifacts
-that permits alternative models that apply to, for instance, head motion estimation in fMRI
-and positron-emission tomography (PET) data.
-Like ``eddy``, *NiFreeze* estimates each volume's motion and distortion with a
-leave-one-volume-out scheme: a signal model fit on all the *other* volumes
-synthesizes an independent, same-contrast registration target for the held-out
-volume, sidestepping the ill-posed volume-to-volume registration of
-direction-varying dMRI contrast.
-
-.. BEGIN FLOWCHART
+Diffusion MRI (dMRI), functional MRI and dynamic PET acquire a series of volumes, and the
+head moves while the series is acquired.
+Realignment usually registers each volume to a reference volume, which works only when all
+volumes show the same contrast; contrast changes across the diffusion encodings of dMRI, and
+as the tracer distributes during a PET scan.
+*NiFreeze* fits a model of the signal on all the other volumes, predicts the volume left out,
+and registers the volume to its prediction, a target with the volume's own contrast.
+In dMRI, it also estimates the distortions that eddy currents cause.
+The `Overview <https://www.nipreps.org/nifreeze/main/introduction/index.html>`__ describes the
+problem and the models for each modality.
 
 .. image:: https://raw.githubusercontent.com/nipreps/nifreeze/main/docs/_static/nifreeze-flowchart.png
    :alt: The nifreeze flowchart
-
-.. END FLOWCHART
-
-.. [1] Yendiki et al. (2014) *Spurious group differences due to head motion in a diffusion MRI study*.
-    NeuroImage **88**:79-90.
-
-.. [2] Power et al. (2012) *Spurious but systematic correlations in functional connectivity MRI
-    networks arise from subject motion*. NeuroImage **59**:2142-2154.
-
-.. [3] Zhuang et al. (2006) *Correction of eddy-current distortions in diffusion tensor images using
-    the known directions and strengths of diffusion gradients*. J Magn Reson Imaging **24**:1188-1193.
-
-.. [4] Andersson et al. (2012) *A comprehensive Gaussian Process framework for correcting distortions
-    and movements in diffusion images*. In: 20th SMRT & 21st ISMRM, Melbourne, Australia.
-
-.. [5] Andersson & Sotiropoulos (2015) *Non-parametric representation and prediction of single- and
-    multi-shell diffusion-weighted MRI data using Gaussian processes*. NeuroImage **122**:166-176.
-
-.. [6] Esteban (2025) *Standardized preprocessing in neuroimaging: enhancing reliability and reproducibility*.
-    In: Whelan, R., & Lemaître, H. (eds.) *Methods for Analyzing Large Neuroimaging Datasets. Neuromethods*,
-    vol. **218**, pp. 153-179. Humana, New York, NY.
-    doi:`10.1007/978-1-0716-4260-3_8 <https://doi.org/10.1007/978-1-0716-4260-3_8>`__.
