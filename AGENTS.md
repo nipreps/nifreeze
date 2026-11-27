@@ -109,8 +109,10 @@ tox -e spellcheck
 ### Documentation
 ```bash
 python tools/fetch_gallery.py  # gallery pages (needs `gh auth`); placeholders otherwise
-curl -fsSL -o docs/_static/gem/corrections-sherbrooke.svg \
-  https://gin.g-node.org/nipreps-data/tests-nifreeze/raw/master/docs/corrections-sherbrooke.svg  # the GEM page's animation (26 MB)
+for name in phantom sherbrooke; do  # the GEM page's animations (19 and 26 MB)
+  curl -fsSL -o docs/_static/gem/corrections-${name}.svg \
+    https://gin.g-node.org/nipreps-data/tests-nifreeze/raw/master/docs/corrections-${name}.svg
+done
 make -C docs/ html
 ```
 
