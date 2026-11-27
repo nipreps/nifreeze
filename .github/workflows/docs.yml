@@ -115,6 +115,14 @@ jobs:
         fi
         python tools/fetch_gallery.py "${ARGS[@]}"
 
+    # The GEM page's animation of the corrections (26 MB) is kept on GIN; without it, the
+    # page links to it
+    - name: Fetch the corrections animation
+      run: |
+        curl -fsSL --retry 3 -o docs/_static/gem/corrections-sherbrooke.svg \
+          https://gin.g-node.org/nipreps-data/tests-nifreeze/raw/master/docs/corrections-sherbrooke.svg \
+          || echo "::warning::The corrections animation could not be fetched from GIN"
+
     - name: Build docs
       run: |
         python -m hatch build --hooks-only
