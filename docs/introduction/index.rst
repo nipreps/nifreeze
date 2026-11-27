@@ -17,7 +17,7 @@ When contrast changes from one volume to the next, as it does across the diffusi
 encodings of dMRI or as the tracer distributes during a PET scan, a volume and its
 reference differ in more than their position, and the registration confounds the two.
 
-*NiFreeze* estimates head motion by generating *unmoved* predictions of
+*NiFreeze* estimates head motion by generating an *unmoved* prediction of
 the moved volume and finding a mapping through image registration.
 The *unmoved* reference volume is predicted from a model of the signal.
 The model is fit on all the *other* volumes so as not to bias the prediction,
@@ -50,10 +50,9 @@ dMRI).
 *NiFreeze* is an open-source implementation of ``eddy``'s approach to estimate
 artifacts that permits alternative models that apply to, for instance, head motion
 estimation in fMRI and PET data.
-Like ``eddy``, *NiFreeze* estimates each volume's motion and distortion with a
-leave-one-volume-out scheme: a signal model fit on all the *other* volumes synthesizes
-an independent, same-contrast registration target for the held-out volume, sidestepping
-the ill-posed volume-to-volume registration of direction-varying dMRI contrast.
+Like ``eddy``, *NiFreeze* estimates each volume's motion and distortion this way,
+sidestepping the ill-posed volume-to-volume registration of direction-varying dMRI
+contrast.
 The diffusion models are described in :doc:`/methods/models`, and the global eddy model,
 which estimates the eddy currents of all volumes at once, in :doc:`/methods/gem`.
 

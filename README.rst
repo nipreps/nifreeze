@@ -79,8 +79,8 @@ head moves while the series is acquired.
 Realignment usually registers each volume to a reference volume, which works only when all
 volumes show the same contrast; contrast changes across the diffusion encodings of dMRI, and
 as the tracer distributes during a PET scan.
-*NiFreeze* fits a model of the signal on all the other volumes, predicts the volume left out,
-and registers the volume to its prediction, a target with the volume's own contrast.
+*NiFreeze* estimates head motion by registering each volume to an *unmoved* prediction of it,
+from a model of the signal fit on all the other volumes.
 In dMRI, it also estimates the distortions that eddy currents cause.
 The `Overview <https://www.nipreps.org/nifreeze/main/introduction/index.html>`__ describes the
 problem and the models for each modality.
