@@ -173,6 +173,53 @@ for head motion alone.
 
     taskset -c 0-5 python tools/gem_sherbrooke.py --work <work> --out docs/_static/gem
 
+The animation below plays how the default run corrects each volume, on three axial,
+three coronal and three sagittal cuts.
+Each volume goes through five steps:
+
+1. the volume as found (*original*);
+2. a quiver of where head motion sends its voxels;
+3. the data travelling there (*realigned*);
+4. a quiver of where GEM's field sends them next;
+5. the data travelling to the corrected position (*corrected*).
+
+.. raw:: html
+
+   <object data="../_static/gem/corrections-sherbrooke.svg" type="image/svg+xml"
+           style="width: 100%; aspect-ratio: 592 / 492">
+     <p><a href="https://gin.g-node.org/nipreps-data/tests-nifreeze/raw/master/docs/corrections-sherbrooke.svg">
+     The animation</a> (26 MB) is downloaded when the documentation is built.</p>
+   </object>
+
+The dashed line outlines the brain mask at the reference position.
+The solid line is the mask moved by head motion: it should fit the original volume, up
+to the eddy currents, and it travels with the data into the reference.
+Arrows are drawn 10 times longer than head motion moves the voxels, and 30 times
+longer than the eddy currents do; the data travel at true scale.
+A displacement across the cut is drawn as a circle of that size: ⊙ toward you, ⊗ away.
+With phase encoding along :math:`j`, GEM moves voxels only across the coronal cuts.
+In each cut's corner, the b-vector is projected onto the cut.
+It turns with the head during the realignment, as the b-vectors the command line
+writes do.
+GEM's field is drawn zero at the centre of the field of view, where GEM fits it, and
+the shift it makes there counts as head motion.
+Either way, the last frame is the volume the command line writes.
+Between the frames of each step, which are exact, the data move along the cut as the
+step moves it, while the part of the motion across the cut dissolves.
+Every volume plays in turn.
+The buttons below the animation, or the keys, change the speed (``-`` and ``+``),
+pause (space), go to the previous or next volume (arrow keys), and the bar jumps to any
+volume.
+
+The animation is drawn from the default run's ``--write-hdf5`` output:
+
+.. code-block:: python
+
+    from nifreeze.data.dmri import DWI
+    from nifreeze.viz.corrections import animate_corrections
+
+    animate_corrections(DWI.from_filename("dwi.h5"), "corrections.svg")
+
 Each variant is one ``GEM``, given as the pass's backend:
 
 .. code-block:: python

@@ -31,7 +31,10 @@ NiReports' reportlets do.
 
 Writes, in ``<work>``: the brain mask (``median_otsu`` on the b=0), each run's outputs,
 log and time (``motion/``, ``default/``, ``*.log``, ``times.json``), and ``sizes.tsv``
-(one row per diffusion-weighted volume); in ``<out>``, ``gem-sherbrooke.svg``.
+(one row per diffusion-weighted volume); in ``<out>``, ``gem-sherbrooke.svg`` and
+``corrections-sherbrooke.svg``, how the default run corrects each volume (made by
+:func:`nifreeze.viz.corrections.animate_corrections`; about 26 MB, kept on GIN and
+fetched by the documentation's build).
 On CPUs 0-5::
 
     taskset -c 0-5 python tools/gem_sherbrooke.py --work <work> --out docs/_static/gem
@@ -58,6 +61,7 @@ from skimage.measure import find_contours
 
 from nifreeze.data import dmri
 from nifreeze.registration.utils import displacements_within_mask
+from nifreeze.viz.corrections import animate_corrections
 
 PHASE_ENCODING = "j"
 """The phase-encoding direction the runs are given (the data have no sidecar)."""
@@ -270,6 +274,13 @@ def figure(dwi: Path, bval: Path, mask: Path, work: Path, table: np.ndarray, out
     return path
 
 
+def animation(work: Path, out: Path) -> Path:
+    """How the default run corrects each volume, animated."""
+    path = out / "corrections-sherbrooke.svg"
+    animate_corrections(dmri.DWI.from_filename(output(work, "default", ".h5")), path)
+    return path
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--work", type=Path, required=True, help="the runs' folder")
@@ -289,8 +300,11 @@ def main(argv: list[str] | None = None) -> None:
             f"{name}: {np.median(table[:, col]):.2f} mm in the median volume (median in "
             f"the brain), at most {table[:, col + 1].max():.2f} mm"
         )
-    path = figure(dwi, bval, mask, args.work, table, args.out)
-    print(f"{path}: {path.stat().st_size / 1e6:.1f} MB")
+    for path in (
+        figure(dwi, bval, mask, args.work, table, args.out),
+        animation(args.work, args.out),
+    ):
+        print(f"{path}: {path.stat().st_size / 1e6:.1f} MB")
 
 
 if __name__ == "__main__":
