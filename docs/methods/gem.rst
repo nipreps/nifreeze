@@ -173,7 +173,7 @@ for head motion alone.
 
     taskset -c 0-5 python tools/gem_sherbrooke.py --work <work> --out docs/_static/gem
 
-The animation below plays how the default run corrects each volume, on three axial,
+The animations below play how the default run corrects each volume, on three axial,
 three coronal and three sagittal cuts.
 Each volume goes through five steps:
 
@@ -182,6 +182,40 @@ Each volume goes through five steps:
 3. the data travelling there (*realigned*);
 4. a quiver of where GEM's field sends them next;
 5. the data travelling to the corrected position (*corrected*).
+
+On the phantom (:doc:`/edd/phantoms`), the copy with the largest head motion and eddy
+currents shows both corrections at work, against a known truth.
+Under the Sherbrooke protocol, every diffusion-weighted volume of this copy is turned
+by 4° and shifted by 4 mm, and its eddy currents move some voxel of the brain by 8
+voxels (16 mm) along phase encoding (:math:`j-`).
+The copy is noise-free, as simulated.
+The default run took 15 min on six CPUs.
+
+.. raw:: html
+
+   <object data="../_static/gem/corrections-phantom.svg" type="image/svg+xml"
+           style="width: 100%; aspect-ratio: 598 / 498">
+     <p><a href="https://gin.g-node.org/nipreps-data/tests-nifreeze/raw/master/docs/corrections-phantom.svg">
+     The animation</a> (19 MB) is downloaded when the documentation is built.</p>
+   </object>
+
+In the median volume, the estimated head motion moves the brain by 4.63 mm (the median
+over the brain), against a true 4.77 mm.
+The estimated eddy currents move it by 2.30 mm, against a true 2.56 mm.
+The corrected volume ends 1.67 mm from where the truth would put it: 1.30 mm at b=1000,
+1.78 mm at b=2000 and 2.46 mm at b=3500.
+Four volumes, all at b=3500, end more than 5 mm away.
+In the worst, volume 181, head motion is estimated at 13.2 mm against a true 4.6 mm.
+Its solid outline does not fit the original volume, and its corrected cuts are off the
+reference.
+``tools/gem_phantom.py`` makes the run and the animation:
+
+.. code-block:: bash
+
+    taskset -c 0-5 python tools/gem_phantom.py --dataset <phantoms> --work <work> \
+        --out docs/_static/gem
+
+On DIPY's Sherbrooke data, both corrections are far smaller:
 
 .. raw:: html
 
@@ -194,8 +228,11 @@ Each volume goes through five steps:
 The dashed line outlines the brain mask at the reference position.
 The solid line is the mask moved by head motion: it should fit the original volume, up
 to the eddy currents, and it travels with the data into the reference.
-Arrows are drawn 10 times longer than head motion moves the voxels, and 30 times
-longer than the eddy currents do; the data travel at true scale.
+Arrows are drawn longer than the voxels move, by the factors in each legend.
+On the phantom, they are as long as head motion moves the voxels, and 2.5 times longer
+than the eddy currents do.
+On the Sherbrooke data, they are 10 and 30 times longer.
+The data travel at true scale.
 A displacement across the cut is drawn as a circle of that size: ⊙ toward you, ⊗ away.
 With phase encoding along :math:`j`, GEM moves voxels only across the coronal cuts.
 In each cut's corner, the b-vector is projected onto the cut.
