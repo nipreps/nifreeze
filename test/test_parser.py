@@ -386,6 +386,21 @@ def test_parser_no_instant_update(tmp_path):
     assert args.instant_update is False
 
 
+def test_parser_pet_timing_file(tmp_path):
+    """``--timing-file`` forwards ``temporal_file`` for PET NIfTI inputs."""
+    input_file = tmp_path / "pet.nii.gz"
+    timing_file = tmp_path / "pet.json"
+    input_file.touch()
+    timing_file.touch()
+
+    args, extra_kwargs, estimator_kwargs, _ = parse_args(
+        [str(input_file), "--models", "pet", "--timing-file", str(timing_file)]
+    )
+    assert args.models == ["pet"]
+    assert extra_kwargs["temporal_file"] == timing_file
+    assert estimator_kwargs["pet"] == {"single_fit": False}
+
+
 @pytest.mark.parametrize(
     "models",
     [

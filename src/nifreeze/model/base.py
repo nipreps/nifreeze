@@ -103,12 +103,15 @@ class ModelFactory:
 
             return GQIKRRModel(kwargs.pop("dataset"), **kwargs)
 
-        if model.lower() in ("gqi", "dti", "dki", "pet"):
+        if model.lower() == "pet":
+            from nifreeze.model.pet import BSplinePETModel
+
+            return BSplinePETModel(kwargs.pop("dataset"), **kwargs)
+
+        if model.lower() in ("gqi", "dti", "dki"):
             from importlib import import_module
 
-            thismod = import_module(
-                f"nifreeze.model.{'pet' if model.lower() == 'pet' else 'dmri'}"
-            )
+            thismod = import_module("nifreeze.model.dmri")
             Model = getattr(thismod, f"{model.upper()}Model")
             return Model(kwargs.pop("dataset"), **kwargs)
 
