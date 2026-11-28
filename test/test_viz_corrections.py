@@ -95,19 +95,54 @@ def test_split_keeps_the_mapping():
     np.testing.assert_allclose(field @ [*point, 1.0], [*point, 1.0], atol=1e-12)
 
 
-def test_the_corrected_frame_is_the_command_line_output():
-    """The last frame is the volume the command line writes, the middle one head motion."""
-    dwi = _dwi()
+@pytest.mark.parametrize("eddy", [True, False])
+def test_the_frames_are_the_corrections(eddy):
+    """
+    The middle frame is the volume read through the field alone, and the last one the
+    volume the command line writes, each as the command line resamples it.
+    """
+    dwi = _dwi(eddy=eddy)
     written = np.asanyarray(to_nifti(dwi).dataobj)
-    assert dwi.motion is not None and dwi.eddy is not None
+    assert dwi.motion is not None
+    eddies = np.repeat(np.eye(4)[None], len(dwi), 0) if dwi.eddy is None else dwi.eddy
+    point = np.array([3.0, -4.0, 2.0])
+    fields = np.stack(
+        [corrections._split(m, e, point)[1] for m, e in zip(dwi.motion, eddies, strict=True)]
+    )
+    # The same volumes, with no head motion and the fields as their eddy currents
+    unwarped = _dwi(eddy=eddy)
+    unwarped.motion, unwarped.eddy = None, fields
+    in_place = np.asanyarray(to_nifti(unwarped).dataobj)
 
     for index in range(len(dwi)):
-        head, _ = corrections._split(dwi.motion[index], dwi.eddy[index], np.zeros(3))
-        frames = corrections._frames(dwi, index, head)
+        frames = corrections._frames(dwi, index, fields[index])
+        assert list(frames) == (["o", "e", "r"] if eddy else ["o", "r"])
         np.testing.assert_array_equal(frames["o"], dwi.dataobj[index])
-        np.testing.assert_array_equal(frames["c"], written[..., index])
-        realigned = corrections._resample(head, nb.Nifti1Image(dwi.dataobj[index], dwi.affine), 3)
-        np.testing.assert_array_equal(frames["r"], realigned)
+        if eddy:
+            np.testing.assert_array_equal(frames["e"], in_place[..., index])
+        np.testing.assert_array_equal(frames["r"], written[..., index])
+
+
+def test_the_field_acts_where_the_volume_was_acquired():
+    """
+    The field moves voxels along phase encoding in the volume as acquired, however the
+    head turned: across the coronal cuts only, and up and down the axial ones.
+    """
+    dwi = _dwi()
+    assert dwi.motion is not None
+    dwi.motion[0] = _rigid([0, 0, 20], [1.0, -2.0, 0.5])  # a large turn about z
+    layout = corrections._layout(dwi, cuts=3)
+    slot = corrections._volume(dwi, 0, layout, np.zeros(3), (10.0, 30.0), 75)
+    paths = re.findall(r'class="q-e" d="([^"]*)"', slot)
+    assert len(paths) == len(layout.views)
+
+    for view, path in zip(layout.views, paths, strict=True):
+        arrows = _arrows(path)
+        if view.orientation == "coronal":
+            assert len(arrows) == 0 and "a" in path
+        elif view.orientation == "axial":
+            assert len(arrows) > 0
+            np.testing.assert_allclose(arrows[:, 0], 0.0, atol=0.06)
 
 
 def test_the_layout_is_canonical():
@@ -196,6 +231,44 @@ def test_the_compass_turns_with_the_head():
     np.testing.assert_allclose([a, b, c, d], [0.0, 1.0, -1.0, 0.0], atol=1e-4)
 
 
+def _opacity(style: str, name: str, time: float, end: float) -> float:
+    """An element's opacity at a time (s), held from the last stop before it."""
+    line = next(row for row in style.splitlines() if row.startswith(f"@keyframes {name} "))
+    stops = [(float(p), float(o)) for p, o in re.findall(r"([\d.]+)% \{ opacity: ([\d.]+);", line)]
+    return [o for p, o in stops if p <= 100 * time / end][-1]
+
+
+# What shows at times away from any transition: the original, the field's quiver, the
+# eddy-corrected volume under head motion's quiver, and the realigned volume
+_SHOWN = {
+    True: {
+        0.5: {"lab-o", "im-o", "mo"},
+        2.0: {"lab-o", "im-o", "mo", "q-e"},
+        6.0: {"lab-e", "im-e", "mc", "q-m"},
+        9.5: {"lab-r", "im-r"},
+    },
+    False: {
+        0.5: {"lab-o", "im-o", "mc"},
+        2.0: {"lab-o", "im-o", "mc", "q-m"},
+        5.75: {"lab-r", "im-r"},
+    },
+}
+
+
+@pytest.mark.parametrize("eddy", [True, False])
+def test_the_steps_play_in_order(eddy):
+    """The field is undone first, then head motion, and the solid outline fades on arrival."""
+    timing = Timing()
+    style = corrections._style(timing, eddy)
+    end = timing.marks(eddy)["end"]
+    names = {"lab-o", "lab-r", "im-o", "im-r", "mc", "q-m"}
+    names |= {"lab-e", "im-e", "mo", "q-e"} if eddy else set()
+
+    for time, shown in _SHOWN[eddy].items():
+        found = {name for name in names if _opacity(style, name, time, end) == 1}
+        assert found == shown, time
+
+
 @pytest.mark.parametrize("eddy", [True, False])
 def test_the_document(tmp_path, eddy):
     """One slot per volume, in the order given, the first one playing, labels and script."""
@@ -211,7 +284,7 @@ def test_the_document(tmp_path, eddy):
     assert [g.get("data-index") for g in slots] == ["2", "0"]
     assert [g.get("class") for g in slots] == ["slot on", "slot"]
     labels = [t.text for t in root.iterfind(".//svg:text", ns) if "state" in t.get("class", "")]
-    expected = ["original", "realigned", "corrected"] if eddy else ["original", "corrected"]
+    expected = ["original", "eddy-corrected", "realigned"] if eddy else ["original", "realigned"]
     assert labels == expected * 2
     assert root.find("svg:script", ns) is not None
     style = root.findtext("svg:style", "", ns)
@@ -219,8 +292,15 @@ def test_the_document(tmp_path, eddy):
     end = Timing(hold=0.5).marks(eddy)["end"]
     assert f"animation: cycle {end:g}s" in style
     legend = [t.text for t in root.iterfind(".//svg:text", ns) if "arrows" in (t.text or "")]
-    assert legend == (["head motion (arrows ×10)", "eddy currents (arrows ×30)"][: 1 + eddy])
+    assert legend == (["eddy currents (arrows ×30)"] if eddy else []) + [
+        "head motion (arrows ×10)"
+    ]
     images = list(root.iter("{http://www.w3.org/2000/svg}image"))
     assert len(images) == 2 * (3 if eddy else 2)
+    # The field is undone first: its travel plays inside the head motion's
+    travels = [g for g in root.iter("{http://www.w3.org/2000/svg}g") if g.get("class") == "go-m"]
+    assert travels
+    for travel in travels:
+        assert (travel.find("svg:g[@class='go-e']", ns) is not None) is eddy
     for matrix in re.findall(r"matrix\(([^)]*)\)", svg):
         assert np.isfinite(np.array(matrix.split(","), dtype=float)).all()
