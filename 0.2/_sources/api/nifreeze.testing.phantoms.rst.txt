@@ -1,0 +1,7 @@
+nifreeze.testing.phantoms module
+================================
+
+.. automodule:: nifreeze.testing.phantoms
+   :members:
+   :undoc-members:
+   :show-inheritance:

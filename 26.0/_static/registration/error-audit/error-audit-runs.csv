@@ -1,0 +1,3 @@
+Protocol,Run record,NiFreeze commit,Jobs,Wall time (h:mm:ss),Largest memory of one process (GB)
+Sherbrooke (2 mm),e962d46,527b6765,12,19:34.90,5.5
+HCP-YA (1.25 mm),2a95947,527b6765,12,1:39:20,20.7

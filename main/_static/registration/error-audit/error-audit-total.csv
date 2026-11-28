@@ -1,0 +1,9 @@
+Protocol,Motion,Volumes,M x: median p99,M x - d(M x) u: median p99,M x - d_w(M x) u: median p99,M x + d(M x) u: median p99
+Sherbrooke (2 mm),0.5,576,0.317,0.122,0.123,0.432
+Sherbrooke (2 mm),1,576,0.312,0.143,0.144,0.430
+Sherbrooke (2 mm),2,576,0.315,0.145,0.145,0.430
+Sherbrooke (2 mm),4,576,0.320,0.153,0.154,0.433
+HCP-YA (1.25 mm),0.5,810,0.293,0.119,0.120,0.412
+HCP-YA (1.25 mm),1,810,0.293,0.124,0.124,0.411
+HCP-YA (1.25 mm),2,810,0.293,0.125,0.126,0.412
+HCP-YA (1.25 mm),4,810,0.295,0.128,0.128,0.413

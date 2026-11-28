@@ -1,0 +1,17 @@
+nifreeze.viz package
+====================
+
+.. automodule:: nifreeze.viz
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   nifreeze.viz.bland_altman
+   nifreeze.viz.motion_viz
+   nifreeze.viz.signals

@@ -1,0 +1,7 @@
+nifreeze.registration.elastix module
+====================================
+
+.. automodule:: nifreeze.registration.elastix
+   :members:
+   :show-inheritance:
+   :undoc-members:

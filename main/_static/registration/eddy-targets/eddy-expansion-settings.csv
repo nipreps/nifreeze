@@ -1,0 +1,11 @@
+Copy,Removed,Median difference from the default [95% interval],Verdict
+m2s0e2,no-clipping,"-0.066% [-0.077%, -0.054%]",better
+m2s0e2,no-histogram-matching,"-0.054% [-0.059%, -0.050%]",better
+m2s0e2,no-mask,"-0.400% [-0.414%, -0.378%]",better
+m2s0e2,no-smoothed-stage,"+0.001% [+0.000%, +0.001%]",not worse
+m2s0e2,no-winsorizing,"+0.000% [+0.000%, +0.000%]",not worse
+unmoved,no-clipping,"+0.003% [-0.003%, +0.011%]",not worse
+unmoved,no-histogram-matching,"-0.033% [-0.036%, -0.031%]",not worse
+unmoved,no-mask,"-0.452% [-0.471%, -0.445%]",better
+unmoved,no-smoothed-stage,"+0.008% [+0.007%, +0.009%]",not worse
+unmoved,no-winsorizing,"+0.000% [+0.000%, +0.000%]",not worse

@@ -1,0 +1,9 @@
+Fixed image,Motion (mm and degrees),Direct mapping - ANTs (mm),Three-level pyramid - ANTs (mm),Three-level pyramid - direct mapping (mm)
+"Prediction, unmoved data",1,"-0.004 [-0.015, +0.014], not worse","-0.008 [-0.017, +0.005], not worse","-0.007 [-0.014, +0.004], not worse"
+"Prediction, unmoved data",2,"+0.008 [-0.006, +0.012], not worse","-0.005 [-0.015, +0.009], not worse","-0.008 [-0.016, +0.008], not worse"
+"Prediction, unmoved data",4,"+0.009 [-0.012, +0.020], inconclusive","-0.004 [-0.012, +0.005], not worse","-0.010 [-0.017, +0.000], not worse"
+"Prediction, unmoved data",8,"-0.007 [-0.018, +0.015], not worse","-0.014 [-0.020, -0.006], not worse","-0.003 [-0.010, +0.004], not worse"
+"Prediction, moved data",1,"-0.004 [-0.019, +0.001], not worse","-0.011 [-0.022, -0.005], not worse","-0.010 [-0.015, +0.003], not worse"
+"Prediction, moved data",2,"+0.005 [-0.039, +0.021], inconclusive","-0.014 [-0.026, +0.016], not worse","-0.005 [-0.026, +0.019], not worse"
+"Prediction, moved data",4,"-0.141 [-0.213, -0.051], better","-0.036 [-0.094, +0.043], inconclusive","+0.085 [+0.046, +0.128], worse"
+"Prediction, moved data",8,"-0.775 [-1.017, -0.460], better","-0.409 [-0.562, -0.129], better","+0.377 [+0.143, +0.548], worse"

@@ -1,0 +1,655 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="nifreeze.registration.utils module" href="nifreeze.registration.utils.html"><link rel="prev" title="nifreeze.registration.gem module" href="nifreeze.registration.gem.html">
+
+    <!-- Generated with Sphinx 9.2.0 and Furo 2025.12.19 -->
+        <title>nifreeze.registration.itk_backend module - NiFreeze</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/version-switch.css?v=96f56ebb" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">NiFreeze</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">NiFreeze</span>
+  
+</a><div id="nf-versions" class="nf-versions">
+  <details>
+    <summary>26.1.0.dev103 (development)</summary>
+    <ul></ul>
+  </details>
+</div><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/design.html">Design Principles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/citing.html">Citing NiFreeze</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../usage/index.html">How to use</a><input aria-label="Toggle navigation of How to use" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../usage/cli.html">Running <em>NiFreeze</em></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/python.html">Using <em>NiFreeze</em> from Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/data.html">Data and file formats</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../methods/models.html">Model implementation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methods/gem.html">The global eddy model (GEM)</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Experiment-driven development</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../edd/index.html">Experiment-driven development</a><input aria-label="Toggle navigation of Experiment-driven development" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../edd/phantoms.html">Synthetic reference data</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../edd/gallery.html">Prediction gallery</a><input aria-label="Toggle navigation of Prediction gallery" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../edd/gallery/ds000206.html">Legacy DTI (ds000206)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../edd/gallery/ds000114.html">Single-shell HARDI (ds000114)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../edd/gallery/ds003138.html">Multi-shell (ds003138)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../edd/gallery/ds004737.html">DSI (ds004737)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../edd/registration-floor.html">What limits registration to a perfect target</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../edd/eddy-truth.html">The eddy-current truth</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../edd/error-audit.html">The error audit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../edd/elastix-settings.html">Elastix’s settings, mapped from ANTs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../edd/elastix-accuracy.html">Elastix against ANTs, on held-out volumes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../edd/eddy-targets.html">The targets of the eddy-current pass</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../edd/gem-accuracy.html">GEM’s accuracy on the phantom</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developers</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../developers/index.html">For developers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/extending.html">Extending <em>NiFreeze</em></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/papers.html">Writing a paper about NiFreeze</a></li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../developers/api.html">API reference</a><input aria-label="Toggle navigation of API reference" checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.analysis.html">nifreeze.analysis package</a><input aria-label="Toggle navigation of nifreeze.analysis package" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.filtering.html">nifreeze.analysis.filtering module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.measure_agreement.html">nifreeze.analysis.measure_agreement module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.motion.html">nifreeze.analysis.motion module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.phantoms.html">nifreeze.analysis.phantoms module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.registration.html">nifreeze.analysis.registration module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.sensitivity.html">nifreeze.analysis.sensitivity module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.analysis.similarity.html">nifreeze.analysis.similarity module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.cli.html">nifreeze.cli package</a><input aria-label="Toggle navigation of nifreeze.cli package" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.cli.parser.html">nifreeze.cli.parser module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.cli.run.html">nifreeze.cli.run module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.data.html">nifreeze.data package</a><input aria-label="Toggle navigation of nifreeze.data package" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="nifreeze.data.dmri.html">nifreeze.data.dmri package</a><input aria-label="Toggle navigation of nifreeze.data.dmri package" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="nifreeze.data.dmri.base.html">nifreeze.data.dmri.base module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="nifreeze.data.dmri.io.html">nifreeze.data.dmri.io module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="nifreeze.data.dmri.utils.html">nifreeze.data.dmri.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="nifreeze.data.pet.html">nifreeze.data.pet package</a><input aria-label="Toggle navigation of nifreeze.data.pet package" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="nifreeze.data.pet.base.html">nifreeze.data.pet.base module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="nifreeze.data.pet.io.html">nifreeze.data.pet.io module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="nifreeze.data.pet.utils.html">nifreeze.data.pet.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.data.base.html">nifreeze.data.base module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.data.filtering.html">nifreeze.data.filtering module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.data.splitting.html">nifreeze.data.splitting module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.data.utils.html">nifreeze.data.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="nifreeze.estimator.html">nifreeze.estimator module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nifreeze.exceptions.html">nifreeze.exceptions module</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.model.html">nifreeze.model package</a><input aria-label="Toggle navigation of nifreeze.model package" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.model.base.html">nifreeze.model.base module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.model.dki.html">nifreeze.model.dki module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.model.dmri.html">nifreeze.model.dmri module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.model.gpr.html">nifreeze.model.gpr module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.model.gqi.html">nifreeze.model.gqi module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.model.lovo.html">nifreeze.model.lovo module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.model.pet.html">nifreeze.model.pet module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current has-children"><a class="reference internal" href="nifreeze.registration.html">nifreeze.registration package</a><input aria-label="Toggle navigation of nifreeze.registration package" checked="" class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.registration.ants.html">nifreeze.registration.ants module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.registration.base.html">nifreeze.registration.base module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.registration.elastix.html">nifreeze.registration.elastix module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.registration.gem.html">nifreeze.registration.gem module</a></li>
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">nifreeze.registration.itk_backend module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.registration.utils.html">nifreeze.registration.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.testing.html">nifreeze.testing package</a><input aria-label="Toggle navigation of nifreeze.testing package" class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.testing.perturbations.html">nifreeze.testing.perturbations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.testing.phantoms.html">nifreeze.testing.phantoms module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.testing.simulations.html">nifreeze.testing.simulations module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.utils.html">nifreeze.utils package</a><input aria-label="Toggle navigation of nifreeze.utils package" class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" role="switch" type="checkbox"/><label for="toctree-checkbox-13"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.utils.iterators.html">nifreeze.utils.iterators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.utils.ndimage.html">nifreeze.utils.ndimage module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="nifreeze.viz.html">nifreeze.viz package</a><input aria-label="Toggle navigation of nifreeze.viz package" class="toctree-checkbox" id="toctree-checkbox-14" name="toctree-checkbox-14" role="switch" type="checkbox"/><label for="toctree-checkbox-14"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.viz.bland_altman.html">nifreeze.viz.bland_altman module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.viz.corrections.html">nifreeze.viz.corrections module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.viz.motion_viz.html">nifreeze.viz.motion_viz module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="nifreeze.viz.signals.html">nifreeze.viz.signals module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">About</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../changes.html">What’s new?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">References</a></li>
+</ul>
+
+</div></div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="https://github.com/nipreps/nifreeze/blob/main/docs/api/nifreeze.registration.itk_backend.rst?plain=true" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div><div class="edit-this-page">
+  <a class="muted-link" href="https://github.com/nipreps/nifreeze/edit/main/docs/api/nifreeze.registration.itk_backend.rst" rel="edit" title="Edit this page">
+    <svg><use href="#svg-pencil"></use></svg>
+    <span class="visually-hidden">Edit this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="module-nifreeze.registration.itk_backend">
+<span id="nifreeze-registration-itk-backend-module"></span><h1>nifreeze.registration.itk_backend module<a class="headerlink" href="#module-nifreeze.registration.itk_backend" title="Link to this heading">¶</a></h1>
+<p>Registration with ITK’s registration framework (the <code class="docutils literal notranslate"><span class="pre">…v4</span></code> classes of ITK 5).</p>
+<p>ITK’s framework optimizes several transforms together, which elastix’s does not. So
+this backend can estimate each volume’s mapping as head motion followed by a field along
+the phase-encoding direction, <span class="math notranslate nohighlight">\(W = E M\)</span>, with 9 parameters (6 rigid, and the
+phase-encoding row of <span class="math notranslate nohighlight">\(E\)</span>; see
+<a class="reference internal" href="nifreeze.registration.utils.html#nifreeze.registration.utils.split_phase_encoding" title="nifreeze.registration.utils.split_phase_encoding"><code class="xref py py-func docutils literal notranslate"><span class="pre">split_phase_encoding()</span></code></a>), when the settings say
+<code class="docutils literal notranslate"><span class="pre">restrict:</span> <span class="pre">phase-encoding</span></code>. Otherwise it estimates a full affine (12 parameters).
+With <code class="docutils literal notranslate"><span class="pre">motion:</span> <span class="pre">fixed</span></code> as well, the head motion stays as the start gives it (in the
+eddy-current pass, the head-motion step’s estimate), and only the field’s 3 parameters
+are estimated, about the grid’s centre. The estimates are then not split: the
+eddy-current pass stores them as it stores elastix’s, with the head motion it holds
+factored out and kept unchanged.</p>
+<p>The images reach ITK in their voxel frame (identity direction, origin zero, the voxel
+spacing), so ITK’s physical axes are the voxel axes, and the restriction to the
+phase-encoding axis, an axis of the data array, is exact on oblique data. The estimate
+goes back to RAS+. The images are prepared as the elastix backend prepares them:
+clipped to the sample’s window and coded to 12 bits (as <code class="docutils literal notranslate"><span class="pre">clip</span></code> selects), then
+winsorized and histogram-matched when the settings ask. Only the fixed image is masked.</p>
+<p>Settings are the <code class="docutils literal notranslate"><span class="pre">itk</span></code> sections of <a class="reference internal" href="nifreeze.registration.base.html#nifreeze.registration.base.AFFINE" title="nifreeze.registration.base.AFFINE"><code class="xref py py-data docutils literal notranslate"><span class="pre">AFFINE</span></code></a> (or of
+any such file), with one registration per stage. A stage samples its metric on a share of
+the grid (<code class="docutils literal notranslate"><span class="pre">sampling_percentage</span></code>), or at a number of points within the mask
+(<code class="docutils literal notranslate"><span class="pre">samples</span></code>), as elastix’s random samplers do: its cost then does not grow with the grid.</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.BOTH_SAMPLINGS_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.registration.itk_backend.</span></span><span class="sig-name descname"><span class="pre">BOTH_SAMPLINGS_ERROR_MSG</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'An</span> <span class="pre">ITK</span> <span class="pre">stage</span> <span class="pre">takes</span> <span class="pre">sampling_percentage</span> <span class="pre">or</span> <span class="pre">samples,</span> <span class="pre">not</span> <span class="pre">both'</span></span><a class="headerlink" href="#nifreeze.registration.itk_backend.BOTH_SAMPLINGS_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>A stage with both a share and a count of samples error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.FIXED_MOTION_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.registration.itk_backend.</span></span><span class="sig-name descname"><span class="pre">FIXED_MOTION_ERROR_MSG</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'ITK</span> <span class="pre">settings</span> <span class="pre">keep</span> <span class="pre">the</span> <span class="pre">head</span> <span class="pre">motion</span> <span class="pre">fixed</span> <span class="pre">only</span> <span class="pre">with</span> <span class="pre">restrict:</span> <span class="pre">phase-encoding'</span></span><a class="headerlink" href="#nifreeze.registration.itk_backend.FIXED_MOTION_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>Fixed head motion without the restriction error message.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.ITK">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nifreeze.registration.itk_backend.</span></span><span class="sig-name descname"><span class="pre">ITK</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">align_config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'Mapping[str,</span> <span class="pre">Any]</span> <span class="pre">|</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">PathLike</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">12345</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'Any'</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="s"><span class="pre">'None'</span></span></span></span><a class="reference internal" href="../_modules/nifreeze/registration/itk_backend.html#ITK"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.registration.itk_backend.ITK" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="nifreeze.registration.base.html#nifreeze.registration.base.Registration" title="nifreeze.registration.base.Registration"><code class="xref py py-class docutils literal notranslate"><span class="pre">Registration</span></code></a></p>
+<p>Register with ITK’s registration framework, given the images in memory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>align_config</strong> (<a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapping</span></code></a> or <code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>, optional) – ITK’s settings, or a file with an <code class="docutils literal notranslate"><span class="pre">itk</span></code> section (see <a class="reference internal" href="#nifreeze.registration.itk_backend.get_settings" title="nifreeze.registration.itk_backend.get_settings"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_settings()</span></code></a>).</p></li>
+<li><p><strong>seed</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>, optional) – Seed of the metrics’ random sampling; <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a> leaves ITK’s.</p></li>
+<li><p><strong>**kwargs</strong> – See <a class="reference internal" href="nifreeze.registration.base.html#nifreeze.registration.base.Registration" title="nifreeze.registration.base.Registration"><code class="xref py py-class docutils literal notranslate"><span class="pre">Registration</span></code></a>. With settings restricted
+to phase encoding, <code class="docutils literal notranslate"><span class="pre">phase_encoding</span></code> is required.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.ITK.fixed_motion">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">fixed_motion</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><a class="headerlink" href="#nifreeze.registration.itk_backend.ITK.fixed_motion" title="Link to this definition">¶</a></dt>
+<dd><p>Whether the head motion stays as the start gives it (<code class="docutils literal notranslate"><span class="pre">motion:</span> <span class="pre">fixed</span></code>).</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.ITK.restricted">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">restricted</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><a class="headerlink" href="#nifreeze.registration.itk_backend.ITK.restricted" title="Link to this definition">¶</a></dt>
+<dd><p>Whether the field is restricted to the phase-encoding direction.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.ITK.split">
+<span class="sig-name descname"><span class="pre">split</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">matrix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">affine</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/registration/itk_backend.html#ITK.split"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.registration.itk_backend.ITK.split" title="Link to this definition">¶</a></dt>
+<dd><p>See <a class="reference internal" href="nifreeze.registration.base.html#nifreeze.registration.base.Registration.split" title="nifreeze.registration.base.Registration.split"><code class="xref py py-meth docutils literal notranslate"><span class="pre">split()</span></code></a>.</p>
+<p>With <code class="docutils literal notranslate"><span class="pre">motion:</span> <span class="pre">fixed</span></code>, the head motion was not estimated, so there is nothing to
+split: the field, about the grid’s centre, carries its own shift along phase
+encoding, which the split would move into the head motion.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.ITK.stops">
+<span class="sig-name descname"><span class="pre">stops</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#nifreeze.registration.itk_backend.ITK.stops" title="Link to this definition">¶</a></dt>
+<dd><p>Each stage’s iterations and stop condition, in the last registration.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.METRICS">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.registration.itk_backend.</span></span><span class="sig-name descname"><span class="pre">METRICS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('mattes',</span> <span class="pre">'correlation')</span></span><a class="headerlink" href="#nifreeze.registration.itk_backend.METRICS" title="Link to this definition">¶</a></dt>
+<dd><p>Mattes’ mutual information, or normalized correlation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The metrics of a stage</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.MOTIONS">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.registration.itk_backend.</span></span><span class="sig-name descname"><span class="pre">MOTIONS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('refine',</span> <span class="pre">'fixed')</span></span><a class="headerlink" href="#nifreeze.registration.itk_backend.MOTIONS" title="Link to this definition">¶</a></dt>
+<dd><p>refine it, or keep the start’s.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>What a restricted registration does with the head motion</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.NO_PHASE_ENCODING_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.registration.itk_backend.</span></span><span class="sig-name descname"><span class="pre">NO_PHASE_ENCODING_ERROR_MSG</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;The</span> <span class="pre">settings</span> <span class="pre">restrict</span> <span class="pre">the</span> <span class="pre">field</span> <span class="pre">to</span> <span class="pre">phase</span> <span class="pre">encoding,</span> <span class="pre">but</span> <span class="pre">its</span> <span class="pre">direction</span> <span class="pre">is</span> <span class="pre">unknown:</span> <span class="pre">give</span> <span class="pre">the</span> <span class="pre">backend</span> <span class="pre">phase_encoding</span> <span class="pre">(the</span> <span class="pre">dataset's,</span> <span class="pre">as</span> <span class="pre">BIDS</span> <span class="pre">writes</span> <span class="pre">it).&quot;</span></span><a class="headerlink" href="#nifreeze.registration.itk_backend.NO_PHASE_ENCODING_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>Restricted settings without a phase-encoding direction error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.NO_STAGES_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.registration.itk_backend.</span></span><span class="sig-name descname"><span class="pre">NO_STAGES_ERROR_MSG</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'ITK</span> <span class="pre">settings</span> <span class="pre">need</span> <span class="pre">at</span> <span class="pre">least</span> <span class="pre">one</span> <span class="pre">stage'</span></span><a class="headerlink" href="#nifreeze.registration.itk_backend.NO_STAGES_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>Settings without stages error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.OUTSIDE_FAMILY_WARN_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.registration.itk_backend.</span></span><span class="sig-name descname"><span class="pre">OUTSIDE_FAMILY_WARN_MSG</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;Volume</span> <span class="pre">{index}'s</span> <span class="pre">initial</span> <span class="pre">mapping</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">head</span> <span class="pre">motion</span> <span class="pre">followed</span> <span class="pre">by</span> <span class="pre">a</span> <span class="pre">field</span> <span class="pre">along</span> <span class="pre">phase</span> <span class="pre">encoding;</span> <span class="pre">the</span> <span class="pre">registration</span> <span class="pre">starts</span> <span class="pre">from</span> <span class="pre">its</span> <span class="pre">projection.&quot;</span></span><a class="headerlink" href="#nifreeze.registration.itk_backend.OUTSIDE_FAMILY_WARN_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>An initial mapping outside the 9-parameter family warning message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.RESTRICTIONS">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.registration.itk_backend.</span></span><span class="sig-name descname"><span class="pre">RESTRICTIONS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('phase-encoding',)</span></span><a class="headerlink" href="#nifreeze.registration.itk_backend.RESTRICTIONS" title="Link to this definition">¶</a></dt>
+<dd><p>The fields a setting <code class="docutils literal notranslate"><span class="pre">restrict</span></code> can name.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.SAMPLINGS">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.registration.itk_backend.</span></span><span class="sig-name descname"><span class="pre">SAMPLINGS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('none',</span> <span class="pre">'regular',</span> <span class="pre">'random')</span></span><a class="headerlink" href="#nifreeze.registration.itk_backend.SAMPLINGS" title="Link to this definition">¶</a></dt>
+<dd><p>The samplings of a stage’s metric.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.SETTINGS_KEYS">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.registration.itk_backend.</span></span><span class="sig-name descname"><span class="pre">SETTINGS_KEYS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'motion',</span> <span class="pre">'restrict',</span> <span class="pre">'stages',</span> <span class="pre">'use_histogram_matching',</span> <span class="pre">'winsorize_lower_quantile',</span> <span class="pre">'winsorize_upper_quantile'}</span></span><a class="headerlink" href="#nifreeze.registration.itk_backend.SETTINGS_KEYS" title="Link to this definition">¶</a></dt>
+<dd><p>The keys of a settings file.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.STAGE_KEYS">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.registration.itk_backend.</span></span><span class="sig-name descname"><span class="pre">STAGE_KEYS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'bins',</span> <span class="pre">'gradient_tolerance',</span> <span class="pre">'iterations',</span> <span class="pre">'learning_rate',</span> <span class="pre">'metric',</span> <span class="pre">'minimum_step',</span> <span class="pre">'relaxation',</span> <span class="pre">'samples',</span> <span class="pre">'sampling',</span> <span class="pre">'sampling_percentage',</span> <span class="pre">'shrink_factor',</span> <span class="pre">'smoothing_sigma'}</span></span><a class="headerlink" href="#nifreeze.registration.itk_backend.STAGE_KEYS" title="Link to this definition">¶</a></dt>
+<dd><p>The keys of a stage.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.UNKNOWN_SETTINGS_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.registration.itk_backend.</span></span><span class="sig-name descname"><span class="pre">UNKNOWN_SETTINGS_ERROR_MSG</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Unknown</span> <span class="pre">ITK</span> <span class="pre">settings:</span> <span class="pre">{keys}'</span></span><a class="headerlink" href="#nifreeze.registration.itk_backend.UNKNOWN_SETTINGS_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>Unknown settings error message.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.UNKNOWN_VALUE_ERROR_MSG">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.registration.itk_backend.</span></span><span class="sig-name descname"><span class="pre">UNKNOWN_VALUE_ERROR_MSG</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Unknown</span> <span class="pre">ITK</span> <span class="pre">{key}</span> <span class="pre">{value!r}:</span> <span class="pre">expected</span> <span class="pre">one</span> <span class="pre">of</span> <span class="pre">{values}'</span></span><a class="headerlink" href="#nifreeze.registration.itk_backend.UNKNOWN_VALUE_ERROR_MSG" title="Link to this definition">¶</a></dt>
+<dd><p>Unknown value of a setting error message.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nifreeze.registration.itk_backend.get_settings">
+<span class="sig-prename descclassname"><span class="pre">nifreeze.registration.itk_backend.</span></span><span class="sig-name descname"><span class="pre">get_settings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">align_config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping" title="(in Python v3.15)"><span class="pre">Mapping</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/os.html#os.PathLike" title="(in Python v3.15)"><span class="pre">PathLike</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../_modules/nifreeze/registration/itk_backend.html#get_settings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nifreeze.registration.itk_backend.get_settings" title="Link to this definition">¶</a></dt>
+<dd><p>Read and validate ITK settings.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>align_config</strong> (<a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Mapping</span></code></a> or <code class="xref py py-obj docutils literal notranslate"><span class="pre">os.pathlike</span></code>, optional) – The settings, or a file with an <code class="docutils literal notranslate"><span class="pre">itk</span></code> section (default:
+<a class="reference internal" href="nifreeze.registration.base.html#nifreeze.registration.base.AFFINE" title="nifreeze.registration.base.AFFINE"><code class="xref py py-data docutils literal notranslate"><span class="pre">AFFINE</span></code></a>).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A copy of the settings, validated.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">settings</span> <span class="o">=</span> <span class="n">get_settings</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">settings</span><span class="p">[</span><span class="s2">"restrict"</span><span class="p">],</span> <span class="p">[</span><span class="n">stage</span><span class="p">[</span><span class="s2">"metric"</span><span class="p">]</span> <span class="k">for</span> <span class="n">stage</span> <span class="ow">in</span> <span class="n">settings</span><span class="p">[</span><span class="s2">"stages"</span><span class="p">]]</span>
+<span class="go">('phase-encoding', ['mattes', 'correlation'])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">get_settings</span><span class="p">({</span><span class="s2">"stages"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"metric"</span><span class="p">:</span> <span class="s2">"mattes"</span><span class="p">,</span> <span class="s2">"smoothing"</span><span class="p">:</span> <span class="mi">1</span><span class="p">}]})</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="gr">ValueError</span>: <span class="n">Unknown ITK settings: ['smoothing']</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">get_settings</span><span class="p">(</span><span class="n">settings</span> <span class="o">|</span> <span class="p">{</span><span class="s2">"motion"</span><span class="p">:</span> <span class="s2">"fixed"</span><span class="p">})[</span><span class="s2">"motion"</span><span class="p">]</span>
+<span class="go">'fixed'</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="nifreeze.registration.utils.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">nifreeze.registration.utils module</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="nifreeze.registration.gem.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">nifreeze.registration.gem module</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; Copyright 2024, The NiFreeze developers
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">nifreeze.registration.itk_backend module</a><ul>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.BOTH_SAMPLINGS_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">BOTH_SAMPLINGS_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.FIXED_MOTION_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">FIXED_MOTION_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.ITK"><code class="docutils literal notranslate"><span class="pre">ITK</span></code></a><ul>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.ITK.fixed_motion"><code class="docutils literal notranslate"><span class="pre">ITK.fixed_motion</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.ITK.restricted"><code class="docutils literal notranslate"><span class="pre">ITK.restricted</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.ITK.split"><code class="docutils literal notranslate"><span class="pre">ITK.split()</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.ITK.stops"><code class="docutils literal notranslate"><span class="pre">ITK.stops</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.METRICS"><code class="docutils literal notranslate"><span class="pre">METRICS</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.MOTIONS"><code class="docutils literal notranslate"><span class="pre">MOTIONS</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.NO_PHASE_ENCODING_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">NO_PHASE_ENCODING_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.NO_STAGES_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">NO_STAGES_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.OUTSIDE_FAMILY_WARN_MSG"><code class="docutils literal notranslate"><span class="pre">OUTSIDE_FAMILY_WARN_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.RESTRICTIONS"><code class="docutils literal notranslate"><span class="pre">RESTRICTIONS</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.SAMPLINGS"><code class="docutils literal notranslate"><span class="pre">SAMPLINGS</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.SETTINGS_KEYS"><code class="docutils literal notranslate"><span class="pre">SETTINGS_KEYS</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.STAGE_KEYS"><code class="docutils literal notranslate"><span class="pre">STAGE_KEYS</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.UNKNOWN_SETTINGS_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">UNKNOWN_SETTINGS_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.UNKNOWN_VALUE_ERROR_MSG"><code class="docutils literal notranslate"><span class="pre">UNKNOWN_VALUE_ERROR_MSG</span></code></a></li>
+<li><a class="reference internal" href="#nifreeze.registration.itk_backend.get_settings"><code class="docutils literal notranslate"><span class="pre">get_settings()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=88da3e06"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <script src="../_static/js/version-switch.js?v=03f1aec7"></script>
+    </body>
+</html>

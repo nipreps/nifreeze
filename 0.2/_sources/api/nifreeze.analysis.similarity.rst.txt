@@ -1,0 +1,7 @@
+nifreeze.analysis.similarity module
+===================================
+
+.. automodule:: nifreeze.analysis.similarity
+   :members:
+   :undoc-members:
+   :show-inheritance:

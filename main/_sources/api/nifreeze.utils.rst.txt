@@ -1,0 +1,16 @@
+nifreeze.utils package
+======================
+
+.. automodule:: nifreeze.utils
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   nifreeze.utils.iterators
+   nifreeze.utils.ndimage

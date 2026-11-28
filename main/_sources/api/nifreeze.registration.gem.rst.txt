@@ -1,0 +1,7 @@
+nifreeze.registration.gem module
+================================
+
+.. automodule:: nifreeze.registration.gem
+   :members:
+   :show-inheritance:
+   :undoc-members:

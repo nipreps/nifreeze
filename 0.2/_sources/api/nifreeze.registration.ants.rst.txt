@@ -1,0 +1,7 @@
+nifreeze.registration.ants module
+=================================
+
+.. automodule:: nifreeze.registration.ants
+   :members:
+   :undoc-members:
+   :show-inheritance:

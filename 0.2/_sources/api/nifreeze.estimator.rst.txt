@@ -1,0 +1,7 @@
+nifreeze.estimator module
+=========================
+
+.. automodule:: nifreeze.estimator
+   :members:
+   :undoc-members:
+   :show-inheritance:

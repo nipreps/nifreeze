@@ -1,0 +1,5 @@
+Protocol,Stage,ANTs (s),Elastix (s),Ratio
+Sherbrooke (2 mm),rigid,1.69,0.98,0.58
+Sherbrooke (2 mm),affine,6.24,2.42,0.39
+HCP-YA (1.25 mm),rigid,5.82,3.70,0.64
+HCP-YA (1.25 mm),affine,32.71,10.07,0.31

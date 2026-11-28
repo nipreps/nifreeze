@@ -1,0 +1,7 @@
+nifreeze.cli.parser module
+==========================
+
+.. automodule:: nifreeze.cli.parser
+   :members:
+   :undoc-members:
+   :show-inheritance:

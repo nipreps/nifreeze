@@ -1,0 +1,7 @@
+nifreeze.utils.iterators module
+===============================
+
+.. automodule:: nifreeze.utils.iterators
+   :members:
+   :undoc-members:
+   :show-inheritance:

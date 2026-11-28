@@ -1,0 +1,20 @@
+nifreeze.registration package
+=============================
+
+.. automodule:: nifreeze.registration
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   nifreeze.registration.ants
+   nifreeze.registration.base
+   nifreeze.registration.elastix
+   nifreeze.registration.gem
+   nifreeze.registration.itk_backend
+   nifreeze.registration.utils

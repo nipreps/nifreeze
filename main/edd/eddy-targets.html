@@ -1,0 +1,3284 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="GEM’s accuracy on the phantom" href="gem-accuracy.html"><link rel="prev" title="Elastix against ANTs, on held-out volumes" href="elastix-accuracy.html">
+
+    <!-- Generated with Sphinx 9.2.0 and Furo 2025.12.19 -->
+        <title>The targets of the eddy-current pass - NiFreeze</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/version-switch.css?v=96f56ebb" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">NiFreeze</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">NiFreeze</span>
+  
+</a><div id="nf-versions" class="nf-versions">
+  <details>
+    <summary>26.1.0.dev103 (development)</summary>
+    <ul></ul>
+  </details>
+</div><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/design.html">Design Principles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/citing.html">Citing NiFreeze</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../usage/index.html">How to use</a><input aria-label="Toggle navigation of How to use" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../usage/cli.html">Running <em>NiFreeze</em></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/python.html">Using <em>NiFreeze</em> from Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/data.html">Data and file formats</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../methods/models.html">Model implementation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../methods/gem.html">The global eddy model (GEM)</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Experiment-driven development</span></p>
+<ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Experiment-driven development</a><input aria-label="Toggle navigation of Experiment-driven development" checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="phantoms.html">Synthetic reference data</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="gallery.html">Prediction gallery</a><input aria-label="Toggle navigation of Prediction gallery" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="gallery/ds000206.html">Legacy DTI (ds000206)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="gallery/ds000114.html">Single-shell HARDI (ds000114)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="gallery/ds003138.html">Multi-shell (ds003138)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="gallery/ds004737.html">DSI (ds004737)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="registration-floor.html">What limits registration to a perfect target</a></li>
+<li class="toctree-l2"><a class="reference internal" href="eddy-truth.html">The eddy-current truth</a></li>
+<li class="toctree-l2"><a class="reference internal" href="error-audit.html">The error audit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="elastix-settings.html">Elastix’s settings, mapped from ANTs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="elastix-accuracy.html">Elastix against ANTs, on held-out volumes</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">The targets of the eddy-current pass</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gem-accuracy.html">GEM’s accuracy on the phantom</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developers</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developers/index.html">For developers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/extending.html">Extending <em>NiFreeze</em></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/papers.html">Writing a paper about NiFreeze</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../developers/api.html">API reference</a><input aria-label="Toggle navigation of API reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/nifreeze.analysis.html">nifreeze.analysis package</a><input aria-label="Toggle navigation of nifreeze.analysis package" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.analysis.filtering.html">nifreeze.analysis.filtering module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.analysis.measure_agreement.html">nifreeze.analysis.measure_agreement module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.analysis.motion.html">nifreeze.analysis.motion module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.analysis.phantoms.html">nifreeze.analysis.phantoms module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.analysis.registration.html">nifreeze.analysis.registration module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.analysis.sensitivity.html">nifreeze.analysis.sensitivity module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.analysis.similarity.html">nifreeze.analysis.similarity module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/nifreeze.cli.html">nifreeze.cli package</a><input aria-label="Toggle navigation of nifreeze.cli package" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.cli.parser.html">nifreeze.cli.parser module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.cli.run.html">nifreeze.cli.run module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/nifreeze.data.html">nifreeze.data package</a><input aria-label="Toggle navigation of nifreeze.data package" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../api/nifreeze.data.dmri.html">nifreeze.data.dmri package</a><input aria-label="Toggle navigation of nifreeze.data.dmri package" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../api/nifreeze.data.dmri.base.html">nifreeze.data.dmri.base module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/nifreeze.data.dmri.io.html">nifreeze.data.dmri.io module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/nifreeze.data.dmri.utils.html">nifreeze.data.dmri.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../api/nifreeze.data.pet.html">nifreeze.data.pet package</a><input aria-label="Toggle navigation of nifreeze.data.pet package" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../api/nifreeze.data.pet.base.html">nifreeze.data.pet.base module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/nifreeze.data.pet.io.html">nifreeze.data.pet.io module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/nifreeze.data.pet.utils.html">nifreeze.data.pet.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.data.base.html">nifreeze.data.base module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.data.filtering.html">nifreeze.data.filtering module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.data.splitting.html">nifreeze.data.splitting module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.data.utils.html">nifreeze.data.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/nifreeze.estimator.html">nifreeze.estimator module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/nifreeze.exceptions.html">nifreeze.exceptions module</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/nifreeze.model.html">nifreeze.model package</a><input aria-label="Toggle navigation of nifreeze.model package" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.model.base.html">nifreeze.model.base module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.model.dki.html">nifreeze.model.dki module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.model.dmri.html">nifreeze.model.dmri module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.model.gpr.html">nifreeze.model.gpr module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.model.gqi.html">nifreeze.model.gqi module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.model.lovo.html">nifreeze.model.lovo module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.model.pet.html">nifreeze.model.pet module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/nifreeze.registration.html">nifreeze.registration package</a><input aria-label="Toggle navigation of nifreeze.registration package" class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.registration.ants.html">nifreeze.registration.ants module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.registration.base.html">nifreeze.registration.base module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.registration.elastix.html">nifreeze.registration.elastix module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.registration.gem.html">nifreeze.registration.gem module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.registration.itk_backend.html">nifreeze.registration.itk_backend module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.registration.utils.html">nifreeze.registration.utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/nifreeze.testing.html">nifreeze.testing package</a><input aria-label="Toggle navigation of nifreeze.testing package" class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.testing.perturbations.html">nifreeze.testing.perturbations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.testing.phantoms.html">nifreeze.testing.phantoms module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.testing.simulations.html">nifreeze.testing.simulations module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/nifreeze.utils.html">nifreeze.utils package</a><input aria-label="Toggle navigation of nifreeze.utils package" class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" role="switch" type="checkbox"/><label for="toctree-checkbox-13"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.utils.iterators.html">nifreeze.utils.iterators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.utils.ndimage.html">nifreeze.utils.ndimage module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/nifreeze.viz.html">nifreeze.viz package</a><input aria-label="Toggle navigation of nifreeze.viz package" class="toctree-checkbox" id="toctree-checkbox-14" name="toctree-checkbox-14" role="switch" type="checkbox"/><label for="toctree-checkbox-14"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.viz.bland_altman.html">nifreeze.viz.bland_altman module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.viz.corrections.html">nifreeze.viz.corrections module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.viz.motion_viz.html">nifreeze.viz.motion_viz module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/nifreeze.viz.signals.html">nifreeze.viz.signals module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">About</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../changes.html">What’s new?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">References</a></li>
+</ul>
+
+</div></div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="https://github.com/nipreps/nifreeze/blob/main/docs/edd/eddy-targets.rst?plain=true" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div><div class="edit-this-page">
+  <a class="muted-link" href="https://github.com/nipreps/nifreeze/edit/main/docs/edd/eddy-targets.rst" rel="edit" title="Edit this page">
+    <svg><use href="#svg-pencil"></use></svg>
+    <span class="visually-hidden">Edit this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="the-targets-of-the-eddy-current-pass">
+<h1>The targets of the eddy-current pass<a class="headerlink" href="#the-targets-of-the-eddy-current-pass" title="Link to this heading">¶</a></h1>
+<p><em>NiFreeze</em> estimates head motion with a cascade of models (here <code class="docutils literal notranslate"><span class="pre">--models</span> <span class="pre">gqi-krr</span>
+<span class="pre">gp-loo</span></code>, each level a rigid registration of every volume to the model’s held-out
+prediction of it), then estimates eddy currents with one more pass (<code class="docutils literal notranslate"><span class="pre">--eddy</span></code>).
+That pass registers each diffusion-weighted volume, with an affine, to a model’s
+held-out prediction, starting from the cascade’s head motion.
+Its result is the <em>whole mapping</em> of the volume: the estimate of how the reference maps
+into it, head motion and eddy currents composed.</p>
+<p>In the end-to-end test of <a class="reference external" href="https://github.com/nipreps/nifreeze/issues/712">#712</a>,
+the pass left a median largest displacement of 1.185 to 1.648 mm of eddy currents on
+the three shells (the reproduction table below), and at b=1000 the whole mapping ended
+further from the truth than without the pass
+(<a class="reference external" href="https://github.com/nipreps/nifreeze/pull/721">#721</a>).
+Three tests on <a class="reference external" href="https://github.com/nipreps/nifreeze/issues/723">#723</a> follow that
+error, each under rules posted before its run:</p>
+<dl class="simple">
+<dt>Test 1</dt><dd><p>It splits the pass’s error into steps, from an oracle to the pass.
+No single step accounts for most of it.
+The pass drifts: its registrations share an expansion, which the <em>instant update</em>
+(each volume, once registered, enters the model’s training data realigned) feeds
+back into the targets.</p>
+</dd>
+<dt>Test 2</dt><dd><p>It asks why the registrations expand, and finds the noise in the moving volume.</p>
+</dd>
+<dt>Test 3</dt><dd><p>It asks whether a registration with 9 parameters, head motion and a field along
+phase encoding, does better than the affine, and whether the pass can then keep the
+instant update.
+It does better, in the same or less time, most at b=1000; and the rules chose the
+<em>delayed update</em> for its pass, which applies its estimates only after the pass.
+On HCP-YA that pass still beats today’s, but by little (0.019 mm), and it is worse
+at b=3000.</p>
+</dd>
+</dl>
+<section id="test-1-what-the-targets-carry">
+<h2>Test 1: what the targets carry<a class="headerlink" href="#test-1-what-the-targets-carry" title="Link to this heading">¶</a></h2>
+<p>The <em>floor</em> is the pass’s error minus the oracle’s, on the mean error of the whole
+mapping defined below.</p>
+<section id="the-question">
+<h3>The question<a class="headerlink" href="#the-question" title="Link to this heading">¶</a></h3>
+<p>Do the targets of the eddy-current pass carry the eddy currents it should correct?
+The working hypothesis asked two questions:</p>
+<ol class="arabic simple">
+<li><p>Which step from the oracle to the pass makes the floor?
+Hypothesis 1 said: the eddy currents that the training data still carry.</p></li>
+<li><p>Hypothesis 2: does the pass’s benefit from the <em>instant update</em> grow with a volume’s
+position in the order of registration?
+With the instant update (<a class="reference internal" href="../introduction/design.html"><span class="doc">Design Principles</span></a>), each volume, once registered, enters the
+models’ training data resampled with its estimate, so later volumes get targets
+drawn from more corrected volumes.
+The order is random, drawn from the run’s seed, and the same in every level of the
+cascade and in the pass.</p></li>
+</ol>
+</section>
+<section id="data">
+<h3>Data<a class="headerlink" href="#data" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>The copy</dt><dd><p>Sherbrooke <code class="docutils literal notranslate"><span class="pre">m2s0e2</span></code> (<a class="reference internal" href="phantoms.html"><span class="doc">Synthetic reference data</span></a>): 192 diffusion-weighted volumes at 2 mm,
+in three shells (b=1000, 2000 and 3500) that share the same 64 directions.
+Every volume moved by 2 mm and 2° (motion seed 0), then was distorted by eddy
+currents of up to 4 mm within the brain.
+It carries the noise of the end-to-end test (seed 20261020).</p>
+</dd>
+<dt>The truth</dt><dd><p>Each volume’s head motion <code class="docutils literal notranslate"><span class="pre">M</span></code>, from the sidecar, and its eddy currents <code class="docutils literal notranslate"><span class="pre">E</span></code>, from
+<a class="reference internal" href="../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.Distortion.matrices" title="nifreeze.analysis.sensitivity.Distortion.matrices"><code class="xref py py-meth docutils literal notranslate"><span class="pre">matrices()</span></code></a>
+(<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/724">#724</a>).
+The volume shows at <code class="docutils literal notranslate"><span class="pre">E</span> <span class="pre">M</span> <span class="pre">x</span></code> what the reference shows at <code class="docutils literal notranslate"><span class="pre">x</span></code>
+(<a class="reference internal" href="error-audit.html"><span class="doc">The error audit</span></a>).
+The field is linear in position and in the q-vector: its coefficients are
+<code class="docutils literal notranslate"><span class="pre">0.0265</span> <span class="pre">×</span> <span class="pre">(b</span> <span class="pre">/</span> <span class="pre">1000)</span> <span class="pre">×</span> <span class="pre">g</span></code>, so along the same direction the field at b=2000 and
+b=3500 is 2 and 3.5 times the field at b=1000.</p>
+</dd>
+<dt>The cascade</dt><dd><p>gqi-krr, then gp-loo, rigid, with elastix and seed 12345, run once, as the command
+line chains them.
+Its head motion <code class="docutils literal notranslate"><span class="pre">m̂</span></code> is the start of the arms that start from the cascade.</p>
+</dd>
+</dl>
+</section>
+<section id="the-arms">
+<h3>The arms<a class="headerlink" href="#the-arms" title="Link to this heading">¶</a></h3>
+<p>Each arm registers the copy’s noisy volume, for all 192 volumes, to a target and from a
+start, with the pass’s settings (<a class="reference internal" href="../api/nifreeze.registration.base.html#nifreeze.registration.base.AFFINE" title="nifreeze.registration.base.AFFINE"><code class="xref py py-data docutils literal notranslate"><span class="pre">AFFINE</span></code></a>, elastix,
+one thread, seed 12345).
+Every target but the oracle’s is a held-out prediction
+(<a class="reference internal" href="../api/nifreeze.analysis.sensitivity.html#nifreeze.analysis.sensitivity.held_out_predictions" title="nifreeze.analysis.sensitivity.held_out_predictions"><code class="xref py py-func docutils literal notranslate"><span class="pre">held_out_predictions()</span></code></a>), by gp-loo and by gqi-krr:
+a weighted sum of the other volumes of a realigned copy of the data
+(<a class="reference internal" href="../api/nifreeze.data.base.html#nifreeze.data.base.BaseDataset.realigned" title="nifreeze.data.base.BaseDataset.realigned"><code class="xref py py-meth docutils literal notranslate"><span class="pre">realigned()</span></code></a>), with the listed estimates applied.</p>
+<div class="table-wrapper colwidths-auto docutils container" id="id9">
+<table class="docutils align-default" id="id9">
+<caption><span class="caption-number">Table 38 </span><span class="caption-text">The arms.</span><a class="headerlink" href="#id9" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Arm</p></th>
+<th class="head"><p>Target</p></th>
+<th class="head"><p>Start</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">oracle</span></code></p></td>
+<td><p>the noise-free reference volume</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">M</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">oracle-cascade</span></code></p></td>
+<td><p>the noise-free reference volume</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">m̂</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">reference</span></code></p></td>
+<td><p>prediction from the noisy reference (no motion, no eddy currents)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">M</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">corrected</span></code></p></td>
+<td><p>prediction from the copy realigned by its true mapping <code class="docutils literal notranslate"><span class="pre">E</span> <span class="pre">M</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">M</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">motion-corrected</span></code></p></td>
+<td><p>prediction from the copy realigned by <code class="docutils literal notranslate"><span class="pre">M</span></code>, its eddy currents left</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">M</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cascade-corrected</span></code></p></td>
+<td><p>prediction from the copy realigned by <code class="docutils literal notranslate"><span class="pre">m̂</span></code>: the pass’s targets at its start,
+and so the pass without the instant update</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">m̂</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">pass</span></code></p></td>
+<td><p>the pass itself (<a class="reference internal" href="../api/nifreeze.estimator.html#nifreeze.estimator.Estimator" title="nifreeze.estimator.Estimator"><code class="xref py py-class docutils literal notranslate"><span class="pre">Estimator</span></code></a> with
+<code class="docutils literal notranslate"><span class="pre">estimates=&quot;eddy&quot;</span></code> and the instant update), with one thread per registration</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">m̂</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="how-the-results-are-judged">
+<h3>How the results are judged<a class="headerlink" href="#how-the-results-are-judged" title="Link to this heading">¶</a></h3>
+<p>The error of a registration is its estimated whole mapping <code class="docutils literal notranslate"><span class="pre">W</span></code> against the truth
+<code class="docutils literal notranslate"><span class="pre">E</span> <span class="pre">M</span></code>: the mean, within the brain mask, of
+<a class="reference internal" href="../api/nifreeze.registration.utils.html#nifreeze.registration.utils.displacements_within_mask" title="nifreeze.registration.utils.displacements_within_mask"><code class="xref py py-func docutils literal notranslate"><span class="pre">displacements_within_mask()</span></code></a>, in the frame of the
+arm’s targets.
+The targets predicted from data realigned by <code class="docutils literal notranslate"><span class="pre">m̂</span></code> (<code class="docutils literal notranslate"><span class="pre">cascade-corrected</span></code> and <code class="docutils literal notranslate"><span class="pre">pass</span></code>)
+sit in the cascade’s frame, so those arms have the cascade’s <em>common offset</em> removed:
+the transform that all of <code class="docutils literal notranslate"><span class="pre">m̂</span></code> shares against <code class="docutils literal notranslate"><span class="pre">M</span></code> (its mean rotation and
+translation, as the end-to-end test computes it).
+The other arms have nothing removed.
+Beside this error are reported the largest displacement, the eddy-current score of
+#712 (<code class="docutils literal notranslate"><span class="pre">eddy</span> <span class="pre">M</span></code> against <code class="docutils literal notranslate"><span class="pre">E</span> <span class="pre">M</span></code>, with <code class="docutils literal notranslate"><span class="pre">eddy</span> <span class="pre">=</span> <span class="pre">W</span> <span class="pre">m̂⁻¹</span></code> the estimate with its start
+factored out), the whole mapping with each arm’s own common offset removed, and κ, the
+fraction of each volume’s field that the whole mapping recovers (by least squares over
+the brain’s points).</p>
+<p>Each step compares two arms with <code class="xref py py-func docutils literal notranslate"><span class="pre">experiments.paired_comparison()</span></code>: candidate minus
+the other arm, paired by volume, with a margin of 0.01 voxel (0.02 mm), over all volumes
+(resampled within shells) and within each shell.
+From the 95% interval of the median difference, a step is “worse” if the interval lies
+above the margin, “better” if it lies below zero with the median below the negative
+margin, “not worse” if its upper bound is below the margin, and “inconclusive”
+otherwise.</p>
+<div class="table-wrapper colwidths-auto docutils container" id="id10">
+<table class="docutils align-default" id="id10">
+<caption><span class="caption-number">Table 39 </span><span class="caption-text">The steps.</span><a class="headerlink" href="#id10" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Step</p></th>
+<th class="head"><p>Measures</p></th>
+<th class="head"><p>Candidate</p></th>
+<th class="head"><p>Against</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>S0</p></td>
+<td><p>the start</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">oracle-cascade</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">oracle</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>S1</p></td>
+<td><p>the model’s prediction</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">reference</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">oracle</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>S2</p></td>
+<td><p>resampling of the training data</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">corrected</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">reference</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>S3</p></td>
+<td><p>the eddy currents in the training data</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">motion-corrected</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">corrected</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>S4</p></td>
+<td><p>the cascade’s motion error, in the training data and the start</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">cascade-corrected</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">motion-corrected</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>S5</p></td>
+<td><p>the instant update</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pass</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">cascade-corrected</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Total</p></td>
+<td><p>the floor</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pass</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">oracle</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The working hypothesis
+(<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/723#issuecomment-7070452338">posted on #723</a>)
+set two rules, on gp-loo:</p>
+<dl class="simple">
+<dt>Question 1</dt><dd><p>A step makes the floor if it is “worse” over all volumes and within every shell, and
+its median difference is at least half the total’s; if more than one does, the
+largest decides.
+S3 would mean the targets carry the field: Test 2 then tries targets free of it,
+starting with the pass repeated on its corrected view, and
+<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/591">#591</a> waits for Test 2.
+S1 would send Test 2 to the choice of model, and S4 to the coupling of the motion
+and eddy-current passes (E3b in
+<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/614">#614</a>).
+If no step reaches half, Test 2 takes the largest step that is “worse”.</p>
+</dd>
+<dt>Question 2</dt><dd><p>With <code class="docutils literal notranslate"><span class="pre">g</span> <span class="pre">=</span> <span class="pre">e(pass)</span> <span class="pre">−</span> <span class="pre">e(cascade-corrected)</span></code> the change in each volume’s error that
+the instant update makes (negative where it helped; the posted rules call it the
+gain) and <code class="docutils literal notranslate"><span class="pre">r</span></code> the volume’s position in the order, hypothesis 2 holds if
+Spearman’s ρ(r, g) is below zero (one-sided permutation p below 0.05) and the median
+<code class="docutils literal notranslate"><span class="pre">g</span></code> of the last third of the order is below the first third’s, with the bootstrap
+interval of the difference entirely below the negative margin.
+If it holds, Test 2 starts with the pass repeated; if not, with targets that leave
+out the volumes along the same direction.
+This rule sets which of Test 2’s tries comes first.</p>
+</dd>
+</dl>
+<p>The checks, posted with the rules: the truth must apply within 1e-9 mm, the pass’s and
+<code class="docutils literal notranslate"><span class="pre">cascade-corrected</span></code>’s estimates of the first volume of the order must agree within
+0.01 mm (both have the same target and start there), and the pass and the cascade must
+reproduce #721’s run within 0.05 mm on every median of the end-to-end test’s scores.</p>
+</section>
+<section id="results">
+<h3>Results<a class="headerlink" href="#results" title="Link to this heading">¶</a></h3>
+<p>By the rules, no step makes the floor, and hypothesis 2 fails in the opposite
+direction: the instant update makes the pass worse the later a volume comes.
+The answer to the question is partly yes: the targets carry part of the field at b=2000
+and b=3500, but not at b=1000.</p>
+<section id="question-1">
+<h4>Question 1<a class="headerlink" href="#question-1" title="Link to this heading">¶</a></h4>
+<p>The floor is +0.377 mm with gp-loo.
+Its largest step is S3, the eddy currents in the training data (+0.116 mm, 31% of the
+floor): “worse” at b=2000 and b=3500, but inconclusive at b=1000, so it does not make
+the floor.
+S4, the cascade’s motion error, is “worse” on every shell (+0.079 mm, 21%).
+The start (S0) changes nothing: from either start, the registration to a perfect target
+ends as close to the truth.
+At b=1000, most of the floor comes from S5, the instant update (+0.212 of +0.403 mm); at
+b=3500, S5 is “better” (−0.042 mm).</p>
+<p>No step reaches half, so by the fallback Test 2 takes the largest step that is “worse”:
+S3, reading “worse” as the verdict over all volumes (the decision script’s reading).
+Reading it as “worse” over all volumes and within every shell, as the rule for making
+the floor does, only S4 qualifies, and Test 2 would go to the coupling of the passes
+instead.
+The posted rules do not say which reading holds.</p>
+<figure class="align-default" id="id11">
+<a class="reference internal image-reference" href="../_images/eddy-targets-steps.png"><img alt="../_images/eddy-targets-steps.png" src="../_images/eddy-targets-steps.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 19 </span><span class="caption-text">Each step’s median difference of the error, with its 95% interval, over all volumes
+(diamonds) and within each shell, for gp-loo.
+The dotted lines are the margin on either side of zero: a step is “worse” where its
+interval lies right of the right one.
+The text on the right gives the verdict over all volumes and the step’s share of the
+floor.</span><a class="headerlink" href="#id11" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<div class="table-wrapper colwidths-auto docutils container" id="id12">
+<table class="docutils align-default" id="id12">
+<caption><span class="caption-number">Table 40 </span><span class="caption-text">The steps for gp-loo: the median difference of the error (mm), with its
+95% interval and verdict, over all volumes and within each shell; the share of the
+floor; and Wilcoxon’s p, Holm-adjusted across the steps.</span><a class="headerlink" href="#id12" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Step</p></th>
+<th class="head"><p>Measures</p></th>
+<th class="head"><p>All volumes (mm)</p></th>
+<th class="head"><p>b=1000 (mm)</p></th>
+<th class="head"><p>b=2000 (mm)</p></th>
+<th class="head"><p>b=3500 (mm)</p></th>
+<th class="head"><p>Share</p></th>
+<th class="head"><p>Holm p</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>S0</p></td>
+<td><p>the start</p></td>
+<td><p>+0.000 [+0.000, +0.000] not worse</p></td>
+<td><p>+0.000 [+0.000, +0.000] not worse</p></td>
+<td><p>+0.000 [+0.000, +0.000] not worse</p></td>
+<td><p>+0.000 [-0.001, +0.001] not worse</p></td>
+<td><p>0.00</p></td>
+<td><p>9.8e-01</p></td>
+</tr>
+<tr class="row-odd"><td><p>S1</p></td>
+<td><p>the model</p></td>
+<td><p>+0.028 [+0.025, +0.030] worse</p></td>
+<td><p>+0.031 [+0.028, +0.032] worse</p></td>
+<td><p>+0.022 [+0.017, +0.027] inconclusive</p></td>
+<td><p>+0.032 [+0.021, +0.040] worse</p></td>
+<td><p>0.07</p></td>
+<td><p>5.4e-28</p></td>
+</tr>
+<tr class="row-even"><td><p>S2</p></td>
+<td><p>resampling</p></td>
+<td><p>+0.024 [+0.022, +0.027] worse</p></td>
+<td><p>+0.038 [+0.036, +0.040] worse</p></td>
+<td><p>+0.025 [+0.023, +0.029] worse</p></td>
+<td><p>-0.003 [-0.006, +0.004] not worse</p></td>
+<td><p>0.06</p></td>
+<td><p>3.7e-20</p></td>
+</tr>
+<tr class="row-odd"><td><p>S3</p></td>
+<td><p>eddy currents in the training data</p></td>
+<td><p>+0.116 [+0.086, +0.151] worse</p></td>
+<td><p>+0.008 [+0.000, +0.027] inconclusive</p></td>
+<td><p>+0.118 [+0.084, +0.170] worse</p></td>
+<td><p>+0.362 [+0.288, +0.443] worse</p></td>
+<td><p>0.31</p></td>
+<td><p>2.7e-27</p></td>
+</tr>
+<tr class="row-even"><td><p>S4</p></td>
+<td><p>the cascade’s motion</p></td>
+<td><p>+0.079 [+0.070, +0.090] worse</p></td>
+<td><p>+0.068 [+0.058, +0.076] worse</p></td>
+<td><p>+0.096 [+0.081, +0.121] worse</p></td>
+<td><p>+0.090 [+0.053, +0.119] worse</p></td>
+<td><p>0.21</p></td>
+<td><p>2.0e-29</p></td>
+</tr>
+<tr class="row-odd"><td><p>S5</p></td>
+<td><p>the instant update</p></td>
+<td><p>+0.030 [+0.016, +0.054] inconclusive</p></td>
+<td><p>+0.212 [+0.131, +0.274] worse</p></td>
+<td><p>+0.037 [+0.022, +0.067] worse</p></td>
+<td><p>-0.042 [-0.095, -0.012] better</p></td>
+<td><p>0.08</p></td>
+<td><p>2.8e-07</p></td>
+</tr>
+<tr class="row-even"><td><p>total</p></td>
+<td><p>the whole floor</p></td>
+<td><p>+0.377 [+0.348, +0.416] worse</p></td>
+<td><p>+0.403 [+0.300, +0.466] worse</p></td>
+<td><p>+0.357 [+0.326, +0.412] worse</p></td>
+<td><p>+0.395 [+0.333, +0.451] worse</p></td>
+<td><p>1.00</p></td>
+<td><p>2.1e-32</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="question-2">
+<h4>Question 2<a class="headerlink" href="#question-2" title="Link to this heading">¶</a></h4>
+<p>The instant update’s change in error grows with the order instead of shrinking:
+ρ(r, g) is +0.27 with gp-loo and +0.51 with gqi-krr.
+With gp-loo, the median change goes from +0.008 mm in the first third of the order to
++0.131 mm in the last.
+The pass’s error rises with the order at b=1000 and b=2000, and shows no trend at
+b=3500.</p>
+<figure class="align-default" id="id13">
+<a class="reference internal image-reference" href="../_images/eddy-targets-order.png"><img alt="../_images/eddy-targets-order.png" src="../_images/eddy-targets-order.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 20 </span><span class="caption-text">The change in each volume’s error that the instant update makes (<code class="docutils literal notranslate"><span class="pre">pass</span></code> minus
+<code class="docutils literal notranslate"><span class="pre">cascade-corrected</span></code>, gp-loo), against the volume’s position in the order of
+registration.
+Above zero, the update made the volume worse; the black segments are each third’s
+median.
+The first volume of the order has the same target and start in both arms, so its
+change is zero.</span><a class="headerlink" href="#id13" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<div class="table-wrapper colwidths-auto docutils container" id="id14">
+<table class="docutils align-default" id="id14">
+<caption><span class="caption-number">Table 41 </span><span class="caption-text">Hypothesis 2’s rule, by model: Spearman’s ρ(r, g), its one-sided
+permutation p (for ρ below zero) and its two-sided p, the median change of the first
+and last thirds of the order, their difference with its 95% interval, and whether
+the rule holds.</span><a class="headerlink" href="#id14" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Model</p></th>
+<th class="head"><p>Spearman’s rho</p></th>
+<th class="head"><p>One-sided p (rho &lt; 0)</p></th>
+<th class="head"><p>Two-sided p</p></th>
+<th class="head"><p>First third (mm)</p></th>
+<th class="head"><p>Last third (mm)</p></th>
+<th class="head"><p>Difference (mm)</p></th>
+<th class="head"><p>Holds</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>gp-loo</p></td>
+<td><p>+0.27</p></td>
+<td><p>1.00</p></td>
+<td><p>2.0e-04</p></td>
+<td><p>+0.008</p></td>
+<td><p>+0.131</p></td>
+<td><p>+0.123 [+0.060, +0.237]</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p>gqi-krr</p></td>
+<td><p>+0.51</p></td>
+<td><p>1.00</p></td>
+<td><p>2.2e-14</p></td>
+<td><p>+0.018</p></td>
+<td><p>+0.213</p></td>
+<td><p>+0.194 [+0.123, +0.263]</p></td>
+<td><p>no</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrapper colwidths-auto docutils container" id="id15">
+<table class="docutils align-default" id="id15">
+<caption><span class="caption-number">Table 42 </span><span class="caption-text">Spearman’s ρ of the pass’s error against the order, by shell, with its
+two-sided p.</span><a class="headerlink" href="#id15" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Pass</p></th>
+<th class="head"><p>b=1000</p></th>
+<th class="head"><p>b=2000</p></th>
+<th class="head"><p>b=3500</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>gp-loo</p></td>
+<td><p>+0.87 (p 7.5e-21)</p></td>
+<td><p>+0.55 (p 2.3e-06)</p></td>
+<td><p>-0.14 (p 2.7e-01)</p></td>
+</tr>
+<tr class="row-odd"><td><p>gqi-krr</p></td>
+<td><p>+0.88 (p 4.8e-22)</p></td>
+<td><p>+0.65 (p 4.4e-09)</p></td>
+<td><p>+0.12 (p 3.4e-01)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="checks">
+<h4>Checks<a class="headerlink" href="#checks" title="Link to this heading">¶</a></h4>
+<p>All three hold.
+The truth applies to 5.7e-14 mm within the brain.
+The pass’s and <code class="docutils literal notranslate"><span class="pre">cascade-corrected</span></code>’s estimates of the first volume of the order agree
+to 3e-14 mm (gp-loo) and 5e-14 mm (gqi-krr).
+The pass and the cascade reproduce #721’s run within 0.043 mm on every median.</p>
+<div class="table-wrapper colwidths-auto docutils container" id="id16">
+<table class="docutils align-default" id="id16">
+<caption><span class="caption-number">Table 43 </span><span class="caption-text">The end-to-end test’s scores (median largest displacement): this run
+against #721’s.</span><a class="headerlink" href="#id16" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Score</p></th>
+<th class="head"><p>Shells</p></th>
+<th class="head"><p>This run (mm)</p></th>
+<th class="head"><p>#721 (mm)</p></th>
+<th class="head"><p>Difference (mm)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>eddy_currents</p></td>
+<td><p>all</p></td>
+<td><p>1.344</p></td>
+<td><p>1.338</p></td>
+<td><p>+0.006</p></td>
+</tr>
+<tr class="row-odd"><td><p>eddy_currents</p></td>
+<td><p>b=1000</p></td>
+<td><p>1.248</p></td>
+<td><p>1.263</p></td>
+<td><p>-0.014</p></td>
+</tr>
+<tr class="row-even"><td><p>eddy_currents</p></td>
+<td><p>b=2000</p></td>
+<td><p>1.199</p></td>
+<td><p>1.185</p></td>
+<td><p>+0.014</p></td>
+</tr>
+<tr class="row-odd"><td><p>eddy_currents</p></td>
+<td><p>b=3500</p></td>
+<td><p>1.629</p></td>
+<td><p>1.648</p></td>
+<td><p>-0.019</p></td>
+</tr>
+<tr class="row-even"><td><p>whole</p></td>
+<td><p>all</p></td>
+<td><p>1.268</p></td>
+<td><p>1.273</p></td>
+<td><p>-0.006</p></td>
+</tr>
+<tr class="row-odd"><td><p>whole</p></td>
+<td><p>b=1000</p></td>
+<td><p>1.389</p></td>
+<td><p>1.392</p></td>
+<td><p>-0.002</p></td>
+</tr>
+<tr class="row-even"><td><p>whole</p></td>
+<td><p>b=2000</p></td>
+<td><p>1.253</p></td>
+<td><p>1.250</p></td>
+<td><p>+0.003</p></td>
+</tr>
+<tr class="row-odd"><td><p>whole</p></td>
+<td><p>b=3500</p></td>
+<td><p>1.211</p></td>
+<td><p>1.244</p></td>
+<td><p>-0.033</p></td>
+</tr>
+<tr class="row-even"><td><p>head_motion</p></td>
+<td><p>all</p></td>
+<td><p>0.741</p></td>
+<td><p>0.747</p></td>
+<td><p>-0.006</p></td>
+</tr>
+<tr class="row-odd"><td><p>head_motion</p></td>
+<td><p>b=1000</p></td>
+<td><p>0.557</p></td>
+<td><p>0.560</p></td>
+<td><p>-0.003</p></td>
+</tr>
+<tr class="row-even"><td><p>head_motion</p></td>
+<td><p>b=2000</p></td>
+<td><p>0.732</p></td>
+<td><p>0.736</p></td>
+<td><p>-0.003</p></td>
+</tr>
+<tr class="row-odd"><td><p>head_motion</p></td>
+<td><p>b=3500</p></td>
+<td><p>1.153</p></td>
+<td><p>1.196</p></td>
+<td><p>-0.043</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="reported-not-used-in-the-decision">
+<h4>Reported, not used in the decision<a class="headerlink" href="#reported-not-used-in-the-decision" title="Link to this heading">¶</a></h4>
+<p>With the field left in the training data and the true start (<code class="docutils literal notranslate"><span class="pre">motion-corrected</span></code>), the
+whole mapping recovers κ = 0.91 of the field at b=1000, and 0.69 at b=2000 and b=3500.
+The opening of #723 predicted that this fraction grows with b and is lowest at b=1000;
+it is highest at b=1000 and does not grow.
+At b=1000, the pass recovers about the same fraction of the field as its starting
+targets (κ 0.88 against 0.91, gp-loo), while its error rises from 0.48 to 0.71 mm: the
+error that the instant update adds is mostly not along the field.</p>
+<p>gqi-krr gives the same steps in the same order (S3 its largest, +0.105 mm, 26%), but its
+S5 is “worse” over all volumes (+0.069 mm, 17%), where gp-loo’s is inconclusive.</p>
+<p>The head-motion error of the cascade’s first level (gqi-krr, from unaligned data) falls
+with the order; that of its second level (gp-loo, from data the first level aligned)
+does not.
+No cascade ran without the instant update, so whether the update causes that fall is
+not tested.</p>
+<div class="table-wrapper colwidths-auto docutils container" id="id17">
+<table class="docutils align-default" id="id17">
+<caption><span class="caption-number">Table 44 </span><span class="caption-text">The head-motion error of each level of the cascade against the order:
+Spearman’s ρ and its two-sided p.</span><a class="headerlink" href="#id17" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Cascade level</p></th>
+<th class="head"><p>Spearman’s rho</p></th>
+<th class="head"><p>p</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1: gqi-krr</p></td>
+<td><p>-0.22</p></td>
+<td><p>2.4e-03</p></td>
+</tr>
+<tr class="row-odd"><td><p>2: gp-loo</p></td>
+<td><p>-0.01</p></td>
+<td><p>8.7e-01</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrapper colwidths-auto docutils container" id="id18">
+<table class="docutils align-default" id="id18">
+<caption><span class="caption-number">Table 45 </span><span class="caption-text">The change in error by how many of the volume’s two same-direction
+volumes in the other shells were registered before it (64 volumes each).
+The post hoc probes below show that this count tracks the volume’s place in the
+order.</span><a class="headerlink" href="#id18" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Model</p></th>
+<th class="head"><p>Same-direction volumes registered before</p></th>
+<th class="head"><p>Volumes</p></th>
+<th class="head"><p>Median change (mm)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>gp-loo</p></td>
+<td><p>0</p></td>
+<td><p>64</p></td>
+<td><p>+0.009</p></td>
+</tr>
+<tr class="row-odd"><td><p>gp-loo</p></td>
+<td><p>1</p></td>
+<td><p>64</p></td>
+<td><p>+0.035</p></td>
+</tr>
+<tr class="row-even"><td><p>gp-loo</p></td>
+<td><p>2</p></td>
+<td><p>64</p></td>
+<td><p>+0.128</p></td>
+</tr>
+<tr class="row-odd"><td><p>gqi-krr</p></td>
+<td><p>0</p></td>
+<td><p>64</p></td>
+<td><p>+0.020</p></td>
+</tr>
+<tr class="row-even"><td><p>gqi-krr</p></td>
+<td><p>1</p></td>
+<td><p>64</p></td>
+<td><p>+0.069</p></td>
+</tr>
+<tr class="row-odd"><td><p>gqi-krr</p></td>
+<td><p>2</p></td>
+<td><p>64</p></td>
+<td><p>+0.199</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrapper colwidths-auto docutils container" id="id19">
+<table class="docutils align-default" id="id19">
+<caption><span class="caption-number">Table 46 </span><span class="caption-text">The steps for gqi-krr.</span><a class="headerlink" href="#id19" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Step</p></th>
+<th class="head"><p>Measures</p></th>
+<th class="head"><p>All volumes (mm)</p></th>
+<th class="head"><p>b=1000 (mm)</p></th>
+<th class="head"><p>b=2000 (mm)</p></th>
+<th class="head"><p>b=3500 (mm)</p></th>
+<th class="head"><p>Share</p></th>
+<th class="head"><p>Holm p</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>S0</p></td>
+<td><p>the start</p></td>
+<td><p>+0.000 [+0.000, +0.000] not worse</p></td>
+<td><p>+0.000 [+0.000, +0.000] not worse</p></td>
+<td><p>+0.000 [+0.000, +0.000] not worse</p></td>
+<td><p>+0.000 [-0.001, +0.001] not worse</p></td>
+<td><p>0.00</p></td>
+<td><p>9.8e-01</p></td>
+</tr>
+<tr class="row-odd"><td><p>S1</p></td>
+<td><p>the model</p></td>
+<td><p>+0.052 [+0.048, +0.056] worse</p></td>
+<td><p>-0.060 [-0.065, -0.058] better</p></td>
+<td><p>+0.062 [+0.055, +0.067] worse</p></td>
+<td><p>+0.075 [+0.061, +0.100] worse</p></td>
+<td><p>0.13</p></td>
+<td><p>1.9e-06</p></td>
+</tr>
+<tr class="row-even"><td><p>S2</p></td>
+<td><p>resampling</p></td>
+<td><p>+0.037 [+0.034, +0.039] worse</p></td>
+<td><p>+0.043 [+0.040, +0.045] worse</p></td>
+<td><p>+0.038 [+0.035, +0.042] worse</p></td>
+<td><p>+0.015 [+0.009, +0.022] inconclusive</p></td>
+<td><p>0.09</p></td>
+<td><p>5.9e-29</p></td>
+</tr>
+<tr class="row-odd"><td><p>S3</p></td>
+<td><p>eddy currents in the training data</p></td>
+<td><p>+0.105 [+0.082, +0.133] worse</p></td>
+<td><p>+0.018 [+0.010, +0.030] inconclusive</p></td>
+<td><p>+0.112 [+0.077, +0.161] worse</p></td>
+<td><p>+0.244 [+0.186, +0.363] worse</p></td>
+<td><p>0.26</p></td>
+<td><p>2.6e-29</p></td>
+</tr>
+<tr class="row-even"><td><p>S4</p></td>
+<td><p>the cascade’s motion</p></td>
+<td><p>+0.066 [+0.062, +0.074] worse</p></td>
+<td><p>+0.055 [+0.047, +0.061] worse</p></td>
+<td><p>+0.085 [+0.067, +0.099] worse</p></td>
+<td><p>+0.074 [+0.055, +0.093] worse</p></td>
+<td><p>0.17</p></td>
+<td><p>1.0e-30</p></td>
+</tr>
+<tr class="row-odd"><td><p>S5</p></td>
+<td><p>the instant update</p></td>
+<td><p>+0.069 [+0.044, +0.093] worse</p></td>
+<td><p>+0.144 [+0.114, +0.223] worse</p></td>
+<td><p>+0.056 [+0.029, +0.104] worse</p></td>
+<td><p>+0.000 [-0.013, +0.023] inconclusive</p></td>
+<td><p>0.17</p></td>
+<td><p>2.3e-16</p></td>
+</tr>
+<tr class="row-even"><td><p>total</p></td>
+<td><p>the whole floor</p></td>
+<td><p>+0.399 [+0.356, +0.429] worse</p></td>
+<td><p>+0.272 [+0.197, +0.324] worse</p></td>
+<td><p>+0.422 [+0.366, +0.453] worse</p></td>
+<td><p>+0.500 [+0.427, +0.538] worse</p></td>
+<td><p>1.00</p></td>
+<td><p>2.2e-32</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrapper colwidths-auto docutils container" id="id20">
+<table class="docutils align-default" id="id20">
+<caption><span class="caption-number">Table 47 </span><span class="caption-text">Median error of each arm (mm): the mean and the largest displacement of
+the whole mapping, in the frame of its targets.</span><a class="headerlink" href="#id20" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Arm</p></th>
+<th class="head"><p>Model</p></th>
+<th class="head"><p>All</p></th>
+<th class="head"><p>b=1000</p></th>
+<th class="head"><p>b=2000</p></th>
+<th class="head"><p>b=3500</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>oracle</p></td>
+<td><p>none</p></td>
+<td><p>0.19 / 0.37</p></td>
+<td><p>0.32 / 0.56</p></td>
+<td><p>0.19 / 0.36</p></td>
+<td><p>0.13 / 0.27</p></td>
+</tr>
+<tr class="row-odd"><td><p>oracle-cascade</p></td>
+<td><p>none</p></td>
+<td><p>0.19 / 0.37</p></td>
+<td><p>0.32 / 0.56</p></td>
+<td><p>0.19 / 0.36</p></td>
+<td><p>0.13 / 0.27</p></td>
+</tr>
+<tr class="row-even"><td><p>reference</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.21 / 0.43</p></td>
+<td><p>0.35 / 0.61</p></td>
+<td><p>0.21 / 0.41</p></td>
+<td><p>0.16 / 0.33</p></td>
+</tr>
+<tr class="row-odd"><td><p>corrected</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.24 / 0.47</p></td>
+<td><p>0.39 / 0.69</p></td>
+<td><p>0.24 / 0.46</p></td>
+<td><p>0.16 / 0.34</p></td>
+</tr>
+<tr class="row-even"><td><p>motion-corrected</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.41 / 0.84</p></td>
+<td><p>0.39 / 0.75</p></td>
+<td><p>0.36 / 0.82</p></td>
+<td><p>0.52 / 1.42</p></td>
+</tr>
+<tr class="row-odd"><td><p>cascade-corrected</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.50 / 1.06</p></td>
+<td><p>0.48 / 0.94</p></td>
+<td><p>0.47 / 1.02</p></td>
+<td><p>0.58 / 1.45</p></td>
+</tr>
+<tr class="row-even"><td><p>pass</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.57 / 1.22</p></td>
+<td><p>0.71 / 1.36</p></td>
+<td><p>0.55 / 1.20</p></td>
+<td><p>0.51 / 1.16</p></td>
+</tr>
+<tr class="row-odd"><td><p>reference</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.24 / 0.47</p></td>
+<td><p>0.26 / 0.46</p></td>
+<td><p>0.25 / 0.48</p></td>
+<td><p>0.21 / 0.45</p></td>
+</tr>
+<tr class="row-even"><td><p>corrected</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.28 / 0.53</p></td>
+<td><p>0.30 / 0.55</p></td>
+<td><p>0.29 / 0.55</p></td>
+<td><p>0.23 / 0.47</p></td>
+</tr>
+<tr class="row-odd"><td><p>motion-corrected</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.38 / 0.85</p></td>
+<td><p>0.32 / 0.64</p></td>
+<td><p>0.41 / 0.89</p></td>
+<td><p>0.46 / 1.18</p></td>
+</tr>
+<tr class="row-even"><td><p>cascade-corrected</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.47 / 1.01</p></td>
+<td><p>0.39 / 0.79</p></td>
+<td><p>0.51 / 1.09</p></td>
+<td><p>0.55 / 1.28</p></td>
+</tr>
+<tr class="row-odd"><td><p>pass</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.60 / 1.25</p></td>
+<td><p>0.58 / 1.14</p></td>
+<td><p>0.60 / 1.29</p></td>
+<td><p>0.63 / 1.31</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrapper colwidths-auto docutils container" id="id21">
+<table class="docutils align-default" id="id21">
+<caption><span class="caption-number">Table 48 </span><span class="caption-text">Median error of each arm (mm), with each arm’s own common offset removed,
+as the end-to-end test removes it: mean and largest displacement.</span><a class="headerlink" href="#id21" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Arm</p></th>
+<th class="head"><p>Model</p></th>
+<th class="head"><p>All</p></th>
+<th class="head"><p>b=1000</p></th>
+<th class="head"><p>b=2000</p></th>
+<th class="head"><p>b=3500</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>oracle</p></td>
+<td><p>none</p></td>
+<td><p>0.20 / 0.40</p></td>
+<td><p>0.33 / 0.63</p></td>
+<td><p>0.20 / 0.40</p></td>
+<td><p>0.13 / 0.27</p></td>
+</tr>
+<tr class="row-odd"><td><p>oracle-cascade</p></td>
+<td><p>none</p></td>
+<td><p>0.20 / 0.40</p></td>
+<td><p>0.33 / 0.63</p></td>
+<td><p>0.20 / 0.40</p></td>
+<td><p>0.12 / 0.28</p></td>
+</tr>
+<tr class="row-even"><td><p>reference</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.23 / 0.47</p></td>
+<td><p>0.36 / 0.67</p></td>
+<td><p>0.22 / 0.43</p></td>
+<td><p>0.17 / 0.36</p></td>
+</tr>
+<tr class="row-odd"><td><p>corrected</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.26 / 0.50</p></td>
+<td><p>0.40 / 0.76</p></td>
+<td><p>0.25 / 0.50</p></td>
+<td><p>0.18 / 0.35</p></td>
+</tr>
+<tr class="row-even"><td><p>motion-corrected</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.42 / 0.88</p></td>
+<td><p>0.40 / 0.78</p></td>
+<td><p>0.37 / 0.85</p></td>
+<td><p>0.53 / 1.46</p></td>
+</tr>
+<tr class="row-odd"><td><p>cascade-corrected</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.52 / 1.07</p></td>
+<td><p>0.50 / 0.99</p></td>
+<td><p>0.48 / 1.05</p></td>
+<td><p>0.60 / 1.45</p></td>
+</tr>
+<tr class="row-even"><td><p>pass</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.61 / 1.27</p></td>
+<td><p>0.74 / 1.39</p></td>
+<td><p>0.58 / 1.25</p></td>
+<td><p>0.54 / 1.21</p></td>
+</tr>
+<tr class="row-odd"><td><p>reference</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.26 / 0.51</p></td>
+<td><p>0.27 / 0.52</p></td>
+<td><p>0.26 / 0.52</p></td>
+<td><p>0.22 / 0.48</p></td>
+</tr>
+<tr class="row-even"><td><p>corrected</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.29 / 0.59</p></td>
+<td><p>0.31 / 0.62</p></td>
+<td><p>0.30 / 0.59</p></td>
+<td><p>0.25 / 0.53</p></td>
+</tr>
+<tr class="row-odd"><td><p>motion-corrected</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.39 / 0.85</p></td>
+<td><p>0.34 / 0.68</p></td>
+<td><p>0.42 / 0.89</p></td>
+<td><p>0.45 / 1.19</p></td>
+</tr>
+<tr class="row-even"><td><p>cascade-corrected</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.48 / 1.01</p></td>
+<td><p>0.41 / 0.83</p></td>
+<td><p>0.52 / 1.08</p></td>
+<td><p>0.58 / 1.31</p></td>
+</tr>
+<tr class="row-odd"><td><p>pass</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.63 / 1.28</p></td>
+<td><p>0.59 / 1.16</p></td>
+<td><p>0.64 / 1.33</p></td>
+<td><p>0.66 / 1.40</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrapper colwidths-auto docutils container" id="id22">
+<table class="docutils align-default" id="id22">
+<caption><span class="caption-number">Table 49 </span><span class="caption-text">Median error of each arm (mm) on the eddy-current score of #712: mean
+and largest displacement.</span><a class="headerlink" href="#id22" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Arm</p></th>
+<th class="head"><p>Model</p></th>
+<th class="head"><p>All</p></th>
+<th class="head"><p>b=1000</p></th>
+<th class="head"><p>b=2000</p></th>
+<th class="head"><p>b=3500</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>oracle</p></td>
+<td><p>none</p></td>
+<td><p>0.19 / 0.37</p></td>
+<td><p>0.32 / 0.56</p></td>
+<td><p>0.19 / 0.36</p></td>
+<td><p>0.13 / 0.27</p></td>
+</tr>
+<tr class="row-odd"><td><p>oracle-cascade</p></td>
+<td><p>none</p></td>
+<td><p>0.67 / 1.20</p></td>
+<td><p>0.64 / 1.18</p></td>
+<td><p>0.64 / 1.07</p></td>
+<td><p>0.85 / 1.36</p></td>
+</tr>
+<tr class="row-even"><td><p>reference</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.21 / 0.43</p></td>
+<td><p>0.35 / 0.61</p></td>
+<td><p>0.21 / 0.41</p></td>
+<td><p>0.16 / 0.33</p></td>
+</tr>
+<tr class="row-odd"><td><p>corrected</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.24 / 0.47</p></td>
+<td><p>0.39 / 0.69</p></td>
+<td><p>0.24 / 0.46</p></td>
+<td><p>0.16 / 0.34</p></td>
+</tr>
+<tr class="row-even"><td><p>motion-corrected</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.41 / 0.84</p></td>
+<td><p>0.39 / 0.75</p></td>
+<td><p>0.36 / 0.82</p></td>
+<td><p>0.52 / 1.42</p></td>
+</tr>
+<tr class="row-odd"><td><p>cascade-corrected</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.50 / 1.09</p></td>
+<td><p>0.44 / 0.87</p></td>
+<td><p>0.48 / 1.01</p></td>
+<td><p>0.74 / 1.73</p></td>
+</tr>
+<tr class="row-even"><td><p>pass</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.65 / 1.34</p></td>
+<td><p>0.69 / 1.25</p></td>
+<td><p>0.57 / 1.20</p></td>
+<td><p>0.71 / 1.63</p></td>
+</tr>
+<tr class="row-odd"><td><p>reference</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.24 / 0.47</p></td>
+<td><p>0.26 / 0.46</p></td>
+<td><p>0.25 / 0.48</p></td>
+<td><p>0.21 / 0.45</p></td>
+</tr>
+<tr class="row-even"><td><p>corrected</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.28 / 0.53</p></td>
+<td><p>0.30 / 0.55</p></td>
+<td><p>0.29 / 0.55</p></td>
+<td><p>0.23 / 0.47</p></td>
+</tr>
+<tr class="row-odd"><td><p>motion-corrected</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.38 / 0.85</p></td>
+<td><p>0.32 / 0.64</p></td>
+<td><p>0.41 / 0.89</p></td>
+<td><p>0.46 / 1.18</p></td>
+</tr>
+<tr class="row-even"><td><p>cascade-corrected</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.51 / 1.08</p></td>
+<td><p>0.38 / 0.76</p></td>
+<td><p>0.51 / 1.08</p></td>
+<td><p>0.76 / 1.71</p></td>
+</tr>
+<tr class="row-odd"><td><p>pass</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.67 / 1.36</p></td>
+<td><p>0.58 / 1.09</p></td>
+<td><p>0.62 / 1.27</p></td>
+<td><p>0.80 / 1.73</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrapper colwidths-auto docutils container" id="id23">
+<table class="docutils align-default" id="id23">
+<caption><span class="caption-number">Table 50 </span><span class="caption-text">Median fraction of the field that the whole mapping recovers, κ.</span><a class="headerlink" href="#id23" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Arm</p></th>
+<th class="head"><p>Model</p></th>
+<th class="head"><p>All</p></th>
+<th class="head"><p>b=1000</p></th>
+<th class="head"><p>b=2000</p></th>
+<th class="head"><p>b=3500</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>oracle</p></td>
+<td><p>none</p></td>
+<td><p>1.00</p></td>
+<td><p>1.01</p></td>
+<td><p>1.00</p></td>
+<td><p>1.00</p></td>
+</tr>
+<tr class="row-odd"><td><p>oracle-cascade</p></td>
+<td><p>none</p></td>
+<td><p>1.00</p></td>
+<td><p>1.00</p></td>
+<td><p>1.00</p></td>
+<td><p>1.00</p></td>
+</tr>
+<tr class="row-even"><td><p>reference</p></td>
+<td><p>gp-loo</p></td>
+<td><p>1.00</p></td>
+<td><p>1.01</p></td>
+<td><p>1.00</p></td>
+<td><p>0.99</p></td>
+</tr>
+<tr class="row-odd"><td><p>corrected</p></td>
+<td><p>gp-loo</p></td>
+<td><p>1.00</p></td>
+<td><p>1.01</p></td>
+<td><p>1.01</p></td>
+<td><p>1.00</p></td>
+</tr>
+<tr class="row-even"><td><p>motion-corrected</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.74</p></td>
+<td><p>0.91</p></td>
+<td><p>0.69</p></td>
+<td><p>0.69</p></td>
+</tr>
+<tr class="row-odd"><td><p>cascade-corrected</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.78</p></td>
+<td><p>0.91</p></td>
+<td><p>0.72</p></td>
+<td><p>0.76</p></td>
+</tr>
+<tr class="row-even"><td><p>pass</p></td>
+<td><p>gp-loo</p></td>
+<td><p>0.84</p></td>
+<td><p>0.88</p></td>
+<td><p>0.76</p></td>
+<td><p>0.86</p></td>
+</tr>
+<tr class="row-odd"><td><p>reference</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.99</p></td>
+<td><p>0.99</p></td>
+<td><p>1.00</p></td>
+<td><p>0.99</p></td>
+</tr>
+<tr class="row-even"><td><p>corrected</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>1.00</p></td>
+<td><p>1.00</p></td>
+<td><p>1.00</p></td>
+<td><p>1.00</p></td>
+</tr>
+<tr class="row-odd"><td><p>motion-corrected</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.77</p></td>
+<td><p>0.88</p></td>
+<td><p>0.75</p></td>
+<td><p>0.75</p></td>
+</tr>
+<tr class="row-even"><td><p>cascade-corrected</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.79</p></td>
+<td><p>0.90</p></td>
+<td><p>0.75</p></td>
+<td><p>0.77</p></td>
+</tr>
+<tr class="row-odd"><td><p>pass</p></td>
+<td><p>gqi-krr</p></td>
+<td><p>0.85</p></td>
+<td><p>0.91</p></td>
+<td><p>0.79</p></td>
+<td><p>0.84</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</section>
+<section id="post-hoc-why-the-instant-update-hurts">
+<h3>Post hoc: why the instant update hurts<a class="headerlink" href="#post-hoc-why-the-instant-update-hurts" title="Link to this heading">¶</a></h3>
+<p>Two probes ran after the results; they are not in the working hypothesis
+(<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/723#issuecomment-7076489123">posted on #723</a>).</p>
+<dl class="simple">
+<dt>The targets do not draw mostly on the same direction</dt><dd><p>Each target is a weighted sum of the other volumes, with the weights of the model’s
+<em>smoother</em>.
+The two volumes along the same direction in the other shells carry 5% to 13% of a
+target’s absolute weight, and are almost never its two largest weights.
+A volume’s change in error correlates with the error the pass left on its
+same-direction volumes registered before it, weighted by their smoother weights
+(ρ +0.66 at b=1000, gp-loo), but about as strongly, in the opposite direction, with
+those registered after it (−0.52), which cannot have entered its target.
+Both track the volume’s place in the order (ρ +0.91 with the order at b=1000).
+The breakdown by how many same-direction volumes were registered before a volume
+therefore restates the order.
+At b=3500, the change in error falls with the order for gp-loo (ρ −0.47): there,
+the update’s benefit grows with the order, as hypothesis 2 expected.</p>
+</dd>
+<dt>The pass drifts</dt><dd><p>Each volume’s residual is <code class="docutils literal notranslate"><span class="pre">W</span> <span class="pre">(E</span> <span class="pre">M)⁻¹</span></code>, in the scanner’s frame.
+Averaged over each third of the order, the residual’s <em>strain</em> (the Frobenius norm
+of its symmetric polar factor minus the identity; 0.01 is about a 1% deformation)
+grows with the order in the pass and stays flat without the instant update.
+The strain is an expansion on all three axes, largest along the superior-inferior
+axis (z), not along phase encoding (y), although its part along phase encoding
+grows too (+0.0027 to +0.0084, gp-loo).
+The rigid part of the mean residual (a shift of the brain’s centre of 0.38 to 0.52
+mm and a rotation of 0.22° to 0.38°, the cascade’s frame) and the spread of each
+volume around it change little, and alike in both arms.
+Without the update, the affine registrations to model predictions already carry a
+small expansion (strain 0.004 to 0.014 by shell).
+One reading, not tested: with the instant update, every registered volume enters
+the training data resampled with that expansion, so later targets are expanded and
+later estimates expand further, as groupwise registration drifts when nothing holds
+the mean transform at the identity.</p>
+</dd>
+</dl>
+<figure class="align-default" id="id24">
+<a class="reference internal image-reference" href="../_images/eddy-targets-drift.png"><img alt="../_images/eddy-targets-drift.png" src="../_images/eddy-targets-drift.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 21 </span><span class="caption-text">The strain of the mean residual, by third of the order and shell, for gp-loo (left)
+and gqi-krr (right): the pass (solid) and <code class="docutils literal notranslate"><span class="pre">cascade-corrected</span></code>, the pass without
+the instant update (dotted).</span><a class="headerlink" href="#id24" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<div class="table-wrapper colwidths-auto docutils container" id="id25">
+<table class="docutils align-default" id="id25">
+<caption><span class="caption-number">Table 51 </span><span class="caption-text">The smoother’s weight on the same direction, by model and shell: the
+median share of a target’s absolute weight on its two same-direction volumes, how
+often they are its two largest weights, and Spearman’s ρ of the change in error
+against the weighted error left on those registered before, on those registered
+after, and against the order.</span><a class="headerlink" href="#id25" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Model</p></th>
+<th class="head"><p>Shell</p></th>
+<th class="head"><p>Weight share</p></th>
+<th class="head"><p>Largest two</p></th>
+<th class="head"><p>Rho, before</p></th>
+<th class="head"><p>Rho, after</p></th>
+<th class="head"><p>Rho, order</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>gp-loo</p></td>
+<td><p>b=1000</p></td>
+<td><p>0.071</p></td>
+<td><p>0%</p></td>
+<td><p>+0.66</p></td>
+<td><p>-0.52</p></td>
+<td><p>+0.91</p></td>
+</tr>
+<tr class="row-odd"><td><p>gp-loo</p></td>
+<td><p>b=2000</p></td>
+<td><p>0.129</p></td>
+<td><p>0%</p></td>
+<td><p>+0.39</p></td>
+<td><p>-0.48</p></td>
+<td><p>+0.58</p></td>
+</tr>
+<tr class="row-even"><td><p>gp-loo</p></td>
+<td><p>b=3500</p></td>
+<td><p>0.088</p></td>
+<td><p>0%</p></td>
+<td><p>-0.44</p></td>
+<td><p>+0.42</p></td>
+<td><p>-0.47</p></td>
+</tr>
+<tr class="row-odd"><td><p>gqi-krr</p></td>
+<td><p>b=1000</p></td>
+<td><p>0.052</p></td>
+<td><p>0%</p></td>
+<td><p>+0.69</p></td>
+<td><p>-0.63</p></td>
+<td><p>+0.97</p></td>
+</tr>
+<tr class="row-even"><td><p>gqi-krr</p></td>
+<td><p>b=2000</p></td>
+<td><p>0.066</p></td>
+<td><p>0%</p></td>
+<td><p>+0.37</p></td>
+<td><p>-0.42</p></td>
+<td><p>+0.68</p></td>
+</tr>
+<tr class="row-odd"><td><p>gqi-krr</p></td>
+<td><p>b=3500</p></td>
+<td><p>0.062</p></td>
+<td><p>3%</p></td>
+<td><p>+0.15</p></td>
+<td><p>-0.07</p></td>
+<td><p>+0.07</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrapper colwidths-auto docutils container" id="id26">
+<table class="docutils align-default" id="id26">
+<caption><span class="caption-number">Table 52 </span><span class="caption-text">The mean residual by third of the order (first / second / last): its
+strain, the shift of the brain’s centre and the rotation (its rigid part), the
+median spread of each volume’s residual around it, and its mean displacement within
+the brain.
+The residual is in the scanner’s frame and includes the cascade’s offset, unlike the
+errors above.</span><a class="headerlink" href="#id26" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Model</p></th>
+<th class="head"><p>Arm</p></th>
+<th class="head"><p>Shells</p></th>
+<th class="head"><p>Strain</p></th>
+<th class="head"><p>Shift (mm)</p></th>
+<th class="head"><p>Rotation (degrees)</p></th>
+<th class="head"><p>Spread (mm)</p></th>
+<th class="head"><p>Mean displacement (mm)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>gp-loo</p></td>
+<td><p>cascade-corrected</p></td>
+<td><p>all</p></td>
+<td><p>0.0085 / 0.0080 / 0.0090</p></td>
+<td><p>0.42 / 0.46 / 0.46</p></td>
+<td><p>0.29 / 0.31 / 0.29</p></td>
+<td><p>0.396 / 0.442 / 0.424</p></td>
+<td><p>0.509 / 0.543 / 0.558</p></td>
+</tr>
+<tr class="row-odd"><td><p>gp-loo</p></td>
+<td><p>cascade-corrected</p></td>
+<td><p>b=1000</p></td>
+<td><p>0.0134 / 0.0140 / 0.0134</p></td>
+<td><p>0.42 / 0.47 / 0.47</p></td>
+<td><p>0.33 / 0.35 / 0.30</p></td>
+<td><p>0.277 / 0.297 / 0.276</p></td>
+<td><p>0.598 / 0.663 / 0.627</p></td>
+</tr>
+<tr class="row-even"><td><p>gp-loo</p></td>
+<td><p>cascade-corrected</p></td>
+<td><p>b=2000</p></td>
+<td><p>0.0084 / 0.0079 / 0.0097</p></td>
+<td><p>0.42 / 0.41 / 0.41</p></td>
+<td><p>0.22 / 0.30 / 0.34</p></td>
+<td><p>0.381 / 0.391 / 0.421</p></td>
+<td><p>0.479 / 0.498 / 0.556</p></td>
+</tr>
+<tr class="row-odd"><td><p>gp-loo</p></td>
+<td><p>cascade-corrected</p></td>
+<td><p>b=3500</p></td>
+<td><p>0.0048 / 0.0048 / 0.0041</p></td>
+<td><p>0.42 / 0.50 / 0.51</p></td>
+<td><p>0.38 / 0.33 / 0.26</p></td>
+<td><p>0.516 / 0.560 / 0.667</p></td>
+<td><p>0.515 / 0.556 / 0.544</p></td>
+</tr>
+<tr class="row-even"><td><p>gp-loo</p></td>
+<td><p>pass</p></td>
+<td><p>all</p></td>
+<td><p>0.0101 / 0.0131 / 0.0199</p></td>
+<td><p>0.43 / 0.47 / 0.49</p></td>
+<td><p>0.28 / 0.32 / 0.30</p></td>
+<td><p>0.403 / 0.448 / 0.442</p></td>
+<td><p>0.531 / 0.622 / 0.762</p></td>
+</tr>
+<tr class="row-odd"><td><p>gp-loo</p></td>
+<td><p>pass</p></td>
+<td><p>b=1000</p></td>
+<td><p>0.0163 / 0.0227 / 0.0299</p></td>
+<td><p>0.43 / 0.51 / 0.52</p></td>
+<td><p>0.32 / 0.34 / 0.30</p></td>
+<td><p>0.299 / 0.310 / 0.296</p></td>
+<td><p>0.657 / 0.856 / 1.000</p></td>
+</tr>
+<tr class="row-even"><td><p>gp-loo</p></td>
+<td><p>pass</p></td>
+<td><p>b=2000</p></td>
+<td><p>0.0096 / 0.0131 / 0.0192</p></td>
+<td><p>0.42 / 0.42 / 0.45</p></td>
+<td><p>0.22 / 0.33 / 0.33</p></td>
+<td><p>0.361 / 0.341 / 0.368</p></td>
+<td><p>0.494 / 0.582 / 0.734</p></td>
+</tr>
+<tr class="row-odd"><td><p>gp-loo</p></td>
+<td><p>pass</p></td>
+<td><p>b=3500</p></td>
+<td><p>0.0049 / 0.0069 / 0.0095</p></td>
+<td><p>0.44 / 0.50 / 0.50</p></td>
+<td><p>0.34 / 0.31 / 0.30</p></td>
+<td><p>0.503 / 0.452 / 0.501</p></td>
+<td><p>0.513 / 0.571 / 0.603</p></td>
+</tr>
+<tr class="row-even"><td><p>gqi-krr</p></td>
+<td><p>cascade-corrected</p></td>
+<td><p>all</p></td>
+<td><p>0.0092 / 0.0089 / 0.0095</p></td>
+<td><p>0.41 / 0.44 / 0.45</p></td>
+<td><p>0.29 / 0.30 / 0.32</p></td>
+<td><p>0.349 / 0.401 / 0.391</p></td>
+<td><p>0.510 / 0.537 / 0.563</p></td>
+</tr>
+<tr class="row-odd"><td><p>gqi-krr</p></td>
+<td><p>cascade-corrected</p></td>
+<td><p>b=1000</p></td>
+<td><p>0.0108 / 0.0114 / 0.0106</p></td>
+<td><p>0.42 / 0.46 / 0.45</p></td>
+<td><p>0.33 / 0.32 / 0.30</p></td>
+<td><p>0.244 / 0.258 / 0.237</p></td>
+<td><p>0.559 / 0.608 / 0.571</p></td>
+</tr>
+<tr class="row-even"><td><p>gqi-krr</p></td>
+<td><p>cascade-corrected</p></td>
+<td><p>b=2000</p></td>
+<td><p>0.0102 / 0.0099 / 0.0121</p></td>
+<td><p>0.43 / 0.42 / 0.42</p></td>
+<td><p>0.22 / 0.31 / 0.34</p></td>
+<td><p>0.386 / 0.382 / 0.451</p></td>
+<td><p>0.508 / 0.531 / 0.603</p></td>
+</tr>
+<tr class="row-odd"><td><p>gqi-krr</p></td>
+<td><p>cascade-corrected</p></td>
+<td><p>b=3500</p></td>
+<td><p>0.0074 / 0.0061 / 0.0063</p></td>
+<td><p>0.38 / 0.45 / 0.48</p></td>
+<td><p>0.33 / 0.30 / 0.31</p></td>
+<td><p>0.498 / 0.508 / 0.565</p></td>
+<td><p>0.490 / 0.513 / 0.551</p></td>
+</tr>
+<tr class="row-even"><td><p>gqi-krr</p></td>
+<td><p>pass</p></td>
+<td><p>all</p></td>
+<td><p>0.0111 / 0.0151 / 0.0218</p></td>
+<td><p>0.42 / 0.46 / 0.49</p></td>
+<td><p>0.28 / 0.32 / 0.31</p></td>
+<td><p>0.359 / 0.356 / 0.345</p></td>
+<td><p>0.544 / 0.648 / 0.803</p></td>
+</tr>
+<tr class="row-odd"><td><p>gqi-krr</p></td>
+<td><p>pass</p></td>
+<td><p>b=1000</p></td>
+<td><p>0.0131 / 0.0185 / 0.0243</p></td>
+<td><p>0.43 / 0.50 / 0.49</p></td>
+<td><p>0.33 / 0.33 / 0.30</p></td>
+<td><p>0.234 / 0.253 / 0.234</p></td>
+<td><p>0.600 / 0.753 / 0.857</p></td>
+</tr>
+<tr class="row-even"><td><p>gqi-krr</p></td>
+<td><p>pass</p></td>
+<td><p>b=2000</p></td>
+<td><p>0.0117 / 0.0159 / 0.0232</p></td>
+<td><p>0.44 / 0.43 / 0.46</p></td>
+<td><p>0.22 / 0.34 / 0.35</p></td>
+<td><p>0.399 / 0.338 / 0.369</p></td>
+<td><p>0.534 / 0.643 / 0.836</p></td>
+</tr>
+<tr class="row-odd"><td><p>gqi-krr</p></td>
+<td><p>pass</p></td>
+<td><p>b=3500</p></td>
+<td><p>0.0091 / 0.0121 / 0.0179</p></td>
+<td><p>0.41 / 0.47 / 0.50</p></td>
+<td><p>0.32 / 0.30 / 0.29</p></td>
+<td><p>0.508 / 0.506 / 0.483</p></td>
+<td><p>0.522 / 0.596 / 0.726</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrapper colwidths-auto docutils container" id="id27">
+<table class="docutils align-default" id="id27">
+<caption><span class="caption-number">Table 53 </span><span class="caption-text">The strain’s axes over all shells, in world (RAS+) coordinates (x, y, z),
+with phase encoding along y: its eigenvalues, its largest axis, that axis’s
+alignment with phase encoding, and the strain along phase encoding.</span><a class="headerlink" href="#id27" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Model</p></th>
+<th class="head"><p>Arm</p></th>
+<th class="head"><p>Third</p></th>
+<th class="head"><p>Eigenvalues</p></th>
+<th class="head"><p>Largest axis</p></th>
+<th class="head"><p>Alignment with PE (absolute cosine)</p></th>
+<th class="head"><p>Along PE</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>gp-loo</p></td>
+<td><p>cascade-corrected</p></td>
+<td><p>1</p></td>
+<td><p>+0.0018, +0.0049, +0.0067</p></td>
+<td><p>(-0.09, +0.19, +0.98)</p></td>
+<td><p>0.19</p></td>
+<td><p>+0.0022</p></td>
+</tr>
+<tr class="row-odd"><td><p>gp-loo</p></td>
+<td><p>cascade-corrected</p></td>
+<td><p>2</p></td>
+<td><p>+0.0033, +0.0043, +0.0059</p></td>
+<td><p>(-0.05, +0.25, +0.97)</p></td>
+<td><p>0.25</p></td>
+<td><p>+0.0038</p></td>
+</tr>
+<tr class="row-even"><td><p>gp-loo</p></td>
+<td><p>cascade-corrected</p></td>
+<td><p>3</p></td>
+<td><p>+0.0036, +0.0049, +0.0065</p></td>
+<td><p>(-0.04, +0.00, +1.00)</p></td>
+<td><p>0.00</p></td>
+<td><p>+0.0040</p></td>
+</tr>
+<tr class="row-odd"><td><p>gp-loo</p></td>
+<td><p>pass</p></td>
+<td><p>1</p></td>
+<td><p>+0.0022, +0.0059, +0.0079</p></td>
+<td><p>(-0.07, +0.14, +0.99)</p></td>
+<td><p>0.14</p></td>
+<td><p>+0.0027</p></td>
+</tr>
+<tr class="row-even"><td><p>gp-loo</p></td>
+<td><p>pass</p></td>
+<td><p>2</p></td>
+<td><p>+0.0055, +0.0068, +0.0098</p></td>
+<td><p>(+0.00, +0.14, +0.99)</p></td>
+<td><p>0.14</p></td>
+<td><p>+0.0057</p></td>
+</tr>
+<tr class="row-odd"><td><p>gp-loo</p></td>
+<td><p>pass</p></td>
+<td><p>3</p></td>
+<td><p>+0.0080, +0.0105, +0.0149</p></td>
+<td><p>(-0.04, +0.01, +1.00)</p></td>
+<td><p>0.01</p></td>
+<td><p>+0.0084</p></td>
+</tr>
+<tr class="row-even"><td><p>gqi-krr</p></td>
+<td><p>cascade-corrected</p></td>
+<td><p>1</p></td>
+<td><p>+0.0020, +0.0055, +0.0071</p></td>
+<td><p>(+0.08, -0.21, -0.98)</p></td>
+<td><p>0.21</p></td>
+<td><p>+0.0026</p></td>
+</tr>
+<tr class="row-odd"><td><p>gqi-krr</p></td>
+<td><p>cascade-corrected</p></td>
+<td><p>2</p></td>
+<td><p>+0.0032, +0.0048, +0.0067</p></td>
+<td><p>(-0.04, +0.03, +1.00)</p></td>
+<td><p>0.03</p></td>
+<td><p>+0.0035</p></td>
+</tr>
+<tr class="row-even"><td><p>gqi-krr</p></td>
+<td><p>cascade-corrected</p></td>
+<td><p>3</p></td>
+<td><p>+0.0039, +0.0050, +0.0070</p></td>
+<td><p>(-0.08, -0.07, +0.99)</p></td>
+<td><p>0.07</p></td>
+<td><p>+0.0040</p></td>
+</tr>
+<tr class="row-odd"><td><p>gqi-krr</p></td>
+<td><p>pass</p></td>
+<td><p>1</p></td>
+<td><p>+0.0027, +0.0066, +0.0086</p></td>
+<td><p>(-0.02, +0.17, +0.98)</p></td>
+<td><p>0.17</p></td>
+<td><p>+0.0033</p></td>
+</tr>
+<tr class="row-even"><td><p>gqi-krr</p></td>
+<td><p>pass</p></td>
+<td><p>2</p></td>
+<td><p>+0.0057, +0.0079, +0.0116</p></td>
+<td><p>(-0.01, +0.06, +1.00)</p></td>
+<td><p>0.06</p></td>
+<td><p>+0.0058</p></td>
+</tr>
+<tr class="row-odd"><td><p>gqi-krr</p></td>
+<td><p>pass</p></td>
+<td><p>3</p></td>
+<td><p>+0.0087, +0.0115, +0.0164</p></td>
+<td><p>(-0.04, -0.02, +1.00)</p></td>
+<td><p>0.02</p></td>
+<td><p>+0.0090</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="consequences">
+<h3>Consequences<a class="headerlink" href="#consequences" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>By the rules, Test 2 tries targets free of the field, starting with targets that
+leave out the volumes along the same direction, and #591 waits for Test 2.</p></li>
+<li><p>The post hoc probes weaken that start: the same direction carries little of a
+target’s weight, and the pass drifts.
+They point instead to the eddy pass without the instant update, to removing the
+transform that the eddy estimates share as it accumulates, or to a field model
+restricted to phase encoding (#591), which cannot express the expansion off that axis
+but could still drift along it.
+Test 2’s working hypothesis will be posted on #723 before it runs.</p></li>
+<li><p>As it stands, the instant update makes the eddy pass worse at b=1000 and b=2000 with
+both models: <code class="docutils literal notranslate"><span class="pre">cascade-corrected</span></code>, the pass without it, does better there.
+The command line’s <code class="docutils literal notranslate"><span class="pre">--no-instant-update</span></code> would also remove it from the cascade’s
+rigid levels.</p></li>
+</ul>
+</section>
+<section id="open-questions">
+<h3>Open questions<a class="headerlink" href="#open-questions" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Why do the affine registrations to model predictions carry an expansion, even
+without the instant update?</p></li>
+<li><p>Do the cascade’s rigid levels absorb part of each volume’s field into the head motion
+(<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/629">#629</a>)?
+The cascade’s head-motion error grows with b (the reproduction table), but nothing
+here separates that from the targets’ noise.</p></li>
+<li><p>Only Sherbrooke’s <code class="docutils literal notranslate"><span class="pre">m2s0e2</span></code> was run; HCP-YA’s shells do not share their directions.</p></li>
+</ul>
+</section>
+<section id="deviations-from-the-registration">
+<h3>Deviations from the registration<a class="headerlink" href="#deviations-from-the-registration" title="Link to this heading">¶</a></h3>
+<p>None from the rules.
+The opening of #723 named the eddy-current score as the error; the pilot changed it to
+the whole mapping before the rules were posted, as Test 1’s working hypothesis explains:
+the eddy-current score also counts the cascade’s motion error.
+The rules leave open which reading of “worse” their fallback uses; the results give
+both.</p>
+</section>
+<section id="reproducing">
+<h3>Reproducing<a class="headerlink" href="#reproducing" title="Link to this heading">¶</a></h3>
+<p>The run was made outside the phantom dataset, without a <code class="docutils literal notranslate"><span class="pre">datalad</span> <span class="pre">run</span></code> record, and
+its results are kept outside the repository.
+The dataset stood at commit 826e611 at the start and the end.
+The run’s <em>NiFreeze</em> commit, clean, was 42a92ecb, with itk-elastix 0.25.4; it took 55 min,
+with 6 single-threaded registration workers and 6 threads for the cascade and the
+passes, on 6 physical cores.
+From the repository’s root:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">OMP_NUM_THREADS</span><span class="o">=</span><span class="mi">6</span> <span class="n">uv</span> <span class="n">run</span> <span class="n">tools</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">eddy_targets</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">dataset</span> <span class="o">&lt;</span><span class="n">dataset</span><span class="o">&gt;</span> \
+    <span class="o">--</span><span class="n">out</span> <span class="o">&lt;</span><span class="n">results</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">jobs</span> <span class="mi">6</span> <span class="o">--</span><span class="n">threads</span> <span class="mi">6</span>
+</pre></div>
+</div>
+<p>The decision, and the figures and tables of this page, come from the scripts as of the
+commit that adds this page:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">uv</span> <span class="n">run</span> <span class="n">tools</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">eddy_targets_figures</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">results</span> <span class="o">&lt;</span><span class="n">results</span><span class="o">&gt;</span> \
+    <span class="o">--</span><span class="n">record</span> <span class="o">&lt;</span><span class="n">results</span><span class="o">&gt;/</span><span class="n">e2e</span><span class="o">-</span><span class="n">record</span><span class="o">-</span><span class="mf">721.</span><span class="n">json</span> \
+    <span class="o">--</span><span class="n">out</span> <span class="n">docs</span><span class="o">/</span><span class="n">_static</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">eddy</span><span class="o">-</span><span class="n">targets</span> <span class="o">--</span><span class="n">figures</span>
+<span class="n">uv</span> <span class="n">run</span> <span class="n">tools</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">eddy_targets_posthoc</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">dataset</span> <span class="o">&lt;</span><span class="n">dataset</span><span class="o">&gt;</span> \
+    <span class="o">--</span><span class="n">results</span> <span class="o">&lt;</span><span class="n">results</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">out</span> <span class="n">docs</span><span class="o">/</span><span class="n">_static</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">eddy</span><span class="o">-</span><span class="n">targets</span> <span class="o">--</span><span class="n">figures</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">e2e-record-721.json</span></code> is the <code class="docutils literal notranslate"><span class="pre">cascade-eddy.json</span></code> record that #721’s end-to-end test
+wrote locally, kept with the results for the reproduction check.</p>
+</section>
+</section>
+<section id="test-2-why-the-registrations-expand">
+<h2>Test 2: why the registrations expand<a class="headerlink" href="#test-2-why-the-registrations-expand" title="Link to this heading">¶</a></h2>
+<p>Test 1 found that the pass’s estimates share an expansion.
+A check after Test 1 found that it starts before any model is involved: even the
+oracle’s registrations, each of a volume to its own noise-free original from its true
+head motion, enlarge the volume by a median of +0.33%.
+Test 2 asked where that comes from, before any remedy was chosen
+(<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/723#issuecomment-7077326152">working hypothesis</a>,
+<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/723#issuecomment-7077725428">results</a>).</p>
+<section id="the-cells">
+<h3>The cells<a class="headerlink" href="#the-cells" title="Link to this heading">¶</a></h3>
+<p>Every volume of four copies of Sherbrooke is registered to its noise-free original, from
+its true head motion, with the pass’s settings
+(<a class="reference internal" href="../api/nifreeze.registration.base.html#nifreeze.registration.base.AFFINE" title="nifreeze.registration.base.AFFINE"><code class="xref py py-data docutils literal notranslate"><span class="pre">AFFINE</span></code></a>, elastix, one thread, seed 12345):</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">unmoved</span></code></dt><dd><p>The reference itself: noise-free, the moving image <em>is</em> its target.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">m2s0</span></code></dt><dd><p>Head motion only (2 mm and 2°).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">e2</span></code></dt><dd><p>Eddy currents only (up to 4 mm).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">m2s0e2</span></code></dt><dd><p>Both: Test 1’s copy.</p>
+</dd>
+</dl>
+<p>Each copy is used noise-free and with the end-to-end test’s noise.
+On <code class="docutils literal notranslate"><span class="pre">m2s0e2</span></code> and <code class="docutils literal notranslate"><span class="pre">unmoved</span></code>, with the noise, the settings also run with one
+ingredient removed: the histogram matching of the moving volume to the target, the
+winsorizing, the clipping of both images to the moving volume’s window, the target’s
+brain mask (the moving volume has none), or the smoothed first stage.
+That makes 18 cells of 192 volumes: 3,456 registrations.</p>
+</section>
+<section id="id1">
+<h3>How the results are judged<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
+<p>Each volume’s residual is <code class="docutils literal notranslate"><span class="pre">R</span> <span class="pre">=</span> <span class="pre">W</span> <span class="pre">T⁻¹</span></code>, with <code class="docutils literal notranslate"><span class="pre">W</span></code> the estimate and <code class="docutils literal notranslate"><span class="pre">T</span> <span class="pre">=</span> <span class="pre">E</span> <span class="pre">M</span></code> the
+copy’s true mapping.
+Its <em>volume change</em> is <code class="docutils literal notranslate"><span class="pre">det(L)^(1/3)</span> <span class="pre">−</span> <span class="pre">1</span></code> of its linear part <code class="docutils literal notranslate"><span class="pre">L</span></code>: positive when the
+estimate makes the volume larger than the truth.
+The margin, 0.037%, is the volume change that moves the brain’s mean radius (53.4 mm)
+by 0.01 voxel.
+Comparisons are paired by volume (<code class="docutils literal notranslate"><span class="pre">experiments.paired_comparison</span></code> on the volume
+change, stratified by shell, 10,000 resamples, seed 0).</p>
+<dl class="simple">
+<dt>R0, an image onto itself</dt><dd><p>The noise-free <code class="docutils literal notranslate"><span class="pre">unmoved</span></code> cell’s median must have its 95% interval within the
+margin.</p>
+</dd>
+<dt>R1, the data</dt><dd><p>With the default settings, each factor with against without: the noise (noisy
+against noise-free <code class="docutils literal notranslate"><span class="pre">m2s0e2</span></code>), the noise alone (the same on <code class="docutils literal notranslate"><span class="pre">unmoved</span></code>), the eddy
+currents (<code class="docutils literal notranslate"><span class="pre">m2s0e2</span></code> against <code class="docutils literal notranslate"><span class="pre">m2s0</span></code>, both noisy) and the head motion (<code class="docutils literal notranslate"><span class="pre">m2s0e2</span></code>
+against <code class="docutils literal notranslate"><span class="pre">e2</span></code>, both noisy).
+The verdicts are Test 1’s (“better”, “not worse”, “worse” or “inconclusive”, from
+the interval of the median difference and the margin).
+A factor <em>drives</em> the expansion if it is “worse” and, without it, the median has
+its interval within the margin.
+A factor that is “worse” while the expansion stays without it <em>modulates</em> it.</p>
+</dd>
+<dt>R2, the settings</dt><dd><p>On noisy <code class="docutils literal notranslate"><span class="pre">m2s0e2</span></code>, each variant against the default.
+A setting <em>causes</em> the expansion if removing it is “better” and the variant’s
+median has its interval within the margin.</p>
+</dd>
+</dl>
+</section>
+<section id="id2">
+<h3>Results<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
+<figure class="align-default" id="id28">
+<img alt="The median volume change of each cell, overall and by shell." src="../_images/eddy-expansion-cells.png" />
+<figcaption>
+<p><span class="caption-number">Fig. 22 </span><span class="caption-text">The median volume change of each cell’s residuals: all shells (black, with its 95%
+interval) and each shell.
+The dotted lines are the margin.
+Without noise, no copy expands; with it, every copy does, unless the target’s mask
+is removed, which turns b=2000 and b=3500 into a contraction.</span><a class="headerlink" href="#id28" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<ul class="simple">
+<li><p><strong>R0 holds.</strong> The noise-free <code class="docutils literal notranslate"><span class="pre">unmoved</span></code> volume registered onto itself changes volume
+by +0.000%.</p></li>
+<li><p><strong>The noise drives the expansion.</strong> With minus without, on <code class="docutils literal notranslate"><span class="pre">m2s0e2</span></code>: +0.328%
+[+0.320, +0.341], “worse”; without it, the median is −0.003%, within the margin.
+On the volume that never moved, the noise alone gives +0.286%.</p></li>
+<li><p><strong>The eddy currents play no part</strong> (+0.003%, “not worse”), and <strong>the head motion
+modulates it</strong> (+0.055%, “worse”, while the expansion stays without it).</p></li>
+<li><p><strong>No setting causes it.</strong> Removing the mask turns it into a contraction: the cell’s
+median is −0.150% on <code class="docutils literal notranslate"><span class="pre">m2s0e2</span></code>, a difference of −0.400% from the default.
+Removing the clipping or the histogram matching takes a little off (differences of
+−0.066% and −0.054%); the winsorizing and the smoothed stage change nothing.</p></li>
+<li><p><strong>By shell,</strong> the expansion is largest at b=1000 and smallest at b=3500 in every noisy
+cell with the mask (+0.60%, +0.33% and +0.11% on <code class="docutils literal notranslate"><span class="pre">m2s0e2</span></code>).</p></li>
+<li><p><strong>What the noise costs the oracle:</strong> on <code class="docutils literal notranslate"><span class="pre">m2s0e2</span></code>, a median error of 0.189 mm with
+it and 0.033 mm without it.</p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container" id="id29">
+<table class="docutils align-default" id="id29">
+<caption><span class="caption-number">Table 54 </span><span class="caption-text">The data’s factors (R1): the median difference of the volume change,
+with minus without, paired by volume.</span><a class="headerlink" href="#id29" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Factor (with minus without)</p></th>
+<th class="head"><p>Median difference [95% interval]</p></th>
+<th class="head"><p>Verdict</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>noise</p></td>
+<td><p>+0.328% [+0.320%, +0.341%]</p></td>
+<td><p>worse</p></td>
+</tr>
+<tr class="row-odd"><td><p>noise, unmoved</p></td>
+<td><p>+0.286% [+0.278%, +0.295%]</p></td>
+<td><p>worse</p></td>
+</tr>
+<tr class="row-even"><td><p>eddy currents</p></td>
+<td><p>+0.003% [-0.002%, +0.006%]</p></td>
+<td><p>not worse</p></td>
+</tr>
+<tr class="row-odd"><td><p>head motion</p></td>
+<td><p>+0.055% [+0.047%, +0.062%]</p></td>
+<td><p>worse</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrapper colwidths-auto docutils container" id="id30">
+<table class="docutils align-default" id="id30">
+<caption><span class="caption-number">Table 55 </span><span class="caption-text">The settings (R2): each variant minus the default, paired by volume.</span><a class="headerlink" href="#id30" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Copy</p></th>
+<th class="head"><p>Removed</p></th>
+<th class="head"><p>Median difference from the default [95% interval]</p></th>
+<th class="head"><p>Verdict</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>m2s0e2</p></td>
+<td><p>no-clipping</p></td>
+<td><p>-0.066% [-0.077%, -0.054%]</p></td>
+<td><p>better</p></td>
+</tr>
+<tr class="row-odd"><td><p>m2s0e2</p></td>
+<td><p>no-histogram-matching</p></td>
+<td><p>-0.054% [-0.059%, -0.050%]</p></td>
+<td><p>better</p></td>
+</tr>
+<tr class="row-even"><td><p>m2s0e2</p></td>
+<td><p>no-mask</p></td>
+<td><p>-0.400% [-0.414%, -0.378%]</p></td>
+<td><p>better</p></td>
+</tr>
+<tr class="row-odd"><td><p>m2s0e2</p></td>
+<td><p>no-smoothed-stage</p></td>
+<td><p>+0.001% [+0.000%, +0.001%]</p></td>
+<td><p>not worse</p></td>
+</tr>
+<tr class="row-even"><td><p>m2s0e2</p></td>
+<td><p>no-winsorizing</p></td>
+<td><p>+0.000% [+0.000%, +0.000%]</p></td>
+<td><p>not worse</p></td>
+</tr>
+<tr class="row-odd"><td><p>unmoved</p></td>
+<td><p>no-clipping</p></td>
+<td><p>+0.003% [-0.003%, +0.011%]</p></td>
+<td><p>not worse</p></td>
+</tr>
+<tr class="row-even"><td><p>unmoved</p></td>
+<td><p>no-histogram-matching</p></td>
+<td><p>-0.033% [-0.036%, -0.031%]</p></td>
+<td><p>not worse</p></td>
+</tr>
+<tr class="row-odd"><td><p>unmoved</p></td>
+<td><p>no-mask</p></td>
+<td><p>-0.452% [-0.471%, -0.445%]</p></td>
+<td><p>better</p></td>
+</tr>
+<tr class="row-even"><td><p>unmoved</p></td>
+<td><p>no-smoothed-stage</p></td>
+<td><p>+0.008% [+0.007%, +0.009%]</p></td>
+<td><p>not worse</p></td>
+</tr>
+<tr class="row-odd"><td><p>unmoved</p></td>
+<td><p>no-winsorizing</p></td>
+<td><p>+0.000% [+0.000%, +0.000%]</p></td>
+<td><p>not worse</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrapper colwidths-auto docutils container" id="id31">
+<table class="docutils align-default" id="id31">
+<caption><span class="caption-number">Table 56 </span><span class="caption-text">Every cell: the median volume change with its 95% interval, by shell,
+the share of volumes expanded beyond the margin, and the median error.</span><a class="headerlink" href="#id31" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Copy</p></th>
+<th class="head"><p>Noise</p></th>
+<th class="head"><p>Settings</p></th>
+<th class="head"><p>Median volume change [95% interval]</p></th>
+<th class="head"><p>b=1000</p></th>
+<th class="head"><p>b=2000</p></th>
+<th class="head"><p>b=3500</p></th>
+<th class="head"><p>Volumes expanded beyond the margin</p></th>
+<th class="head"><p>Median error (mm)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>unmoved</p></td>
+<td><p>no</p></td>
+<td><p>default</p></td>
+<td><p>+0.000% [+0.000%, +0.000%]</p></td>
+<td><p>+0.000%</p></td>
+<td><p>+0.000%</p></td>
+<td><p>+0.000%</p></td>
+<td><p>0%</p></td>
+<td><p>0.000</p></td>
+</tr>
+<tr class="row-odd"><td><p>unmoved</p></td>
+<td><p>yes</p></td>
+<td><p>default</p></td>
+<td><p>+0.286% [+0.278%, +0.295%]</p></td>
+<td><p>+0.476%</p></td>
+<td><p>+0.286%</p></td>
+<td><p>+0.063%</p></td>
+<td><p>94%</p></td>
+<td><p>0.153</p></td>
+</tr>
+<tr class="row-even"><td><p>m2s0</p></td>
+<td><p>no</p></td>
+<td><p>default</p></td>
+<td><p>-0.006% [-0.008%, -0.003%]</p></td>
+<td><p>-0.051%</p></td>
+<td><p>-0.002%</p></td>
+<td><p>+0.009%</p></td>
+<td><p>1%</p></td>
+<td><p>0.037</p></td>
+</tr>
+<tr class="row-odd"><td><p>m2s0</p></td>
+<td><p>yes</p></td>
+<td><p>default</p></td>
+<td><p>+0.341% [+0.329%, +0.354%]</p></td>
+<td><p>+0.599%</p></td>
+<td><p>+0.341%</p></td>
+<td><p>+0.086%</p></td>
+<td><p>96%</p></td>
+<td><p>0.195</p></td>
+</tr>
+<tr class="row-even"><td><p>e2</p></td>
+<td><p>no</p></td>
+<td><p>default</p></td>
+<td><p>+0.001% [+0.001%, +0.003%]</p></td>
+<td><p>-0.003%</p></td>
+<td><p>+0.003%</p></td>
+<td><p>+0.000%</p></td>
+<td><p>0%</p></td>
+<td><p>0.010</p></td>
+</tr>
+<tr class="row-odd"><td><p>e2</p></td>
+<td><p>yes</p></td>
+<td><p>default</p></td>
+<td><p>+0.300% [+0.285%, +0.314%]</p></td>
+<td><p>+0.500%</p></td>
+<td><p>+0.300%</p></td>
+<td><p>+0.068%</p></td>
+<td><p>92%</p></td>
+<td><p>0.166</p></td>
+</tr>
+<tr class="row-even"><td><p>m2s0e2</p></td>
+<td><p>no</p></td>
+<td><p>default</p></td>
+<td><p>-0.003% [-0.007%, -0.001%]</p></td>
+<td><p>-0.036%</p></td>
+<td><p>+0.001%</p></td>
+<td><p>+0.010%</p></td>
+<td><p>1%</p></td>
+<td><p>0.033</p></td>
+</tr>
+<tr class="row-odd"><td><p>m2s0e2</p></td>
+<td><p>yes</p></td>
+<td><p>default</p></td>
+<td><p>+0.331% [+0.321%, +0.345%]</p></td>
+<td><p>+0.605%</p></td>
+<td><p>+0.331%</p></td>
+<td><p>+0.108%</p></td>
+<td><p>94%</p></td>
+<td><p>0.189</p></td>
+</tr>
+<tr class="row-even"><td><p>m2s0e2</p></td>
+<td><p>yes</p></td>
+<td><p>no-histogram-matching</p></td>
+<td><p>+0.309% [+0.301%, +0.316%]</p></td>
+<td><p>+0.383%</p></td>
+<td><p>+0.309%</p></td>
+<td><p>+0.050%</p></td>
+<td><p>86%</p></td>
+<td><p>0.175</p></td>
+</tr>
+<tr class="row-odd"><td><p>m2s0e2</p></td>
+<td><p>yes</p></td>
+<td><p>no-winsorizing</p></td>
+<td><p>+0.331% [+0.323%, +0.345%]</p></td>
+<td><p>+0.605%</p></td>
+<td><p>+0.331%</p></td>
+<td><p>+0.106%</p></td>
+<td><p>94%</p></td>
+<td><p>0.188</p></td>
+</tr>
+<tr class="row-even"><td><p>m2s0e2</p></td>
+<td><p>yes</p></td>
+<td><p>no-clipping</p></td>
+<td><p>+0.246% [+0.233%, +0.255%]</p></td>
+<td><p>+0.817%</p></td>
+<td><p>+0.246%</p></td>
+<td><p>-0.001%</p></td>
+<td><p>74%</p></td>
+<td><p>0.152</p></td>
+</tr>
+<tr class="row-odd"><td><p>m2s0e2</p></td>
+<td><p>yes</p></td>
+<td><p>no-mask</p></td>
+<td><p>-0.150% [-0.165%, -0.142%]</p></td>
+<td><p>+0.642%</p></td>
+<td><p>-0.150%</p></td>
+<td><p>-0.322%</p></td>
+<td><p>33%</p></td>
+<td><p>0.226</p></td>
+</tr>
+<tr class="row-even"><td><p>m2s0e2</p></td>
+<td><p>yes</p></td>
+<td><p>no-smoothed-stage</p></td>
+<td><p>+0.330% [+0.324%, +0.345%]</p></td>
+<td><p>+0.605%</p></td>
+<td><p>+0.330%</p></td>
+<td><p>+0.099%</p></td>
+<td><p>93%</p></td>
+<td><p>0.196</p></td>
+</tr>
+<tr class="row-odd"><td><p>unmoved</p></td>
+<td><p>yes</p></td>
+<td><p>no-histogram-matching</p></td>
+<td><p>+0.267% [+0.258%, +0.273%]</p></td>
+<td><p>+0.327%</p></td>
+<td><p>+0.267%</p></td>
+<td><p>+0.037%</p></td>
+<td><p>82%</p></td>
+<td><p>0.143</p></td>
+</tr>
+<tr class="row-even"><td><p>unmoved</p></td>
+<td><p>yes</p></td>
+<td><p>no-winsorizing</p></td>
+<td><p>+0.286% [+0.278%, +0.295%]</p></td>
+<td><p>+0.476%</p></td>
+<td><p>+0.286%</p></td>
+<td><p>+0.064%</p></td>
+<td><p>94%</p></td>
+<td><p>0.153</p></td>
+</tr>
+<tr class="row-odd"><td><p>unmoved</p></td>
+<td><p>yes</p></td>
+<td><p>no-clipping</p></td>
+<td><p>+0.255% [+0.247%, +0.258%]</p></td>
+<td><p>+0.729%</p></td>
+<td><p>+0.255%</p></td>
+<td><p>+0.059%</p></td>
+<td><p>88%</p></td>
+<td><p>0.139</p></td>
+</tr>
+<tr class="row-even"><td><p>unmoved</p></td>
+<td><p>yes</p></td>
+<td><p>no-mask</p></td>
+<td><p>-0.256% [-0.269%, -0.248%]</p></td>
+<td><p>+0.365%</p></td>
+<td><p>-0.256%</p></td>
+<td><p>-0.398%</p></td>
+<td><p>33%</p></td>
+<td><p>0.200</p></td>
+</tr>
+<tr class="row-odd"><td><p>unmoved</p></td>
+<td><p>yes</p></td>
+<td><p>no-smoothed-stage</p></td>
+<td><p>+0.294% [+0.286%, +0.300%]</p></td>
+<td><p>+0.482%</p></td>
+<td><p>+0.294%</p></td>
+<td><p>+0.087%</p></td>
+<td><p>99%</p></td>
+<td><p>0.157</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="id3">
+<h3>Consequences<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Registering a noisy volume to a noise-free target expands it.
+The rules read this as applying to the pass, whose targets, model predictions, are
+smoother than its volumes; Test 2 did not register to predictions.</p></li>
+<li><p>By the rules, the next test holds the transform that the eddy estimates share (their
+common offset from the truth) at the identity.
+A second candidate came from a discussion after Test 1, outside the rules: a
+registration with 9 parameters, which cannot stretch the volume across phase
+encoding.
+In Test 1’s oracle, the strain is +0.31% along x, +0.25% along phase encoding and
++0.44% along z, so three quarters of it lies across phase encoding.
+Test 3 takes that candidate first; the shared transform stays open if the expansion
+remains.</p></li>
+<li><p>Not tested: <em>why</em> noise expands the registration.
+The mask turns the sign at b=2000 and b=3500, so the brain’s boundary is involved,
+but nothing here isolates how.</p></li>
+</ul>
+</section>
+<section id="id4">
+<h3>Reproducing<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
+<p>The run was made outside the phantom dataset, without a <code class="docutils literal notranslate"><span class="pre">datalad</span> <span class="pre">run</span></code> record, with the
+dataset at commit 826e611 at the start and the end.
+The <em>NiFreeze</em> commit, clean, was 7f7a8012, with itk-elastix 0.25.4; it took 35 min,
+with 6 single-threaded workers on 6 physical cores.
+Noisy <code class="docutils literal notranslate"><span class="pre">m2s0e2</span></code> with the default settings repeats Test 1’s oracle bit for bit.
+From the repository’s root:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">OMP_NUM_THREADS</span><span class="o">=</span><span class="mi">6</span> <span class="n">uv</span> <span class="n">run</span> <span class="n">tools</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">eddy_targets_expansion</span><span class="o">.</span><span class="n">py</span> \
+    <span class="o">--</span><span class="n">dataset</span> <span class="o">&lt;</span><span class="n">dataset</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">out</span> <span class="o">&lt;</span><span class="n">results</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">jobs</span> <span class="mi">6</span>
+<span class="n">uv</span> <span class="n">run</span> <span class="n">tools</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">eddy_targets_expansion_figures</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">results</span> <span class="o">&lt;</span><span class="n">results</span><span class="o">&gt;</span> \
+    <span class="o">--</span><span class="n">test1</span> <span class="o">&lt;</span><span class="n">Test</span> <span class="mi">1</span><span class="s1">'s results&gt;/sherbrooke.npz </span><span class="se">\</span>
+<span class="s1">    --out docs/_static/registration/eddy-targets --figures</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="test-3-an-eddy-current-registration-with-9-parameters">
+<h2>Test 3: an eddy-current registration with 9 parameters<a class="headerlink" href="#test-3-an-eddy-current-registration-with-9-parameters" title="Link to this heading">¶</a></h2>
+<p>A linear field from eddy currents moves each point only along the phase-encoding
+direction <code class="docutils literal notranslate"><span class="pre">u</span></code>.
+So each volume’s mapping is head motion followed by such a field, <code class="docutils literal notranslate"><span class="pre">W</span> <span class="pre">=</span> <span class="pre">E</span> <span class="pre">M</span></code>, with
+<code class="docutils literal notranslate"><span class="pre">M</span></code> rigid (6 parameters) and <code class="docutils literal notranslate"><span class="pre">E</span> <span class="pre">=</span> <span class="pre">I</span> <span class="pre">−</span> <span class="pre">u</span> <span class="pre">sᵀ</span></code> (3: a scaling along phase encoding and
+two shears), and the split of <code class="docutils literal notranslate"><span class="pre">W</span></code> into <code class="docutils literal notranslate"><span class="pre">M</span></code> and <code class="docutils literal notranslate"><span class="pre">E</span></code> is unique
+(<a class="reference internal" href="../api/nifreeze.registration.utils.html#nifreeze.registration.utils.split_phase_encoding" title="nifreeze.registration.utils.split_phase_encoding"><code class="xref py py-func docutils literal notranslate"><span class="pre">split_phase_encoding()</span></code></a>).
+An affine also has 3 more parameters, which can stretch the volume across phase
+encoding, where three quarters of the strain that Test 2 traced to the noise lies.
+Test 3 asked three questions, under rules posted before the run
+(<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/723#issuecomment-7079966873">working hypothesis</a>,
+<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/723#issuecomment-7080809180">results</a>):</p>
+<dl class="simple">
+<dt>H1</dt><dd><p>Can ITK’s transforms, combined, reproduce the model, with the frozen parameters set
+in the image’s voxel axes, and give the decoupled transform: head motion plus a
+3-parameter field?</p>
+</dd>
+<dt>H2</dt><dd><p>Does the model improve the accuracy without longer run times, and take out the
+expansion?</p>
+</dd>
+<dt>H3</dt><dd><p>Without the parameters that let the volume expand, can the pass keep the instant
+update?</p>
+</dd>
+</dl>
+<section id="the-registration">
+<h3>The registration<a class="headerlink" href="#the-registration" title="Link to this heading">¶</a></h3>
+<p>The ITK backend (<a class="reference internal" href="../api/nifreeze.registration.itk_backend.html#nifreeze.registration.itk_backend.ITK" title="nifreeze.registration.itk_backend.ITK"><code class="xref py py-class docutils literal notranslate"><span class="pre">ITK</span></code></a>, <a class="reference external" href="https://github.com/nipreps/nifreeze/issues/730">#730</a>) runs ITK 5’s registration
+framework, which optimizes several transforms together; elastix’s does not.
+It composes an <code class="docutils literal notranslate"><span class="pre">Euler3DTransform</span></code> (head motion, applied first) with an
+<code class="docutils literal notranslate"><span class="pre">AffineTransform</span></code> (the field), and the optimizer’s weights freeze all of the field
+but its phase-encoding row.
+The images reach ITK in their voxel frame, so the phase-encoding axis, a voxel axis
+(<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/727">#727</a>), is exact on oblique data.
+Its settings, the <code class="docutils literal notranslate"><span class="pre">itk</span></code> section of <a class="reference internal" href="../api/nifreeze.registration.base.html#nifreeze.registration.base.AFFINE" title="nifreeze.registration.base.AFFINE"><code class="xref py py-data docutils literal notranslate"><span class="pre">AFFINE</span></code></a>, were set
+by a pilot on development volumes: Mattes mutual information on a regular 20% of a
+half-resolution grid, then normalized correlation at 17,000 random points within the
+mask.
+The eddy-current pass stores the split: the head motion it refined, and the field.</p>
+<p>Three registrations are compared, each with one thread and seed 12345:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">e12</span></code></dt><dd><p>elastix, <code class="docutils literal notranslate"><span class="pre">AFFINE</span></code> (today’s pass).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">i12</span></code></dt><dd><p>ITK with the <code class="docutils literal notranslate"><span class="pre">itk</span></code> section, without its restriction: a full affine, which
+separates the backend from the model.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">i9</span></code></dt><dd><p>ITK with the <code class="docutils literal notranslate"><span class="pre">itk</span></code> section as packaged: head motion and a field along phase
+encoding.</p>
+</dd>
+</dl>
+</section>
+<section id="id5">
+<h3>The arms<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h3>
+<p>The copy is Test 1’s, Sherbrooke <code class="docutils literal notranslate"><span class="pre">m2s0e2</span></code> with the end-to-end test’s noise; its phase
+encoding is along <code class="docutils literal notranslate"><span class="pre">j</span></code> (world y).</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">oracle-&lt;registration&gt;</span></code>, <code class="docutils literal notranslate"><span class="pre">oracle-&lt;registration&gt;-clean</span></code></dt><dd><p>Each volume registered to its noise-free original from its true head motion <code class="docutils literal notranslate"><span class="pre">M</span></code>,
+as Test 1’s oracle; <code class="docutils literal notranslate"><span class="pre">-clean</span></code> registers the noise-free copy.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">pass-&lt;registration&gt;-u</span></code></dt><dd><p>The eddy-current pass (gp-loo) from the cascade’s head motion <code class="docutils literal notranslate"><span class="pre">m̂</span></code> (Test 1’s), with
+the instant update.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">pass-&lt;registration&gt;</span></code></dt><dd><p>The same pass with the <em>delayed update</em>: its model is built on the copy realigned
+by <code class="docutils literal notranslate"><span class="pre">m̂</span></code>, and the pass’s estimates are applied only after the pass, so every
+volume’s target is predicted from the same training data. These are Test 1’s
+<code class="docutils literal notranslate"><span class="pre">cascade-corrected</span></code> targets.
+The command line’s <code class="docutils literal notranslate"><span class="pre">--no-instant-update</span></code> is different: it trains every level on
+the original volumes.</p>
+</dd>
+</dl>
+<p>The arms are <code class="docutils literal notranslate"><span class="pre">oracle-e12</span></code>, <code class="docutils literal notranslate"><span class="pre">oracle-e12-clean</span></code>, <code class="docutils literal notranslate"><span class="pre">oracle-i12</span></code>, <code class="docutils literal notranslate"><span class="pre">oracle-i9</span></code>,
+<code class="docutils literal notranslate"><span class="pre">oracle-i9-clean</span></code>, <code class="docutils literal notranslate"><span class="pre">pass-e12-u</span></code>, <code class="docutils literal notranslate"><span class="pre">pass-e12</span></code>, <code class="docutils literal notranslate"><span class="pre">pass-i12-u</span></code>, <code class="docutils literal notranslate"><span class="pre">pass-i9-u</span></code> and
+<code class="docutils literal notranslate"><span class="pre">pass-i9</span></code>.
+Each runs in a process of its own: once the ITK backend has run in a process, elastix’s
+later estimates and times change there (<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/732">#732</a>).
+HCP-YA <code class="docutils literal notranslate"><span class="pre">m2s0e2</span></code> (eddy currents up to 2.5 mm, phase encoding along world x) confirms the
+decision with its own cascade and four arms: <code class="docutils literal notranslate"><span class="pre">oracle-e12</span></code>, <code class="docutils literal notranslate"><span class="pre">oracle-i9</span></code>,
+<code class="docutils literal notranslate"><span class="pre">pass-e12-u</span></code> and the pass H3 chose.</p>
+</section>
+<section id="id6">
+<h3>How the results are judged<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h3>
+<p>The error is Test 1’s: the whole mapping against <code class="docutils literal notranslate"><span class="pre">E</span> <span class="pre">M</span></code>, in the frame of the arm’s
+targets (mean displacement within the brain, mm).
+The volume change and the normal strains are taken from the residual
+<code class="docutils literal notranslate"><span class="pre">R</span> <span class="pre">=</span> <span class="pre">W</span> <span class="pre">F⁻¹</span> <span class="pre">T⁻¹</span></code>, with <code class="docutils literal notranslate"><span class="pre">F</span></code> the frame of the arm’s targets, as Test 2 takes them; the
+strain across phase encoding is the mean of the two axes across it.
+The <em>family</em> distance is how far an estimate lies from head motion followed by a field
+along phase encoding.
+The split’s errors compare the estimate’s head motion and field with the truth’s split,
+in which the field’s constant shift along phase encoding counts as head motion.
+Comparisons are paired by volume, stratified by shell, with margins of 0.01 voxel on the
+error and Test 2’s 0.037% on the volume change.
+On Sherbrooke they use the confirmation subset (64 volumes), because the pilot set the
+ITK stages on development volumes; on HCP-YA, every volume.</p>
+<dl class="simple">
+<dt>H1</dt><dd><p>Every <code class="docutils literal notranslate"><span class="pre">i9</span></code> estimate lies in the family within 1e-6 mm; and <code class="docutils literal notranslate"><span class="pre">oracle-i9-clean</span></code> is
+“better” or “not worse” than <code class="docutils literal notranslate"><span class="pre">oracle-e12-clean</span></code>, with the medians of its head
+motion and field errors no larger than <code class="docutils literal notranslate"><span class="pre">oracle-e12-clean</span></code>’s median error.</p>
+</dd>
+<dt>H2</dt><dd><p>For both settings of the instant update, the 9-parameter pass is “better” or “not
+worse” than elastix’s with the same setting on the error, and “better” on the volume
+change without contracting beyond the margin; and <code class="docutils literal notranslate"><span class="pre">oracle-i9</span></code>’s median time per
+registration is at most 1.1 times <code class="docutils literal notranslate"><span class="pre">oracle-e12</span></code>’s, over every volume.</p>
+</dd>
+<dt>H3</dt><dd><p><code class="docutils literal notranslate"><span class="pre">pass-i9-u</span></code> is “better” or “not worse” than <code class="docutils literal notranslate"><span class="pre">pass-i9</span></code>, and does not drift: its
+gain against the delayed update does not grow with the order of registration
+(Test 1’s statistics, in the direction of a drift).
+If H3 holds, the pass keeps the instant update; otherwise it takes the delayed
+update.</p>
+</dd>
+<dt>The confirmation</dt><dd><p>On HCP-YA, the pass H3 chose is “better” or “not worse” than <code class="docutils literal notranslate"><span class="pre">pass-e12-u</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">oracle-i9</span></code>’s median time is at most 1.1 times <code class="docutils literal notranslate"><span class="pre">oracle-e12</span></code>’s.</p>
+</dd>
+</dl>
+<p>If H1, H2 and the confirmation hold, a follow-up core change makes the 9-parameter
+registration the eddy-current pass’s default; if H3 chose the delayed update, that
+change also adds a per-pass switch for it.
+Otherwise the default stays, and the report says which rule failed.</p>
+</section>
+<section id="results-on-sherbrooke">
+<h3>Results on Sherbrooke<a class="headerlink" href="#results-on-sherbrooke" title="Link to this heading">¶</a></h3>
+<p>By the rules, H1 and H2 hold and H3 fails.
+The 9-parameter registration is more accurate than elastix’s affine, in about the same
+time, and the pass takes the delayed update.</p>
+<figure class="align-default" id="id32">
+<img alt="The median difference of the error for each comparison, overall and by shell." src="../_images/eddy-model-sherbrooke-comparisons.png" />
+<figcaption>
+<p><span class="caption-number">Fig. 23 </span><span class="caption-text">Each comparison on the error, candidate minus reference: the median difference
+(black, all shells, with its 95% interval) and each shell’s.
+The dotted lines are the margin, 0.02 mm.
+Left of them, the candidate is better.
+The first four rows are the rules’; the others are reported.</span><a class="headerlink" href="#id32" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<ul class="simple">
+<li><p><strong>H1 holds.</strong>
+Every <code class="docutils literal notranslate"><span class="pre">i9</span></code> estimate is head motion followed by a field along phase encoding, to
+1.5e-13 mm.
+On the noise-free copy, <code class="docutils literal notranslate"><span class="pre">oracle-i9-clean</span></code> is “not worse” than <code class="docutils literal notranslate"><span class="pre">oracle-e12-clean</span></code>
+(−0.006 mm [−0.009, −0.003]), and its split recovers the head motion to 0.025 mm and
+the field to 0.013 mm (medians), below elastix’s median error on the noise-free copy,
+0.036 mm.</p></li>
+<li><p><strong>H2 holds.</strong>
+The 9-parameter pass is “better” than elastix’s with the instant update
+(−0.110 mm [−0.139, −0.075]) and with the delayed update (−0.061 mm
+[−0.082, −0.053]),
+most at b=1000 (−0.246 and −0.130 mm).
+Its volume change is “better” (−0.504% and −0.297%), and neither pass contracts;
+the expansion is reduced, not removed (+0.276% and +0.173% remain).
+On the oracle, its median time per registration is 0.99 times elastix’s, over every
+volume (2.40 against 2.42 s).</p></li>
+<li><p><strong>H3 fails.</strong>
+With the 9 parameters, the instant update against the delayed update is
+“inconclusive” (+0.011 mm [−0.001, +0.039]) and “worse” at b=1000 (+0.093 mm).
+So the pass takes the delayed update, and HCP-YA’s confirmation tests <code class="docutils literal notranslate"><span class="pre">pass-i9</span></code>.</p></li>
+<li><p><strong>Against today’s pass</strong> (reported, not a rule), the chosen <code class="docutils literal notranslate"><span class="pre">pass-i9</span></code> is “better”:
+−0.120 mm
+[−0.165, −0.057], with −0.295 mm at b=1000, −0.054 mm at b=2000 and −0.013 mm at
+b=3500 (“inconclusive”).</p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container" id="id33">
+<table class="docutils align-default" id="id33">
+<caption><span class="caption-number">Table 57 </span><span class="caption-text">Each comparison on the error, candidate minus reference (mm), overall and
+by shell, with its verdict.</span><a class="headerlink" href="#id33" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Comparison</p></th>
+<th class="head"><p>Median difference (mm) [95% interval]</p></th>
+<th class="head"><p>Verdict</p></th>
+<th class="head"><p>b=1000</p></th>
+<th class="head"><p>b=2000</p></th>
+<th class="head"><p>b=3500</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>H1: oracle-i9-clean against oracle-e12-clean</p></td>
+<td><p>-0.006 [-0.009, -0.003]</p></td>
+<td><p>not worse</p></td>
+<td><p>-0.012 (not worse)</p></td>
+<td><p>-0.005 (not worse)</p></td>
+<td><p>-0.003 (not worse)</p></td>
+</tr>
+<tr class="row-odd"><td><p>H2: pass-i9-u against pass-e12-u</p></td>
+<td><p>-0.110 [-0.139, -0.075]</p></td>
+<td><p>better</p></td>
+<td><p>-0.246 (better)</p></td>
+<td><p>-0.075 (better)</p></td>
+<td><p>-0.022 (not worse)</p></td>
+</tr>
+<tr class="row-even"><td><p>H2: pass-i9 against pass-e12</p></td>
+<td><p>-0.061 [-0.082, -0.053]</p></td>
+<td><p>better</p></td>
+<td><p>-0.130 (better)</p></td>
+<td><p>-0.027 (better)</p></td>
+<td><p>-0.060 (better)</p></td>
+</tr>
+<tr class="row-odd"><td><p>H3: pass-i9-u against pass-i9</p></td>
+<td><p>+0.011 [-0.001, +0.039]</p></td>
+<td><p>inconclusive</p></td>
+<td><p>+0.093 (worse)</p></td>
+<td><p>-0.003 (inconclusive)</p></td>
+<td><p>-0.025 (not worse)</p></td>
+</tr>
+<tr class="row-even"><td><p>Backend, oracle: i12 against e12</p></td>
+<td><p>+0.018 [+0.007, +0.029]</p></td>
+<td><p>inconclusive</p></td>
+<td><p>+0.003 (inconclusive)</p></td>
+<td><p>+0.034 (worse)</p></td>
+<td><p>+0.005 (not worse)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Backend, pass: i12-u against e12-u</p></td>
+<td><p>+0.052 [+0.046, +0.064]</p></td>
+<td><p>worse</p></td>
+<td><p>+0.042 (inconclusive)</p></td>
+<td><p>+0.104 (worse)</p></td>
+<td><p>-0.003 (inconclusive)</p></td>
+</tr>
+<tr class="row-even"><td><p>Model, oracle: i9 against i12</p></td>
+<td><p>-0.072 [-0.080, -0.064]</p></td>
+<td><p>better</p></td>
+<td><p>-0.119 (better)</p></td>
+<td><p>-0.069 (better)</p></td>
+<td><p>-0.014 (not worse)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Model, pass: i9-u against i12-u</p></td>
+<td><p>-0.163 [-0.212, -0.121]</p></td>
+<td><p>better</p></td>
+<td><p>-0.259 (better)</p></td>
+<td><p>-0.178 (better)</p></td>
+<td><p>-0.017 (not worse)</p></td>
+</tr>
+<tr class="row-even"><td><p>Chosen (pass-i9) against today’s pass</p></td>
+<td><p>-0.120 [-0.165, -0.057]</p></td>
+<td><p>better</p></td>
+<td><p>-0.295 (better)</p></td>
+<td><p>-0.054 (better)</p></td>
+<td><p>-0.013 (inconclusive)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="the-expansion-moves-onto-phase-encoding">
+<h3>The expansion moves onto phase encoding<a class="headerlink" href="#the-expansion-moves-onto-phase-encoding" title="Link to this heading">¶</a></h3>
+<p>This section and the next two are reported beside the rules; they decide nothing.</p>
+<figure class="align-default" id="id34">
+<img alt="Each arm's median volume change and strains along and across phase encoding." src="../_images/eddy-model-sherbrooke-expansion.png" />
+<figcaption>
+<p><span class="caption-number">Fig. 24 </span><span class="caption-text">Each arm’s median volume change, and the normal strains of its residual along and
+across phase encoding (black, all shells, with the 95% interval; each shell below).
+The dotted lines are Test 2’s margin.
+The 9-parameter arms have no strain across phase encoding, but more along it than
+elastix’s.</span><a class="headerlink" href="#id34" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>The 9 parameters cannot stretch the volume across phase encoding, and on the oracle
+the volume change falls by about two thirds (from +0.348% to +0.131%).
+They do not take the noise’s bias away: along phase encoding, the 9-parameter arms
+stretch more than elastix’s (+0.39% against +0.27% on the oracle, +0.52% against +0.35%
+with the delayed update, +0.83% against +0.72% with the instant update), and the volume
+still grows by +0.17% with the delayed update, beyond the margin.</p>
+<div class="table-wrapper colwidths-auto docutils container" id="id35">
+<table class="docutils align-default" id="id35">
+<caption><span class="caption-number">Table 58 </span><span class="caption-text">The rule on the volume change: each 9-parameter pass’s median volume change,
+and its difference from elastix’s with the same setting of the instant update.</span><a class="headerlink" href="#id35" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Pass</p></th>
+<th class="head"><p>Its median volume change [95% interval]</p></th>
+<th class="head"><p>Against elastix 12</p></th>
+<th class="head"><p>Verdict</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>pass-i9-u</p></td>
+<td><p>+0.276% [+0.217, +0.357]</p></td>
+<td><p>-0.504% [-0.559, -0.424]</p></td>
+<td><p>better</p></td>
+</tr>
+<tr class="row-odd"><td><p>pass-i9</p></td>
+<td><p>+0.173% [+0.153, +0.210]</p></td>
+<td><p>-0.297% [-0.325, -0.279]</p></td>
+<td><p>better</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="the-instant-update-and-the-order-of-registration">
+<h3>The instant update and the order of registration<a class="headerlink" href="#the-instant-update-and-the-order-of-registration" title="Link to this heading">¶</a></h3>
+<figure class="align-default" id="id36">
+<img alt="The change in error with the instant update against the order of registration." src="../_images/eddy-model-sherbrooke-order.png" />
+<figcaption>
+<p><span class="caption-number">Fig. 25 </span><span class="caption-text">The change in each volume’s error with the instant update (the pass with it minus the
+pass with the delayed update), against the volume’s position in the order of
+registration, with each third’s median (black), on the 64 confirmation volumes.
+Above zero, the instant update made the volume’s error larger.
+Left, the 9 parameters; right, elastix’s 12.</span><a class="headerlink" href="#id36" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>By the rules’ definition, the 9-parameter pass does not drift: the last third’s median
+gain exceeds the first third’s by +0.145 mm, but the interval of that difference,
+[−0.012, +0.221], reaches below the margin.
+The trend is there all the same (Spearman’s ρ +0.23, one-sided p 0.032), mostly at
+b=1000.
+Elastix drifts, as in Test 1: on these 64 volumes, ρ +0.36 (p 0.002), and +0.220 mm
+[+0.059, +0.451] between the thirds (Test 1, on all 192 volumes: ρ +0.27).
+With either registration, the delayed update has the lower median error (0.495 against
+0.604 mm with elastix, 0.423 against 0.503 mm with the 9 parameters); with the 9
+parameters, the paired comparison is “inconclusive” (H3).</p>
+<div class="table-wrapper colwidths-auto docutils container" id="id37">
+<table class="docutils align-default" id="id37">
+<caption><span class="caption-number">Table 59 </span><span class="caption-text">The instant update’s gain against the order: Spearman’s ρ and its
+one-sided p, the first and last thirds’ median gains, and their difference.</span><a class="headerlink" href="#id37" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Instant update</p></th>
+<th class="head"><p>Spearman’s rho</p></th>
+<th class="head"><p>p (rho above zero)</p></th>
+<th class="head"><p>First third (mm)</p></th>
+<th class="head"><p>Last third (mm)</p></th>
+<th class="head"><p>Last minus first [95% interval]</p></th>
+<th class="head"><p>Drifts</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>pass-i9-u against pass-i9</p></td>
+<td><p>+0.232</p></td>
+<td><p>0.0321</p></td>
+<td><p>+0.001</p></td>
+<td><p>+0.146</p></td>
+<td><p>+0.145 [-0.012, +0.221]</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p>pass-e12-u against pass-e12</p></td>
+<td><p>+0.356</p></td>
+<td><p>0.0017</p></td>
+<td><p>+0.006</p></td>
+<td><p>+0.226</p></td>
+<td><p>+0.220 [+0.059, +0.451]</p></td>
+<td><p>yes</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="the-backend-and-the-model">
+<h3>The backend and the model<a class="headerlink" href="#the-backend-and-the-model" title="Link to this heading">¶</a></h3>
+<p>The gain comes from the model, not from ITK.
+With 12 parameters, ITK is no better than elastix (+0.018 mm on the oracle,
+“inconclusive”; +0.052 mm on the pass, “worse”).
+With 9, it does better than its own 12 (−0.072 mm on the oracle, −0.163 mm on the
+pass).</p>
+<div class="table-wrapper colwidths-auto docutils container" id="id38">
+<table class="docutils align-default" id="id38">
+<caption><span class="caption-number">Table 60 </span><span class="caption-text">Each arm’s medians on the confirmation volumes: the error, overall and by
+shell; the residual’s volume change and strains; the split’s head motion and field
+errors (for the 12-parameter arms, of their estimates’ split); and the time per
+registration (oracle arms).</span><a class="headerlink" href="#id38" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Arm</p></th>
+<th class="head"><p>Error (mm)</p></th>
+<th class="head"><p>b=1000</p></th>
+<th class="head"><p>b=2000</p></th>
+<th class="head"><p>b=3500</p></th>
+<th class="head"><p>Volume change</p></th>
+<th class="head"><p>Strain along PE</p></th>
+<th class="head"><p>Strain across PE</p></th>
+<th class="head"><p>Head motion (mm)</p></th>
+<th class="head"><p>Field (mm)</p></th>
+<th class="head"><p>Time (s)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>oracle-e12</p></td>
+<td><p>0.190</p></td>
+<td><p>0.313</p></td>
+<td><p>0.190</p></td>
+<td><p>0.130</p></td>
+<td><p>+0.348%</p></td>
+<td><p>+0.269%</p></td>
+<td><p>+0.384%</p></td>
+<td><p>0.123</p></td>
+<td><p>0.102</p></td>
+<td><p>2.43</p></td>
+</tr>
+<tr class="row-odd"><td><p>oracle-e12-clean</p></td>
+<td><p>0.036</p></td>
+<td><p>0.036</p></td>
+<td><p>0.033</p></td>
+<td><p>0.040</p></td>
+<td><p>-0.001%</p></td>
+<td><p>-0.001%</p></td>
+<td><p>-0.002%</p></td>
+<td><p>0.030</p></td>
+<td><p>0.012</p></td>
+<td><p>2.28</p></td>
+</tr>
+<tr class="row-even"><td><p>oracle-i12</p></td>
+<td><p>0.227</p></td>
+<td><p>0.320</p></td>
+<td><p>0.227</p></td>
+<td><p>0.139</p></td>
+<td><p>+0.406%</p></td>
+<td><p>+0.356%</p></td>
+<td><p>+0.433%</p></td>
+<td><p>0.141</p></td>
+<td><p>0.144</p></td>
+<td><p>1.98</p></td>
+</tr>
+<tr class="row-odd"><td><p>oracle-i9</p></td>
+<td><p>0.156</p></td>
+<td><p>0.201</p></td>
+<td><p>0.154</p></td>
+<td><p>0.122</p></td>
+<td><p>+0.131%</p></td>
+<td><p>+0.394%</p></td>
+<td><p>-0.000%</p></td>
+<td><p>0.132</p></td>
+<td><p>0.160</p></td>
+<td><p>2.40</p></td>
+</tr>
+<tr class="row-even"><td><p>oracle-i9-clean</p></td>
+<td><p>0.027</p></td>
+<td><p>0.020</p></td>
+<td><p>0.028</p></td>
+<td><p>0.037</p></td>
+<td><p>+0.003%</p></td>
+<td><p>+0.011%</p></td>
+<td><p>+0.000%</p></td>
+<td><p>0.025</p></td>
+<td><p>0.013</p></td>
+<td><p>2.21</p></td>
+</tr>
+<tr class="row-odd"><td><p>pass-e12-u</p></td>
+<td><p>0.604</p></td>
+<td><p>0.735</p></td>
+<td><p>0.552</p></td>
+<td><p>0.591</p></td>
+<td><p>+0.750%</p></td>
+<td><p>+0.721%</p></td>
+<td><p>+0.814%</p></td>
+<td><p>0.398</p></td>
+<td><p>0.356</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>pass-e12</p></td>
+<td><p>0.495</p></td>
+<td><p>0.463</p></td>
+<td><p>0.475</p></td>
+<td><p>0.596</p></td>
+<td><p>+0.512%</p></td>
+<td><p>+0.350%</p></td>
+<td><p>+0.537%</p></td>
+<td><p>0.371</p></td>
+<td><p>0.312</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>pass-i12-u</p></td>
+<td><p>0.673</p></td>
+<td><p>0.802</p></td>
+<td><p>0.668</p></td>
+<td><p>0.602</p></td>
+<td><p>+0.892%</p></td>
+<td><p>+0.686%</p></td>
+<td><p>+1.024%</p></td>
+<td><p>0.415</p></td>
+<td><p>0.378</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>pass-i9-u</p></td>
+<td><p>0.503</p></td>
+<td><p>0.522</p></td>
+<td><p>0.486</p></td>
+<td><p>0.568</p></td>
+<td><p>+0.276%</p></td>
+<td><p>+0.833%</p></td>
+<td><p>+0.001%</p></td>
+<td><p>0.412</p></td>
+<td><p>0.422</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>pass-i9</p></td>
+<td><p>0.423</p></td>
+<td><p>0.345</p></td>
+<td><p>0.423</p></td>
+<td><p>0.510</p></td>
+<td><p>+0.173%</p></td>
+<td><p>+0.518%</p></td>
+<td><p>+0.001%</p></td>
+<td><p>0.391</p></td>
+<td><p>0.328</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="results-on-hcp-ya">
+<h3>Results on HCP-YA<a class="headerlink" href="#results-on-hcp-ya" title="Link to this heading">¶</a></h3>
+<p>By the rule, the confirmation holds, but the gain is small (<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/723#issuecomment-7083335667">results</a>).
+The pass that Sherbrooke chose, <code class="docutils literal notranslate"><span class="pre">pass-i9</span></code> (9 parameters, delayed update), is
+“better” than today’s pass, <code class="docutils literal notranslate"><span class="pre">pass-e12-u</span></code> (elastix’s affine, instant update), over
+HCP-YA’s 270 volumes: −0.019 mm [−0.022, −0.013], with a margin of 0.0125 mm.
+That is about 5% of today’s median error (0.414 mm).
+On the oracle, the 9-parameter registration takes 0.62 times elastix’s time (6.32 against
+10.16 s per registration).
+Every check holds: the truth is exact to 4.3e-14 mm and in the family to 4.4e-16; phase
+encoding lies along world x; the chosen pass stores its split to 5.0e-14 mm; no
+registration failed.</p>
+<figure class="align-default" id="id39">
+<img alt="The confirmation and the oracle on HCP-YA, overall and by shell." src="../_images/eddy-model-hcpya-comparisons.png" />
+<figcaption>
+<p><span class="caption-number">Fig. 26 </span><span class="caption-text">The confirmation (first row) and the oracle (second row, reported): the median
+difference of the error, candidate minus reference (black, all shells, with its 95%
+interval) and each shell’s.
+The dotted lines are the margin, 0.0125 mm; left of them, the candidate is better.</span><a class="headerlink" href="#id39" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<div class="table-wrapper colwidths-auto docutils container" id="id40">
+<table class="docutils align-default" id="id40">
+<caption><span class="caption-number">Table 61 </span><span class="caption-text">The confirmation, and the oracle (reported, not a rule): candidate minus
+reference, median difference of the error (mm), overall and by shell.</span><a class="headerlink" href="#id40" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Comparison</p></th>
+<th class="head"><p>Median difference (mm) [95% interval]</p></th>
+<th class="head"><p>Verdict</p></th>
+<th class="head"><p>b=1000</p></th>
+<th class="head"><p>b=2000</p></th>
+<th class="head"><p>b=3000</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Confirmation: pass-i9 against pass-e12-u</p></td>
+<td><p>-0.019 [-0.022, -0.013]</p></td>
+<td><p>better</p></td>
+<td><p>-0.129 (better)</p></td>
+<td><p>-0.001 (not worse)</p></td>
+<td><p>+0.022 (worse)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Oracle: i9 against e12</p></td>
+<td><p>-0.039 [-0.042, -0.036]</p></td>
+<td><p>better</p></td>
+<td><p>-0.070 (better)</p></td>
+<td><p>-0.039 (better)</p></td>
+<td><p>+0.013 (inconclusive)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<ul class="simple">
+<li><p><strong>The gain is at b=1000.</strong>
+By shell, the chosen pass is “better” at b=1000 (−0.129 mm), “not worse” at b=2000
+(−0.001 mm) and “worse” at b=3000 (+0.022 mm).</p></li>
+<li><p><strong>At b=3000, the model itself does no better here</strong> (reported, not a rule).
+On the oracle, where no model and no update are involved, the 9 parameters beat
+elastix’s 12 overall (−0.039 mm) and at b=1000 and b=2000, but not at b=3000
+(+0.013 mm, “inconclusive”).
+So the pass’s loss at b=3000 may come partly from the registration on this protocol,
+and partly from the delayed update, which gives up what the instant update brings the
+highest shell (below); this run has no arm that separates the two.
+A possible reason, not tested: the 9-parameter registration’s second stage samples a
+fixed 17,000 points, 2.4% of HCP-YA’s brain voxels against 10% of Sherbrooke’s, and
+b=3000 has the lowest signal-to-noise; elastix draws new points at every iteration.</p></li>
+<li><p><strong>The expansion falls on every shell.</strong>
+The volume change falls by 0.29% against today’s pass (from +0.41% to +0.10%), and
+across phase encoding the strain is zero.
+Along phase encoding, the two registrations stretch alike on the oracle (+0.170%
+against +0.176%); on Sherbrooke the 9 parameters stretched more.</p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container" id="id41">
+<table class="docutils align-default" id="id41">
+<caption><span class="caption-number">Table 62 </span><span class="caption-text">The volume change (reported, not a rule): candidate minus reference,
+median difference.</span><a class="headerlink" href="#id41" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Comparison</p></th>
+<th class="head"><p>Median difference of the volume change [95% interval]</p></th>
+<th class="head"><p>Verdict</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>pass-i9 against pass-e12-u</p></td>
+<td><p>-0.291% [-0.313, -0.273]</p></td>
+<td><p>better</p></td>
+</tr>
+<tr class="row-odd"><td><p>oracle-i9 against oracle-e12</p></td>
+<td><p>-0.142% [-0.148, -0.135]</p></td>
+<td><p>better</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrapper colwidths-auto docutils container" id="id42">
+<table class="docutils align-default" id="id42">
+<caption><span class="caption-number">Table 63 </span><span class="caption-text">Each arm’s medians on HCP-YA (every volume).</span><a class="headerlink" href="#id42" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Arm</p></th>
+<th class="head"><p>Error (mm)</p></th>
+<th class="head"><p>b=1000</p></th>
+<th class="head"><p>b=2000</p></th>
+<th class="head"><p>b=3000</p></th>
+<th class="head"><p>Volume change</p></th>
+<th class="head"><p>Strain along PE</p></th>
+<th class="head"><p>Strain across PE</p></th>
+<th class="head"><p>Head motion (mm)</p></th>
+<th class="head"><p>Field (mm)</p></th>
+<th class="head"><p>Time (s)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>oracle-e12</p></td>
+<td><p>0.106</p></td>
+<td><p>0.174</p></td>
+<td><p>0.106</p></td>
+<td><p>0.063</p></td>
+<td><p>+0.192%</p></td>
+<td><p>+0.176%</p></td>
+<td><p>+0.198%</p></td>
+<td><p>0.070</p></td>
+<td><p>0.049</p></td>
+<td><p>10.16</p></td>
+</tr>
+<tr class="row-odd"><td><p>oracle-i9</p></td>
+<td><p>0.082</p></td>
+<td><p>0.102</p></td>
+<td><p>0.066</p></td>
+<td><p>0.076</p></td>
+<td><p>+0.056%</p></td>
+<td><p>+0.170%</p></td>
+<td><p>+0.000%</p></td>
+<td><p>0.051</p></td>
+<td><p>0.063</p></td>
+<td><p>6.32</p></td>
+</tr>
+<tr class="row-even"><td><p>pass-e12-u</p></td>
+<td><p>0.414</p></td>
+<td><p>0.458</p></td>
+<td><p>0.386</p></td>
+<td><p>0.410</p></td>
+<td><p>+0.406%</p></td>
+<td><p>+0.410%</p></td>
+<td><p>+0.393%</p></td>
+<td><p>0.345</p></td>
+<td><p>0.156</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>pass-i9</p></td>
+<td><p>0.379</p></td>
+<td><p>0.300</p></td>
+<td><p>0.391</p></td>
+<td><p>0.462</p></td>
+<td><p>+0.103%</p></td>
+<td><p>+0.307%</p></td>
+<td><p>+0.000%</p></td>
+<td><p>0.357</p></td>
+<td><p>0.141</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="after-the-results-the-instant-update-against-the-order">
+<h3>After the results: the instant update against the order<a class="headerlink" href="#after-the-results-the-instant-update-against-the-order" title="Link to this heading">¶</a></h3>
+<p>An analysis after the results, not in the rules
+(<a class="reference external" href="https://github.com/nipreps/nifreeze/issues/723#issuecomment-7083346553">post hoc</a>),
+asked whether, within each shell of Sherbrooke, the instant update’s effect depends on
+when a volume was registered.
+For every volume (64 per shell), the change is its error with the instant update minus
+its error with the delayed update; the table gives its median in each third of the shell’s
+order of registration, and Spearman’s ρ with the position in the order.
+The delayed update’s own error against the order is the control: its targets do not
+depend on the order.</p>
+<div class="table-wrapper colwidths-auto docutils container" id="id43">
+<table class="docutils align-default" id="id43">
+<caption><span class="caption-number">Table 64 </span><span class="caption-text">The change in error with the instant update (mm; positive: the instant
+update made the error larger), by third of the order within each shell.</span><a class="headerlink" href="#id43" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Registration</p></th>
+<th class="head"><p>Shell</p></th>
+<th class="head"><p>Volumes</p></th>
+<th class="head"><p>First third (mm)</p></th>
+<th class="head"><p>Middle third (mm)</p></th>
+<th class="head"><p>Last third (mm)</p></th>
+<th class="head"><p>Spearman’s rho with the order</p></th>
+<th class="head"><p>Control: the delayed update’s error</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>9 parameters (ITK)</p></td>
+<td><p>b=1000</p></td>
+<td><p>64</p></td>
+<td><p>+0.012</p></td>
+<td><p>+0.098</p></td>
+<td><p>+0.221</p></td>
+<td><p>+0.84 (p &lt; 0.001)</p></td>
+<td><p>+0.05 (p 0.692)</p></td>
+</tr>
+<tr class="row-odd"><td><p>9 parameters (ITK)</p></td>
+<td><p>b=2000</p></td>
+<td><p>64</p></td>
+<td><p>-0.000</p></td>
+<td><p>+0.008</p></td>
+<td><p>+0.011</p></td>
+<td><p>+0.14 (p 0.280)</p></td>
+<td><p>+0.03 (p 0.837)</p></td>
+</tr>
+<tr class="row-even"><td><p>9 parameters (ITK)</p></td>
+<td><p>b=3500</p></td>
+<td><p>64</p></td>
+<td><p>-0.004</p></td>
+<td><p>-0.038</p></td>
+<td><p>-0.130</p></td>
+<td><p>-0.44 (p &lt; 0.001)</p></td>
+<td><p>+0.03 (p 0.825)</p></td>
+</tr>
+<tr class="row-odd"><td><p>12 parameters (elastix)</p></td>
+<td><p>b=1000</p></td>
+<td><p>64</p></td>
+<td><p>+0.033</p></td>
+<td><p>+0.210</p></td>
+<td><p>+0.465</p></td>
+<td><p>+0.91 (p &lt; 0.001)</p></td>
+<td><p>+0.07 (p 0.583)</p></td>
+</tr>
+<tr class="row-even"><td><p>12 parameters (elastix)</p></td>
+<td><p>b=2000</p></td>
+<td><p>64</p></td>
+<td><p>+0.005</p></td>
+<td><p>+0.056</p></td>
+<td><p>+0.110</p></td>
+<td><p>+0.58 (p &lt; 0.001)</p></td>
+<td><p>+0.19 (p 0.135)</p></td>
+</tr>
+<tr class="row-odd"><td><p>12 parameters (elastix)</p></td>
+<td><p>b=3500</p></td>
+<td><p>64</p></td>
+<td><p>-0.008</p></td>
+<td><p>-0.015</p></td>
+<td><p>-0.114</p></td>
+<td><p>-0.47 (p &lt; 0.001)</p></td>
+<td><p>+0.10 (p 0.455)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The instant update’s effect builds up with the number of volumes already fed back: the
+later a volume comes, the more the update hurts it at b=1000 (+0.22 mm in the last third
+with the 9 parameters, +0.47 mm with elastix) and the more it helps it at b=3500 (−0.13
+and −0.11 mm).
+The controls show no trend.
+Why is not tested.
+The fed-back volumes may carry the registration’s own bias into the training data, which
+weighs most at b=1000, where the distortion is smallest; or the feedback may deepen a
+local minimum of the registration’s cost that high signal-to-noise volumes fall into.</p>
+</section>
+<section id="id7">
+<h3>Consequences<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>By the rules, H1, H2 and the confirmation hold: a follow-up core change would make the
+9-parameter registration the eddy-current pass’s default, with the delayed update and
+a per-pass setting for it.
+That change is the maintainers’ decision.</p></li>
+<li><p>The gain is largest at b=1000 on both phantoms (−0.30 mm on Sherbrooke and −0.13 mm on
+HCP-YA, against today’s pass), the shell that most protocols include.
+At the highest shell it is small or negative; on HCP-YA, the oracle suggests the
+registration plays a part at b=3000, and giving up the instant update may too.</p></li>
+<li><p>The noise’s bias remains: the 9 parameters take away the stretch across phase
+encoding, but the volume still grows along it.
+Holding the eddy estimates’ shared transform at the identity, which Test 2’s rules
+named, stays open.</p></li>
+<li><p>With the delayed update, the volumes of a pass no longer depend on each other, so they
+can be registered in parallel.
+On HCP-YA the registration takes about 80 to 90% of a pass’s time, so repeated
+delayed levels, each refining from the last, could fit in today’s time; whether they
+recover what the instant update brings the highest shell, without its harm at b=1000
+(and with elastix at b=2000), is the next question.</p></li>
+<li><p>The instant update’s command-line switch, <code class="docutils literal notranslate"><span class="pre">--no-instant-update</span></code>, trains every level
+on the original volumes, which is neither the instant nor the delayed update; a setting
+per pass, in the settings files, would replace it.</p></li>
+</ul>
+</section>
+<section id="id8">
+<h3>Reproducing<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h3>
+<p>The runs were made outside the phantom dataset, without a <code class="docutils literal notranslate"><span class="pre">datalad</span> <span class="pre">run</span></code> record, with
+the dataset at commit 826e611 at the start and the end, and itk-elastix 0.25.4, on CPUs
+0-5.
+Sherbrooke’s run took 62 min, and HCP-YA’s 2 h 44 min.
+The runs used the harness of <a class="reference external" href="mailto:oesteban/nifreeze&#37;&#52;&#48;476893223">oesteban/nifreeze<span>&#64;</span>476893223</a>, the commit the rules cite;
+their recorded commits (c3aca0322 and 470ee996b, clean) change it only by type
+annotations, which re-score Sherbrooke’s arms to identical tables.
+The rules’ code is unchanged since 476893223, but the tables, the figures and the
+analysis after the results come from later scripts: the commands below reproduce this
+page from b4a8c6053 or later.
+Sherbrooke starts from Test 1’s cascade.
+From the repository’s root:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">OMP_NUM_THREADS</span><span class="o">=</span><span class="mi">6</span> <span class="n">uv</span> <span class="n">run</span> <span class="n">tools</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">eddy_targets_model</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">dataset</span> <span class="o">&lt;</span><span class="n">dataset</span><span class="o">&gt;</span> \
+    <span class="o">--</span><span class="n">out</span> <span class="o">&lt;</span><span class="n">results</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">cascade</span> <span class="o">&lt;</span><span class="n">Test</span> <span class="mi">1</span><span class="s1">'s results&gt;/sherbrooke.npz --jobs 6 --threads 6</span>
+<span class="n">OMP_NUM_THREADS</span><span class="o">=</span><span class="mi">6</span> <span class="n">uv</span> <span class="n">run</span> <span class="n">tools</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">eddy_targets_model</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">dataset</span> <span class="o">&lt;</span><span class="n">dataset</span><span class="o">&gt;</span> \
+    <span class="o">--</span><span class="n">protocol</span> <span class="n">hcpya</span> <span class="o">--</span><span class="n">out</span> <span class="o">&lt;</span><span class="n">results</span><span class="o">&gt;</span> \
+    <span class="o">--</span><span class="n">arms</span> <span class="n">oracle</span><span class="o">-</span><span class="n">e12</span> <span class="n">oracle</span><span class="o">-</span><span class="n">i9</span> <span class="k">pass</span><span class="o">-</span><span class="n">e12</span><span class="o">-</span><span class="n">u</span> <span class="k">pass</span><span class="o">-</span><span class="n">i9</span> <span class="o">--</span><span class="n">jobs</span> <span class="mi">6</span> <span class="o">--</span><span class="n">threads</span> <span class="mi">6</span>
+<span class="n">uv</span> <span class="n">run</span> <span class="n">tools</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">eddy_targets_model_figures</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">results</span> <span class="o">&lt;</span><span class="n">results</span><span class="o">&gt;</span> \
+    <span class="o">--</span><span class="n">out</span> <span class="n">docs</span><span class="o">/</span><span class="n">_static</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">eddy</span><span class="o">-</span><span class="n">targets</span> <span class="o">--</span><span class="n">figures</span>
+<span class="n">uv</span> <span class="n">run</span> <span class="n">tools</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">eddy_targets_model_figures</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">results</span> <span class="o">&lt;</span><span class="n">results</span><span class="o">&gt;</span> \
+    <span class="o">--</span><span class="n">protocol</span> <span class="n">hcpya</span> <span class="o">--</span><span class="n">chosen</span> <span class="k">pass</span><span class="o">-</span><span class="n">i9</span> <span class="o">--</span><span class="n">out</span> <span class="n">docs</span><span class="o">/</span><span class="n">_static</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">eddy</span><span class="o">-</span><span class="n">targets</span> \
+    <span class="o">--</span><span class="n">figures</span>
+<span class="n">uv</span> <span class="n">run</span> <span class="n">tools</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">eddy_targets_model_posthoc</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">results</span> <span class="o">&lt;</span><span class="n">results</span><span class="o">&gt;</span> \
+    <span class="o">--</span><span class="n">out</span> <span class="n">docs</span><span class="o">/</span><span class="n">_static</span><span class="o">/</span><span class="n">registration</span><span class="o">/</span><span class="n">eddy</span><span class="o">-</span><span class="n">targets</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="gem-accuracy.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">GEM’s accuracy on the phantom</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="elastix-accuracy.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Elastix against ANTs, on held-out volumes</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; Copyright 2024, The NiFreeze developers
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">The targets of the eddy-current pass</a><ul>
+<li><a class="reference internal" href="#test-1-what-the-targets-carry">Test 1: what the targets carry</a><ul>
+<li><a class="reference internal" href="#the-question">The question</a></li>
+<li><a class="reference internal" href="#data">Data</a></li>
+<li><a class="reference internal" href="#the-arms">The arms</a></li>
+<li><a class="reference internal" href="#how-the-results-are-judged">How the results are judged</a></li>
+<li><a class="reference internal" href="#results">Results</a><ul>
+<li><a class="reference internal" href="#question-1">Question 1</a></li>
+<li><a class="reference internal" href="#question-2">Question 2</a></li>
+<li><a class="reference internal" href="#checks">Checks</a></li>
+<li><a class="reference internal" href="#reported-not-used-in-the-decision">Reported, not used in the decision</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#post-hoc-why-the-instant-update-hurts">Post hoc: why the instant update hurts</a></li>
+<li><a class="reference internal" href="#consequences">Consequences</a></li>
+<li><a class="reference internal" href="#open-questions">Open questions</a></li>
+<li><a class="reference internal" href="#deviations-from-the-registration">Deviations from the registration</a></li>
+<li><a class="reference internal" href="#reproducing">Reproducing</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#test-2-why-the-registrations-expand">Test 2: why the registrations expand</a><ul>
+<li><a class="reference internal" href="#the-cells">The cells</a></li>
+<li><a class="reference internal" href="#id1">How the results are judged</a></li>
+<li><a class="reference internal" href="#id2">Results</a></li>
+<li><a class="reference internal" href="#id3">Consequences</a></li>
+<li><a class="reference internal" href="#id4">Reproducing</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#test-3-an-eddy-current-registration-with-9-parameters">Test 3: an eddy-current registration with 9 parameters</a><ul>
+<li><a class="reference internal" href="#the-registration">The registration</a></li>
+<li><a class="reference internal" href="#id5">The arms</a></li>
+<li><a class="reference internal" href="#id6">How the results are judged</a></li>
+<li><a class="reference internal" href="#results-on-sherbrooke">Results on Sherbrooke</a></li>
+<li><a class="reference internal" href="#the-expansion-moves-onto-phase-encoding">The expansion moves onto phase encoding</a></li>
+<li><a class="reference internal" href="#the-instant-update-and-the-order-of-registration">The instant update and the order of registration</a></li>
+<li><a class="reference internal" href="#the-backend-and-the-model">The backend and the model</a></li>
+<li><a class="reference internal" href="#results-on-hcp-ya">Results on HCP-YA</a></li>
+<li><a class="reference internal" href="#after-the-results-the-instant-update-against-the-order">After the results: the instant update against the order</a></li>
+<li><a class="reference internal" href="#id7">Consequences</a></li>
+<li><a class="reference internal" href="#id8">Reproducing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=88da3e06"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../_static/js/version-switch.js?v=03f1aec7"></script>
+    </body>
+</html>

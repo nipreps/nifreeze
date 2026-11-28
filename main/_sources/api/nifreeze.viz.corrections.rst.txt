@@ -1,0 +1,7 @@
+nifreeze.viz.corrections module
+===============================
+
+.. automodule:: nifreeze.viz.corrections
+   :members:
+   :show-inheritance:
+   :undoc-members:

@@ -1,0 +1,7 @@
+nifreeze.registration.itk\_backend module
+=========================================
+
+.. automodule:: nifreeze.registration.itk_backend
+   :members:
+   :show-inheritance:
+   :undoc-members:

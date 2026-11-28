@@ -1,0 +1,12 @@
+Fixed image,Motion (mm and degrees),ANTs,"Direct mapping, 1x iterations","Three-level pyramid, 1x iterations"
+"Prediction, unmoved data",0,0.151,0.157,0.161
+"Prediction, unmoved data",1,0.168,0.177,0.181
+"Prediction, unmoved data",2,0.169,0.197,0.186
+"Prediction, unmoved data",4,0.164,0.184,0.188
+"Prediction, unmoved data",8,0.175,0.190,0.186
+"Prediction, moved data",0,0.151,0.157,0.161
+"Prediction, moved data",1,0.389,0.376,0.366
+"Prediction, moved data",2,0.746,0.814,0.756
+"Prediction, moved data",4,2.047,2.000,2.122
+"Prediction, moved data",8,5.710,4.830,5.193
+Median seconds,,1.60,0.96,1.24

@@ -1,0 +1,7 @@
+nifreeze.model.gpr module
+=========================
+
+.. automodule:: nifreeze.model.gpr
+   :members:
+   :undoc-members:
+   :show-inheritance:
