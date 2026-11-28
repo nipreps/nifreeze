@@ -16,6 +16,8 @@ The question
 (:meth:`~nifreeze.estimator.Estimator.run`).
 The prediction is the fixed image, on the reference's grid, and the volume is the
 moving image.
+(GEM, the eddy-current model that came later, swaps the roles: it compares each volume
+where it was acquired, with the prediction moved into it, :doc:`../methods/gem`.)
 ANTs then returns the transform that maps each point *x* of the fixed image to the
 point of the moving image that holds the same tissue.
 ``test_ANTs_config_b0`` (``test/test_registration.py``) checks that direction on a

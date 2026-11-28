@@ -99,13 +99,30 @@ How GEM is estimated
 --------------------
 Estimating GEM is one registration of all the volumes at once, with one set of
 parameters, in which each volume moves by its own field.
-The cost is the sum, over the volumes, of ITK's similarity metric between each
-volume and its target, run in the stages of the ``itk`` section of
-:data:`~nifreeze.registration.base.AFFINE`.
-ITK's metric evaluates each volume's similarity and its derivative, and scipy's
-L-BFGS-B estimates the model's parameters.
+Each volume is compared where it was acquired, on the grid its eddy currents distorted:
+a forward model, as in ``eddy`` :footcite:p:`andersson_integrated_2016`.
+The cost is the sum, over the volumes, of ITK's similarity metric between each volume
+as acquired, ITK's fixed image, and its target, ITK's moving image.
+The target is read through the inverse of the volume's mapping: the field's inverse,
+then the head motion's.
+ITK maps each point as it reads the target, so the target is never resampled, and
+GEM brings ITK's derivative with respect to that inverse back to the model's
+parameters, which scipy's L-BFGS-B estimates.
+
+The volume as acquired is read exactly.
+It is smoothed once, as it is added, with the cubic B-spline (1/6, 2/3, 1/6 along each
+axis), and the stages smooth neither image.
+Each stage's points sit at the centres of its (shrunk) voxels, with no random offset
+within them.
+They are drawn once, the same for every volume, within the union of the brain mask
+moved into each volume by its head motion, dilated by two voxels.
+The stages are those of the ``gem`` section of
+:data:`~nifreeze.registration.base.AFFINE` (:func:`~nifreeze.registration.gem.get_settings`):
+Mattes mutual information on images shrunk by two, then correlation at full
+resolution.
 The images are prepared as for ITK's registration of each volume on its own: clipped to
-the volume's intensity window, winsorized and histogram-matched as the settings ask.
+the smoothed volume's intensity window, winsorized and histogram-matched as the
+settings ask.
 
 Running GEM
 -----------
@@ -264,6 +281,7 @@ GEM differs from it in four ways:
 
 1. GEM is fitted on the images, in one registration of all the volumes, while ``eddy``
    fits its model to the volumes' own estimates, each counting the same.
+   Both compare each volume where it was acquired, with the prediction moved into it.
 2. GEM estimates the exponent, or holds it at a value the caller gives; ``eddy``
    holds it at 1.
 3. GEM's zero point is given.
