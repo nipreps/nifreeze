@@ -27,17 +27,25 @@ For each volume, :func:`animate_corrections` plays, on three axial, three corona
 three sagittal cuts:
 
 1. the volume as found, labelled *original*;
-2. where head motion sends its voxels, as a quiver;
-3. the data travelling there, labelled *realigned* on arrival;
-4. where the eddy-current field sends them next, as a second quiver;
-5. the data travelling to the corrected position, labelled *corrected*.
+2. where the eddy-current field sends its voxels, as a quiver, where the volume was
+   acquired;
+3. the data travelling there, labelled *eddy-corrected* on arrival: the field undone in
+   place;
+4. where head motion sends them next, as a second quiver;
+5. the data travelling into the reference, labelled *realigned*.
 
 Each volume's mapping :math:`W = E M` (:meth:`~nifreeze.data.base.BaseDataset.get_transform`)
 is split into head motion :math:`M_z` and a field :math:`E_z` that moves nothing at a
 point :math:`z` (the centre of the field of view, GEM's default), so that the shift the
 field makes there counts as head motion.
-:math:`E_z M_z = W`, so the last frame is the volume the command line writes.
+Realignment reads the volume at :math:`E_z M_z y` for each point :math:`y` of the
+reference: head motion takes the point into the volume as acquired, and the field moves
+it along phase encoding there.
+In image terms, the field is undone first, in place, and head motion after it, which is
+the order the animation plays.
 
+The third step's frame is the volume read through :math:`E_z` alone, and the fifth's is
+the volume read once through :math:`W`, the volume the command line writes.
 Every frame of the first, third and fifth steps is an exact resampling.
 In between, the browser moves the data continuously along the cut, with the 2D
 mapping each step induces on it, while the part of the motion across the cut
@@ -46,13 +54,13 @@ dissolves from one frame into the next.
 Drawn throughout:
 
 * the brain mask at the reference position (dashed), and the mask moved by head motion
-  (solid), which travels with the data into the reference;
+  and the eddy currents (solid), which travels with the data into the reference;
 * in each cut's corner, the b-vector projected onto the cut, which turns with the head
   during the realignment, as the b-vectors the command line writes do;
 * across a cut, ``⊙`` points toward the viewer and ``⊗`` away from them.
 
-The quivers are drawn ``magnify`` times their size (by default, ×10 for head motion and
-×30 for the smaller eddy currents); the data travel at true scale.
+The quivers are drawn ``magnify`` times their size (by default, ×30 for the eddy
+currents and ×10 for the larger head motion); the data travel at true scale.
 
 The SVG plays on its own (as an ``<img>``, it loops the first volume).
 Opened as a document (a browser tab, ``<object>`` or ``<iframe>``), it plays every
@@ -124,39 +132,40 @@ class Timing:
     How long each step of a volume's sequence lasts (s).
 
     >>> marks = Timing().marks(eddy=True)
-    >>> marks["realign"], marks["realigned"], marks["correct"], marks["end"]
-    (3.25, 5.25, 7.0, 10.0)
-    >>> Timing().marks(eddy=False)["end"]
-    6.25
+    >>> marks["correct"], marks["corrected"], marks["realign"], marks["end"]
+    (2.75, 4.75, 7.0, 10.0)
+    >>> Timing().marks(eddy=False)["realign"], Timing().marks(eddy=False)["end"]
+    (3.25, 6.25)
 
     """
 
     original: float = 1.0
     """The volume as found."""
-    motion: float = 2.0
-    """The quiver of head motion."""
-    realign: float = 2.0
-    """The travel to the realigned position."""
     eddy: float = 1.5
     """The quiver of the eddy-current field."""
     correct: float = 2.0
-    """The travel to the corrected position."""
+    """The travel through the field alone, in place."""
+    motion: float = 2.0
+    """The quiver of head motion."""
+    realign: float = 2.0
+    """The travel into the reference."""
     hold: float = 1.0
-    """The corrected volume, before the next one."""
+    """The realigned volume, before the next one."""
     fade: float = 0.25
     """A quiver fading in or out."""
 
     def marks(self, eddy: bool = True) -> dict[str, float]:
         """When each step starts (s), and the sequence's length (``"end"``)."""
-        marks = {"motion": self.original}
-        marks["realign"] = marks["motion"] + self.motion + self.fade
-        marks["realigned"] = marks["realign"] + self.realign
+        marks = {"eddy": self.original}
         if eddy:
-            marks["correct"] = marks["realigned"] + self.eddy + self.fade
+            marks["correct"] = marks["eddy"] + self.eddy + self.fade
             marks["corrected"] = marks["correct"] + self.correct
         else:
-            marks["corrected"] = marks["realigned"]
-        marks["end"] = marks["corrected"] + self.hold
+            marks["correct"] = marks["corrected"] = marks["eddy"]
+        marks["motion"] = marks["corrected"]
+        marks["realign"] = marks["motion"] + self.motion + self.fade
+        marks["realigned"] = marks["realign"] + self.realign
+        marks["end"] = marks["realigned"] + self.hold
         return marks
 
 
@@ -501,19 +510,22 @@ def _resample(matrix: np.ndarray, image: nb.Nifti1Image, order: int) -> np.ndarr
     return np.asanyarray(moved.dataobj)
 
 
-def _frames(dataset: DWI, index: int, head: np.ndarray) -> dict[str, np.ndarray]:
+def _frames(dataset: DWI, index: int, field: np.ndarray) -> dict[str, np.ndarray]:
     """
-    A volume as found (``"o"``), realigned by head motion (``"r"``) and, with eddy
-    currents, corrected (``"c"``), resampled as the command line's output is
+    A volume as found (``"o"``); with eddy currents, read through the field alone, the
+    eddy correction in place (``"e"``); and read once through the whole mapping, realigned
+    (``"r"``). Each is resampled as the command line's output is
     (:func:`~nifreeze.data.base.to_nifti`).
     """
     data = np.asanyarray(dataset.dataobj[index])
     image = nb.Nifti1Image(data, dataset.affine, dataset.datahdr)
     dtype = dataset.dataobj.dtype
-    frames = {"o": data, "r": np.asanyarray(_resample(head, image, 3), dtype=dtype)}
+    frames = {"o": data}
+    if dataset.eddy is not None:
+        frames["e"] = np.asanyarray(_resample(field, image, 3), dtype=dtype)
     mapping = dataset.get_transform(index)
-    if dataset.eddy is not None and mapping is not None:
-        frames["c"] = np.asanyarray(_resample(mapping, image, 3), dtype=dtype)
+    mapping = np.eye(4) if mapping is None else mapping
+    frames["r"] = np.asanyarray(_resample(mapping, image, 3), dtype=dtype)
     return frames
 
 
@@ -525,19 +537,22 @@ def _volume(
     magnify: tuple[float, float],
     quality: int,
 ) -> str:
-    """One volume's slot: its three frames, quivers, outlines, compasses and labels."""
+    """One volume's slot: its frames, quivers, outlines, compasses and labels."""
     motion = np.eye(4) if dataset.motion is None else dataset.motion[index]
     eddy = None if dataset.eddy is None else dataset.eddy[index]
     head, field = _split(motion, np.eye(4) if eddy is None else eddy, point)
     mapping = field @ head
-    frames = _frames(dataset, index, head)
+    frames = _frames(dataset, index, field)
     data = frames["o"]
     brain = (
         np.ones(dataset.shape3d, dtype="float32")
         if dataset.brainmask is None
         else dataset.brainmask.astype("float32")
     )
-    moved = _resample(np.linalg.inv(head), nb.Nifti1Image(brain, dataset.affine), 1)
+    brain_img = nb.Nifti1Image(brain, dataset.affine)
+    # The brain as the volume was acquired, and after the field alone
+    raw = _resample(np.linalg.inv(mapping), brain_img, 1)
+    moved = _resample(np.linalg.inv(head), brain_img, 1) if eddy is not None else raw
 
     window = float(np.percentile(data[brain > 0], 99.5)) if brain.any() else float(data.max())
     low, high = layout.low, layout.high
@@ -552,39 +567,45 @@ def _volume(
             f'href="data:image/jpeg;base64,{_encode(sprite, window, quality)}"/>'
         )
 
-    reference = layout.canonical(brain)
+    raw = layout.canonical(raw)
     moved = layout.canonical(moved)
-    back = layout.local(np.linalg.inv(head))  # where head motion sends the volume's points
-    rest = layout.local(np.linalg.inv(np.linalg.solve(head, mapping)))  # and GEM's field
+    unwarp = layout.local(np.linalg.inv(field))  # where the field sends the volume's points
+    back = layout.local(np.linalg.inv(head))  # and where head motion sends them next
     bvec = dataset.gradients[index, :3]
     start = layout.direction(bvec)
     end = layout.direction(realign_bvecs(bvec, head))
 
     cells = []
     for v, view in enumerate(layout.views):
+        # The head motion's travel holds the field's, so that the field is undone first
         travel = view.project(back)
+        original = f'<use class="im-o" href="#v{index}o"/>'
+        outline = f'<path class="mc" d="{view.outline(view.cut(moved, low, high) > 0.5)}"/>'
+        quivers = ""
+        if eddy is not None:
+            correct = view.project(unwarp)
+            original = (
+                f'<g class="go-e" style="--end:{_matrix(correct)}">{original}'
+                f'<g transform="{_matrix(_inverse(correct))}">'
+                f'<use class="im-e" href="#v{index}e"/></g></g>'
+            )
+            outline = (
+                f'<g class="go-e" style="--end:{_matrix(correct)}">'
+                f'<path class="mo" d="{view.outline(view.cut(raw, low, high) > 0.5)}"/></g>'
+                f"{outline}"
+            )
+            inside = view.cut(raw, low, high)
+            quivers += f'<path class="q-e" d="{_quiver(view, unwarp, inside, magnify[1])}"/>'
         stack = (
-            f'<g class="go-m" style="--end:{_matrix(travel)}">'
-            f'<use class="im-o" href="#v{index}o"/>'
+            f'<g class="go-m" style="--end:{_matrix(travel)}">{original}'
             f'<g transform="{_matrix(_inverse(travel))}"><use class="im-r" href="#v{index}r"/></g>'
             "</g>"
         )
-        if eddy is not None:
-            correct = view.project(rest)
-            stack = (
-                f'<g class="go-e" style="--end:{_matrix(correct)}">{stack}'
-                f'<g transform="{_matrix(_inverse(correct))}">'
-                f'<use class="im-c" href="#v{index}c"/></g></g>'
-            )
         inside = view.cut(moved, low, high)
-        quivers = f'<path class="q-m" d="{_quiver(view, back, inside, magnify[0])}"/>'
-        if eddy is not None:
-            inside = view.cut(reference, low, high)
-            quivers += f'<path class="q-e" d="{_quiver(view, rest, inside, magnify[1])}"/>'
+        quivers += f'<path class="q-m" d="{_quiver(view, back, inside, magnify[0])}"/>'
         cells.append(
             f'<g clip-path="url(#cell{v})">{stack}'
-            f'<g class="go-m" style="--end:{_matrix(travel)}">'
-            f'<path class="mc" d="{view.outline(view.cut(moved, low, high) > 0.5)}"/></g>'
+            f'<g class="go-m" style="--end:{_matrix(travel)}">{outline}</g>'
             f"{quivers}{_compass(view, start, end)}</g>"
         )
 
@@ -597,16 +618,17 @@ def _volume(
     ]
     bval = float(dataset.gradients[index, 3])
     title = f"Volume {index} of {len(dataset)} · b = {np.round(bval, -1):g} s/mm²"
-    detail = f"Median shift in the brain: head motion {sizes[0]:.2f} mm"
+    detail = "Median shift in the brain: "
     if eddy is not None:
-        detail += f", eddy currents {sizes[1]:.2f} mm"
+        detail += f"eddy currents {sizes[1]:.2f} mm, "
+    detail += f"head motion {sizes[0]:.2f} mm"
     right = LEFT + layout.width
     labels = [
         f'<text class="lab-o state" x="{_n(right)}" y="12">original</text>',
-        f'<text class="lab-r state" x="{_n(right)}" y="12">realigned</text>'
+        f'<text class="lab-e state" x="{_n(right)}" y="12">eddy-corrected</text>'
         if eddy is not None
         else "",
-        f'<text class="lab-c state" x="{_n(right)}" y="12">corrected</text>',
+        f'<text class="lab-r state" x="{_n(right)}" y="12">realigned</text>',
     ]
     return (
         f'<g class="slot" data-index="{index}"><defs>{"".join(images)}</defs>'
@@ -633,42 +655,62 @@ def _style(timing: Timing, eddy: bool) -> str:
     end, fade, quick = marks["end"], timing.fade, 0.15
     hidden, shown = "opacity: 0", "opacity: 1"
     still, moved, turned = "transform: none", "transform: var(--end)", "transform: var(--turn)"
-    off_o = marks["realign"] - fade
+    # The original, until the first step's travel starts
+    off_o = (marks["correct"] if eddy else marks["realign"]) - fade
+    off_e = marks["realign"] - fade
+    # The solid outline fades as it arrives in the reference
+    fading = [
+        (marks["realigned"] - 0.3 * timing.realign, shown, False),
+        (marks["realigned"], hidden, False),
+    ]
     animations = {
         "lab-o": [(off_o, shown, False), (off_o + quick, hidden, False)],
-        "lab-c": [(marks["corrected"], hidden, False), (marks["corrected"] + quick, shown, False)],
+        "lab-r": [(marks["realigned"], hidden, False), (marks["realigned"] + quick, shown, False)],
         "q-m": [
             (marks["motion"], hidden, False),
             (marks["motion"] + fade, shown, False),
-            (off_o, shown, False),
+            (off_e, shown, False),
             (marks["realign"], hidden, False),
         ],
         "go-m": [(marks["realign"], still, True), (marks["realigned"], moved, False)],
         "turn": [(marks["realign"], still, True), (marks["realigned"], turned, False)],
-        "im-o": [(marks["realigned"], shown, False), (marks["realigned"] + 0.01, hidden, False)],
         "im-r": [(marks["realign"], hidden, True), (marks["realigned"], shown, False)],
-        "mc": [
-            (marks["realigned"] - 0.3 * timing.realign, shown, False),
-            (marks["realigned"], hidden, False),
-        ],
     }
     if eddy:
-        off_r = marks["correct"] - fade
+        swap = marks["corrected"] + 0.01
         animations |= {
-            "lab-r": [
-                (marks["realigned"], hidden, False),
-                (marks["realigned"] + quick, shown, False),
-                (off_r, shown, False),
-                (off_r + quick, hidden, False),
+            "lab-e": [
+                (marks["corrected"], hidden, False),
+                (marks["corrected"] + quick, shown, False),
+                (off_e, shown, False),
+                (off_e + quick, hidden, False),
             ],
             "q-e": [
-                (marks["realigned"], hidden, False),
-                (marks["realigned"] + fade, shown, False),
-                (off_r, shown, False),
+                (marks["eddy"], hidden, False),
+                (marks["eddy"] + fade, shown, False),
+                (off_o, shown, False),
                 (marks["correct"], hidden, False),
             ],
             "go-e": [(marks["correct"], still, True), (marks["corrected"], moved, False)],
-            "im-c": [(marks["correct"], hidden, True), (marks["corrected"], shown, False)],
+            "im-o": [(marks["corrected"], shown, False), (swap, hidden, False)],
+            "im-e": [
+                (marks["correct"], hidden, True),
+                (marks["corrected"], shown, False),
+                (marks["realigned"], shown, False),
+                (marks["realigned"] + 0.01, hidden, False),
+            ],
+            # The outline of the volume as acquired gives way to the exact one after the
+            # field, which travels into the reference
+            "mo": [(marks["corrected"], shown, False), (swap, hidden, False)],
+            "mc": [(marks["corrected"], hidden, False), (swap, shown, False), *fading],
+        }
+    else:
+        animations |= {
+            "im-o": [
+                (marks["realigned"], shown, False),
+                (marks["realigned"] + 0.01, hidden, False),
+            ],
+            "mc": fading,
         }
     rules = [
         ".slot { display: none; }",
@@ -679,10 +721,10 @@ def _style(timing: Timing, eddy: bool) -> str:
         f"text {{ fill: {COLORS['text']}; }}",
         ".title { font-size: 7px; } .detail { font-size: 5px; fill: " + COLORS["muted"] + "; }",
         ".state { font-size: 10px; text-anchor: end; font-weight: bold; }",
-        f".lab-o {{ fill: {COLORS['text']}; }} .lab-r {{ fill: {COLORS['moved']}; }}"
-        f" .lab-c {{ fill: {COLORS['bvec']}; }}",
+        f".lab-o {{ fill: {COLORS['text']}; }} .lab-e {{ fill: {COLORS['moved']}; }}"
+        f" .lab-r {{ fill: {COLORS['bvec']}; }}",
         "path { fill: none; stroke-linecap: round; stroke-linejoin: round; }",
-        f".mc {{ stroke: {COLORS['moved']}; stroke-width: 0.6; }}",
+        f".mc, .mo {{ stroke: {COLORS['moved']}; stroke-width: 0.6; }}",
         f".ref {{ stroke: {COLORS['reference']}; stroke-width: 0.6; stroke-dasharray: 2 1.5; }}",
         f".q-m {{ stroke: {COLORS['motion']}; stroke-width: 0.6; }}",
         f".q-e {{ stroke: {COLORS['eddy']}; stroke-width: 0.6; }}",
@@ -796,11 +838,11 @@ def _controls(top: float, width: float) -> str:
 def _legend(top: float, magnify: tuple[float, float], eddy: bool) -> str:
     entries = [
         ("ref", "brain mask, reference"),
-        ("mc", "brain mask, moved by head motion"),
-        ("q-m", f"head motion (arrows ×{magnify[0]:g})"),
+        ("mc", "brain mask, moved by head motion" + (" and eddy currents" if eddy else "")),
     ]
     if eddy:
         entries.append(("q-e", f"eddy currents (arrows ×{magnify[1]:g})"))
+    entries.append(("q-m", f"head motion (arrows ×{magnify[0]:g})"))
     entries.append(("b", "b-vector"))
     parts, x = [], LEFT
     for style, label in entries:
