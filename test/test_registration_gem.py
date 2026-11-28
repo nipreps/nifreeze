@@ -356,9 +356,10 @@ def _images(
     shared: np.ndarray | None = None,
     zero: np.ndarray = ZERO,
     segmented: bool = False,
+    seed: int = 8,
 ):
     """Volumes moved by known head motion and known fields, all zero at ``zero``."""
-    rng = np.random.default_rng(8)
+    rng = np.random.default_rng(seed)
     data, mask = _volume()
     affine = _off_centre()
     u = phase_encoding_vector(phase_encoding, affine)
@@ -499,21 +500,35 @@ def test_the_fit_leaves_out_most_of_a_stretch_every_volume_shares():
     """
     A stretch shared by every volume, on top of the field, mostly stays out of the fields.
 
-    A registration of each volume alone takes all of it. On slopes, the b-vectors of each
-    shell cancel it exactly (see the test of :meth:`EddyTensor.from_slopes`); on images,
-    the volumes of an antipodal pair weigh a little differently in the metric, so some of
-    it leaks, in proportion to its size (about a tenth here, at most a fifth).
+    The model has no parameter for it: on slopes, the b-vectors of each shell cancel it
+    exactly (see the test of :meth:`EddyTensor.from_slopes`), whereas a registration of each
+    volume alone takes all of it. On images, the volumes of an antipodal pair weigh a little
+    differently in the metric, so some of it reaches each volume's mapping: a few percent of
+    the stretch's displacement in a typical volume, and up to about a third in the worst of
+    a draw, which varies several-fold from draw to draw (#776). The leak is measured as the
+    other tests measure the mappings (mean displacement in the mask, mm), over three draws,
+    and the limits are where a model that takes the stretch, as a registration of each
+    volume alone does, fails: they guard the model's structure, not its accuracy.
     """
     shared = np.array([0.01, -0.015, 0.012])
-    sim = _images(shared=shared)
+    shares = []
+    for seed in (8, 9, 10):
+        sim = _images(shared=shared, seed=seed)
+        fit = _fitted(sim, zero_point=ZERO)
+        found = fit.fit(sim.table)
 
-    found = _fitted(sim, zero_point=ZERO).fit(sim.table)
-
-    assert isinstance(found, EddyTensor)
-    assert abs(found.exponent - 1.0) < 0.05
-    error = found.slopes(sim.table) - sim.truth.slopes(sim.table)
-    share = np.linalg.norm(error, axis=1) / np.linalg.norm(shared)
-    assert np.median(share) < 0.15 and share.max() < 0.25
+        assert isinstance(found, EddyTensor)
+        assert abs(found.exponent - 1.0) < 0.05
+        without = sim.fields @ sim.motions  # the truth GEM's model can express
+        shares.append(
+            [
+                _error(sim.mask, sim.affine, eddy @ motion, without[index])
+                / _error(sim.mask, sim.affine, sim.mappings[index], without[index])
+                for index, (motion, eddy) in sorted(fit.mappings().items())
+            ]
+        )
+    assert np.mean(np.median(shares, axis=1)) < 0.25
+    assert np.max(shares) < 0.5
 
 
 @SKIP_ELASTIX
