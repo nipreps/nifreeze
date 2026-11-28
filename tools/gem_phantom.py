@@ -135,7 +135,7 @@ def sizes(work: Path, mask_path: Path, truth: Perturbation) -> np.ndarray:
     true_motion = np.repeat(np.eye(4)[None], len(dataset), 0)
     true_motion[list(truth.moved)] = truth.motions
     true_field = truth.distortion.matrices()
-    mask = nb.load(mask_path)
+    mask = nb.Nifti1Image.from_filename(mask_path)
     point = field_of_view_centre(dataset.affine, dataset.shape3d)
 
     def shift(test: np.ndarray, reference: np.ndarray | None = None) -> np.ndarray:
