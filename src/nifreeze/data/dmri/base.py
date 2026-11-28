@@ -187,7 +187,10 @@ class DWI(BaseDataset[np.ndarray]):
     """Data representation structure for dMRI data."""
 
     ESTIMATES: ClassVar[tuple[str, ...]] = ("motion", "eddy")
-    """Head motion, then eddy currents: a volume's mapping is ``eddy @ motion``."""
+    """Head motion, then eddy currents: a volume's mapping is ``eddy @ motion``. A point of
+    the reference goes where the head moved it, then where the field moved it in the volume
+    as acquired. In image terms, realigning undoes the field first, in place in the
+    orientation the volume was acquired in, and then the head motion."""
 
     gradients: np.ndarray = attrs.field(
         default=None,

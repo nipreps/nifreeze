@@ -453,7 +453,9 @@ class BaseDataset(Generic[Unpack[Ts]]):
         The RAS+ matrix that maps the reference into volume ``index``.
 
         Every field of :attr:`ESTIMATES` that is set enters, each applied after the
-        ones before it: for a DWI volume, ``eddy @ motion``.
+        ones before it: for a DWI volume, ``eddy @ motion``. Resampled with it, a volume
+        has its fields undone in the reverse order: for a DWI volume, the eddy currents
+        first, in the orientation it was acquired in, then the head motion.
 
         Parameters
         ----------

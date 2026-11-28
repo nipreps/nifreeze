@@ -138,8 +138,10 @@ To utilize *NiFreeze* functionalities within your Python module or script, follo
    array of affine matrices: the head motion in ``motion``, and the eddy currents of
    a DWI in ``eddy``. A volume's mapping composes them, ``eddy @ motion``
    (:meth:`~nifreeze.data.base.BaseDataset.get_transform`), and the outputs are
-   resampled with it. The b-vectors turn with the head motion alone: eddy currents
-   displace the image without turning the head.
+   resampled with it, once. In image terms, the eddy-current field is undone first, in
+   place in the orientation the volume was acquired in, and the head motion after it.
+   The b-vectors turn with the head motion alone: eddy currents displace the image
+   without turning the head.
 
    Example:
 
