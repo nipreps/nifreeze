@@ -56,15 +56,18 @@ Estimating the model is one registration of all the volumes at once, with one se
 parameters, in which each volume moves by its own field. ITK's transforms map a point
 without knowing which volume it belongs to, so :class:`GEM` has ITK's metric
 evaluate each volume's similarity and its derivative, and scipy estimates the
-parameters.
+parameters. Each volume is compared where it was acquired (a forward model): the volume
+as acquired is ITK's fixed image, read at its voxels, and the target is read through the
+inverse of the volume's mapping, the field's inverse and then the head motion's.
 
 FSL eddy's second-level model (``--slm linear``) is the antecedent: it replaces each
 volume's estimated field coefficients by their least-squares fit on
 :math:`(b_v / 1000)\, g_v`, which is this model with :math:`p = 1`, fitted to the
 estimates of the volumes registered one by one (:meth:`EddyTensor.from_slopes` does the
-same, with the exponent free). Here, the model is fitted on the images; the zero point is
-given, whereas eddy regresses the field's offset on the gradients; and each segment of
-b-values may have its own tensor.
+same, with the exponent free). Here, the model is fitted on the images, compared in the
+space each volume was acquired in, as eddy compares them; the zero point is given,
+whereas eddy regresses the field's offset on the gradients; and each segment of b-values
+may have its own tensor.
 """
 
 from __future__ import annotations
@@ -79,17 +82,39 @@ import numpy as np
 
 from nifreeze.data.dmri.utils import format_phase_encoding
 from nifreeze.data.filtering import ClippingValueError, robust_window
-from nifreeze.registration.base import CLIPPING
+from nifreeze.registration.base import AFFINE, CLIPPING, load_config
 from nifreeze.registration.itk_backend import (
+    METRICS,
+    SAMPLINGS,
     _frame,
     _matched,
     _prepare,
     _threads,
     _voxel_image,
-    get_settings,
 )
 from nifreeze.registration.utils import phase_encoding_vector, split_phase_encoding
 
+SETTINGS_KEYS = {
+    "winsorize_lower_quantile",
+    "winsorize_upper_quantile",
+    "use_histogram_matching",
+    "stages",
+}
+"""The settings GEM reads (see :func:`get_settings`)."""
+STAGE_KEYS = {
+    "metric",
+    "bins",
+    "sampling",
+    "sampling_percentage",
+    "samples",
+    "shrink_factor",
+    "iterations",
+}
+"""The settings of one of GEM's stages."""
+BSPLINE_KERNEL = np.array([1.0, 4.0, 1.0]) / 6.0
+"""The cubic B-spline at the voxels: GEM smooths each sample with it along each axis."""
+MASK_DILATION = 2
+"""How far (voxels) the union of the moved masks is dilated before the points are drawn."""
 DEFAULT_EXPONENT = 0.5
 """The exponent of a field that follows the gradient's strength at a fixed timing."""
 EXPONENT_BOUNDS = (0.0, 2.0)
@@ -146,6 +171,89 @@ NOT_FITTED_ERROR_MSG = "The tensor is not fitted yet: call fit() first."
 """Mappings before the fit error message."""
 TABLE_LENGTH_ERROR_MSG = "The gradient table has {rows} rows, but volume {index} was added."
 """A gradient table without a row for every volume error message."""
+UNKNOWN_SETTINGS_ERROR_MSG = "Unknown GEM settings: {keys}"
+"""Settings GEM does not read error message."""
+NO_STAGES_ERROR_MSG = "GEM's settings need at least one stage"
+"""Settings without stages error message."""
+UNKNOWN_VALUE_ERROR_MSG = "Unknown GEM {key} {value!r}: expected one of {values}"
+"""A setting with a value GEM does not know error message."""
+BOTH_SAMPLINGS_ERROR_MSG = "A GEM stage takes sampling_percentage or samples, not both"
+"""A stage with both a share and a number of samples error message."""
+
+
+def get_settings(align_config: Mapping[str, Any] | str | PathLike | None = None) -> dict:
+    """
+    Read and validate GEM's settings.
+
+    GEM's stages are ITK's metrics, summed over the volumes and minimized by L-BFGS-B:
+    each takes a metric, its histogram bins, a sampling, a shrink factor and a number of
+    iterations. No stage smooths the images (each sample is smoothed once, see
+    :class:`GEM`), and ITK's optimizer, with its step settings, does not run.
+
+    Parameters
+    ----------
+    align_config : :obj:`~collections.abc.Mapping` or :obj:`os.pathlike`, optional
+        The settings, or a file with a ``gem`` section (default:
+        :data:`~nifreeze.registration.base.AFFINE`).
+
+    Returns
+    -------
+    :obj:`dict`
+        A copy of the settings, validated.
+
+    Examples
+    --------
+    >>> [stage["metric"] for stage in get_settings()["stages"]]
+    ['mattes', 'correlation']
+
+    >>> get_settings({"stages": [{"metric": "mattes", "smoothing_sigma": 1.0}]})
+    Traceback (most recent call last):
+    ValueError: Unknown GEM settings: ['smoothing_sigma']
+
+    >>> from nifreeze.registration.base import RIGID
+    >>> get_settings(RIGID)
+    Traceback (most recent call last):
+    ValueError: .../rigid.yaml has no settings for gem (it has: ants, elastix).
+
+    """
+    loaded = load_config(AFFINE if align_config is None else align_config, "gem")
+    if not loaded.get("stages"):
+        raise ValueError(NO_STAGES_ERROR_MSG)
+    unknown = set(loaded) - SETTINGS_KEYS
+    for stage in loaded["stages"]:
+        unknown |= set(stage) - STAGE_KEYS
+    if unknown:
+        raise ValueError(UNKNOWN_SETTINGS_ERROR_MSG.format(keys=sorted(unknown)))
+    for stage in loaded["stages"]:
+        if {"sampling_percentage", "samples"} <= set(stage):
+            raise ValueError(BOTH_SAMPLINGS_ERROR_MSG)
+        for key, value, values in (
+            ("metric", stage.get("metric"), METRICS),
+            ("sampling", stage.get("sampling", "none"), SAMPLINGS),
+        ):
+            if value not in values:
+                raise ValueError(
+                    UNKNOWN_VALUE_ERROR_MSG.format(key=key, value=value, values=values)
+                )
+    return loaded
+
+
+def _bspline_smooth(values: np.ndarray) -> np.ndarray:
+    """
+    An image convolved with the cubic B-spline along each axis, its edges repeated.
+
+    >>> point = np.zeros((3, 3, 3))
+    >>> point[1, 1, 1] = 216.0
+    >>> _bspline_smooth(point)[:, 1, 1].tolist()
+    [16.0, 64.0, 16.0]
+
+    """
+    from scipy.ndimage import correlate1d
+
+    smoothed = np.asarray(values, dtype="float32")
+    for axis in range(smoothed.ndim):
+        smoothed = correlate1d(smoothed, BSPLINE_KERNEL, axis=axis, mode="nearest")
+    return smoothed
 
 
 def _table(gradients: Any) -> np.ndarray:
@@ -500,8 +608,14 @@ class _Problem:
     of the images (see :func:`~nifreeze.registration.itk_backend._frame`), where phase
     encoding runs along the data axis ``axis``: :math:`W_v = E_v M_v`, with
     :math:`E_v(y) = y - e\, r_v^T (y - z)`, the voxel-frame slopes :math:`r_v` and the
-    fields' zero point :math:`z`. ``evaluators`` give, for one volume's matrix and
-    translation, the metric's value and its derivative with respect to both.
+    fields' zero point :math:`z`. The mapping takes a point of the reference to where the
+    volume shows it. Each metric reads the target through its inverse,
+    :math:`W_v^{-1}(x) = A_v x + b_v`, from the points :math:`x` of the sample (the
+    forward model): ``evaluators`` give, for :math:`A_v` and :math:`b_v`, the metric's
+    value and its derivative with respect to both, :math:`G_v` and :math:`g_v`. With
+    :math:`W_v(y) = L_v y + o_v`, the derivative with respect to the mapping is
+    :math:`-A_v^T (G_v A_v^T + g_v b_v^T)` for :math:`L_v` and :math:`-A_v^T g_v` for
+    :math:`o_v`.
     """
 
     def __init__(
@@ -562,10 +676,18 @@ class _Problem:
         """The summed metric and its derivative with respect to the parameters."""
         matrix, scales, _ = self._rows(theta)
         linear, offset = self.matrices(theta)
-        each = [evaluate(linear[v], offset[v]) for v, evaluate in enumerate(self.evaluators)]
+        inverse = np.linalg.inv(linear)
+        back = -np.einsum("nij,nj->ni", inverse, offset)
+        each = [evaluate(inverse[v], back[v]) for v, evaluate in enumerate(self.evaluators)]
         values = [value for value, _, _ in each]
-        by_linear = np.stack([gradient for _, gradient, _ in each])
-        by_offset = np.stack([gradient for _, _, gradient in each])
+        by_inverse = np.stack([gradient for _, gradient, _ in each])
+        by_back = np.stack([gradient for _, _, gradient in each])
+        # From the inverse's derivative to the mapping's (d L^-1 = -L^-1 dL L^-1)
+        transposed = inverse.transpose(0, 2, 1)
+        by_linear = -transposed @ (
+            by_inverse @ transposed + by_back[:, :, np.newaxis] * back[:, np.newaxis, :]
+        )
+        by_offset = -np.einsum("nji,nj->ni", inverse, by_back)
         rotations, translations = self.motions[:, :3, :3], self.motions[:, :3, 3]
         by_rows = -np.einsum("nkj,nj->nk", rotations, by_linear[:, self.axis]) - by_offset[
             :, self.axis, np.newaxis
@@ -589,18 +711,11 @@ def _itk_image(values: np.ndarray, spacing: np.ndarray, origin: np.ndarray) -> A
     return image
 
 
-def _stage_image(image: Any, sigma: float, shrink: int) -> Any:
-    """An image smoothed (``sigma`` in voxels) and shrunk as a stage sets."""
+def _stage_image(image: Any, shrink: int) -> Any:
+    """An image shrunk as a stage sets."""
     import itk
 
     kind = type(image)
-    if sigma > 0:
-        smoother = itk.DiscreteGaussianImageFilter[kind, kind].New(
-            image, Variance=sigma**2, UseImageSpacing=False, MaximumError=0.01
-        )
-        smoother.Update()
-        image = smoother.GetOutput()
-        image.DisconnectPipeline()
     if shrink > 1:
         shrinker = itk.ShrinkImageFilter[kind, kind].New(image, ShrinkFactors=shrink)
         shrinker.Update()
@@ -611,9 +726,11 @@ def _stage_image(image: Any, sigma: float, shrink: int) -> Any:
 
 class _Metric:
     """
-    One volume's ITK metric, as a function of its mapping's matrix and translation.
+    One volume's ITK metric, as a function of a matrix and a translation.
 
-    It holds the volume's arrays, which its stage images may only view.
+    The fixed image is the volume's sample, read at the points; the moving image is its
+    target, read where the matrix and translation map the points. It holds the volume's
+    arrays (the sample, then the target), which its stage images may only view.
     """
 
     def __init__(
@@ -627,10 +744,9 @@ class _Metric:
         import itk
 
         self.arrays = arrays
-        sigma = float(stage.get("smoothing_sigma", 0.0))
         shrink = int(stage.get("shrink_factor", 1))
         fixed, moving = (
-            _stage_image(_itk_image(values, spacing, origin), sigma, shrink) for values in arrays
+            _stage_image(_itk_image(values, spacing, origin), shrink) for values in arrays
         )
         kind = type(fixed)
         if stage["metric"] == "mattes":
@@ -640,8 +756,9 @@ class _Metric:
             metric = itk.CorrelationImageToImageMetricv4[kind, kind].New()
         metric.SetFixedImage(fixed)
         metric.SetMovingImage(moving)
-        # Central differences of the moving image keep the derivative within a few percent
-        # of the metric's own (ITK's default gradient filter makes it about 1.6 times larger)
+        # Central differences of the moving image (the target) keep the derivative within a
+        # few percent of the metric's own (ITK's default gradient filter makes it about 1.6
+        # times larger)
         metric.SetUseMovingImageGradientFilter(False)
         self.transform = itk.AffineTransform[itk.D, 3].New()
         metric.SetMovingTransform(self.transform)
@@ -679,24 +796,28 @@ class GEM:
     b-values only, and every volume added gets its field from it. Each volume's shift
     along phase encoding is derived from its slopes and the fields' zero point.
 
-    The cost is the sum over volumes of ITK's metric between the target and the
-    sample, run in the stages of the settings (the ``itk`` section of
-    :data:`~nifreeze.registration.base.AFFINE` by default), and minimized by
-    L-BFGS-B. A stage takes its metric, histogram bins, sampling, smoothing (in
-    voxels), shrink factor and iterations from the settings; their step settings
-    (``learning_rate`` and the like) belong to ITK's optimizer and do not apply. Both
-    images of a stage are smoothed and then shrunk, and its points, drawn once, are the
-    same for every volume. The images are prepared as
-    :class:`~nifreeze.registration.itk_backend.ITK` prepares them (clipped to the
-    sample's window, winsorized, histogram-matched as the settings ask), in their voxel
-    frame, and kept within the mask's box and ``margin``; a point mapped beyond it does
-    not count.
+    Each volume is compared where it was acquired, on the grid its eddy currents
+    distorted (a forward model, as FSL eddy's). The cost is the sum over volumes of ITK's
+    metric between the sample, ITK's fixed image, and the target, its moving image, read
+    through the inverse of the volume's mapping (the field's inverse, then the head
+    motion's). ITK maps each point as it reads the target, so the target is never
+    resampled. The cost is run in the stages of the settings (the ``gem`` section of
+    :data:`~nifreeze.registration.base.AFFINE` by default, see :func:`get_settings`) and
+    minimized by L-BFGS-B. A stage takes its metric, histogram bins, sampling, shrink
+    factor and iterations from the settings, and smooths neither image: each sample is
+    smoothed once, as it is added, with the cubic B-spline (:data:`BSPLINE_KERNEL`). A
+    stage's points sit at the centres of its (shrunk) voxels, so the sample is read
+    exactly. They are drawn once, the same for every volume, within the union of the mask
+    moved into each volume by its head motion, dilated by :data:`MASK_DILATION` voxels.
+    The images are prepared as :class:`~nifreeze.registration.itk_backend.ITK` prepares
+    them (the smoothed sample's window clips them; winsorized, histogram-matched as the
+    settings ask), in their voxel frame, and kept within the mask's box and ``margin``;
+    the points come from within it, and a point mapped beyond it does not count.
 
     Parameters
     ----------
     align_config : :obj:`~collections.abc.Mapping` or :obj:`os.pathlike`, optional
-        ITK's settings, or a file with an ``itk`` section (see
-        :func:`~nifreeze.registration.itk_backend.get_settings`).
+        GEM's settings, or a file with a ``gem`` section (see :func:`get_settings`).
     phase_encoding : :obj:`str`, optional
         The phase-encoding direction, as BIDS writes it.
     exponent : :obj:`float`, optional
@@ -768,22 +889,23 @@ class GEM:
         self.messages: list[list[str]] = []
         """How each stage's minimization stopped, for each segment."""
         self._grid: tuple[np.ndarray, np.ndarray, tuple[slice, ...]] | None = None
-        self._fixed: dict[int, np.ndarray] = {}
-        self._moving: dict[int, np.ndarray] = {}
+        self._samples: dict[int, np.ndarray] = {}
+        self._targets: dict[int, np.ndarray] = {}
         self._motion: dict[int, np.ndarray] = {}
         self._field: dict[int, np.ndarray] = {}
         self._mappings: dict[int, tuple[np.ndarray, np.ndarray]] = {}
+        self._sampled: np.ndarray | None = None  # where the points are drawn (see _union)
 
     @property
     def indices(self) -> list[int]:
         """The volumes added, in order."""
-        return sorted(self._fixed)
+        return sorted(self._samples)
 
     def add(
         self,
         index: int,
-        fixed: np.ndarray,
-        moving: np.ndarray,
+        target: np.ndarray,
+        sample: np.ndarray,
         affine: np.ndarray,
         mask: np.ndarray | None = None,
         motion: np.ndarray | None = None,
@@ -796,12 +918,16 @@ class GEM:
         ----------
         index : :obj:`int`
             The volume's index, its row in the gradient table.
-        fixed, moving : :obj:`~numpy.ndarray`
-            The volume's target and its sample.
+        target : :obj:`~numpy.ndarray`
+            The volume's target, in the reference's position.
+        sample : :obj:`~numpy.ndarray`
+            The volume as acquired. It is smoothed with the cubic B-spline before it is
+            prepared.
         affine : :obj:`~numpy.ndarray`
             The voxel-to-RAS+ affine of their grid, the same for every volume.
         mask : :obj:`~numpy.ndarray`, optional
-            The mask of the target, the same for every volume.
+            The mask of the target, the same for every volume. Moved into each volume by
+            its head motion, it gives where the points are drawn.
         motion : :obj:`~numpy.ndarray`, optional
             The head motion the volume is given (a RAS+ matrix that maps the reference
             into it; default: none).
@@ -814,7 +940,7 @@ class GEM:
 
         """
         affine = np.asarray(affine, dtype=float)
-        mask = np.ones(fixed.shape, dtype=bool) if mask is None else np.asanyarray(mask, bool)
+        mask = np.ones(target.shape, dtype=bool) if mask is None else np.asanyarray(mask, bool)
         if self._grid is None:
             spacing = _frame(affine)[1]
             inside = np.argwhere(mask)
@@ -830,37 +956,68 @@ class GEM:
         ):
             raise ValueError(GRID_ERROR_MSG.format(index=index))
 
+        sample = _bspline_smooth(sample)
         window = None
         if self.clip in CLIPPING:
             try:
-                window = robust_window(moving, mask)
+                window = robust_window(sample, mask)
             except ClippingValueError as exc:
                 warn(f"Adding volume {index} without clipping: {exc}", stacklevel=2)
-        fixed_values, moving_values = _prepare(fixed, moving, window, self.clip, self.settings)
+        target_values, sample_values = _prepare(target, sample, window, self.clip, self.settings)
         if self.settings.get("use_histogram_matching", False):
             import itk
 
             spacing = _frame(affine)[1]
-            moving_values = np.transpose(
+            sample_values = np.transpose(
                 itk.array_from_image(
                     _matched(
-                        _voxel_image(moving_values, spacing), _voxel_image(fixed_values, spacing)
+                        _voxel_image(sample_values, spacing), _voxel_image(target_values, spacing)
                     )
                 ),
                 (2, 1, 0),
             )
         box = self._grid[2]
         # Kept in ITK's order, so that each stage views them without a copy
-        self._fixed[index] = np.ascontiguousarray(fixed_values[box].transpose(2, 1, 0))
-        self._moving[index] = np.ascontiguousarray(moving_values[box].transpose(2, 1, 0))
+        self._samples[index] = np.ascontiguousarray(sample_values[box].transpose(2, 1, 0))
+        self._targets[index] = np.ascontiguousarray(target_values[box].transpose(2, 1, 0))
         self._motion[index] = np.eye(4) if motion is None else np.array(motion, dtype=float)
         self._field[index] = np.eye(4) if field is None else np.array(field, dtype=float)
+        self._sampled = None
 
-    def _points(self, stage: Mapping[str, Any], number: int) -> np.ndarray:
-        """A stage's points in the voxel frame (mm), within the mask."""
+    def _union(self) -> np.ndarray:
+        """
+        Where the points are drawn: the mask moved into each volume by its head motion.
+
+        The union over the volumes (nearest neighbour), dilated by :data:`MASK_DILATION`
+        voxels, within the box the images are kept in.
+        """
+        from scipy.ndimage import affine_transform, binary_dilation
+        from skimage.morphology import ball
+
         assert self._grid is not None
-        affine, mask, _ = self._grid
-        spacing = _frame(affine)[1]
+        if self._sampled is not None:
+            return self._sampled
+        affine, mask, box = self._grid
+        frame, spacing = _frame(affine)
+        start = np.array([part.start for part in box])
+        shape = tuple(part.stop - part.start for part in box)
+        reference = mask.astype("uint8")
+        union = np.zeros(shape, dtype=bool)
+        for index in self.indices:
+            # Where each voxel of the volume (in the box) was in the reference, in voxels
+            back = np.linalg.inv(np.linalg.inv(frame) @ self._motion[index] @ frame)
+            matrix = back[:3, :3] * spacing[np.newaxis, :] / spacing[:, np.newaxis]
+            offset = back[:3, 3] / spacing + matrix @ start
+            union |= affine_transform(reference, matrix, offset, shape, order=0) > 0
+        union = binary_dilation(union, structure=ball(MASK_DILATION))
+        self._sampled = np.zeros(mask.shape, dtype=bool)
+        self._sampled[box] = union
+        return self._sampled
+
+    def _points(self, stage: Mapping[str, Any], number: int, mask: np.ndarray) -> np.ndarray:
+        """A stage's points in the voxel frame (mm): the centres of its voxels in ``mask``."""
+        assert self._grid is not None
+        spacing = _frame(self._grid[0])[1]
         shrink = int(stage.get("shrink_factor", 1))
         index = np.argwhere(mask)
         index = index[np.all(index % shrink == 0, axis=1)]
@@ -878,9 +1035,7 @@ class GEM:
             chosen = np.linspace(0, len(points) - 1, count).round().astype(int)
         else:
             chosen = np.sort(rng.choice(len(points), count, replace=False))
-        # As ITK's samplers do, each point moves at random within its (shrunk) voxel
-        jitter = rng.uniform(-0.5, 0.5, size=(count, 3)) * shrink * spacing
-        return points[chosen] + jitter
+        return points[chosen]
 
     def _problem(
         self,
@@ -900,10 +1055,10 @@ class GEM:
         origin = np.array([part.start for part in box]) * spacing
 
         points = itk.PointSet[itk.F, 3].New()
-        for n, point in enumerate(self._points(stage, number)):
+        for n, point in enumerate(self._points(stage, number, self._union())):
             points.SetPoint(n, itk.Point[itk.F, 3](point.tolist()))
         evaluators = [
-            _Metric(stage, (self._fixed[index], self._moving[index]), spacing, origin, points)
+            _Metric(stage, (self._samples[index], self._targets[index]), spacing, origin, points)
             for index in indices
         ]
         return self._model(indices, table, b_ref, zero, evaluators)
@@ -1025,7 +1180,7 @@ class GEM:
             images are released.
 
         """
-        if not self._fixed:
+        if not self._samples:
             raise ValueError(NOTHING_ADDED_ERROR_MSG)
         if self.phase_encoding is None:
             raise ValueError(NO_PHASE_ENCODING_ERROR_MSG)
@@ -1046,6 +1201,7 @@ class GEM:
         for index, field in self._field.items():
             undone = np.linalg.inv(_zero_at(field, np.asarray(world, dtype=float)))
             self._motion[index] = undone @ field @ self._motion[index]
+        self._sampled = None  # the points follow the head motion that remains
 
         self.evaluations, self.messages = [], []
         parts: list[EddyTensor] = []
@@ -1071,7 +1227,8 @@ class GEM:
         self.zero_point = np.asarray(world, dtype=float)
         self.tensor = parts[0] if self.edges is None else SegmentedEddyTensor(self.edges, parts)
         self._mappings = mappings
-        self._fixed, self._moving, self._field = {}, {}, {}
+        self._samples, self._targets, self._field = {}, {}, {}
+        self._sampled = None
         return self.tensor
 
     def mappings(self) -> dict[int, tuple[np.ndarray, np.ndarray]]:

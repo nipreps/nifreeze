@@ -117,3 +117,25 @@ itk:
     learning_rate: 0.1
     relaxation: 0.8
     minimum_step: 0.00001
+
+# GEM, the global eddy model (#745), compared where each volume was acquired (#776): its
+# stages are ITK's metrics, summed over the volumes and minimized by L-BFGS-B, so ITK's
+# optimizer and its step settings do not run. No stage smooths the images: each volume
+# as acquired is smoothed once with the cubic B-spline, and the points sit at voxel
+# centres, so it is read exactly.
+gem:
+  winsorize_lower_quantile: 0.0001
+  winsorize_upper_quantile: 0.9998
+  use_histogram_matching: false
+  stages:
+  - metric: mattes
+    bins: 32
+    sampling: regular
+    sampling_percentage: 0.2
+    shrink_factor: 2
+    iterations: 100
+  - metric: correlation
+    sampling: random
+    samples: 17000
+    shrink_factor: 1
+    iterations: 50
