@@ -33,7 +33,7 @@ the truth, and animates how the run corrects each volume.
 Writes, in ``<work>``: the copy (``phantom.h5``) and its brain mask, the run's outputs,
 log and time (``default/``, ``default.log``, ``times.json``), and ``sizes.tsv`` (one row
 per diffusion-weighted volume); in ``<out>``, ``corrections-phantom.svg`` (made by
-:func:`nifreeze.viz.corrections.animate_corrections`; about 19 MB, kept on GIN and
+:func:`nifreeze.viz.corrections.animate_corrections`; about 21 MB, kept on GIN and
 fetched by the documentation's build).
 On CPUs 0-5::
 

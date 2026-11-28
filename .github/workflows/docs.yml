@@ -115,7 +115,7 @@ jobs:
         fi
         python tools/fetch_gallery.py "${ARGS[@]}"
 
-    # The GEM page's animations of the corrections (19 and 26 MB) are kept on GIN;
+    # The GEM page's animations of the corrections (21 and 28 MB) are kept on GIN;
     # without one, the page links to it
     - name: Fetch the corrections animations
       run: |

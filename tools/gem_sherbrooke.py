@@ -33,7 +33,7 @@ Writes, in ``<work>``: the brain mask (``median_otsu`` on the b=0), each run's o
 log and time (``motion/``, ``default/``, ``*.log``, ``times.json``), and ``sizes.tsv``
 (one row per diffusion-weighted volume); in ``<out>``, ``gem-sherbrooke.svg`` and
 ``corrections-sherbrooke.svg``, how the default run corrects each volume (made by
-:func:`nifreeze.viz.corrections.animate_corrections`; about 26 MB, kept on GIN and
+:func:`nifreeze.viz.corrections.animate_corrections`; about 28 MB, kept on GIN and
 fetched by the documentation's build).
 On CPUs 0-5::
 

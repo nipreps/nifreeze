@@ -178,10 +178,18 @@ three coronal and three sagittal cuts.
 Each volume goes through five steps:
 
 1. the volume as found (*original*);
-2. a quiver of where head motion sends its voxels;
-3. the data travelling there (*realigned*);
-4. a quiver of where GEM's field sends them next;
-5. the data travelling to the corrected position (*corrected*).
+2. a quiver of where GEM's field sends its voxels, in the volume as acquired;
+3. the data travelling there (*eddy-corrected*);
+4. a quiver of where head motion sends them next;
+5. the data travelling into the reference (*realigned*).
+
+This is the order in which realignment undoes the two corrections.
+For each point of the reference, it reads the volume where head motion takes the point,
+moved along phase encoding by the field.
+So the field is undone first, in place, where the volume was acquired, and head motion
+after it.
+The third step's frame is the volume read through the field alone, and the last one is
+the volume read once through both, as the command line writes it.
 
 On the phantom (:doc:`/edd/phantoms`), the copy with the largest head motion and eddy
 currents shows both corrections at work, against a known truth.
@@ -196,7 +204,7 @@ The default run took 15 min on six CPUs.
    <object data="../_static/gem/corrections-phantom.svg" type="image/svg+xml"
            style="width: 100%; aspect-ratio: 598 / 498">
      <p><a href="https://gin.g-node.org/nipreps-data/tests-nifreeze/raw/master/docs/corrections-phantom.svg">
-     The animation</a> (19 MB) is downloaded when the documentation is built.</p>
+     The animation</a> (21 MB) is downloaded when the documentation is built.</p>
    </object>
 
 In the median volume, the estimated head motion moves the brain by 4.63 mm (the median
@@ -206,7 +214,7 @@ The corrected volume ends 1.67 mm from where the truth would put it: 1.30 mm at 
 1.78 mm at b=2000 and 2.46 mm at b=3500.
 Four volumes, all at b=3500, end more than 5 mm away.
 In the worst, volume 181, head motion is estimated at 13.2 mm against a true 4.6 mm.
-Its solid outline does not fit the original volume, and its corrected cuts are off the
+Its solid outline does not fit the original volume, and its realigned cuts are off the
 reference.
 ``tools/gem_phantom.py`` makes the run and the animation:
 
@@ -222,16 +230,16 @@ On DIPY's Sherbrooke data, both corrections are far smaller:
    <object data="../_static/gem/corrections-sherbrooke.svg" type="image/svg+xml"
            style="width: 100%; aspect-ratio: 592 / 492">
      <p><a href="https://gin.g-node.org/nipreps-data/tests-nifreeze/raw/master/docs/corrections-sherbrooke.svg">
-     The animation</a> (26 MB) is downloaded when the documentation is built.</p>
+     The animation</a> (28 MB) is downloaded when the documentation is built.</p>
    </object>
 
 The dashed line outlines the brain mask at the reference position.
-The solid line is the mask moved by head motion: it should fit the original volume, up
-to the eddy currents, and it travels with the data into the reference.
+The solid line is the mask moved by head motion and the eddy currents: it should fit the
+original volume, and it travels with the data into the reference.
 Arrows are drawn longer than the voxels move, by the factors in each legend.
-On the phantom, they are as long as head motion moves the voxels, and 2.5 times longer
-than the eddy currents do.
-On the Sherbrooke data, they are 10 and 30 times longer.
+On the phantom, they are 2.5 times longer than the eddy currents move the voxels, and as
+long as head motion does.
+On the Sherbrooke data, they are 30 and 10 times longer.
 The data travel at true scale.
 A displacement across the cut is drawn as a circle of that size: ⊙ toward you, ⊗ away.
 With phase encoding along :math:`j`, GEM moves voxels only across the coronal cuts.
