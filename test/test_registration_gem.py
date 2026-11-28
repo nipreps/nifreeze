@@ -55,6 +55,7 @@ from nifreeze.registration.gem import (
     TABLE_ERROR_MSG,
     EddyTensor,
     SegmentedEddyTensor,
+    _Metric,
     _Problem,
     field_of_view_centre,
     field_slopes,
@@ -306,8 +307,8 @@ def _central(cost, theta: np.ndarray, step: float) -> np.ndarray:
 
 @pytest.mark.parametrize("sign", [1.0, -1.0])
 def test_the_chain_rule_gives_the_derivative_of_the_cost(sign):
-    """From each volume's derivative to C and the exponent, with the zero point off the
-    grid's centre."""
+    """From each volume's derivative, with respect to the inverse mapping its metric reads
+    the target through, to C and the exponent, with the zero point off the grid's centre."""
     rng = np.random.default_rng(6)
     table = _balanced(rng)
     motions = np.stack([_motion(degrees=3.0, shift=rng.normal(size=3)) for _ in table])
@@ -355,9 +356,10 @@ def _images(
     shared: np.ndarray | None = None,
     zero: np.ndarray = ZERO,
     segmented: bool = False,
+    seed: int = 8,
 ):
     """Volumes moved by known head motion and known fields, all zero at ``zero``."""
-    rng = np.random.default_rng(8)
+    rng = np.random.default_rng(seed)
     data, mask = _volume()
     affine = _off_centre()
     u = phase_encoding_vector(phase_encoding, affine)
@@ -498,21 +500,35 @@ def test_the_fit_leaves_out_most_of_a_stretch_every_volume_shares():
     """
     A stretch shared by every volume, on top of the field, mostly stays out of the fields.
 
-    A registration of each volume alone takes all of it. On slopes, the b-vectors of each
-    shell cancel it exactly (see the test of :meth:`EddyTensor.from_slopes`); on images,
-    the volumes of an antipodal pair weigh a little differently in the metric, so some of
-    it leaks, in proportion to its size (about a tenth here, at most a fifth).
+    The model has no parameter for it: on slopes, the b-vectors of each shell cancel it
+    exactly (see the test of :meth:`EddyTensor.from_slopes`), whereas a registration of each
+    volume alone takes all of it. On images, the volumes of an antipodal pair weigh a little
+    differently in the metric, so some of it reaches each volume's mapping: a few percent of
+    the stretch's displacement in a typical volume, and up to about a third in the worst of
+    a draw, which varies several-fold from draw to draw (#776). The leak is measured as the
+    other tests measure the mappings (mean displacement in the mask, mm), over three draws,
+    and the limits are where a model that takes the stretch, as a registration of each
+    volume alone does, fails: they guard the model's structure, not its accuracy.
     """
     shared = np.array([0.01, -0.015, 0.012])
-    sim = _images(shared=shared)
+    shares = []
+    for seed in (8, 9, 10):
+        sim = _images(shared=shared, seed=seed)
+        fit = _fitted(sim, zero_point=ZERO)
+        found = fit.fit(sim.table)
 
-    found = _fitted(sim, zero_point=ZERO).fit(sim.table)
-
-    assert isinstance(found, EddyTensor)
-    assert abs(found.exponent - 1.0) < 0.05
-    error = found.slopes(sim.table) - sim.truth.slopes(sim.table)
-    share = np.linalg.norm(error, axis=1) / np.linalg.norm(shared)
-    assert np.median(share) < 0.15 and share.max() < 0.25
+        assert isinstance(found, EddyTensor)
+        assert abs(found.exponent - 1.0) < 0.05
+        without = sim.fields @ sim.motions  # the truth GEM's model can express
+        shares.append(
+            [
+                _error(sim.mask, sim.affine, eddy @ motion, without[index])
+                / _error(sim.mask, sim.affine, sim.mappings[index], without[index])
+                for index, (motion, eddy) in sorted(fit.mappings().items())
+            ]
+        )
+    assert np.mean(np.median(shares, axis=1)) < 0.25
+    assert np.max(shares) < 0.5
 
 
 @SKIP_ELASTIX
@@ -564,7 +580,7 @@ def test_keeping_the_mask_box_leaves_the_correlation_unchanged():
     values = []
     for margin in (8.0, 1000.0):  # the mask's box and 4 voxels, and the whole grid
         fit = _fitted(sim, margin=margin)
-        kept = fit._fixed[0].shape
+        kept = fit._samples[0].shape
         problem = fit._problem(fit.indices, sim.table, 2000.0, zero, 1)
         del fit  # the stage's metrics hold the arrays they view
         if theta is None:
@@ -576,11 +592,15 @@ def test_keeping_the_mask_box_leaves_the_correlation_unchanged():
 
 @SKIP_ELASTIX
 def test_the_fit_prepares_the_images_as_the_backend_does():
-    """Clipped to the sample's window, winsorized and histogram-matched, as by the backend."""
+    """
+    The sample is smoothed with the cubic B-spline, then both images are clipped to the
+    smoothed sample's window, winsorized and histogram-matched, as by the backend.
+    """
     import itk
 
     from nifreeze.data.filtering import robust_window
-    from nifreeze.registration.itk_backend import _matched, _prepare, _voxel_image, get_settings
+    from nifreeze.registration.gem import _bspline_smooth, get_settings
+    from nifreeze.registration.itk_backend import _matched, _prepare, _voxel_image
 
     sim = _images()
     settings = get_settings() | {"use_histogram_matching": True}
@@ -589,30 +609,123 @@ def test_the_fit_prepares_the_images_as_the_backend_does():
 
     fit.add(0, sim.data, sample, sim.affine, sim.mask, sim.motions[0])
 
-    window = robust_window(sample, sim.mask)
-    fixed, moving = _prepare(sim.data, sample, window, "both", settings)
+    smoothed = _bspline_smooth(sample)
+    window = robust_window(smoothed, sim.mask)
+    target, prepared = _prepare(sim.data, smoothed, window, "both", settings)
     spacing = np.linalg.norm(sim.affine[:3, :3], axis=0)
-    matched = _matched(_voxel_image(moving, spacing), _voxel_image(fixed, spacing))
-    assert np.array_equal(fit._fixed[0], fixed.transpose(2, 1, 0))
-    assert np.array_equal(fit._moving[0], itk.array_from_image(matched))
+    matched = _matched(_voxel_image(prepared, spacing), _voxel_image(target, spacing))
+    assert np.array_equal(fit._targets[0], target.transpose(2, 1, 0))
+    assert np.array_equal(fit._samples[0], itk.array_from_image(matched))
     with pytest.warns(UserWarning, match="without clipping"):
         fit.add(1, sim.data, np.zeros_like(sample), sim.affine, sim.mask)
 
 
-def test_a_stage_draws_its_points_in_the_mask():
+def test_a_stage_draws_its_points_at_the_centres_of_its_voxels():
     data, mask = _volume()
     fit = GEM(phase_encoding="j", clip="none")
-    fit.add(0, data, data, _off_centre(), mask)
+    affine = _off_centre()
+    fit.add(0, data, data, affine, mask)
+    spacing = _frame(affine)[1]
     stage = {"metric": "correlation"}
 
-    every = fit._points(stage | {"sampling": "none", "shrink_factor": 2}, 0)
-    share = fit._points(stage | {"sampling": "regular", "sampling_percentage": 0.1}, 0)
-    count = fit._points(stage | {"sampling": "random", "samples": 500}, 0)
+    every = fit._points(stage | {"sampling": "none", "shrink_factor": 2}, 0, mask)
+    share = fit._points(stage | {"sampling": "regular", "sampling_percentage": 0.1}, 0, mask)
+    count = fit._points(stage | {"sampling": "random", "samples": 500}, 0, mask)
 
     assert len(every) == np.sum(np.all(np.argwhere(mask) % 2 == 0, axis=1))
     assert len(share) == round(0.1 * mask.sum())
     assert len(count) == 500
-    assert np.array_equal(count, fit._points(stage | {"sampling": "random", "samples": 500}, 0))
+    again = fit._points(stage | {"sampling": "random", "samples": 500}, 0, mask)
+    assert np.array_equal(count, again)
+    for points, shrink in ((every, 2), (share, 1), (count, 1)):
+        index = points / spacing - (shrink - 1) / 2  # no offset within the voxel
+        assert np.allclose(index, np.round(index))
+        assert mask[tuple(np.round(index).astype(int).T)].all()
+
+
+def _moved_mask(mask: np.ndarray, affine: np.ndarray, motion: np.ndarray) -> np.ndarray:
+    """The mask where a volume moved by ``motion`` shows it, voxel by voxel (nearest)."""
+    index = np.indices(mask.shape).reshape(3, -1).T
+    world = np.c_[index, np.ones(len(index))] @ affine.T
+    found = np.round((world @ np.linalg.inv(motion).T @ np.linalg.inv(affine).T)[:, :3])
+    inside = np.all((found >= 0) & (found < mask.shape), axis=1)
+    moved = np.zeros(len(index), dtype=bool)
+    moved[inside] = mask[tuple(found[inside].astype(int).T)]
+    return moved.reshape(mask.shape)
+
+
+def test_the_points_come_from_the_masks_moved_by_head_motion():
+    """The union of the mask moved into each volume, dilated by two voxels, in the box."""
+    from scipy.ndimage import binary_dilation
+    from skimage.morphology import ball
+
+    rng = np.random.default_rng(12)
+    data, mask = _volume()
+    affine = _off_centre()
+    motions = [
+        _motion(degrees=rng.uniform(1.0, 3.0), shift=rng.normal(scale=3.0, size=3))
+        for _ in range(4)
+    ]
+    fit = GEM(phase_encoding="j", clip="none", margin=4.0)  # a box the moved masks leave
+    for index, motion in enumerate(motions):
+        fit.add(index, data, data, affine, mask, motion)
+
+    union = fit._union()
+
+    assert fit._grid is not None
+    box = fit._grid[2]
+    moved = [_moved_mask(mask, affine, motion) for motion in motions]
+    expected = np.zeros_like(mask)
+    expected[box] = binary_dilation(np.any(moved, axis=0), structure=ball(2))[box]
+    assert np.mean(union != expected) < 1e-3  # a voxel or so where rounding ties
+    assert not union[tuple(slice(0, part.start) for part in box)].any()  # within the box
+    for each in moved:  # every moved mask is covered, where the box keeps it
+        assert not (each[box] & ~union[box]).any()
+    assert union.sum() > mask.sum()
+
+
+@SKIP_ELASTIX
+@pytest.mark.parametrize("number", [0, 1])
+def test_each_stage_reads_the_sample_at_its_voxels(number):
+    """Every point falls on a voxel centre of the stage's sample, so none is interpolated."""
+    sim = _images()
+    fit = _fitted(sim)
+    problem = fit._problem(fit.indices, sim.table, 2000.0, _voxel_zero(sim.affine), number)
+    points = fit._points(fit.settings["stages"][number], number, fit._union())
+    metric = problem.evaluators[0]
+    assert isinstance(metric, _Metric)
+    sample = metric.images[0]
+
+    index = np.array(
+        [list(sample.TransformPhysicalPointToContinuousIndex(point.tolist())) for point in points]
+    )
+
+    assert np.allclose(index, np.round(index), atol=1e-4)
+
+
+def test_gem_reads_its_own_settings():
+    """GEM's section has no stage smoothing; ITK's backend keeps its own."""
+    from nifreeze.registration.base import AFFINE, RIGID
+    from nifreeze.registration.gem import get_settings
+    from nifreeze.registration.itk_backend import get_settings as itk_settings
+
+    settings = get_settings()
+
+    assert [stage["metric"] for stage in settings["stages"]] == ["mattes", "correlation"]
+    assert not any("smoothing_sigma" in stage for stage in settings["stages"])
+    assert itk_settings(AFFINE)["stages"][0]["smoothing_sigma"] == 1.0
+    stage = {"metric": "mattes", "iterations": 10}
+    for bad, message in (
+        ({"stages": [stage | {"smoothing_sigma": 1.0}]}, "Unknown GEM settings"),
+        ({"stages": [stage | {"learning_rate": 0.1}]}, "Unknown GEM settings"),
+        ({"stages": []}, "at least one stage"),
+        ({"stages": [stage | {"metric": "ncc"}]}, "Unknown GEM metric"),
+        ({"stages": [stage | {"samples": 10, "sampling_percentage": 0.1}]}, "not both"),
+    ):
+        with pytest.raises(ValueError, match=message):
+            get_settings(bad)
+    with pytest.raises(ValueError, match="has no settings for gem"):
+        GEM(RIGID)
 
 
 def test_the_fit_validates_its_inputs():

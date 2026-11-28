@@ -2183,6 +2183,45 @@ def test_dwi_realigns_and_exports_the_whole_mapping(tmp_path):
     assert np.allclose(chain.transforms[1].matrix[3] @ chain.transforms[0].matrix[3], whole)
 
 
+def test_dwi_realigns_by_undoing_the_field_in_place_then_head_motion():
+    """
+    Realigning reads each volume at ``eddy @ motion``: in image terms, the field is undone
+    first, in place in the orientation the volume was acquired in, then the head motion.
+    """
+    from nitransforms.linear import Affine
+    from nitransforms.resampling import apply
+
+    shape = (32, 32, 24)
+    grid = np.indices(shape).astype("float32")
+    smooth = np.sin(grid[0] / 4.0) * np.cos(grid[1] / 5.0) + np.sin(grid[2] / 3.5 + grid[0] / 9.0)
+    smooth = (smooth + 3.0).astype("float32")
+    affine = np.diag([2.0, 2.0, 2.5, 1.0])
+    affine[:3, 3] = -(np.array(shape) - 1) / 2 * np.diag(affine)[:3]  # centred on the grid
+    gradients = _eddy_dwi().gradients
+    dwi = DWI(
+        dataobj=np.stack([smooth] * len(gradients)),
+        affine=affine,
+        gradients=gradients,
+        bzero=np.ones(shape, dtype="float32"),
+    )
+    motion = _rotation_about_z(10.0, (3.0, -2.0, 1.0))
+    field = _shear(0.06, 1.5)
+    dwi.set_estimates(3, motion=motion, eddy=field)
+
+    realigned = np.asanyarray(dwi.realigned().dataobj[3])
+
+    image = nb.Nifti1Image(smooth, affine)
+    in_place = apply(Affine(field), image, reference=image, order=3)  # the field undone
+    then_motion = np.asanyarray(apply(Affine(motion), in_place, reference=image, order=3).dataobj)
+    motion_first = apply(Affine(motion), image, reference=image, order=3)
+    reversed_ = np.asanyarray(apply(Affine(field), motion_first, reference=image, order=3).dataobj)
+    inner = (slice(8, -8), slice(8, -8), slice(6, -6))  # what both steps keep in the grid
+    whole = dwi.get_transform(3)
+    assert whole is not None and np.allclose(whole, field @ motion)
+    assert np.abs(realigned[inner] - then_motion[inner]).max() < 2e-3
+    assert np.abs(realigned[inner] - reversed_[inner]).max() > 2e-2
+
+
 def test_dwi_writes_eddy_currents_after_identities(tmp_path):
     """Without head motion, the X5 file's first transform is the identity."""
     dwi = _eddy_dwi()
