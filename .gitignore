@@ -70,6 +70,8 @@ docs/_build/
 docs/api/
 # Prediction gallery pages, fetched by tools/fetch_gallery.py
 docs/edd/gallery/
+# The corrections animations, fetched from GIN by the docs build
+docs/_static/gem/corrections-*.svg
 
 # PyBuilder
 target/

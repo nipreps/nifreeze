@@ -173,6 +173,98 @@ for head motion alone.
 
     taskset -c 0-5 python tools/gem_sherbrooke.py --work <work> --out docs/_static/gem
 
+The animations below play how the default run corrects each volume, on three axial,
+three coronal and three sagittal cuts.
+Each volume goes through five steps:
+
+1. the volume as found (*original*);
+2. a quiver of where GEM's field sends its voxels, in the volume as acquired;
+3. the data travelling there (*eddy-corrected*);
+4. a quiver of where head motion sends them next;
+5. the data travelling into the reference (*realigned*).
+
+This is the order in which realignment undoes the two corrections.
+For each point of the reference, it reads the volume where head motion takes the point,
+moved along phase encoding by the field.
+So the field is undone first, in place, where the volume was acquired, and head motion
+after it.
+The third step's frame is the volume read through the field alone, and the last one is
+the volume read once through both, as the command line writes it.
+
+On the phantom (:doc:`/edd/phantoms`), the copy with the largest head motion and eddy
+currents shows both corrections at work, against a known truth.
+Under the Sherbrooke protocol, every diffusion-weighted volume of this copy is turned
+by 4° and shifted by 4 mm, and its eddy currents move some voxel of the brain by 8
+voxels (16 mm) along phase encoding (:math:`j-`).
+The copy is noise-free, as simulated.
+The default run took 15 min on six CPUs.
+
+.. raw:: html
+
+   <object data="../_static/gem/corrections-phantom.svg" type="image/svg+xml"
+           style="width: 100%; aspect-ratio: 598 / 498">
+     <p><a href="https://gin.g-node.org/nipreps-data/tests-nifreeze/raw/master/docs/corrections-phantom.svg">
+     The animation</a> (21 MB) is downloaded when the documentation is built.</p>
+   </object>
+
+In the median volume, the estimated head motion moves the brain by 4.63 mm (the median
+over the brain), against a true 4.77 mm.
+The estimated eddy currents move it by 2.30 mm, against a true 2.56 mm.
+The corrected volume ends 1.67 mm from where the truth would put it: 1.30 mm at b=1000,
+1.78 mm at b=2000 and 2.46 mm at b=3500.
+Four volumes, all at b=3500, end more than 5 mm away.
+In the worst, volume 181, head motion is estimated at 13.2 mm against a true 4.6 mm.
+Its solid outline does not fit the original volume, and its realigned cuts are off the
+reference.
+``tools/gem_phantom.py`` makes the run and the animation:
+
+.. code-block:: bash
+
+    taskset -c 0-5 python tools/gem_phantom.py --dataset <phantoms> --work <work> \
+        --out docs/_static/gem
+
+On DIPY's Sherbrooke data, both corrections are far smaller:
+
+.. raw:: html
+
+   <object data="../_static/gem/corrections-sherbrooke.svg" type="image/svg+xml"
+           style="width: 100%; aspect-ratio: 592 / 492">
+     <p><a href="https://gin.g-node.org/nipreps-data/tests-nifreeze/raw/master/docs/corrections-sherbrooke.svg">
+     The animation</a> (28 MB) is downloaded when the documentation is built.</p>
+   </object>
+
+The dashed line outlines the brain mask at the reference position.
+The solid line is the mask moved by head motion and the eddy currents: it should fit the
+original volume, and it travels with the data into the reference.
+Arrows are drawn longer than the voxels move, by the factors in each legend.
+On the phantom, they are 2.5 times longer than the eddy currents move the voxels, and as
+long as head motion does.
+On the Sherbrooke data, they are 30 and 10 times longer.
+The data travel at true scale.
+A displacement across the cut is drawn as a circle of that size: ⊙ toward you, ⊗ away.
+With phase encoding along :math:`j`, GEM moves voxels only across the coronal cuts.
+In each cut's corner, the b-vector is projected onto the cut.
+It turns with the head during the realignment, as the b-vectors the command line
+writes do.
+GEM's field is drawn zero at the centre of the field of view, where GEM fits it, and
+the shift it makes there counts as head motion.
+Either way, the last frame is the volume the command line writes.
+Between the frames of each step, which are exact, the data move along the cut as the
+step moves it, while the part of the motion across the cut dissolves.
+Every volume plays in turn.
+The buttons below the animation, or the keys, change the speed (``-`` and ``+``),
+pause (space), go to the previous or next volume (arrow keys), and the bar jumps to any
+volume.
+
+The animation is drawn from the default run's ``--write-hdf5`` output:
+
+.. code-block:: python
+
+    from nifreeze.data.dmri import DWI
+    from nifreeze.viz.corrections import animate_corrections
+
+    animate_corrections(DWI.from_filename("dwi.h5"), "corrections.svg")
+
 Each variant is one ``GEM``, given as the pass's backend:
 
 .. code-block:: python
